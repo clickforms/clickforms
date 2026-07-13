@@ -75,9 +75,12 @@ if [[ -z "${SG_ID}" || "${SG_ID}" == "None" ]]; then
     --region "${REGION}" \
     --query 'GroupId' --output text)"
 
-  MY_IP="$(curl -s https://checkip.amazonaws.com)"
-  echo "==> Allowing SSH (22) from your current IP (${MY_IP}/32) only..."
-  aws ec2 authorize-security-group-ingress --group-id "${SG_ID}" --protocol tcp --port 22 --cidr "${MY_IP}/32" --region "${REGION}" >/dev/null
+  # 0.0.0.0/0 rather than "your IP only": GitHub Actions-hosted runners (which SSH in
+  # to deploy — see .github/workflows/_deploy.yml) have no stable IP, they're drawn from
+  # a large, constantly-rotating range. Key-based auth (private key in the ssh_private_key
+  # secret, no password auth) is the actual access control here, not source IP.
+  echo "==> Allowing SSH (22) from anywhere (key-based auth only; CI runners have no stable IP)..."
+  aws ec2 authorize-security-group-ingress --group-id "${SG_ID}" --protocol tcp --port 22 --cidr "0.0.0.0/0" --region "${REGION}" >/dev/null
   echo "==> Allowing HTTP (80) and HTTPS (443) from anywhere (Caddy + Let's Encrypt)..."
   aws ec2 authorize-security-group-ingress --group-id "${SG_ID}" --protocol tcp --port 80 --cidr "0.0.0.0/0" --region "${REGION}" >/dev/null
   aws ec2 authorize-security-group-ingress --group-id "${SG_ID}" --protocol tcp --port 443 --cidr "0.0.0.0/0" --region "${REGION}" >/dev/null

@@ -1,0 +1,95 @@
+name: Deploy to staging
+
+# Auto-deploys on every push to main. This is the "build" half of "build once,
+# promote the artifact": it builds ONE image, tags it with the git sha, pushes it to
+# ECR, and deploys that exact image to staging. promote-production.yml later takes
+# this same tag and redeploys it to production — production never gets its own build.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write # required for OIDC -> AWS (aws-actions/configure-aws-credentials)
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REPOSITORY: clickforms
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Test
+        run: yarn test
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        id: image
+        run: |
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          IMAGE="${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:sha-${SHORT_SHA}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        # Runners are amd64; the app runs on arm64 (t4g.small, per Dockerfile comment
+        # and ARCHITECTURE.md §3/§10), so cross-build via buildx + QEMU.
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.image.outputs.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: staging
+      image: ${{ needs.build-and-push.outputs.image }}
+      domain: staging.clickforms.com.au
+    secrets:
+      ssh_private_key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+      host: ${{ secrets.STAGING_HOST }}

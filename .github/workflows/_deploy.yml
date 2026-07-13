@@ -1,0 +1,104 @@
+name: Deploy (reusable)
+
+# Shared SSH-deploy logic for both deploy-staging.yml (auto, on push to main) and
+# promote-production.yml (manual, redeploys an already-built image) — kept in one
+# place so the two environments can never drift in how they deploy, only in which
+# image/host they target ("build once, promote the artifact").
+#
+# No AWS credentials are used by this job at all: the target EC2 instance already
+# has its own IAM instance role (see scripts/setup-ec2.sh) with ECR-pull and
+# SSM-read permissions, so ECR auth happens ON the box using that role, not via
+# GitHub Actions OIDC. OIDC is only used once, in deploy-staging.yml's build job,
+# to push the image.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "staging or production — selects Caddyfile.<environment> and the SSM path"
+        required: true
+        type: string
+      image:
+        description: "Full ECR image URI including tag, e.g. <account>.dkr.ecr.ap-southeast-2.amazonaws.com/clickforms:sha-abc1234"
+        required: true
+        type: string
+      domain:
+        description: "Public domain to health-check after deploy"
+        required: true
+        type: string
+    secrets:
+      ssh_private_key:
+        required: true
+      host:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ssh_private_key }}
+
+      - name: Copy compose file + Caddyfile to the instance
+        env:
+          HOST: ${{ secrets.host }}
+        run: |
+          # Scp to /tmp first, not /opt/clickforms directly — that directory is
+          # root-owned (created by EC2 user-data at boot), and ec2-user can't write
+          # to it over plain scp. The remote step below moves it into place with sudo.
+          scp -o StrictHostKeyChecking=no \
+            docker-compose.yml "Caddyfile.${{ inputs.environment }}" \
+            "ec2-user@${HOST}:/tmp/"
+
+      - name: Deploy on the instance
+        env:
+          HOST: ${{ secrets.host }}
+          IMAGE: ${{ inputs.image }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          ssh -o StrictHostKeyChecking=no "ec2-user@${HOST}" bash -s -- "${IMAGE}" "${ENVIRONMENT}" <<'REMOTE'
+          set -euo pipefail
+          IMAGE="$1"
+          ENVIRONMENT="$2"
+
+          sudo mkdir -p /opt/clickforms
+          sudo mv "/tmp/docker-compose.yml" "/tmp/Caddyfile.${ENVIRONMENT}" /opt/clickforms/
+          cd /opt/clickforms
+
+          # ECR_IMAGE is the only value this workflow needs to set — ENVIRONMENT,
+          # CADDYFILE, AWS_REGION, S3_BUCKET were already written to .env by user-data
+          # when the instance was first created (see scripts/setup-ec2.sh).
+          sudo touch .env
+          sudo sed -i '/^ECR_IMAGE=/d' .env
+          echo "ECR_IMAGE=${IMAGE}" | sudo tee -a .env >/dev/null
+
+          # awscli isn't baked into the AMI (only Docker is, via user-data) — install
+          # it once, on demand, rather than requiring every instance to be recreated.
+          command -v aws >/dev/null 2>&1 || sudo dnf install -y awscli
+
+          REGISTRY="$(echo "${IMAGE}" | cut -d/ -f1)"
+          REGION="$(echo "${REGISTRY}" | cut -d. -f4)"
+          aws ecr get-login-password --region "${REGION}" \
+            | sudo docker login --username AWS --password-stdin "${REGISTRY}"
+
+          sudo docker compose pull
+          sudo docker compose up -d
+          REMOTE
+
+      - name: Health check
+        run: |
+          echo "Waiting for https://${{ inputs.domain }}/health to return 200..."
+          for i in $(seq 1 12); do
+            if curl -sf -o /dev/null "https://${{ inputs.domain }}/health"; then
+              echo "Healthy."
+              exit 0
+            fi
+            echo "Not ready yet (attempt ${i}/12), retrying in 10s..."
+            sleep 10
+          done
+          echo "https://${{ inputs.domain }}/health never returned 200 within 2 minutes." >&2
+          exit 1

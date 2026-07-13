@@ -1,0 +1,33 @@
+name: Promote to production
+
+# Manual only — no build, no push. Takes an image tag that already exists in ECR
+# (i.e. one that deploy-staging.yml already built, pushed, and deployed to staging)
+# and redeploys that exact same image to production. This is the "promote" half of
+# "build once, promote the artifact": production always runs a byte-for-byte copy of
+# something that was already running on staging.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to promote, e.g. sha-abc1234 (find it in the deploy-staging run you want to promote, or in ECR)'
+        required: true
+        type: string
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REPOSITORY: clickforms
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: production
+      # Account ID is fixed (single AWS account for both environments), so the
+      # registry host can be built directly rather than requiring a second OIDC
+      # login just to look it up.
+      image: 385129731846.dkr.ecr.ap-southeast-2.amazonaws.com/clickforms:${{ inputs.image_tag }}
+      domain: clickforms.com.au
+    secrets:
+      ssh_private_key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+      host: ${{ secrets.PRODUCTION_HOST }}

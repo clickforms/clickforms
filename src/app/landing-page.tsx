@@ -16,6 +16,63 @@ function ArrowRightIcon() {
   );
 }
 
+function BuilderIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <rect x="3.5" y="3.5" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="12.5" y="3.5" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="3.5" y="12.5" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="12.5" y="12.5" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function CollectIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <path
+        d="M11 3v12M6 10l5 5 5-5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M4 17h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function WorkflowIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <circle cx="5" cy="11" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="17" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="17" cy="17" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7.3 10.2 14.5 6.2M7.3 11.8l7.2 4" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <path
+        d="M11 3 17 5.5V10.5c0 3.5-2.5 6-6 7.5-3.5-1.5-6-4-6-7.5V5.5L11 3Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.5 11 10.5 13 14 9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const FIELD_TYPES = [
   'Short text',
   'Long text',
@@ -27,6 +84,29 @@ const FIELD_TYPES = [
   'Section break',
   'Static text',
   'Multi choice',
+] as const;
+
+const FEATURES = [
+  {
+    icon: BuilderIcon,
+    title: 'Drag-and-drop builder',
+    desc: '15+ field types, multi-page layouts, conditional logic, and custom branding — design forms that match your process.',
+  },
+  {
+    icon: CollectIcon,
+    title: 'Collect accurately',
+    desc: 'Validation, file uploads, e-signatures, and structured answers for intake and consent.',
+  },
+  {
+    icon: WorkflowIcon,
+    title: 'Approval workflow',
+    desc: 'Draft, submit for review, approve, and publish — full lifecycle control for every form.',
+  },
+  {
+    icon: ShieldIcon,
+    title: 'Secure by default',
+    desc: 'Authenticated admin access, audit trails, and data that stays under your control.',
+  },
 ] as const;
 
 const TEMPLATES = [
@@ -95,13 +175,10 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
       <section className="landing-hero">
         <div className="landing-container landing-hero-inner">
           <div className="landing-hero-copy">
-            <div className="landing-pill">
-              <span className="landing-pill-dot" />
-              Clickforms
-            </div>
+            <p className="landing-kicker-hero">Clickforms platform</p>
             <h1 className="landing-hero-title">
               Forms that move
-              <span className="landing-hero-gradient"> as fast as your team</span>
+              <span className="landing-hero-accent"> as fast as your team</span>
             </h1>
             <p className="landing-hero-lead">
               Build intake, consent, and service agreement forms. Collect signatures, route
@@ -136,44 +213,6 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
           </div>
 
           <div className="landing-hero-stage" aria-hidden="true">
-            <div className="landing-stage-glow" />
-
-            {/* Dashboard card — back layer */}
-            <div className="landing-mock landing-mock--dash">
-              <div className="landing-mock-bar">
-                <span className="landing-mock-dot landing-mock-dot--r" />
-                <span className="landing-mock-dot landing-mock-dot--y" />
-                <span className="landing-mock-dot landing-mock-dot--g" />
-              </div>
-              <div className="landing-mock-dash-body">
-                <div className="landing-mock-sidebar">
-                  <div className="landing-mock-sidebar-brand" />
-                  <div className="landing-mock-nav-item landing-mock-nav-item--on" />
-                  <div className="landing-mock-nav-item" />
-                  <div className="landing-mock-nav-item" />
-                </div>
-                <div className="landing-mock-main">
-                  <div className="landing-mock-stat-row">
-                    <div className="landing-mock-stat landing-mock-stat--teal">
-                      <span>12</span>
-                      <small>Active forms</small>
-                    </div>
-                    <div className="landing-mock-stat landing-mock-stat--blue">
-                      <span>847</span>
-                      <small>Submissions</small>
-                    </div>
-                  </div>
-                  <div className="landing-mock-table">
-                    <div className="landing-mock-table-head" />
-                    <div className="landing-mock-table-row" />
-                    <div className="landing-mock-table-row" />
-                    <div className="landing-mock-table-row landing-mock-table-row--dim" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Builder card — front layer */}
             <div className="landing-mock landing-mock--builder">
               <div className="landing-mock-bar">
                 <span className="landing-mock-dot landing-mock-dot--r" />
@@ -222,34 +261,17 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
                 </div>
               </div>
             </div>
-
-            <div className="landing-float landing-float--1">
-              <span className="landing-float-icon landing-float-icon--green">✓</span>
-              Form published
-            </div>
-            <div className="landing-float landing-float--2">
-              <span className="landing-float-avatar">SM</span>
-              <div>
-                <strong>New submission</strong>
-                <small>Sarah M. · 2m ago</small>
-              </div>
-            </div>
-            <div className="landing-float landing-float--3">
-              <span className="landing-float-badge">Approved</span>
-            </div>
           </div>
         </div>
 
-        <div className="landing-marquee-wrap" aria-hidden="true">
-          <div className="landing-marquee">
-            {[...FIELD_TYPES, ...FIELD_TYPES].map((field, i) => (
-              <span
-                key={`${field}-${i < FIELD_TYPES.length ? 'a' : 'b'}`}
-                className="landing-marquee-item"
-              >
-                {field}
-              </span>
-            ))}
+        <div className="landing-container">
+          <div className="landing-field-strip">
+            <p className="landing-field-strip-label">Field types included</p>
+            <div className="landing-field-strip-list">
+              {FIELD_TYPES.map((field) => (
+                <span key={field}>{field}</span>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -265,16 +287,25 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
             </h2>
           </div>
 
-          <div className="landing-bento">
-            <article className="landing-bento-card landing-bento-card--hero">
-              <div className="landing-bento-copy">
-                <h3>Drag-and-drop builder</h3>
-                <p>
-                  15+ field types, multi-page layouts, conditional logic, custom branding, and
-                  section breaks — design forms that match your process.
-                </p>
+          <div className="landing-features">
+            {FEATURES.map((f) => (
+              <article key={f.title} className="landing-feature-card">
+                <div className="landing-feature-icon">
+                  <f.icon />
+                </div>
+                <h3>{f.title}</h3>
+                <p>{f.desc}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="landing-panels">
+            <article className="landing-panel">
+              <div className="landing-panel-copy">
+                <h3>See the builder in action</h3>
+                <p>Drag fields onto the canvas, arrange pages, and preview as you go.</p>
               </div>
-              <div className="landing-bento-visual landing-bento-visual--builder">
+              <div className="landing-panel-visual">
                 <div className="landing-mini-builder">
                   <div className="landing-mini-palette">
                     {['Text', 'Choice', 'Sign', 'File'].map((f) => (
@@ -293,69 +324,12 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
               </div>
             </article>
 
-            <article className="landing-bento-card">
-              <div className="landing-bento-icon landing-bento-icon--blue">
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-                  <path
-                    d="M11 3v12M6 10l5 5 5-5"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M4 17h14"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
-              <h3>Collect accurately</h3>
-              <p>
-                Validation, file uploads, e-signatures, and structured answers for intake and
-                consent.
-              </p>
-              <div className="landing-bento-tags">
-                <span>Validation</span>
-                <span>Uploads</span>
-                <span>E-sign</span>
-              </div>
-            </article>
-
-            <article className="landing-bento-card">
-              <div className="landing-bento-icon landing-bento-icon--purple">
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-                  <circle cx="5" cy="11" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-                  <circle cx="17" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-                  <circle cx="17" cy="17" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-                  <path
-                    d="M7.3 10.2 14.5 6.2M7.3 11.8l7.2 4"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                </svg>
-              </div>
-              <h3>Approval workflow</h3>
-              <p>
-                Draft, submit for review, approve, and publish. Full lifecycle control for every
-                form.
-              </p>
-              <div className="landing-bento-flow">
-                <span>Draft</span>
-                <span className="landing-bento-flow-arrow">→</span>
-                <span>Approved</span>
-                <span className="landing-bento-flow-arrow">→</span>
-                <span className="landing-bento-flow-live">Live</span>
-              </div>
-            </article>
-
-            <article className="landing-bento-card landing-bento-card--wide">
-              <div className="landing-bento-copy">
+            <article className="landing-panel">
+              <div className="landing-panel-copy">
                 <h3>Review every submission</h3>
                 <p>Search, filter, and inspect responses from a central admin workspace.</p>
               </div>
-              <div className="landing-bento-visual landing-bento-visual--table">
+              <div className="landing-panel-visual">
                 <div className="landing-mini-table">
                   <div className="landing-mini-table-head">
                     <span>Form</span>
@@ -380,63 +354,30 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
                 </div>
               </div>
             </article>
-
-            <article className="landing-bento-card landing-bento-card--accent">
-              <div className="landing-bento-icon landing-bento-icon--light">
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-                  <path
-                    d="M11 3 17 5.5V10.5c0 3.5-2.5 6-6 7.5-3.5-1.5-6-4-6-7.5V5.5L11 3Z"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M8.5 11 10.5 13 14 9"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <h3>Your infrastructure</h3>
-              <p>
-                Authenticated admin access, audit trails, and data that stays under your control.
-              </p>
-            </article>
           </div>
         </div>
       </section>
 
-      <section className="landing-section landing-section--dark" id="templates">
+      <section className="landing-section landing-section--alt" id="templates">
         <div className="landing-container">
           <div className="landing-section-head">
-            <p className="landing-kicker landing-kicker--light">Use cases</p>
-            <h2 className="landing-h2 landing-h2--light">Built for the forms you run every day</h2>
-            <p className="landing-section-lead landing-section-lead--light">
+            <p className="landing-kicker">Use cases</p>
+            <h2 className="landing-h2">Built for the forms you run every day</h2>
+            <p className="landing-section-lead">
               From client onboarding to incident reporting — templates and workflows your team
               already knows.
             </p>
           </div>
           <div className="landing-template-grid">
             {TEMPLATES.map((t) => (
-              <article key={t.title} className="landing-template-card">
-                <span
-                  className="landing-template-tag"
-                  style={{ '--tpl-accent': t.accent } as CSSProperties}
-                >
-                  {t.tag}
-                </span>
+              <article
+                key={t.title}
+                className="landing-template-card"
+                style={{ '--tpl-accent': t.accent } as CSSProperties}
+              >
+                <span className="landing-template-tag">{t.tag}</span>
                 <h3>{t.title}</h3>
                 <p>{t.desc}</p>
-                <div className="landing-template-preview">
-                  <div className="landing-template-preview-bar" style={{ background: t.accent }} />
-                  <div className="landing-template-preview-lines">
-                    <div />
-                    <div />
-                    <div style={{ width: '60%' }} />
-                  </div>
-                </div>
               </article>
             ))}
           </div>
@@ -484,7 +425,6 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
       </section>
 
       <section className="landing-cta">
-        <div className="landing-cta-bg" aria-hidden="true" />
         <div className="landing-container landing-cta-inner">
           <h2 className="landing-cta-title">Ready to modernise your form workflows?</h2>
           <p className="landing-cta-lead">

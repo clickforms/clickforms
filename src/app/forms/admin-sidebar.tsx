@@ -4,6 +4,7 @@ import type { UserRole } from '@prisma/client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { BrandMark } from '@/components/brand-mark';
 import { canManageUsers } from '@/lib/user-roles';
 
 function DashboardIcon() {
@@ -109,19 +110,6 @@ function SettingsIcon() {
         strokeWidth="1.4"
         strokeLinecap="round"
       />
-    </svg>
-  );
-}
-
-function BrandMark() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <path
-        d="M11 3c-3.5 2.5-6 5.5-6 9a6 6 0 1 0 12 0c0-3.5-2.5-6.5-6-9Z"
-        fill="currentColor"
-        opacity="0.9"
-      />
-      <path d="M11 8v6M8.5 11h5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
@@ -253,7 +241,7 @@ export function AdminSidebar({ collapsed, userRole }: { collapsed: boolean; user
     <aside className={`admin-sidebar ${collapsed ? 'admin-sidebar--collapsed' : ''}`}>
       <Link href="/forms" className="admin-brand-block">
         <span className="admin-brand-mark">
-          <BrandMark />
+          <BrandMark size={22} id="admin-sidebar" />
         </span>
         <span className="admin-brand-text">Clickforms</span>
       </Link>

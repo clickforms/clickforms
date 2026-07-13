@@ -73,9 +73,15 @@ export function renderEmailLayout({
               <td style="padding: 28px 32px 8px; border-bottom: 1px solid ${BORDER};">
                 <table role="presentation" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td style="padding-right: 8px;">
-                      <table role="presentation" width="24" height="24" cellpadding="0" cellspacing="0" style="background-color: ${BRAND_GREEN}; border-radius: 6px;">
-                        <tr><td></td></tr>
+                    <td style="padding-right: 8px; vertical-align: middle;">
+                      <table role="presentation" width="28" height="28" cellpadding="0" cellspacing="0" style="background-color: ${BRAND_GREEN}; border-radius: 7px;">
+                        <tr>
+                          <td align="center" style="padding: 6px 5px;">
+                            <div style="height: 2px; background: #fff; border-radius: 1px; margin: 0 0 3px;"></div>
+                            <div style="height: 2px; width: 60%; background: #fff; border-radius: 1px; margin: 0 0 3px;"></div>
+                            <div style="height: 2px; background: #fff; border-radius: 1px;"></div>
+                          </td>
+                        </tr>
                       </table>
                     </td>
                     <td style="font-size: 16px; font-weight: 700; color: ${TEXT_DARK};">Clickforms</td>

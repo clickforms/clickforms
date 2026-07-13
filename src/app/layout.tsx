@@ -20,6 +20,24 @@ export const metadata: Metadata = {
   title: 'Clickforms — Internal forms & workflows',
   description:
     'Build intake, consent, and service agreement forms. Collect e-signatures and submissions, route through approvals, and manage responses — your in-house replacement for scattered form workflows.',
+  applicationName: 'Clickforms',
+  icons: {
+    icon: [
+      { url: '/brand/favicon.ico', sizes: 'any' },
+      { url: '/brand/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/brand/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/brand/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/brand/mark.svg', type: 'image/svg+xml' },
+    ],
+    apple: [{ url: '/brand/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  openGraph: {
+    title: 'Clickforms — Internal forms & workflows',
+    description:
+      'Build intake, consent, and service agreement forms. Collect e-signatures and submissions, route through approvals, and manage responses.',
+    siteName: 'Clickforms',
+    images: [{ url: '/brand/logo.png', width: 666, height: 184, alt: 'Clickforms' }],
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

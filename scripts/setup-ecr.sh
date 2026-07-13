@@ -28,7 +28,7 @@ else
     --repository-name "${REPO_NAME}" \
     --image-scanning-configuration scanOnPush=true \
     --image-tag-mutability IMMUTABLE \
-    --encryption-configuration EncryptionType=AES256 \
+    --encryption-configuration encryptionType=AES256 \
     --region "${REGION}" >/dev/null
 fi
 

@@ -33,13 +33,6 @@ export default async function SignupPage() {
 
   return (
     <div className="signup-page">
-      <div className="signup-page-bg" aria-hidden="true">
-        <div className="signup-page-mesh" />
-        <div className="signup-page-grid" />
-        <div className="signup-page-orb signup-page-orb--a" />
-        <div className="signup-page-orb signup-page-orb--b" />
-      </div>
-
       <div className="signup-layout">
         <aside className="signup-aside">
           <Link href="/" className="signup-aside-brand">

@@ -18,11 +18,6 @@ export default async function ForgotPasswordPage() {
 
   return (
     <div className="login-page">
-      <div className="login-page-bg" aria-hidden="true">
-        <div className="login-page-mesh" />
-        <div className="login-page-grid" />
-      </div>
-
       <div className="login-shell">
         <Link href="/" className="login-brand">
           <BrandMark id="forgot-password" />

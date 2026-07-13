@@ -31,6 +31,12 @@ RUN node .yarn/releases/yarn-4.17.1.cjs install --immutable
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+# ENV doesn't carry across FROM boundaries, and COPY . . below causes yarn to
+# re-validate/re-link the dependency tree against the freshly-copied source (same
+# postinstall/build scripts as the deps stage run again) — so this needs to be
+# re-declared here too, or puppeteer's postinstall tries to download Chrome again
+# and fails, which cascades into breaking `next build`'s TypeScript resolution.
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN node .yarn/releases/yarn-4.17.1.cjs prisma:generate

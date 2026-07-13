@@ -45,8 +45,16 @@ export function ForgotPasswordForm() {
       <div className="login-form">
         <div className="signup-check-email">
           <div className="signup-check-email-icon" aria-hidden="true">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect x="3" y="6" width="22" height="16" rx="3" stroke="currentColor" strokeWidth="1.8" />
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+              <rect
+                x="3"
+                y="6"
+                width="22"
+                height="16"
+                rx="3"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
               <path
                 d="M4 8.5l10 7 10-7"
                 stroke="currentColor"

@@ -21,7 +21,8 @@ export function signupVerificationEmail(params: {
       `Click the button below to verify your email and set a password for <strong>${params.organizationName}</strong>'s Clickforms workspace.`,
     ],
     cta: { label: 'Verify email & set password', url: params.verifyUrl },
-    footnote: "This link expires in 24 hours. If you didn't request this, you can ignore this email.",
+    footnote:
+      "This link expires in 24 hours. If you didn't request this, you can ignore this email.",
   });
 
   return { subject: 'Verify your email to finish setting up Clickforms', html, text };
@@ -43,10 +44,15 @@ export function inviteEmail(params: {
       `<strong>${params.invitedByName}</strong> invited you to join <strong>${params.organizationName}</strong>'s Clickforms workspace as ${roleLabel(params.role)}.`,
     ],
     cta: { label: 'Accept invite & set password', url: params.inviteUrl },
-    footnote: "This link expires in 7 days. If you weren't expecting this, you can ignore this email.",
+    footnote:
+      "This link expires in 7 days. If you weren't expecting this, you can ignore this email.",
   });
 
-  return { subject: `You've been invited to join ${params.organizationName} on Clickforms`, html, text };
+  return {
+    subject: `You've been invited to join ${params.organizationName} on Clickforms`,
+    html,
+    text,
+  };
 }
 
 /** "Forgot password" flow (POST /api/auth/forgot-password) — reset link for an existing user. */

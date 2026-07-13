@@ -78,7 +78,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       verifyUrl,
     });
 
-    await sendEmail({ to: email, subject: rendered.subject, html: rendered.html, text: rendered.text });
+    await sendEmail({
+      to: email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+    });
 
     // Dev-mode convenience: when SMTP isn't configured, sendEmail() only logs the
     // message server-side — surface the link in the response too so local testing

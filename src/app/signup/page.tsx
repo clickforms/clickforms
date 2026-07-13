@@ -52,8 +52,8 @@ export default async function SignupPage() {
               Your workspace for forms that actually get finished
             </h1>
             <p className="signup-aside-lead">
-              Replace scattered PDFs and inbox chaos with structured intake, consent, and
-              service agreements — ready for your team.
+              Replace scattered PDFs and inbox chaos with structured intake, consent, and service
+              agreements — ready for your team.
             </p>
           </div>
 
@@ -79,8 +79,8 @@ export default async function SignupPage() {
             <p className="signup-panel-kicker">Get started</p>
             <h2 id="signup-panel-title">Create your organisation</h2>
             <p>
-              Set up your workspace. You&apos;ll be the organisation admin and can invite
-              teammates later.
+              Set up your workspace. You&apos;ll be the organisation admin and can invite teammates
+              later.
             </p>
           </div>
           <SignupForm />

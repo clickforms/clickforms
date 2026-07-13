@@ -31,7 +31,9 @@ export function renderEmailLayout({
   cta,
   footnote,
 }: EmailLayoutParams): { html: string; text: string } {
-  const bodyHtml = paragraphs.map((paragraph) => `<p style="${P_STYLE}">${paragraph}</p>`).join('\n');
+  const bodyHtml = paragraphs
+    .map((paragraph) => `<p style="${P_STYLE}">${paragraph}</p>`)
+    .join('\n');
 
   const ctaHtml = cta
     ? `

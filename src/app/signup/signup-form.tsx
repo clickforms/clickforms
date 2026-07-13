@@ -76,8 +76,16 @@ export function SignupForm() {
       <div className="signup-form">
         <div className="signup-check-email">
           <div className="signup-check-email-icon" aria-hidden="true">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect x="3" y="6" width="22" height="16" rx="3" stroke="currentColor" strokeWidth="1.8" />
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+              <rect
+                x="3"
+                y="6"
+                width="22"
+                height="16"
+                rx="3"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
               <path
                 d="M4 8.5l10 7 10-7"
                 stroke="currentColor"
@@ -89,8 +97,8 @@ export function SignupForm() {
           </div>
           <h3 className="signup-check-email-title">Check your email</h3>
           <p>
-            We&apos;ve sent a verification link to <strong>{submittedEmail}</strong>. Click the
-            link to set your password and get started.
+            We&apos;ve sent a verification link to <strong>{submittedEmail}</strong>. Click the link
+            to set your password and get started.
           </p>
         </div>
         <p className="signup-form-footer">
@@ -187,9 +195,7 @@ export function SignupForm() {
             return (
               <label
                 key={option.value}
-                className={
-                  selected ? 'signup-choice signup-choice--selected' : 'signup-choice'
-                }
+                className={selected ? 'signup-choice signup-choice--selected' : 'signup-choice'}
               >
                 <input
                   type="radio"
@@ -215,9 +221,7 @@ export function SignupForm() {
           onChange={(event) => setTermsAccepted(event.target.checked)}
           disabled={isSubmitting}
         />
-        <span>
-          I agree to the Clickforms Terms of Use and Privacy Policy.
-        </span>
+        <span>I agree to the Clickforms Terms of Use and Privacy Policy.</span>
       </label>
 
       <button className="button signup-submit" type="submit" disabled={isSubmitting}>

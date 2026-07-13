@@ -85,6 +85,11 @@ jobs:
           aws ecr get-login-password --region "${REGION}" \
             | sudo docker login --username AWS --password-stdin "${REGISTRY}"
 
+          # ECR tags are immutable, so every deploy pulls a brand-new image — old
+          # sha-tagged layers just pile up otherwise. Doesn't touch named volumes
+          # (caddy_data/caddy_config) since -af only targets images/containers/networks.
+          sudo docker system prune -af
+
           sudo docker compose pull
           sudo docker compose up -d
           REMOTE

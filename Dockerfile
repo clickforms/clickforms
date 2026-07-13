@@ -42,6 +42,18 @@ COPY . .
 RUN node .yarn/releases/yarn-4.17.1.cjs prisma:generate
 RUN node .yarn/releases/yarn-4.17.1.cjs build
 
+# ---- ssm-deps: isolated install for entrypoint's two SSM GetParameter calls ----
+# Previously this used the apt `awscli` package, on the theory that the CLI alone was
+# lighter than pulling in the full AWS SDK. In practice awscli's Debian package drags in
+# a whole Python runtime (python3 + docutils + sgml-base, ~150-250MB with
+# --no-install-recommends) just to run `aws ssm get-parameter` twice. @aws-sdk/client-ssm
+# is pure JS with no native bindings (~15-20MB with transitive deps) — installed here in
+# its own throwaway node_modules, completely separate from the app's yarn dependency
+# tree, so it can't interact with the postinstall/prisma-generate machinery above.
+FROM node:22-bookworm-slim AS ssm-deps
+WORKDIR /app
+RUN npm install --omit=dev @aws-sdk/client-ssm@^3.700.0
+
 # ---- runtime: minimal image containing only what `node server.js` needs ----
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
@@ -49,16 +61,14 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# AWS CLI is needed by entrypoint.sh to pull secrets from SSM Parameter Store at
-# container start (specs/00-infrastructure.md) — kept to just the CLI, not the full
-# SDK, to minimize image size.
-#
 # `chromium` + `fonts-freefont-ttf` give the submission-PDF-export feature
 # (src/lib/forms/generate-submission-pdf.ts) a real headless browser to drive —
 # Puppeteer's own bundled-Chrome download is skipped above, so without this the
-# PDF export route fails at runtime with "Could not find Chrome".
+# PDF export route fails at runtime with "Could not find Chrome". Chromium can't be
+# swapped for an Alpine-based image to save space here — see the glibc/Prisma note
+# at the top of this file; we're stuck on Debian either way.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends awscli chromium fonts-freefont-ttf \
+  && apt-get install -y --no-install-recommends chromium fonts-freefont-ttf \
   && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
@@ -75,9 +85,25 @@ COPY --from=builder /app/prisma ./prisma
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
+# Kept under ./ssm-deps/, not ./node_modules — the standalone COPY above already
+# populated ./node_modules with Next's own trimmed bundle, and copying here would
+# have clobbered it. Placing resolve-secrets.cjs alongside its node_modules means
+# plain `require()` resolution finds @aws-sdk/client-ssm without any NODE_PATH hacks.
+COPY --from=ssm-deps /app/node_modules ./ssm-deps/node_modules
+COPY resolve-secrets.cjs ./ssm-deps/resolve-secrets.cjs
+
 USER nextjs
 
 EXPOSE 3000
+
+# Container-level self-report, complementary to (not a replacement for) the external
+# curl-against-the-real-domain check in .github/workflows/_deploy.yml — that one proves
+# TLS/Caddy/DNS all work end-to-end, this one lets `docker ps` / orchestrators see
+# per-container health without going through the network. Uses Node's own http client
+# rather than adding a curl/wget package, since node is already here and the whole
+# point of this stage is staying minimal.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["node", "server.js"]

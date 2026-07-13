@@ -185,6 +185,13 @@ AMI_ID="$(aws ec2 describe-images \
   --output text --region "${REGION}")"
 echo "==> AMI: ${AMI_ID} (Amazon Linux 2023, arm64)"
 
+# --- Root volume: default AMI size (8GB) is too small — the app image alone bundles
+# Chromium for the PDF-export feature (see Dockerfile) and runs well past 8GB once
+# Caddy's image and Docker's own layer overhead are added, especially across repeated
+# deploys where old sha-tagged layers accumulate. 30GB gp3 is cheap (~$2.40/mo) headroom.
+ROOT_DEVICE_NAME="$(aws ec2 describe-images --image-ids "${AMI_ID}" --query 'Images[0].RootDeviceName' --output text --region "${REGION}")"
+EC2_ROOT_VOLUME_SIZE="${EC2_ROOT_VOLUME_SIZE:-30}"
+
 # --- Domain for this environment (used only in the final DNS instructions below) ------------
 if [[ "${ENVIRONMENT}" == "production" ]]; then
   DOMAIN_NAME="clickforms.com.au"
@@ -238,6 +245,7 @@ else
     --subnet-id "${SUBNET_ID}" \
     --iam-instance-profile "Name=${INSTANCE_PROFILE_NAME}" \
     --user-data "file://${USER_DATA_FILE}" \
+    --block-device-mappings "[{\"DeviceName\":\"${ROOT_DEVICE_NAME}\",\"Ebs\":{\"VolumeSize\":${EC2_ROOT_VOLUME_SIZE},\"VolumeType\":\"gp3\"}}]" \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${TAG_NAME}}]" \
     --query 'Instances[0].InstanceId' --output text --region "${REGION}")"
 

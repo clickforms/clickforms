@@ -17,6 +17,15 @@ permissions:
 env:
   AWS_REGION: ap-southeast-2
   ECR_REPOSITORY: clickforms
+  # prisma.config.ts calls env('DATABASE_URL') at load time, which runs on every
+  # `prisma generate` — including the postinstall hook `yarn install` fires. This is a
+  # placeholder only: generate never connects to it, it just needs to be a syntactically
+  # valid Postgres URL so the config module doesn't throw in an environment where the
+  # real DB isn't reachable (it also isn't — RDS is EC2-SG-only, see setup-ec2.sh).
+  DATABASE_URL: 'postgresql://ci:ci@localhost:5432/ci'
+  # husky's "prepare" script (also a postinstall-time hook) tries to install git hooks;
+  # unnecessary and occasionally flaky in CI. HUSKY=0 is husky's documented CI opt-out.
+  HUSKY: '0'
 
 jobs:
   build-and-push:

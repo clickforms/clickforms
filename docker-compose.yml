@@ -39,6 +39,11 @@ services:
       # clickforms-production (see scripts/setup-s3.sh).
       S3_BUCKET: ${S3_BUCKET:?Set S3_BUCKET=clickforms-staging or clickforms-prod in .env}
       NODE_ENV: production
+      # Without this, NextAuth can't determine its own public URL and falls back to
+      # inferring localhost:3000 — sign-in succeeds but every redirect (post-login,
+      # callbackUrl, etc.) sends the browser to http://localhost:3000 instead of the
+      # real domain. DOMAIN is written into .env by scripts/setup-ec2.sh's user-data.
+      NEXTAUTH_URL: https://${DOMAIN:?Set DOMAIN=staging.clickforms.com.au or clickforms.com.au in .env}
     expose:
       - '3000'
     networks:

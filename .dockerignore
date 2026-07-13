@@ -1,0 +1,37 @@
+# The build-and-push job in deploy-staging.yml runs `yarn install` (for
+# typecheck/lint/test) directly on the runner BEFORE the Docker build step,
+# which leaves an amd64-built node_modules/ sitting in the checkout dir.
+# Docker's build context is NOT filtered by .gitignore, only by this file —
+# so without excluding node_modules here, `COPY . .` in the builder stage
+# (which runs after COPY --from=deps node_modules) overwrites the correctly
+# cross-compiled arm64 node_modules with the runner's native amd64 binaries
+# (esbuild, sharp, Prisma engines, SWC/lightningcss, etc.), corrupting the
+# build. This caused the "Installing devDependencies (yarn): - typescript"
+# re-trigger and the downstream `The "id" argument must be of type string.
+# Received undefined` crash in `next build`.
+node_modules/
+SAFE_TO_DELETE_stale_node_modules/
+
+.next/
+out/
+build/
+dist/
+
+.git/
+.github/
+
+.env
+.env*.local
+
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.DS_Store
+.vscode/
+
+*.tsbuildinfo
+AWSCLIV2.pkg
+*.pem

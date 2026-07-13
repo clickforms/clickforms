@@ -14,17 +14,22 @@ WORKDIR /app
 # system Chromium via apt in the runtime stage instead (see PUPPETEER_EXECUTABLE_PATH
 # below) and point Puppeteer at it.
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+# prisma.config.ts calls env('DATABASE_URL') at load time, which runs on every `prisma
+# generate` call — including the "postinstall" hook that `yarn install` fires below.
+# Build-time-only placeholder — generate never connects to it, it just needs to parse
+# as a Postgres URL. The real DATABASE_URL is injected at container start by
+# entrypoint.sh from SSM, not baked into the image.
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
+# The postinstall hook needs prisma/schema.prisma to exist, so it has to be copied in
+# before `yarn install` runs, not just in the builder stage's later `COPY . .`.
+COPY prisma ./prisma
 RUN node .yarn/releases/yarn-4.17.1.cjs install --immutable
 
 # ---- builder: generate the Prisma client and produce the Next.js standalone build ----
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
-# prisma.config.ts calls env('DATABASE_URL') at load time, which runs on every `prisma
-# generate` call below. Build-time-only placeholder — generate never connects to it,
-# it just needs to parse as a Postgres URL. The real DATABASE_URL is injected at
-# container start by entrypoint.sh from SSM, not baked into the image.
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

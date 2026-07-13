@@ -1,0 +1,375 @@
+// Clickforms — Prisma schema
+//
+// Source of truth: ARCHITECTURE.md §4 (data model) and specs/01-data-model-and-auth.md.
+// Every tenant-scoped table carries `organizationId` (mapped to `organization_id`) even
+// though there is exactly one organization today — this is what makes a future multi-tenant
+// conversion (ARCHITECTURE.md §7) additive instead of a rewrite.
+//
+// Row-Level Security: Postgres RLS policies keyed off `current_setting('app.current_org_id')`
+// are NOT expressed here — Prisma has no `CREATE POLICY` primitive. They are hand-written SQL
+// in prisma/migrations/<ts>_add_row_level_security/migration.sql, appended after the table
+// migration Prisma would normally generate. See src/lib/db.ts for the `withOrgContext` helper
+// that sets the session variable per request, which is what makes those policies bite.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: the connection string no longer lives here — it's resolved by
+// prisma.config.ts (for the CLI) and by the driver adapter passed into
+// PrismaClient at runtime (see src/lib/db.ts and prisma/seed.ts).
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  admin
+  member
+  editor
+  viewer
+
+  @@map("user_role")
+}
+
+enum FormStatus {
+  draft
+  approved
+  published
+  archived
+
+  @@map("form_status")
+}
+
+enum SubmissionStatus {
+  in_progress
+  submitted
+  approved
+  rejected
+
+  @@map("submission_status")
+}
+
+enum WorkflowStepStatus {
+  pending
+  approved
+  rejected
+
+  @@map("workflow_step_status")
+}
+
+// What the respondent selected on the signup form for "which of the following most
+// applies to you" — purely informational (sales/onboarding context), not used by any
+// application logic.
+enum SignupFormSituation {
+  paper_form
+  existing_online_form
+  no_form
+
+  @@map("signup_form_situation")
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users           User[]
+  userInvites     UserInvite[]
+  forms           Form[]
+  formVersions    FormVersion[]
+  submissions     Submission[]
+  submissionFiles   SubmissionFile[]
+  organizationFiles OrganizationFile[]
+  signatures        Signature[]
+  workflowSteps     WorkflowStep[]
+  auditLogs         AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  email          String
+  name           String?
+  phone          String?
+  // Not itemized in ARCHITECTURE.md §4's abbreviated field list, but required by the
+  // credentials provider described in specs/01-data-model-and-auth.md ("email + bcrypt
+  // password hash"). bcryptjs-hashed, never the plaintext password.
+  passwordHash   String   @map("password_hash")
+  role           UserRole @default(member)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedFiles      OrganizationFile[] @relation("OrganizationFileUploadedBy")
+  createdForms       Form[]             @relation("FormCreatedBy")
+  approvedWorkflows  WorkflowStep[]  @relation("WorkflowApprover")
+  auditLogs          AuditLog[]      @relation("AuditActor")
+  sentInvites        UserInvite[]    @relation("InviteSender")
+  passwordResetTokens PasswordResetToken[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@map("users")
+}
+
+model UserInvite {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  email          String
+  name           String?
+  role           UserRole
+  token          String    @unique
+  invitedById    String    @map("invited_by_id") @db.Uuid
+  expiresAt      DateTime  @map("expires_at")
+  acceptedAt     DateTime? @map("accepted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("InviteSender", fields: [invitedById], references: [id])
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@map("user_invites")
+}
+
+// Step 1 of self-service signup (POST /api/auth/signup): captures the org/contact
+// details up front but does NOT create an Organization/User yet — that only happens
+// once the emailed verification link is clicked and a password is set (POST
+// /api/auth/signup/verify). Looked up by token pre-org-context, same as UserInvite,
+// so it goes through the plain `prisma` client rather than `withOrgContext`.
+model PendingSignup {
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationName String              @map("organization_name")
+  firstName        String              @map("first_name")
+  lastName         String              @map("last_name")
+  email            String
+  phone            String
+  formSituation    SignupFormSituation @map("form_situation")
+  termsAcceptedAt  DateTime            @map("terms_accepted_at")
+  token            String              @unique
+  expiresAt        DateTime            @map("expires_at")
+  completedAt      DateTime?           @map("completed_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+
+  // Re-submitting the signup form with the same email (e.g. the first link expired,
+  // or the email never arrived) refreshes this row via upsert rather than piling up
+  // duplicate pending rows — mirrors UserInvite's re-invite-refreshes-token behavior.
+  @@unique([email])
+  @@map("pending_signups")
+}
+
+// "Forgot password" flow: a short-lived, single-use token emailed to the user's
+// address. No organization_id — like PendingSignup/UserInvite, this is looked up by
+// token alone (the requester hasn't proven who they are yet), so it's read/written
+// through the plain `prisma` client rather than withOrgContext, and carries no RLS
+// policy (see the migration for why). userId is the source of truth for which
+// organization the eventual password update belongs to.
+model PasswordResetToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model Form {
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String     @map("organization_id") @db.Uuid
+  name              String
+  slug              String
+  status            FormStatus @default(draft)
+  // Nullable: a brand-new form has no published version yet. Points at whichever
+  // form_versions row the public renderer (spec 03) should read.
+  currentVersionId  String?    @unique @map("current_version_id") @db.Uuid
+  createdBy         String     @map("created_by") @db.Uuid
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator        User          @relation("FormCreatedBy", fields: [createdBy], references: [id])
+  // All versions of this form, including drafts and the currently-published one.
+  versions       FormVersion[] @relation("FormVersions")
+  // The one version currently live on the public renderer, if published.
+  currentVersion FormVersion?  @relation("FormCurrentVersion", fields: [currentVersionId], references: [id])
+  submissions    Submission[]
+
+  // Slug uniqueness is scoped per-org, not global, to match the multi-tenancy shaping
+  // called out in ARCHITECTURE.md §7. With exactly one org today this is equivalent to
+  // global uniqueness; the public route (`GET /f/:slug`) will need an org-scoping
+  // mechanism (subdomain/custom domain) added alongside real multi-tenant conversion.
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("forms")
+}
+
+model FormVersion {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  formId         String    @map("form_id") @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  // { pages, fields, conditionalLogic, branding } — see specs/02-form-builder.md for the
+  // exact shape. Validated at the application layer with Zod (never trust JSONB shape alone).
+  schema         Json
+  versionNumber  Int       @map("version_number")
+  publishedAt    DateTime? @map("published_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  form         Form         @relation("FormVersions", fields: [formId], references: [id], onDelete: Cascade)
+  // Inverse of Form.currentVersion — lets Prisma know a FormVersion may be "the" current
+  // version of at most one form.
+  currentForForm Form?      @relation("FormCurrentVersion")
+  submissions    Submission[]
+
+  @@unique([formId, versionNumber])
+  @@index([organizationId])
+  @@map("form_versions")
+}
+
+model Submission {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  formId         String           @map("form_id") @db.Uuid
+  formVersionId  String           @map("form_version_id") @db.Uuid
+  status         SubmissionStatus @default(in_progress)
+  // Respondent answers keyed by fieldId, matching form_versions.schema.fields.
+  answers        Json             @default("{}")
+  // Random, unguessable token for the save-and-resume flow (spec 03). Null once a
+  // submission is finalized — resuming a submitted/approved/rejected submission
+  // isn't meaningful and a signed submission is read-only (spec 05).
+  resumeToken    String?          @unique @map("resume_token")
+  ipAddress      String?          @map("ip_address")
+  submittedAt    DateTime?        @map("submitted_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  organization  Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  form          Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formVersion   FormVersion      @relation(fields: [formVersionId], references: [id])
+  files         SubmissionFile[]
+  signatures    Signature[]
+  workflowSteps WorkflowStep[]
+
+  @@index([organizationId])
+  @@index([formId, status])
+  @@map("submissions")
+}
+
+model SubmissionFile {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  submissionId   String   @map("submission_id") @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  fieldKey       String   @map("field_key")
+  // S3 key layout: org_id/form_id/submission_id/filename (ARCHITECTURE.md §4).
+  storageKey     String   @map("storage_key")
+  filename       String
+  mimeType       String   @map("mime_type")
+  sizeBytes      Int      @map("size_bytes")
+  uploadedAt     DateTime @default(now()) @map("uploaded_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submission   Submission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([submissionId])
+  @@map("submission_files")
+}
+
+/// Admin-uploaded org library files (Files page). Separate from submission_files —
+/// those are respondent uploads tied to a form answer; these are documents the org
+/// stores directly (templates, policies, etc.) without a submission.
+model OrganizationFile {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  uploadedById   String?  @map("uploaded_by_id") @db.Uuid
+  // S3 key layout: org_id/library/<uuid>-<sanitized filename>
+  storageKey     String   @map("storage_key")
+  filename       String
+  mimeType       String   @map("mime_type")
+  sizeBytes      Int      @map("size_bytes")
+  uploadedAt     DateTime @default(now()) @map("uploaded_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy   User?        @relation("OrganizationFileUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@map("organization_files")
+}
+
+model Signature {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  submissionId       String   @map("submission_id") @db.Uuid
+  organizationId     String   @map("organization_id") @db.Uuid
+  fieldKey           String   @map("field_key")
+  signatureImageKey  String   @map("signature_image_key")
+  signerName         String   @map("signer_name")
+  // Exact consent wording shown at signing time. Historical consent text is immutable
+  // once used (spec 05) — never mutate a row this field points at.
+  consentTextVersion String   @map("consent_text_version")
+  ipAddress          String   @map("ip_address")
+  userAgent          String   @map("user_agent")
+  signedAt           DateTime @map("signed_at")
+  // SHA-256 of (answers JSON + signature image bytes + signedAt), computed server-side
+  // at signing time. Recomputing from stored data must match this exactly (spec 05).
+  contentHash        String   @map("content_hash")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submission   Submission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([submissionId])
+  @@map("signatures")
+}
+
+/// Created now, unused until spec 07 (approval workflows). Kept in the schema from day
+/// one specifically so adding the feature later doesn't require a migration that touches
+/// every other table's RLS setup again.
+model WorkflowStep {
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  submissionId     String              @map("submission_id") @db.Uuid
+  organizationId   String              @map("organization_id") @db.Uuid
+  stepOrder        Int                 @map("step_order")
+  approverUserId   String              @map("approver_user_id") @db.Uuid
+  status           WorkflowStepStatus  @default(pending)
+  actedAt          DateTime?           @map("acted_at")
+  comments         String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submission   Submission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  approver     User         @relation("WorkflowApprover", fields: [approverUserId], references: [id])
+
+  @@index([organizationId])
+  @@index([submissionId])
+  @@map("workflow_steps")
+}
+
+model AuditLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  // Nullable: public respondent actions (e.g. a form submission) have no admin actor.
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String
+  entityType     String   @map("entity_type")
+  entityId       String   @map("entity_id") @db.Uuid
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@map("audit_log")
+}

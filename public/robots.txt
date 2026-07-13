@@ -1,0 +1,5 @@
+# Internal admin tool + participant-facing consent forms — nothing here should be
+# indexed. Public form-fill URLs (specs/03-form-renderer.md, /f/:slug) are meant to
+# be reached only via a direct link shared with a specific respondent.
+User-agent: *
+Disallow: /

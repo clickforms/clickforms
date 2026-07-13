@@ -1,0 +1,19 @@
+# Staging Caddyfile — used when docker-compose.yml's CADDYFILE=Caddyfile.staging on the
+# staging EC2 instance. Same TLS/security setup as production, different hostname. DNS
+# needs an A record for staging.clickforms.com.au pointed at the staging Elastic IP.
+
+staging.clickforms.com.au {
+	reverse_proxy app:3000
+
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# Discourage search engines from indexing staging.
+	header X-Robots-Tag "noindex, nofollow"
+}

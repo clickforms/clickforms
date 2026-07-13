@@ -1,0 +1,69 @@
+# Deploy compose file — runs on each environment's EC2 instance described in
+# ARCHITECTURE.md §2/§3 (Caddy + app container, RDS reached over the network rather
+# than run here). Distinct from docker-compose.dev.yml, which is local-only and only
+# runs Postgres.
+#
+# Shared by both staging and production — everything that differs between them is an
+# env var, not a separate file, so the exact same compose config runs both places.
+# Each EC2 instance has its own .env in this file's directory (not committed) setting:
+#   ECR_IMAGE=<account>.dkr.ecr.ap-southeast-2.amazonaws.com/clickforms:<tag>
+#   ENVIRONMENT=staging            # or production
+#   CADDYFILE=Caddyfile.staging    # or Caddyfile.production
+#   S3_BUCKET=clickforms-staging   # or clickforms-prod — src/lib/s3.ts reads this directly,
+#                                  # it is NOT one of the SSM-backed secrets below
+# CI (scripts referenced in specs/00-infrastructure.md) updates ECR_IMAGE on deploy and
+# runs `docker compose pull && docker compose up -d`.
+
+services:
+  app:
+    # Replace with the real ECR image URI + tag CI pushes on merge to main, e.g.:
+    #   123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/clickforms:sha-abc1234
+    # Left as a build-from-source fallback (this repo's Dockerfile) so this file is
+    # still useful for a manual smoke test on the EC2 box before CI/CD exists.
+    image: ${ECR_IMAGE:-clickforms:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clickforms-app
+    restart: unless-stopped
+    environment:
+      # entrypoint.sh resolves database-url / session-secret from these at container
+      # start (AWS SSM Parameter Store, SecureString) — no secrets live in this file.
+      # AWS credentials come from the EC2 instance role via instance metadata; no
+      # long-lived keys are configured here. ENVIRONMENT must be "staging" or
+      # "production" to match the SSM path each environment's setup-rds.sh wrote to.
+      AWS_REGION: ap-southeast-2
+      SSM_PARAM_PREFIX: /clickforms/${ENVIRONMENT:?Set ENVIRONMENT=staging or production in .env}
+      # Not a secret — the bucket name itself, read directly by src/lib/s3.ts. Differs from
+      # ENVIRONMENT-based derivation because the prod bucket is named clickforms-prod, not
+      # clickforms-production (see scripts/setup-s3.sh).
+      S3_BUCKET: ${S3_BUCKET:?Set S3_BUCKET=clickforms-staging or clickforms-prod in .env}
+      NODE_ENV: production
+    expose:
+      - '3000'
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: clickforms-caddy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./${CADDYFILE:-Caddyfile.production}:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

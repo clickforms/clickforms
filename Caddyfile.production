@@ -1,0 +1,23 @@
+# Production Caddyfile — used when docker-compose.yml's CADDYFILE=Caddyfile.production
+# (the default). Caddy provisions and auto-renews the Let's Encrypt certificate for this
+# domain on first request; no manual certbot setup or renewal cron needed
+# (ARCHITECTURE.md §3, §10). Route53 (or your registrar's DNS) needs an A record for
+# clickforms.com.au pointed at this instance's Elastic IP.
+
+clickforms.com.au {
+	reverse_proxy app:3000
+
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# specs/00-infrastructure.md acceptance criteria: `curl https://<domain>/health`
+	# must return 200 over valid TLS — no special routing needed here since /health
+	# is just a normal Next.js route handler served by the same reverse_proxy above;
+	# listed for clarity that no additional Caddy config is required for it.
+}

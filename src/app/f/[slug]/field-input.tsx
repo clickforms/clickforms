@@ -99,7 +99,7 @@ export function FieldInput({
     return (
       <div className="form-image-field" style={resolveImageSpacingStyle(field)}>
         {field.label ? <p className="form-image-field-caption">{field.label}</p> : null}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
         <img
           src={src}
           alt={field.alt ?? field.label}

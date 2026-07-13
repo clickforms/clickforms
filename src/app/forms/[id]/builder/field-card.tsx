@@ -350,7 +350,7 @@ function FieldPreview({
       if (src) {
         return (
           <div className="field-preview-image-wrap">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
             <img
               src={src}
               alt={field.alt ?? field.label}

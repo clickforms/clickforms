@@ -351,7 +351,7 @@ export function FormRendererClient({
                 className="form-renderer-logo"
                 style={resolveImageSpacingStyle(field)}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
                 <img
                   src={src}
                   alt={field.alt ?? field.label}

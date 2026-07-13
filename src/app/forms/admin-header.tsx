@@ -1,7 +1,7 @@
 'use client';
 
-import { signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { useState } from 'react';
 import { LogoutConfirmModal } from '@/app/forms/logout-confirm-modal';
 
@@ -85,11 +85,7 @@ export function AdminHeader({ email, onToggleSidebar }: AdminHeaderProps) {
         <span className="admin-header-account" title={email}>
           {displayEmail}
         </span>
-        <button
-          type="button"
-          className="admin-header-signout"
-          onClick={() => setLogoutOpen(true)}
-        >
+        <button type="button" className="admin-header-signout" onClick={() => setLogoutOpen(true)}>
           Sign out
         </button>
       </div>

@@ -80,7 +80,7 @@ export function SubmissionFieldDisplay({
     return (
       <div className="export-image-field" style={resolveImageSpacingStyle(field)}>
         {field.label ? <p className="export-image-caption">{field.label}</p> : null}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
         <img src={src} alt={field.alt ?? field.label} style={resolveImageStyle(field)} />
       </div>
     );
@@ -241,7 +241,7 @@ function FileExportDisplay({
   if (imageUrl) {
     return (
       <div className="export-signature">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
         <img src={imageUrl} alt={filename ?? 'Uploaded file'} />
       </div>
     );
@@ -263,7 +263,7 @@ function SignatureExportDisplay({
   if (!imageUrl) return <div className="export-file-status">No signature</div>;
   return (
     <div className="export-signature">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
       <img src={imageUrl} alt="Signature" />
     </div>
   );

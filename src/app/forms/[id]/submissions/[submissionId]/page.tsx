@@ -315,7 +315,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                       {field.label ? (
                         <p className="submission-image-caption">{field.label}</p>
                       ) : null}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
                       <img
                         src={src}
                         alt={field.alt ?? field.label}

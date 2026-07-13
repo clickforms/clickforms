@@ -20,9 +20,33 @@ function BuilderIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
       <rect x="3.5" y="3.5" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
-      <rect x="12.5" y="3.5" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
-      <rect x="3.5" y="12.5" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
-      <rect x="12.5" y="12.5" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
+      <rect
+        x="12.5"
+        y="3.5"
+        width="6"
+        height="6"
+        rx="1.2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <rect
+        x="3.5"
+        y="12.5"
+        width="6"
+        height="6"
+        rx="1.2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <rect
+        x="12.5"
+        y="12.5"
+        width="6"
+        height="6"
+        rx="1.2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
     </svg>
   );
 }

@@ -93,6 +93,7 @@ export function FormsListClient({
           updatedAt: newForm.updatedAt,
           createdAt: newForm.createdAt,
           responseCount: 0,
+          publicUrl: newForm.publicUrl,
         },
         ...current,
       ]);

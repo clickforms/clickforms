@@ -22,7 +22,10 @@ const SUBDOMAIN_HEADER = 'x-org-subdomain';
 
 /** Strips a port, if present, from a Host header value. */
 function hostWithoutPort(host: string): string {
-  return host.split(':')[0];
+  // `noUncheckedIndexedAccess` types array access as possibly-undefined even though
+  // String.split always returns at least one element — fall back to the full host in
+  // the (unreachable in practice) undefined case rather than asserting it away.
+  return host.split(':')[0] ?? host;
 }
 
 /**

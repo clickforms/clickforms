@@ -5,6 +5,7 @@ import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
 import { slugify, uniqueSlug } from '@/lib/forms/slug';
 import { requireRole, requireSession } from '@/lib/session';
+import { buildOrgFormUrl } from '@/lib/tenant';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -71,7 +72,17 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
         tx,
       );
 
-      return { form: newForm, version };
+      // FormsListClient (a client component) prepends the duplicated form straight into
+      // its list without a full page reload, so it needs the same absolute publicUrl
+      // page.tsx computes for the initial load — building it here keeps that logic
+      // server-side rather than shipping ROOT_DOMAIN/buildOrgFormUrl to the client.
+      const organization = await tx.organization.findUniqueOrThrow({
+        where: { id: session.user.organizationId },
+        select: { subdomain: true },
+      });
+      const publicUrl = buildOrgFormUrl(organization.subdomain, `/f/${newForm.slug}`);
+
+      return { form: { ...newForm, publicUrl }, version };
     });
 
     return NextResponse.json(result, { status: 201 });

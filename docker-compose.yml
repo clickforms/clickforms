@@ -44,6 +44,12 @@ services:
       # callbackUrl, etc.) sends the browser to http://localhost:3000 instead of the
       # real domain. DOMAIN is written into .env by scripts/setup-ec2.sh's user-data.
       NEXTAUTH_URL: https://${DOMAIN:?Set DOMAIN=staging.clickforms.com.au or clickforms.com.au in .env}
+      # src/lib/tenant.ts / src/middleware.ts both fall back to "localhost:3000" when this
+      # is unset — that silently breaks subdomain resolution AND any server-side redirect
+      # that builds an org URL (e.g. the legacy-link redirect in resolveOrganizationIdForSlugOrRedirect),
+      # sending the browser to http://<subdomain>.localhost:3000 instead of the real domain.
+      # Same value as DOMAIN in both environments today (no separate staging-under-root setup).
+      ROOT_DOMAIN: ${DOMAIN:?Set DOMAIN=staging.clickforms.com.au or clickforms.com.au in .env}
     expose:
       - '3000'
     networks:

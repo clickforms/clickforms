@@ -1,10 +1,19 @@
 # Production Caddyfile — used when docker-compose.yml's CADDYFILE=Caddyfile.production
-# (the default). Caddy provisions and auto-renews the Let's Encrypt certificate for this
-# domain on first request; no manual certbot setup or renewal cron needed
-# (ARCHITECTURE.md §3, §10). Route53 (or your registrar's DNS) needs an A record for
-# clickforms.com.au pointed at this instance's Elastic IP.
+# (the default). Wildcard subdomain routing for per-org public form pages
+# (clickforms.com.au uses subdomains like carecircle.clickforms.com.au — see
+# src/middleware.ts). DNS is on Cloudflare (proxied, orange-clouded) with a `*` A record,
+# so this uses a Cloudflare Origin Certificate instead of Caddy's automatic Let's
+# Encrypt — Let's Encrypt's HTTP-01 challenge can't validate a wildcard hostname, and
+# Cloudflare's free Universal SSL only covers the edge (browser <-> Cloudflare), not
+# this origin server, so Cloudflare <-> Caddy still needs its own cert (SSL/TLS mode:
+# Full (strict) in the Cloudflare dashboard). The cert/key are in ./certs (gitignored,
+# *.pem) and mounted into the container via docker-compose.yml — see that file's caddy
+# service. Cert covers clickforms.com.au + *.clickforms.com.au, 15yr validity, generated
+# once in Cloudflare dashboard → SSL/TLS → Origin Server; no ACME renewal loop needed.
 
-clickforms.com.au {
+clickforms.com.au, *.clickforms.com.au {
+	tls /etc/caddy/certs/cloudflare-origin-cert.pem /etc/caddy/certs/cloudflare-origin-key.pem
+
 	reverse_proxy app:3000
 
 	encode gzip

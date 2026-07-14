@@ -18,6 +18,8 @@ interface FormSummary {
   updatedAt: string;
   createdAt: string;
   responseCount: number;
+  /** Absolute URL on the org's subdomain, e.g. https://carecircle.clickforms.com.au/f/intake-form. */
+  publicUrl: string;
 }
 
 const STATUS_BADGE: Record<FormStatus, { label: string; className: string }> = {
@@ -311,7 +313,7 @@ export function FormsListClient({
                       <td data-label="Actions">
                         <FormActionsMenu
                           formId={form.id}
-                          formSlug={form.slug}
+                          formUrl={form.publicUrl}
                           status={form.status}
                           canEdit={canEdit}
                           onRename={() => {

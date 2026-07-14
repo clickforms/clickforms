@@ -12,7 +12,20 @@ const globalForPrisma = globalThis as unknown as {
   prismaSchemaFingerprint?: string;
 };
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+// Explicit `ssl` here rather than relying on `?sslmode=...` in the connection string:
+// `@prisma/adapter-pg` constructs its own `pg.Pool` and does not reliably apply the
+// `sslmode` query-string parameter the way `pg`'s own connection-string parsing does,
+// so `sslmode=no-verify` alone left RDS connections failing with
+// `SELF_SIGNED_CERT_IN_CHAIN` in production. Amazon RDS's CA isn't in Node's default
+// trust store, so verification is disabled explicitly — the connection is still
+// encrypted, just not chain-verified. TODO: swap to `ca: <RDS CA bundle>` for full
+// verification instead of `rejectUnauthorized: false`.
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('sslmode=no-verify')
+    ? { rejectUnauthorized: false }
+    : undefined,
+});
 
 function createPrismaClient(): PrismaClient {
   return new PrismaClient({

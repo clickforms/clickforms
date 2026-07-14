@@ -2,6 +2,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { config as loadEnv } from 'dotenv';
+import { slugify } from '../src/lib/forms/slug';
 
 // Run via tsx as a standalone script — no Next.js env loading here, so load
 // .env.local ourselves before touching process.env.DATABASE_URL.
@@ -14,6 +15,10 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 const ORG_NAME = 'Default Organization';
+// Local dev only — real orgs get their subdomain auto-generated at signup (see
+// src/app/api/auth/signup/verify/route.ts). This one just needs to be a valid,
+// unique-in-this-database value so `subdomain` (now NOT NULL) can be satisfied.
+const ORG_SUBDOMAIN = slugify(ORG_NAME);
 const ADMIN_EMAIL = 'admin@example.local';
 // Placeholder only — this exists so the seed script has something to hash, not as a
 // credential meant to survive contact with a real environment. Change it via the
@@ -27,7 +32,8 @@ async function main(): Promise<void> {
   });
 
   const organization =
-    existingOrg ?? (await prisma.organization.create({ data: { name: ORG_NAME } }));
+    existingOrg ??
+    (await prisma.organization.create({ data: { name: ORG_NAME, subdomain: ORG_SUBDOMAIN } }));
 
   console.log(
     existingOrg

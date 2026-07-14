@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
 import { getFormSchemaByVersionId, getPublishedFormBySlug } from '@/lib/forms/public-lookup';
+import { resolveOrganizationIdForSlugOrRedirect } from '@/lib/tenant';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -13,7 +14,8 @@ interface PageProps {
 export default async function PublicFormPage({ params }: PageProps) {
   const { slug } = await params;
 
-  const form = await getPublishedFormBySlug(slug).catch(() => null);
+  const organizationId = await resolveOrganizationIdForSlugOrRedirect(slug, `/f/${slug}`);
+  const form = await getPublishedFormBySlug(slug, organizationId).catch(() => null);
   if (!form) {
     notFound();
   }

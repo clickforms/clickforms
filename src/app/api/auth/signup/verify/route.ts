@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
+import { uniqueSlug } from '@/lib/forms/slug';
 
 const verifySignupBodySchema = z.object({
   token: z.string().min(1),
@@ -31,9 +32,22 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    // Subdomain is global (not per-org), unlike forms.slug — every org's public form
+    // pages live at {subdomain}.{ROOT_DOMAIN}, so this reuses the same slugify/
+    // uniqueSlug helpers forms use, just against the whole organizations table instead
+    // of one org's forms. Auto-generated from the org name; never user-typed (per
+    // product decision — a mistyped subdomain would be a support headache later).
+    const existingOrganizations = await prisma.organization.findMany({
+      select: { subdomain: true },
+    });
+    const subdomain = uniqueSlug(
+      pendingSignup.organizationName,
+      new Set(existingOrganizations.map((org) => org.subdomain)),
+    );
+
     const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
-        data: { name: pendingSignup.organizationName },
+        data: { name: pendingSignup.organizationName, subdomain },
       });
 
       const user = await tx.user.create({

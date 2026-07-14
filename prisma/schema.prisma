@@ -79,6 +79,11 @@ enum SignupFormSituation {
 model Organization {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String
+  // Public-form tenant identifier — resolved by src/middleware.ts from the request
+  // hostname ({subdomain}.{ROOT_DOMAIN}) so a visitor filling in a form always sees
+  // which org they're submitting to. Auto-generated from `name` at signup (see
+  // src/lib/forms/slug.ts slugify/uniqueSlug), never user-typed.
+  subdomain String   @unique
   createdAt DateTime @default(now()) @map("created_at")
 
   users           User[]
@@ -209,9 +214,8 @@ model Form {
   submissions    Submission[]
 
   // Slug uniqueness is scoped per-org, not global, to match the multi-tenancy shaping
-  // called out in ARCHITECTURE.md §7. With exactly one org today this is equivalent to
-  // global uniqueness; the public route (`GET /f/:slug`) will need an org-scoping
-  // mechanism (subdomain/custom domain) added alongside real multi-tenant conversion.
+  // called out in ARCHITECTURE.md §7. The public route (`GET /f/:slug`) is org-scoped
+  // via Organization.subdomain, resolved per-request by src/middleware.ts.
   @@unique([organizationId, slug])
   @@index([organizationId])
   @@map("forms")

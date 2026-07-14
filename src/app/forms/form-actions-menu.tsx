@@ -19,7 +19,8 @@ import {
 
 interface FormActionsMenuProps {
   formId: string;
-  formSlug: string;
+  /** Absolute public URL on the org's subdomain — see src/app/forms/list/page.tsx. */
+  formUrl: string;
   status: FormStatus;
   canEdit: boolean;
   onRename: () => void;
@@ -312,7 +313,7 @@ function computePanelStyle(trigger: HTMLElement, panel: HTMLElement): CSSPropert
 
 export function FormActionsMenu({
   formId,
-  formSlug,
+  formUrl,
   status,
   canEdit,
   onRename,
@@ -419,7 +420,7 @@ export function FormActionsMenu({
     items.push({
       kind: 'link',
       label: 'View form',
-      href: `/f/${formSlug}`,
+      href: formUrl,
       icon: <ViewFormIcon />,
       external: true,
     });

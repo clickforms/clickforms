@@ -9,6 +9,7 @@ import {
   getSubmissionForForm,
 } from '@/lib/forms/public-lookup';
 import { validateAnswers } from '@/lib/forms/validate-answers';
+import { resolveOrganizationIdOrThrow } from '@/lib/tenant';
 
 interface RouteContext {
   params: Promise<{ slug: string; submissionId: string }>;
@@ -28,7 +29,8 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
     const { slug, submissionId } = await params;
     const body = answersBodySchema.parse(await request.json());
 
-    const form = await getPublishedFormBySlug(slug);
+    const organizationId = await resolveOrganizationIdOrThrow();
+    const form = await getPublishedFormBySlug(slug, organizationId);
     const submission = await getSubmissionForForm({ formId: form.id, submissionId });
 
     if (submission.status !== 'in_progress') {

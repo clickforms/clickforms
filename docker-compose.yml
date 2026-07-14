@@ -60,6 +60,10 @@ services:
       - ./${CADDYFILE:-Caddyfile.production}:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      # Cloudflare Origin Certificate — see Caddyfile.production. Only referenced when
+      # CADDYFILE=Caddyfile.production; harmless no-op mount on staging, which still
+      # uses Caddy's automatic Let's Encrypt HTTP-01 flow (Caddyfile.staging).
+      - ./certs:/etc/caddy/certs:ro
     depends_on:
       - app
     networks:

@@ -14,15 +14,41 @@ import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
 // withOrgContext(form.organizationId, ...), same as every other mutating route.
 
 /** A published form always has a currentVersionId — publish() sets both together
- * (src/app/api/forms/[id]/publish/route.ts) — so callers can rely on the narrowed type. */
+ * (src/app/api/forms/[id]/publish/route.ts) — so callers can rely on the narrowed type.
+ *
+ * `organizationId` is required: `forms.slug` is only unique per-org (schema.prisma
+ * `@@unique([organizationId, slug])`), so an unscoped lookup could return the wrong
+ * org's form once more than one org has forms. Callers resolve organizationId from the
+ * request's subdomain first — see src/lib/tenant.ts getOrganizationBySubdomain and the
+ * legacy-link fallback findOrganizationSubdomainForSlug below. */
 export async function getPublishedFormBySlug(
   slug: string,
+  organizationId: string,
 ): Promise<Form & { currentVersionId: string }> {
-  const form = await prisma.form.findFirst({ where: { slug, status: 'published' } });
+  const form = await prisma.form.findFirst({
+    where: { slug, status: 'published', organizationId },
+  });
   if (!form?.currentVersionId) {
     throw new NotFoundError('Form');
   }
   return form as Form & { currentVersionId: string };
+}
+
+/**
+ * Resolves which org's subdomain a bare-root-domain /f/[slug] request should redirect
+ * to — legacy/shared-link support for URLs from before subdomains existed. Slugs aren't
+ * globally unique, so if two orgs happen to share a slug this picks the older form
+ * (created first); that ambiguity is inherent to a pre-subdomain link and only affects
+ * this one-time redirect, not any authenticated or org-scoped query. Returns null if no
+ * form anywhere has this slug (a genuine 404, not a tenant-resolution problem).
+ */
+export async function findOrganizationSubdomainForSlug(slug: string): Promise<string | null> {
+  const form = await prisma.form.findFirst({
+    where: { slug },
+    select: { organization: { select: { subdomain: true } } },
+    orderBy: { createdAt: 'asc' },
+  });
+  return form?.organization.subdomain ?? null;
 }
 
 export async function getFormSchemaByVersionId(formVersionId: string): Promise<FormSchema> {

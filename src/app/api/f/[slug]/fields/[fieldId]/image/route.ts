@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { getFormSchemaByVersionId, getPublishedFormBySlug } from '@/lib/forms/public-lookup';
 import { createPresignedDownloadUrl, isFormFieldImageKey } from '@/lib/s3';
+import { resolveOrganizationIdOrThrow } from '@/lib/tenant';
 
 interface RouteContext {
   params: Promise<{ slug: string; fieldId: string }>;
@@ -10,7 +11,8 @@ interface RouteContext {
 export async function GET(_request: Request, { params }: RouteContext): Promise<NextResponse> {
   try {
     const { slug, fieldId } = await params;
-    const form = await getPublishedFormBySlug(slug);
+    const organizationId = await resolveOrganizationIdOrThrow();
+    const form = await getPublishedFormBySlug(slug, organizationId);
     if (!form.currentVersionId) throw new NotFoundError('Form');
 
     const schema = await getFormSchemaByVersionId(form.currentVersionId);

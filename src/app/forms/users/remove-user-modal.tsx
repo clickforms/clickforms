@@ -1,16 +1,30 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { UserRow } from '@/app/forms/users/users-client';
 
 interface RemoveUserModalProps {
   user: UserRow | null;
+  /** Other org members this user's forms could be transferred to. */
+  otherUsers: UserRow[];
   isRemoving: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (transferFormsTo?: string) => void;
 }
 
-export function RemoveUserModal({ user, isRemoving, onClose, onConfirm }: RemoveUserModalProps) {
+export function RemoveUserModal({
+  user,
+  otherUsers,
+  isRemoving,
+  onClose,
+  onConfirm,
+}: RemoveUserModalProps) {
+  const [transferTo, setTransferTo] = useState('');
+
+  useEffect(() => {
+    setTransferTo(otherUsers[0]?.id ?? '');
+  }, [otherUsers]);
+
   useEffect(() => {
     if (!user) return;
     function handleKeyDown(event: KeyboardEvent) {
@@ -21,6 +35,9 @@ export function RemoveUserModal({ user, isRemoving, onClose, onConfirm }: Remove
   }, [user, isRemoving, onClose]);
 
   if (!user) return null;
+
+  const needsTransfer = user.formsOwned > 0;
+  const canConfirm = !needsTransfer || Boolean(transferTo);
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; Escape key and a Close/Cancel button are also wired up
@@ -52,11 +69,31 @@ export function RemoveUserModal({ user, isRemoving, onClose, onConfirm }: Remove
             Remove <strong>{user.name ?? user.email}</strong> from your organisation? They will lose
             access immediately.
           </p>
-          {user.formsOwned > 0 ? (
-            <p className="form-error">
-              This user owns {user.formsOwned} form{user.formsOwned === 1 ? '' : 's'}. Transfer or
-              delete those forms before removing them.
-            </p>
+          {needsTransfer ? (
+            <>
+              <p className="form-error">
+                This user owns {user.formsOwned} form{user.formsOwned === 1 ? '' : 's'}. Choose who
+                should receive them.
+              </p>
+              {otherUsers.length === 0 ? (
+                <p className="form-error">
+                  There&rsquo;s no one else in this organisation to transfer their forms to.
+                </p>
+              ) : (
+                <select
+                  className="text-input"
+                  value={transferTo}
+                  onChange={(event) => setTransferTo(event.target.value)}
+                  aria-label="Transfer forms to"
+                >
+                  {otherUsers.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.name ?? candidate.email}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </>
           ) : null}
         </div>
 
@@ -72,10 +109,10 @@ export function RemoveUserModal({ user, isRemoving, onClose, onConfirm }: Remove
           <button
             type="button"
             className="button button--danger"
-            onClick={onConfirm}
-            disabled={isRemoving || user.formsOwned > 0}
+            onClick={() => onConfirm(needsTransfer ? transferTo : undefined)}
+            disabled={isRemoving || !canConfirm}
           >
-            {isRemoving ? 'Removing…' : 'Remove user'}
+            {isRemoving ? 'Removing…' : needsTransfer ? 'Remove and transfer forms' : 'Remove user'}
           </button>
         </div>
       </div>

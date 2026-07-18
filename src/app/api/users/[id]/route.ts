@@ -85,11 +85,25 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
   }
 }
 
-export async function DELETE(_request: Request, { params }: RouteContext): Promise<NextResponse> {
+const deleteUserBodySchema = z
+  .object({
+    /** If provided and this user owns forms, they're reassigned to this user first. */
+    transferFormsTo: z.string().min(1).optional(),
+  })
+  .optional();
+
+export async function DELETE(request: Request, { params }: RouteContext): Promise<NextResponse> {
   try {
     const session = await requireSession();
     requireRole(session, ['admin']);
     const { id } = await params;
+    // DELETE requests aren't guaranteed a body by every caller (older clients sent none),
+    // so treat unparseable/empty bodies as "no transfer requested" rather than a 400.
+    const rawBody = await request
+      .text()
+      .then((text) => (text ? JSON.parse(text) : undefined))
+      .catch(() => undefined);
+    const body = deleteUserBodySchema.parse(rawBody);
 
     await withOrgContext(session.user.organizationId, async (tx) => {
       const existing = await tx.user.findFirst({
@@ -101,7 +115,33 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
       await assertNotLastAdmin(tx, session.user.organizationId, existing.id, existing.role);
 
       const formsOwned = await tx.form.count({ where: { createdBy: existing.id } });
-      if (formsOwned > 0) {
+      if (formsOwned > 0 && body?.transferFormsTo) {
+        if (body.transferFormsTo === existing.id) {
+          throw new InvalidRequestError('Choose a different user to receive these forms.');
+        }
+        const newOwner = await tx.user.findFirst({
+          where: { id: body.transferFormsTo, organizationId: session.user.organizationId },
+          select: { id: true },
+        });
+        if (!newOwner) throw new NotFoundError('User');
+
+        const { count } = await tx.form.updateMany({
+          where: { createdBy: existing.id, organizationId: session.user.organizationId },
+          data: { createdBy: newOwner.id },
+        });
+
+        await logAudit(
+          {
+            organizationId: session.user.organizationId,
+            actorUserId: session.user.id,
+            action: 'form.transfer',
+            entityType: 'user',
+            entityId: existing.id,
+            metadata: { fromUserId: existing.id, toUserId: newOwner.id, formCount: count },
+          },
+          tx,
+        );
+      } else if (formsOwned > 0) {
         throw new InvalidRequestError(
           'This user still owns forms. Transfer or delete their forms before removing them.',
         );

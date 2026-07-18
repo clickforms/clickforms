@@ -4245,19 +4245,24 @@ textarea.form-field-input {
 }
 
 @media (max-width: 640px) {
+  /* Small screens drop the grey canvas + boxed white card in favor of one flat white
+     page — content should read edge-to-edge (minus a small text margin), not sit
+     inside a bordered card floating on grey. */
   .public-form-layout {
-    --form-pad-x: 1.25rem;
+    background-color: #ffffff;
+    --form-pad-x: 1rem;
     --form-pad-y: 1.25rem;
   }
 
   .form-renderer {
-    padding: 1.25rem 0.75rem 2.5rem;
+    padding: 1.25rem 0 2.5rem;
   }
 
   .form-renderer-body {
-    border-left: none;
-    border-right: none;
+    border: none;
     border-radius: 0;
+    box-shadow: none;
+    background-color: transparent;
   }
 
   .form-option-list--grid {

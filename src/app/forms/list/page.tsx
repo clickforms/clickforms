@@ -14,7 +14,7 @@ export default async function FormsListPage() {
   // These run sequentially (not Promise.all) because they share a single connection via
   // withOrgContext's transaction — issuing concurrent queries on one `pg` client triggers
   // a deprecation warning (and will error outright in pg@9.0).
-  const { forms, responseCounts, organization } = await withOrgContext(
+  const { forms, responseCounts, organization, orgMembers } = await withOrgContext(
     session.user.organizationId,
     async (tx) => {
       const forms = await tx.form.findMany({
@@ -31,7 +31,12 @@ export default async function FormsListPage() {
         where: { id: session.user.organizationId },
         select: { subdomain: true },
       });
-      return { forms, responseCounts, organization };
+      const orgMembers = await tx.user.findMany({
+        where: { organizationId: session.user.organizationId },
+        select: { id: true, name: true, email: true },
+        orderBy: { name: 'asc' },
+      });
+      return { forms, responseCounts, organization, orgMembers };
     },
   );
 
@@ -49,9 +54,15 @@ export default async function FormsListPage() {
     createdAt: form.createdAt.toISOString(),
     responseCount: responseCountByFormId.get(form.id) ?? 0,
     publicUrl: buildOrgFormUrl(organization.subdomain, `/f/${form.slug}`),
+    createdById: form.createdBy,
     createdByName: form.creator.name ?? form.creator.email,
     isOwnForm: form.createdBy === session.user.id,
     isPrivate: form.isPrivate,
+  }));
+
+  const memberSummaries = orgMembers.map((member) => ({
+    id: member.id,
+    name: member.name ?? member.email,
   }));
 
   return (
@@ -59,6 +70,7 @@ export default async function FormsListPage() {
       initialForms={formSummaries}
       canEdit={canCreateForms(session.user.role)}
       currentUserDisplayName={session.user.email ?? 'You'}
+      orgMembers={memberSummaries}
     />
   );
 }

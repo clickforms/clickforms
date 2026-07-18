@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { CreateFormModal } from '@/app/forms/create-form-modal';
 import { DeleteFormModal } from '@/app/forms/delete-form-modal';
 import { FormActionsMenu } from '@/app/forms/form-actions-menu';
+import { TransferFormModal } from '@/app/forms/transfer-form-modal';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
 import { type FormWorkflowAction, runFormWorkflow } from '@/lib/forms/form-workflow-client';
@@ -20,12 +21,19 @@ interface FormSummary {
   responseCount: number;
   /** Absolute URL on the org's subdomain, e.g. https://carecircle.clickforms.com.au/f/intake-form. */
   publicUrl: string;
+  /** Creator's user id, for the transfer-ownership picker. */
+  createdById: string;
   /** Creator's name, falling back to email — see src/app/forms/list/page.tsx. */
   createdByName: string;
   /** Whether the signed-in user is this form's creator — only they can toggle privacy. */
   isOwnForm: boolean;
   /** Opt-out flag: hidden from everyone but the creator when true (see formsListWhere). */
   isPrivate: boolean;
+}
+
+interface OrgMember {
+  id: string;
+  name: string;
 }
 
 const STATUS_BADGE: Record<FormStatus, { label: string; className: string }> = {
@@ -50,11 +58,14 @@ export function FormsListClient({
   initialForms,
   canEdit,
   currentUserDisplayName,
+  orgMembers,
 }: {
   initialForms: FormSummary[];
   canEdit: boolean;
   /** Falls back to this label for the creator of a form just-duplicated by the current user. */
   currentUserDisplayName: string;
+  /** Every org member, for the transfer-ownership picker. */
+  orgMembers: OrgMember[];
 }) {
   const [forms, setForms] = useState(initialForms);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -66,6 +77,8 @@ export function FormsListClient({
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [deletingForm, setDeletingForm] = useState<FormSummary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [transferringForm, setTransferringForm] = useState<FormSummary | null>(null);
+  const [isTransferring, setIsTransferring] = useState(false);
 
   async function handleRename(id: string) {
     const name = renameValue.trim();
@@ -106,6 +119,7 @@ export function FormsListClient({
           // The duplicating user is always the new form's creator, and it starts visible
           // to the org (isPrivate defaults false) — matches what POST /api/forms/[id]/duplicate
           // actually persists.
+          createdById: newForm.createdBy,
           createdByName: currentUserDisplayName,
           isOwnForm: true,
           isPrivate: false,
@@ -207,6 +221,41 @@ export function FormsListClient({
     }
   }
 
+  async function handleTransferConfirm(newOwnerId: string) {
+    if (!transferringForm) return;
+
+    setIsTransferring(true);
+    try {
+      const response = await fetch(`/api/forms/${transferringForm.id}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newOwnerId }),
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response, 'Failed to transfer form'));
+      }
+      const { form: updatedForm, newOwnerName } = await response.json();
+      setForms((current) =>
+        current.map((f) =>
+          f.id === transferringForm.id
+            ? {
+                ...f,
+                createdById: updatedForm.createdBy,
+                createdByName: newOwnerName,
+                isOwnForm: false,
+              }
+            : f,
+        ),
+      );
+      toast.success(`Ownership transferred to ${newOwnerName}`);
+      setTransferringForm(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to transfer form');
+    } finally {
+      setIsTransferring(false);
+    }
+  }
+
   function toggleSort(column: SortColumn) {
     if (column === sortColumn) {
       setSortDirection((direction) => (direction === 'asc' ? 'desc' : 'asc'));
@@ -265,6 +314,17 @@ export function FormsListClient({
           isDeleting={isDeleting}
           onClose={() => !isDeleting && setDeletingForm(null)}
           onConfirm={() => void handleDeleteConfirm()}
+        />
+      ) : null}
+
+      {transferringForm ? (
+        <TransferFormModal
+          open
+          formName={transferringForm.name}
+          members={orgMembers.filter((member) => member.id !== transferringForm.createdById)}
+          isTransferring={isTransferring}
+          onClose={() => !isTransferring && setTransferringForm(null)}
+          onConfirm={(newOwnerId) => void handleTransferConfirm(newOwnerId)}
         />
       ) : null}
 
@@ -370,6 +430,7 @@ export function FormsListClient({
                           isPrivate={form.isPrivate}
                           isOwnForm={form.isOwnForm}
                           onTogglePrivate={() => handleTogglePrivate(form)}
+                          onTransfer={() => setTransferringForm(form)}
                         />
                       </td>
                     </tr>

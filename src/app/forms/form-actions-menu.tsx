@@ -33,6 +33,7 @@ interface FormActionsMenuProps {
   /** Only the creator may toggle privacy — see PATCH /api/forms/[id]. */
   isOwnForm: boolean;
   onTogglePrivate: () => void;
+  onTransfer: () => void;
 }
 
 type MenuItem =
@@ -74,6 +75,27 @@ function DuplicateIcon() {
       <rect x="5.5" y="5.5" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="1.4" />
       <path
         d="M3.5 10.5h-1a1 1 0 01-1-1v-6a1 1 0 011-1h6a1 1 0 011 1v1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TransferIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M2.5 5.5h9M9 3l2.5 2.5L9 8"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.5 10.5h-9M7 8l-2.5 2.5L7 13"
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
@@ -366,6 +388,7 @@ export function FormActionsMenu({
   isPrivate,
   isOwnForm,
   onTogglePrivate,
+  onTransfer,
 }: FormActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [panelStyle, setPanelStyle] = useState<CSSProperties | null>(null);
@@ -427,6 +450,7 @@ export function FormActionsMenu({
       { kind: 'link', label: 'Edit', href: `/forms/${formId}/builder`, icon: <EditIcon /> },
       { kind: 'button', label: 'Rename', icon: <RenameIcon />, onClick: onRename },
       { kind: 'button', label: 'Duplicate', icon: <DuplicateIcon />, onClick: onDuplicate },
+      { kind: 'button', label: 'Transfer ownership', icon: <TransferIcon />, onClick: onTransfer },
     );
 
     if (workflowStep) {

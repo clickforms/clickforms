@@ -102,11 +102,19 @@ export function UsersClient({
     }
   }
 
-  async function handleRemoveUser() {
+  async function handleRemoveUser(transferFormsTo?: string) {
     if (!removingUser) return;
     setIsRemoving(true);
     try {
-      const res = await fetch(`/api/users/${removingUser.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/users/${removingUser.id}`, {
+        method: 'DELETE',
+        ...(transferFormsTo
+          ? {
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transferFormsTo }),
+            }
+          : {}),
+      });
       if (!res.ok) {
         toast.error(await readApiError(res, 'Could not remove user'));
         return;
@@ -291,9 +299,10 @@ export function UsersClient({
 
       <RemoveUserModal
         user={removingUser}
+        otherUsers={users.filter((candidate) => candidate.id !== removingUser?.id)}
         isRemoving={isRemoving}
         onClose={() => !isRemoving && setRemovingUser(null)}
-        onConfirm={() => void handleRemoveUser()}
+        onConfirm={(transferFormsTo) => void handleRemoveUser(transferFormsTo)}
       />
     </div>
   );

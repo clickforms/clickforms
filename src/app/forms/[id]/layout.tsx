@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { FormWorkspaceShell } from '@/app/forms/[id]/form-workspace-shell';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { canViewForm } from '@/lib/user-roles';
 
 interface LayoutProps {
   children: ReactNode;
@@ -18,21 +19,33 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
     return null;
   }
 
-  const [form, responseCount] = await withOrgContext(session.user.organizationId, (tx) =>
-    Promise.all([
-      tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
-        select: { id: true, name: true, slug: true, status: true },
-      }),
-      // Mirrors the "responses" count used on the dashboard — submitted (and later
-      // reviewed) submissions only, not abandoned in-progress ones.
-      tx.submission.count({
-        where: { formId: id, organizationId: session.user.organizationId, status: 'submitted' },
-      }),
-    ]),
-  );
+  // Sequential, not Promise.all — both queries share one connection via withOrgContext's
+  // transaction, and concurrent queries on a single `pg` client are deprecated (and will
+  // error in pg@9.0).
+  const { form, responseCount } = await withOrgContext(session.user.organizationId, async (tx) => {
+    const form = await tx.form.findFirst({
+      where: { id, organizationId: session.user.organizationId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        createdBy: true,
+        isPrivate: true,
+      },
+    });
+    // Mirrors the "responses" count used on the dashboard — submitted (and later
+    // reviewed) submissions only, not abandoned in-progress ones.
+    const responseCount = await tx.submission.count({
+      where: { formId: id, organizationId: session.user.organizationId, status: 'submitted' },
+    });
+    return { form, responseCount };
+  });
 
-  if (!form) {
+  // A private form 404s for everyone but its creator — see canViewForm. This gates the
+  // whole form workspace tree (builder, submissions, etc.), which all render as children
+  // of this layout.
+  if (!form || !canViewForm(form.isPrivate, form.createdBy, session.user.id)) {
     notFound();
   }
 

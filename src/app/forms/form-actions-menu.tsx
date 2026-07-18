@@ -28,6 +28,11 @@ interface FormActionsMenuProps {
   onToggleArchive: () => void;
   onWorkflow: (action: FormWorkflowAction) => void;
   onDelete: () => void;
+  /** Whether this form is currently opted out of org-wide visibility. */
+  isPrivate: boolean;
+  /** Only the creator may toggle privacy — see PATCH /api/forms/[id]. */
+  isOwnForm: boolean;
+  onTogglePrivate: () => void;
 }
 
 type MenuItem =
@@ -88,6 +93,43 @@ function LockIcon() {
         strokeWidth="1.4"
         strokeLinecap="round"
       />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M2 8s2.2-4.5 6-4.5 6 4.5 6 4.5-2.2 4.5-6 4.5S2 8 2 8z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.7" stroke="currentColor" strokeWidth="1.4" />
+      <line
+        x1="2.5"
+        y1="13.5"
+        x2="13.5"
+        y2="2.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M2 8s2.2-4.5 6-4.5 6 4.5 6 4.5-2.2 4.5-6 4.5S2 8 2 8z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.7" stroke="currentColor" strokeWidth="1.4" />
     </svg>
   );
 }
@@ -321,6 +363,9 @@ export function FormActionsMenu({
   onToggleArchive,
   onWorkflow,
   onDelete,
+  isPrivate,
+  isOwnForm,
+  onTogglePrivate,
 }: FormActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [panelStyle, setPanelStyle] = useState<CSSProperties | null>(null);
@@ -407,7 +452,21 @@ export function FormActionsMenu({
       icon: <LockIcon />,
       onClick: onToggleArchive,
     });
-  } else {
+  }
+
+  // Only the creator can decide whether their own form opts out of org-wide visibility
+  // (see PATCH /api/forms/[id]) — if this form isn't the viewer's own, it's either
+  // already public (visible to everyone) or private and simply never reaches this menu.
+  if (isOwnForm) {
+    items.push({
+      kind: 'button',
+      label: isPrivate ? 'Make visible to org' : 'Keep private',
+      icon: isPrivate ? <EyeIcon /> : <EyeOffIcon />,
+      onClick: onTogglePrivate,
+    });
+  }
+
+  if (!canEdit) {
     items.push({
       kind: 'link',
       label: 'View',

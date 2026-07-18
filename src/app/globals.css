@@ -1291,6 +1291,10 @@ a {
   text-decoration: underline;
 }
 
+.admin-table-private-badge {
+  margin-left: 8px;
+}
+
 /* Dropdown actions menu (forms list, etc.) */
 .actions-menu {
   position: relative;

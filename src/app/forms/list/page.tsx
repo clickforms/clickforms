@@ -11,24 +11,28 @@ export default async function FormsListPage() {
     return null;
   }
 
-  const [forms, responseCounts, organization] = await withOrgContext(
+  // These run sequentially (not Promise.all) because they share a single connection via
+  // withOrgContext's transaction — issuing concurrent queries on one `pg` client triggers
+  // a deprecation warning (and will error outright in pg@9.0).
+  const { forms, responseCounts, organization } = await withOrgContext(
     session.user.organizationId,
-    (tx) =>
-      Promise.all([
-        tx.form.findMany({
-          where: formsListWhere(session.user.organizationId, session.user.role, session.user.id),
-          orderBy: { updatedAt: 'desc' },
-        }),
-        tx.submission.groupBy({
-          by: ['formId'],
-          where: { organizationId: session.user.organizationId, status: 'submitted' },
-          _count: { _all: true },
-        }),
-        tx.organization.findUniqueOrThrow({
-          where: { id: session.user.organizationId },
-          select: { subdomain: true },
-        }),
-      ]),
+    async (tx) => {
+      const forms = await tx.form.findMany({
+        where: formsListWhere(session.user.organizationId, session.user.role, session.user.id),
+        orderBy: { updatedAt: 'desc' },
+        include: { creator: { select: { name: true, email: true } } },
+      });
+      const responseCounts = await tx.submission.groupBy({
+        by: ['formId'],
+        where: { organizationId: session.user.organizationId, status: 'submitted' },
+        _count: { _all: true },
+      });
+      const organization = await tx.organization.findUniqueOrThrow({
+        where: { id: session.user.organizationId },
+        select: { subdomain: true },
+      });
+      return { forms, responseCounts, organization };
+    },
   );
 
   const responseCountByFormId = new Map(responseCounts.map((row) => [row.formId, row._count._all]));
@@ -45,9 +49,16 @@ export default async function FormsListPage() {
     createdAt: form.createdAt.toISOString(),
     responseCount: responseCountByFormId.get(form.id) ?? 0,
     publicUrl: buildOrgFormUrl(organization.subdomain, `/f/${form.slug}`),
+    createdByName: form.creator.name ?? form.creator.email,
+    isOwnForm: form.createdBy === session.user.id,
+    isPrivate: form.isPrivate,
   }));
 
   return (
-    <FormsListClient initialForms={formSummaries} canEdit={canCreateForms(session.user.role)} />
+    <FormsListClient
+      initialForms={formSummaries}
+      canEdit={canCreateForms(session.user.role)}
+      currentUserDisplayName={session.user.email ?? 'You'}
+    />
   );
 }

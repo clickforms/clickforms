@@ -20,6 +20,12 @@ interface FormSummary {
   responseCount: number;
   /** Absolute URL on the org's subdomain, e.g. https://carecircle.clickforms.com.au/f/intake-form. */
   publicUrl: string;
+  /** Creator's name, falling back to email — see src/app/forms/list/page.tsx. */
+  createdByName: string;
+  /** Whether the signed-in user is this form's creator — only they can toggle privacy. */
+  isOwnForm: boolean;
+  /** Opt-out flag: hidden from everyone but the creator when true (see formsListWhere). */
+  isPrivate: boolean;
 }
 
 const STATUS_BADGE: Record<FormStatus, { label: string; className: string }> = {
@@ -43,9 +49,12 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
 export function FormsListClient({
   initialForms,
   canEdit,
+  currentUserDisplayName,
 }: {
   initialForms: FormSummary[];
   canEdit: boolean;
+  /** Falls back to this label for the creator of a form just-duplicated by the current user. */
+  currentUserDisplayName: string;
 }) {
   const [forms, setForms] = useState(initialForms);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -94,6 +103,12 @@ export function FormsListClient({
           createdAt: newForm.createdAt,
           responseCount: 0,
           publicUrl: newForm.publicUrl,
+          // The duplicating user is always the new form's creator, and it starts visible
+          // to the org (isPrivate defaults false) — matches what POST /api/forms/[id]/duplicate
+          // actually persists.
+          createdByName: currentUserDisplayName,
+          isOwnForm: true,
+          isPrivate: false,
         },
         ...current,
       ]);
@@ -101,6 +116,24 @@ export function FormsListClient({
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to duplicate form');
     }
+  }
+
+  async function handleTogglePrivate(form: FormSummary) {
+    const isPrivate = !form.isPrivate;
+    const previous = forms;
+    setForms((current) => current.map((f) => (f.id === form.id ? { ...f, isPrivate } : f)));
+
+    const response = await fetch(`/api/forms/${form.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isPrivate }),
+    });
+    if (!response.ok) {
+      setForms(previous);
+      toast.error(await readApiError(response, 'Failed to update form visibility'));
+      return;
+    }
+    toast.success(isPrivate ? 'Form is now private to you' : 'Form is now visible to the org');
   }
 
   async function handleToggleArchive(form: FormSummary) {
@@ -270,6 +303,7 @@ export function FormsListClient({
                       </button>
                     </th>
                   ))}
+                  <th>Created by</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -301,6 +335,14 @@ export function FormsListClient({
                           </Link>
                         )}
                       </td>
+                      <td data-label="Created by">
+                        {form.createdByName}
+                        {form.isPrivate ? (
+                          <span className="badge badge--neutral admin-table-private-badge">
+                            Private
+                          </span>
+                        ) : null}
+                      </td>
                       <td data-label="Created">
                         {new Date(form.createdAt).toLocaleDateString('en-AU')}
                       </td>
@@ -325,6 +367,9 @@ export function FormsListClient({
                           onToggleArchive={() => handleToggleArchive(form)}
                           onWorkflow={(action) => handleWorkflow(form, action)}
                           onDelete={() => setDeletingForm(form)}
+                          isPrivate={form.isPrivate}
+                          isOwnForm={form.isOwnForm}
+                          onTogglePrivate={() => handleTogglePrivate(form)}
                         />
                       </td>
                     </tr>
@@ -332,7 +377,7 @@ export function FormsListClient({
                 })}
                 {visibleForms.length === 0 ? (
                   <tr>
-                    <td colSpan={COLUMNS.length + 1} className="admin-table-empty">
+                    <td colSpan={COLUMNS.length + 2} className="admin-table-empty">
                       No forms match &ldquo;{search}&rdquo;.
                     </td>
                   </tr>

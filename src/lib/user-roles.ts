@@ -36,13 +36,25 @@ export function canEditForm(role: UserRole, createdBy: string, userId: string): 
   return false;
 }
 
-/** Prisma `where` clause for listing forms this user can see in the admin UI. */
-export function formsListWhere(organizationId: string, role: UserRole, userId: string) {
-  const base = { organizationId };
-  if (role === 'member') {
-    return { ...base, createdBy: userId };
-  }
-  return base;
+/**
+ * Prisma `where` clause for listing forms this user can see in the admin UI. Every org
+ * member sees every form by default, regardless of role — a form's creator can opt it
+ * out via the `isPrivate` flag, which hides it from everyone but themselves (no
+ * admin/editor override; see canViewForm).
+ */
+export function formsListWhere(organizationId: string, _role: UserRole, userId: string) {
+  return {
+    organizationId,
+    OR: [{ isPrivate: false }, { createdBy: userId }],
+  };
+}
+
+/**
+ * Whether this user may see a form at all. `isPrivate` forms are visible only to their
+ * creator — truly private, with no role-based override (not even admin/editor).
+ */
+export function canViewForm(isPrivate: boolean, createdBy: string, userId: string): boolean {
+  return !isPrivate || createdBy === userId;
 }
 
 /** Derived UI flag: show builder controls (not read-only). */

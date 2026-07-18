@@ -10,18 +10,23 @@ export default async function DashboardPage() {
     return null;
   }
 
-  const [forms, responseCounts] = await withOrgContext(session.user.organizationId, (tx) =>
-    Promise.all([
-      tx.form.findMany({
+  // Sequential, not Promise.all — both queries share one connection via withOrgContext's
+  // transaction, and concurrent queries on a single `pg` client are deprecated (and will
+  // error in pg@9.0).
+  const { forms, responseCounts } = await withOrgContext(
+    session.user.organizationId,
+    async (tx) => {
+      const forms = await tx.form.findMany({
         where: formsListWhere(session.user.organizationId, session.user.role, session.user.id),
         orderBy: { updatedAt: 'desc' },
-      }),
-      tx.submission.groupBy({
+      });
+      const responseCounts = await tx.submission.groupBy({
         by: ['formId'],
         where: { organizationId: session.user.organizationId, status: 'submitted' },
         _count: { _all: true },
-      }),
-    ]),
+      });
+      return { forms, responseCounts };
+    },
   );
 
   const totalResponses = responseCounts.reduce((sum, row) => sum + row._count._all, 0);

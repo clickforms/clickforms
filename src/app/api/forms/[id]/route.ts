@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
+import { toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
-import { assertFormEditAccess } from '@/lib/form-access';
+import { assertFormEditAccess, assertFormViewAccess } from '@/lib/form-access';
 import { deleteForm } from '@/lib/forms/delete-form';
 import {
   restoreStatusAfterUnarchive,
@@ -11,7 +11,7 @@ import {
 } from '@/lib/forms/form-status';
 import { formSchemaSchema } from '@/lib/forms/schema';
 import { getOrCreateDraftVersion } from '@/lib/forms/versions';
-import { requireRole, requireSession } from '@/lib/session';
+import { ForbiddenError, requireRole, requireSession } from '@/lib/session';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
       const form = await tx.form.findFirst({
         where: { id, organizationId: session.user.organizationId },
       });
-      if (!form) throw new NotFoundError('Form');
+      assertFormViewAccess(form, session.user.id);
 
       const editingVersion = await tx.formVersion.findFirst({
         where: { formId: form.id },
@@ -51,11 +51,16 @@ const patchFormBodySchema = z
     name: z.string().trim().min(1).max(200).optional(),
     archived: z.boolean().optional(),
     schema: formSchemaSchema.optional(),
+    isPrivate: z.boolean().optional(),
   })
   .refine(
-    (body) => body.name !== undefined || body.archived !== undefined || body.schema !== undefined,
+    (body) =>
+      body.name !== undefined ||
+      body.archived !== undefined ||
+      body.schema !== undefined ||
+      body.isPrivate !== undefined,
     {
-      message: 'Provide at least one of: name, archived, schema',
+      message: 'Provide at least one of: name, archived, schema, isPrivate',
     },
   );
 
@@ -75,6 +80,14 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         where: { id, organizationId: session.user.organizationId },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
+
+      // The privacy toggle is creator-only, deliberately narrower than the general edit
+      // gate above: "truly private" (see formsListWhere/canViewForm) means admins/editors
+      // can't see a form once it's private, so they shouldn't be able to make that call on
+      // someone else's form in the first place either.
+      if (body.isPrivate !== undefined && form.createdBy !== session.user.id) {
+        throw new ForbiddenError('Only the form creator can change its visibility');
+      }
 
       if (body.name !== undefined) {
         await tx.form.update({ where: { id: form.id }, data: { name: body.name } });
@@ -101,6 +114,20 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
             organizationId: session.user.organizationId,
             actorUserId: session.user.id,
             action: body.archived ? 'form.archive' : 'form.restore',
+            entityType: 'form',
+            entityId: form.id,
+          },
+          tx,
+        );
+      }
+
+      if (body.isPrivate !== undefined) {
+        await tx.form.update({ where: { id: form.id }, data: { isPrivate: body.isPrivate } });
+        await logAudit(
+          {
+            organizationId: session.user.organizationId,
+            actorUserId: session.user.id,
+            action: body.isPrivate ? 'form.make_private' : 'form.make_visible',
             entityType: 'form',
             entityId: form.id,
           },

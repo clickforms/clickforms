@@ -210,6 +210,11 @@ model Form {
   // form_versions row the public renderer (spec 03) should read.
   currentVersionId  String?    @unique @map("current_version_id") @db.Uuid
   createdBy         String     @map("created_by") @db.Uuid
+  // Opt-out toggle (row action on the Forms list, see FormActionsMenu): when true, this
+  // form is hidden from literally everyone in the org except its creator — no admin/editor
+  // override. Enforced in application code (formsListWhere, assertFormViewAccess /
+  // assertFormEditAccess), not RLS, since RLS's "forms" policy is org-scoped only.
+  isPrivate         Boolean    @default(false) @map("is_private")
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
 

@@ -86,6 +86,14 @@ model Organization {
   subdomain String   @unique
   createdAt DateTime @default(now()) @map("created_at")
 
+  // Org profile fields (specs 06 admin dashboard) — all optional, editable only by
+  // org admins via /forms/settings/organisation (see src/app/api/organization/route.ts).
+  // Not collected at signup; filled in later, so every existing org has these as null.
+  abn          String? @map("abn")
+  contactName  String? @map("contact_name")
+  contactEmail String? @map("contact_email")
+  contactPhone String? @map("contact_phone")
+
   users           User[]
   userInvites     UserInvite[]
   forms           Form[]

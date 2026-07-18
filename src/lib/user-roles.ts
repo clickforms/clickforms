@@ -6,8 +6,8 @@ export const INVITABLE_ROLES = ['admin', 'member'] as const satisfies readonly U
 export type InvitableRole = (typeof INVITABLE_ROLES)[number];
 
 export const ROLE_LABELS: Record<InvitableRole, string> = {
-  admin: 'Organisation admin',
-  member: 'Regular user',
+  admin: 'Org super admin',
+  member: 'Org user',
 };
 
 export const ROLE_DESCRIPTIONS: Record<InvitableRole, string> = {
@@ -54,9 +54,9 @@ export function canUseBuilder(role: UserRole, createdBy: string | null, userId: 
 export function formatUserRole(role: UserRole): string {
   switch (role) {
     case 'admin':
-      return 'Organisation admin';
+      return 'Org super admin';
     case 'member':
-      return 'Regular user';
+      return 'Org user';
     case 'editor':
       return 'Editor';
     case 'viewer':

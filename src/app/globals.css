@@ -6038,6 +6038,10 @@ textarea.form-field-input {
   align-items: start;
 }
 
+.settings-nav-group + .settings-nav-group {
+  margin-top: 1.75rem;
+}
+
 .settings-nav-heading {
   margin: 0 0 0.75rem;
   font-size: 0.9375rem;

@@ -30,6 +30,13 @@ export const FIELD_TYPES = [
   'image',
   'address',
   'choice_matrix',
+  'number',
+  'phone',
+  'website',
+  'rating',
+  'opinion_scale',
+  'legal',
+  'hidden',
 ] as const;
 
 export const COLUMN_COUNTS = [2, 3, 4] as const;
@@ -237,31 +244,71 @@ const baseFieldSchema = z.object({
 const shortTextFieldSchema = baseFieldSchema.extend({
   type: z.literal('short_text'),
   validation: textValidationSchema.optional(),
+  placeholder: z.string().optional(),
+  defaultValue: z.string().optional(),
 });
 
 const paragraphFieldSchema = baseFieldSchema.extend({
   type: z.literal('paragraph'),
   validation: textValidationSchema.optional(),
+  placeholder: z.string().optional(),
+  defaultValue: z.string().optional(),
+  // Textarea row count — undefined falls through to the existing 4-row CSS default.
+  rows: z.number().int().min(2).max(20).optional(),
 });
+
+// Shared by multi_choice/checkbox/dropdown's "Randomize order" and "Add an 'Other'
+// option" toggles — every option-bearing field type behaves identically for these two,
+// so the properties (and the option-list-building logic in field-input.tsx that reads
+// them) are written once here rather than duplicated per type.
+const optionFieldExtras = {
+  // Reshuffled once per render session (not on every re-render — see useMemo in
+  // field-input.tsx) so the order doesn't jump around while a respondent is answering.
+  randomizeOrder: z.boolean().optional(),
+  // Appends a synthetic "Other" choice with a free-text box — see ALLOW_OTHER_OPTION_ID
+  // in field-input.tsx for how its answer is distinguished from a real option id.
+  allowOther: z.boolean().optional(),
+};
 
 const multiChoiceFieldSchema = baseFieldSchema.extend({
   type: z.literal('multi_choice'),
   options: z.array(fieldOptionSchema).min(1),
+  defaultValue: z.string().optional(),
+  ...optionFieldExtras,
 });
 
 const checkboxFieldSchema = baseFieldSchema.extend({
   type: z.literal('checkbox'),
   options: z.array(fieldOptionSchema).min(1),
+  minSelected: z.number().int().nonnegative().optional(),
+  maxSelected: z.number().int().positive().optional(),
+  ...optionFieldExtras,
 });
 
 const dropdownFieldSchema = baseFieldSchema.extend({
   type: z.literal('dropdown'),
   options: z.array(fieldOptionSchema).min(1),
+  placeholder: z.string().optional(),
+  defaultValue: z.string().optional(),
+  ...optionFieldExtras,
 });
+
+export const DATE_DISPLAY_FORMATS = ['iso', 'us', 'uk'] as const;
+export type DateDisplayFormat = (typeof DATE_DISPLAY_FORMATS)[number];
+export const DATE_DISPLAY_FORMAT_LABEL: Record<DateDisplayFormat, string> = {
+  iso: 'YYYY-MM-DD',
+  us: 'MM/DD/YYYY',
+  uk: 'DD/MM/YYYY',
+};
 
 const dateFieldSchema = baseFieldSchema.extend({
   type: z.literal('date'),
   validation: dateValidationSchema.optional(),
+  // 'today' resolves at render time (not baked into the schema at save time) so a
+  // published form always defaults to *the respondent's* today, not the day the admin
+  // configured the field. A concrete ISO string pins it to one fixed date instead.
+  defaultValue: z.union([z.literal('today'), z.string().date()]).optional(),
+  displayFormat: z.enum(DATE_DISPLAY_FORMATS).optional(),
 });
 
 const timeFieldSchema = baseFieldSchema.extend({
@@ -270,11 +317,19 @@ const timeFieldSchema = baseFieldSchema.extend({
 
 const emailFieldSchema = baseFieldSchema.extend({
   type: z.literal('email'),
+  placeholder: z.string().optional(),
+  defaultValue: z.string().optional(),
 });
 
 const fileUploadFieldSchema = baseFieldSchema.extend({
   type: z.literal('file_upload'),
   validation: fileValidationSchema.optional(),
+  // When true, the answer becomes a string[] of SubmissionFile ids instead of a single
+  // string — SubmissionFile already has no per-field uniqueness constraint (multiple
+  // rows can share the same fieldKey), so this is a front-end-only capability, not a
+  // data-model change. maxFiles undefined + multiple:true means "no fixed cap".
+  multiple: z.boolean().optional(),
+  maxFiles: z.number().int().min(2).max(20).optional(),
 });
 
 const signatureFieldSchema = baseFieldSchema.extend({
@@ -363,12 +418,27 @@ export const IMAGE_SPACING_LABEL: Record<ImageSpacing, string> = {
   large: 'Large',
 };
 
+// Horizontal placement within the field's container — matches JotForm/Google Forms'
+// image alignment control. 'center' is the existing default rendering, so it's the
+// implicit fallback when unset (no CSS behavior change for existing forms).
+export const IMAGE_ALIGN_OPTIONS = ['left', 'center', 'right'] as const;
+export type ImageAlign = (typeof IMAGE_ALIGN_OPTIONS)[number];
+export const IMAGE_ALIGN_LABEL: Record<ImageAlign, string> = {
+  left: 'Left',
+  center: 'Center',
+  right: 'Right',
+};
+
 const imageFieldSchema = baseFieldSchema.extend({
   type: z.literal('image'),
   imageStorageKey: z.string().min(1).optional(),
   alt: z.string().optional(),
   imageSize: z.enum(IMAGE_SIZE_OPTIONS).optional(),
   imageSpacing: z.enum(IMAGE_SPACING_OPTIONS).optional(),
+  align: z.enum(IMAGE_ALIGN_OPTIONS).optional(),
+  // Wraps the rendered image in an <a>, opened in a new tab — JotForm's "Link Image".
+  // Left unset, the image renders as a plain <img> with no click behavior.
+  linkUrl: z.string().url().optional(),
 });
 
 // Compound street/suburb/state/postcode field. The answer is stored as a single JSON
@@ -377,6 +447,9 @@ const imageFieldSchema = baseFieldSchema.extend({
 // treating it as an opaque `string | string[] | undefined`.
 const addressFieldSchema = baseFieldSchema.extend({
   type: z.literal('address'),
+  // Most single-country deployments (the common case) don't need a country selector
+  // cluttering the address block — off by default, matching Typeform/JotForm.
+  includeCountry: z.boolean().optional(),
 });
 
 // A ratings grid — one row per statement/item, one shared set of columns (e.g. a
@@ -386,6 +459,122 @@ const choiceMatrixFieldSchema = baseFieldSchema.extend({
   type: z.literal('choice_matrix'),
   rows: z.array(fieldOptionSchema).min(1),
   columns: z.array(fieldOptionSchema).min(2),
+});
+
+const numberValidationSchema = z
+  .object({
+    min: z.number().optional(),
+    max: z.number().optional(),
+    // Purely a UX nicety for the <input type="number"> step attribute (e.g. 0.5 for
+    // half-units) — never enforced server-side, since rejecting an off-step value a
+    // respondent typed by hand would be a confusing, low-value validation failure.
+    step: z.number().positive().optional(),
+  })
+  .strict();
+
+const numberFieldSchema = baseFieldSchema.extend({
+  type: z.literal('number'),
+  validation: numberValidationSchema.optional(),
+  placeholder: z.string().optional(),
+  defaultValue: z.number().optional(),
+  // Rendered adjacent to the input rather than baked into the stored value — e.g.
+  // prefix "$" + suffix "/mo" around a plain numeric answer, matching Typeform/JotForm's
+  // currency- and unit-style number fields without polluting the exported data.
+  prefix: z.string().max(8).optional(),
+  suffix: z.string().max(8).optional(),
+});
+
+// Deliberately a plain string, not a structured country-code + national-number pair —
+// v1 has no phone-number library dependency, and a permissive format regex (see
+// validate-answers.ts) covers the common "how big companies do it" case of collecting a
+// contact number without forcing a specific international format on every respondent.
+const phoneFieldSchema = baseFieldSchema.extend({
+  type: z.literal('phone'),
+  placeholder: z.string().optional(),
+  defaultValue: z.string().optional(),
+  // A display hint only (e.g. "+1", "+61") shown ahead of the input to set respondent
+  // expectations — not parsed, validated, or split out of the stored answer, keeping the
+  // "plain string" shape above intact.
+  defaultCountryCode: z.string().max(5).optional(),
+});
+
+const websiteFieldSchema = baseFieldSchema.extend({
+  type: z.literal('website'),
+  placeholder: z.string().optional(),
+  defaultValue: z.string().optional(),
+});
+
+// Bounds match what a star-rating control can sensibly render in a form width — undefined
+// falls through to 5, matching every competitor's default (Typeform, JotForm, Google Forms).
+export const RATING_MAX_MIN = 3;
+export const RATING_MAX_MAX = 10;
+export const DEFAULT_RATING_MAX = 5;
+
+// Icon swap is purely cosmetic (all three render the same 1..maxRating click/tap
+// control) — matches JotForm's star/heart and a thumbs option covering the common
+// "simple approval" use case Typeform/JotForm both support via emoji rating.
+export const RATING_ICON_OPTIONS = ['star', 'heart', 'thumb'] as const;
+export type RatingIcon = (typeof RATING_ICON_OPTIONS)[number];
+export const RATING_ICON_LABEL: Record<RatingIcon, string> = {
+  star: 'Star',
+  heart: 'Heart',
+  thumb: 'Thumbs up',
+};
+
+const ratingFieldSchema = baseFieldSchema.extend({
+  type: z.literal('rating'),
+  maxRating: z.number().int().min(RATING_MAX_MIN).max(RATING_MAX_MAX).optional(),
+  icon: z.enum(RATING_ICON_OPTIONS).optional(),
+  // Hex color for the filled icon state — undefined falls through to the existing
+  // --color-primary-derived CSS default, so existing forms render unchanged.
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
+});
+
+// An NPS-style 0-10 (or admin-chosen range) scale with optional end-point labels (e.g.
+// "Not likely" / "Very likely") — the single most common "how likely are you to
+// recommend..." field shape across every major form builder.
+export const OPINION_SCALE_MIN_BOUND = 0;
+export const OPINION_SCALE_MAX_BOUND = 10;
+export const DEFAULT_OPINION_SCALE_MIN = 0;
+export const DEFAULT_OPINION_SCALE_MAX = 10;
+
+const opinionScaleFieldSchema = baseFieldSchema.extend({
+  type: z.literal('opinion_scale'),
+  scaleMin: z.number().int().min(OPINION_SCALE_MIN_BOUND).max(OPINION_SCALE_MAX_BOUND).optional(),
+  scaleMax: z.number().int().min(OPINION_SCALE_MIN_BOUND).max(OPINION_SCALE_MAX_BOUND).optional(),
+  minLabel: z.string().optional(),
+  maxLabel: z.string().optional(),
+  // Optional label under the scale's midpoint (e.g. "Neutral") — SurveyMonkey/Typeform
+  // both support a middle anchor in addition to the two end labels.
+  midLabel: z.string().optional(),
+});
+
+// A single "I agree to ..." consent checkbox with an optional link (Terms of Service,
+// Privacy Policy) — kept as its own field type rather than reusing `checkbox` with one
+// option, since consent text/link semantics (and legal record-keeping expectations) are
+// different enough to deserve dedicated settings and a distinct submission-export label.
+const legalFieldSchema = baseFieldSchema.extend({
+  type: z.literal('legal'),
+  consentText: z.string().min(1),
+  linkLabel: z.string().optional(),
+  linkUrl: z.string().optional(),
+});
+
+// Carries a value the respondent never sees or edits — either a fixed admin-set default,
+// or (if `sourceParam` is set) whatever value arrives on the public form URL's query
+// string under that param name (e.g. ?ref=partner_x), falling back to `defaultValue` when
+// the param is absent. Common use: campaign/UTM tracking, a pre-filled record id linked
+// from an external system. Still a real answer (stored, exported, usable in conditional
+// logic and merge fields) — just never rendered as a visible input; see FieldInput and
+// the "no visible UI" special-casing throughout the builder/renderer for why it isn't in
+// LAYOUT_ONLY_FIELD_TYPES despite having no on-page presence.
+const hiddenFieldSchema = baseFieldSchema.extend({
+  type: z.literal('hidden'),
+  sourceParam: z.string().optional(),
+  defaultValue: z.string().optional(),
 });
 
 const formFieldUnionSchema = z.discriminatedUnion('type', [
@@ -405,6 +594,13 @@ const formFieldUnionSchema = z.discriminatedUnion('type', [
   imageFieldSchema,
   addressFieldSchema,
   choiceMatrixFieldSchema,
+  numberFieldSchema,
+  phoneFieldSchema,
+  websiteFieldSchema,
+  ratingFieldSchema,
+  opinionScaleFieldSchema,
+  legalFieldSchema,
+  hiddenFieldSchema,
 ]);
 
 // Preprocess step (rather than baking the migration into staticTextFieldSchema itself)

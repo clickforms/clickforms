@@ -5,6 +5,7 @@ import {
 } from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getVisibleFieldIds } from '@/lib/forms/conditional-logic';
+import { OTHER_OPTION_ID } from '@/lib/forms/other-option';
 import type { FormField, FormPage, FormSchema } from '@/lib/forms/schema';
 import { expandPageFieldIds } from '@/lib/forms/schema';
 
@@ -28,6 +29,7 @@ function validateField(field: FormField, value: string | string[] | undefined): 
     case 'column_layout':
     case 'image':
     case 'static_text':
+    case 'hidden':
       return null;
 
     default:
@@ -80,16 +82,40 @@ function validateField(field: FormField, value: string | string[] | undefined): 
     case 'multi_choice':
     case 'dropdown': {
       const optionIds = new Set(field.options.map((option) => option.id));
-      if (typeof value !== 'string' || !optionIds.has(value)) {
+      if (typeof value !== 'string') {
         return 'Select a valid option.';
       }
-      return null;
+      if (optionIds.has(value)) {
+        return null;
+      }
+      // A value that isn't a real option id is only valid when it's respondent-typed
+      // free text for an allowOther "Other" row — the bare OTHER_OPTION_ID sentinel
+      // (Other clicked/selected but no text typed yet) still fails here, same as any
+      // other blank answer would.
+      if (field.allowOther && value !== OTHER_OPTION_ID) {
+        return null;
+      }
+      return 'Select a valid option.';
     }
 
     case 'checkbox': {
       const optionIds = new Set(field.options.map((option) => option.id));
-      if (!Array.isArray(value) || value.some((v) => !optionIds.has(v))) {
+      if (!Array.isArray(value)) {
         return 'Select a valid option.';
+      }
+      const invalidEntry = value.find((v) => !optionIds.has(v));
+      if (invalidEntry !== undefined) {
+        const isValidOther =
+          field.allowOther && invalidEntry !== OTHER_OPTION_ID && invalidEntry.length > 0;
+        if (!isValidOther) {
+          return 'Select a valid option.';
+        }
+      }
+      if (field.minSelected !== undefined && value.length < field.minSelected) {
+        return `Select at least ${field.minSelected}.`;
+      }
+      if (field.maxSelected !== undefined && value.length > field.maxSelected) {
+        return `Select at most ${field.maxSelected}.`;
       }
       return null;
     }
@@ -132,6 +158,73 @@ function validateField(field: FormField, value: string | string[] | undefined): 
       // only after a real upload completed via the presign/confirm flow — size and MIME
       // type were already enforced server-side at presign time (src/lib/s3.ts), so
       // presence of a non-blank value is all that needs checking here.
+      return null;
+
+    case 'number': {
+      const numberValue = typeof value === 'string' ? Number(value) : Number.NaN;
+      if (Number.isNaN(numberValue)) {
+        return 'Enter a valid number.';
+      }
+      if (field.validation?.min !== undefined && numberValue < field.validation.min) {
+        return `Must be at least ${field.validation.min}.`;
+      }
+      if (field.validation?.max !== undefined && numberValue > field.validation.max) {
+        return `Must be at most ${field.validation.max}.`;
+      }
+      return null;
+    }
+
+    case 'phone': {
+      const phoneValue = typeof value === 'string' ? value.trim() : '';
+      // Permissive on purpose — no single format covers every country's numbers, and
+      // v1 has no phone-formatting library dependency. Digits, spaces, and the usual
+      // punctuation, at least 7 digits total (shortest plausible real phone number).
+      const digitCount = (phoneValue.match(/\d/g) ?? []).length;
+      if (!/^[+()\-.\s\d]+$/.test(phoneValue) || digitCount < 7) {
+        return 'Enter a valid phone number.';
+      }
+      return null;
+    }
+
+    case 'website': {
+      const raw = typeof value === 'string' ? value.trim() : '';
+      // Respondents commonly type "example.com" without a protocol — accept that and
+      // validate as if https:// were prepended, rather than forcing them to type it.
+      const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+      try {
+        const parsed = new URL(candidate);
+        if (!parsed.hostname.includes('.')) {
+          return 'Enter a valid website address.';
+        }
+      } catch {
+        return 'Enter a valid website address.';
+      }
+      return null;
+    }
+
+    case 'rating': {
+      const max = field.maxRating ?? 5;
+      const numberValue = typeof value === 'string' ? Number(value) : Number.NaN;
+      if (Number.isNaN(numberValue) || numberValue < 1 || numberValue > max) {
+        return 'Select a rating.';
+      }
+      return null;
+    }
+
+    case 'opinion_scale': {
+      const min = field.scaleMin ?? 0;
+      const max = field.scaleMax ?? 10;
+      const numberValue = typeof value === 'string' ? Number(value) : Number.NaN;
+      if (Number.isNaN(numberValue) || numberValue < min || numberValue > max) {
+        return 'Select a value on the scale.';
+      }
+      return null;
+    }
+
+    case 'legal':
+      // The generic required/isBlank check above already covers this: the answer is the
+      // literal string "true" when checked, undefined otherwise, so an unchecked-but-
+      // required consent box fails the isBlank() gate before this switch is even reached.
       return null;
 
     default: {

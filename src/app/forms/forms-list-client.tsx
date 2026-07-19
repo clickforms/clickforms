@@ -395,14 +395,6 @@ export function FormsListClient({
                           </Link>
                         )}
                       </td>
-                      <td data-label="Created by">
-                        {form.createdByName}
-                        {form.isPrivate ? (
-                          <span className="badge badge--neutral admin-table-private-badge">
-                            Private
-                          </span>
-                        ) : null}
-                      </td>
                       <td data-label="Created">
                         {new Date(form.createdAt).toLocaleDateString('en-AU')}
                       </td>
@@ -412,6 +404,14 @@ export function FormsListClient({
                       <td data-label="Responses">{form.responseCount}</td>
                       <td data-label="Status">
                         <span className={`badge ${badge.className}`}>{badge.label}</span>
+                      </td>
+                      <td data-label="Created by">
+                        {form.createdByName}
+                        {form.isPrivate ? (
+                          <span className="badge badge--neutral admin-table-private-badge">
+                            Private
+                          </span>
+                        ) : null}
                       </td>
                       <td data-label="Actions">
                         <FormActionsMenu

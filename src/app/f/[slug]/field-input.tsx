@@ -1,7 +1,7 @@
 'use client';
 
-import type { ChangeEvent } from 'react';
-import { useState } from 'react';
+import type { ChangeEvent, CSSProperties } from 'react';
+import { useMemo, useState } from 'react';
 import { SignaturePad } from '@/app/f/[slug]/signature-pad';
 import { DatePickerField } from '@/components/date-picker/date-picker-field';
 import { TimePickerField } from '@/components/time-picker/time-picker-field';
@@ -25,7 +25,8 @@ import {
 } from '@/lib/forms/field-styles';
 import { resolveFieldWidth } from '@/lib/forms/field-width';
 import { resolveMergeFieldsForRespondent } from '@/lib/forms/merge-fields';
-import type { FormField } from '@/lib/forms/schema';
+import { OTHER_OPTION_ID } from '@/lib/forms/other-option';
+import type { FieldOption, FormField } from '@/lib/forms/schema';
 
 // Renders a single field's input control, switching on FormField's discriminant. Owns no
 // answer state itself (the wizard in form-renderer-client.tsx is the single source of
@@ -34,6 +35,33 @@ import type { FormField } from '@/lib/forms/schema';
 // progress/validation — only the resulting fileId (written via onChange) does.
 
 export type FieldValue = string | string[] | undefined;
+
+// Stable empty array reused as the "no options" fallback below — a fresh `[]` literal on
+// every render would be referentially unequal each time, which is harmless here (nothing
+// keys off its identity) but avoiding needless allocations in a per-field render is a
+// habit worth keeping in this file.
+const EMPTY_OPTIONS: FieldOption[] = [];
+
+/** Shuffles `options` once per mount (stable across re-renders of the same field instance)
+ * when `randomizeOrder` is set — matches WPForms/Paperform's "randomize choice order",
+ * which reshuffles per respondent session rather than on every render (a respondent
+ * re-ordering under their own eyes while filling the form out would be disorienting). */
+function useOrderedOptions<T>(options: T[], randomizeOrder: boolean | undefined): T[] {
+  // `options` is included in the dependency list for correctness (this is the public
+  // renderer, not the builder — `schema`/`field.options` is loaded once per page view and
+  // doesn't change identity between re-renders here, so this doesn't cause re-shuffling
+  // while a respondent is answering; only a genuinely new options array — e.g. a fresh
+  // form load — produces a fresh shuffle).
+  return useMemo(() => {
+    if (!randomizeOrder) return options;
+    const shuffled = [...options];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j] as T, shuffled[i] as T];
+    }
+    return shuffled;
+  }, [randomizeOrder, options]);
+}
 
 interface FieldInputProps {
   slug?: string;
@@ -75,6 +103,34 @@ export function FieldInput({
   answers,
   disableOptionGrid,
 }: FieldInputProps) {
+  // Hooks must run unconditionally, in the same order, on every render of a given
+  // FieldInput instance — so this is computed up front for every field type (falling
+  // back to an empty options list for types that don't carry one) rather than only
+  // inside the multi_choice/checkbox/dropdown JSX branches further down, which would put
+  // the hook call after the early returns below for hidden/section_break/image/static_text.
+  const rawOptions =
+    field.type === 'multi_choice' || field.type === 'checkbox' || field.type === 'dropdown'
+      ? field.options
+      : EMPTY_OPTIONS;
+  const randomizeOrder =
+    field.type === 'multi_choice' || field.type === 'checkbox' || field.type === 'dropdown'
+      ? field.randomizeOrder
+      : false;
+  const orderedOptions = useOrderedOptions(rawOptions, randomizeOrder);
+  const allowOther =
+    (field.type === 'multi_choice' || field.type === 'checkbox' || field.type === 'dropdown') &&
+    field.allowOther === true;
+  const optionsWithOther = allowOther
+    ? [...orderedOptions, { id: OTHER_OPTION_ID, label: 'Other' }]
+    : orderedOptions;
+
+  // Never rendered — its value is populated programmatically (see the hidden-field
+  // auto-population effect in form-renderer-client.tsx), not typed by the respondent.
+  // Still a real field with a real answer, just with no on-page presence.
+  if (field.type === 'hidden') {
+    return null;
+  }
+
   if (field.type === 'section_break') {
     // The colored banner (.form-section-break) is just the label — helpText renders
     // as a plain paragraph below it, not inside the colored bar, matching the
@@ -96,16 +152,34 @@ export function FieldInput({
     }
     const src = getFieldImageSrc({ slug, formId, fieldId: field.id, preferFormId: previewMode });
     if (!src) return null;
+    const align = field.align ?? 'center';
+    const imageEl = (
+      // biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here
+      <img
+        src={src}
+        alt={field.alt ?? field.label}
+        className="form-image-field-img"
+        style={resolveImageStyle(field)}
+      />
+    );
     return (
-      <div className="form-image-field" style={resolveImageSpacingStyle(field)}>
+      <div
+        className={`form-image-field form-image-field--align-${align}`}
+        style={resolveImageSpacingStyle(field)}
+      >
         {field.label ? <p className="form-image-field-caption">{field.label}</p> : null}
-        {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
-        <img
-          src={src}
-          alt={field.alt ?? field.label}
-          className="form-image-field-img"
-          style={resolveImageStyle(field)}
-        />
+        {field.linkUrl ? (
+          <a
+            href={field.linkUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="form-image-field-link"
+          >
+            {imageEl}
+          </a>
+        ) : (
+          imageEl
+        )}
       </div>
     );
   }
@@ -167,6 +241,7 @@ export function FieldInput({
           type="text"
           className="text-input form-field-input"
           style={inputStyle}
+          placeholder={field.placeholder}
           value={typeof value === 'string' ? value : ''}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -176,8 +251,9 @@ export function FieldInput({
         <textarea
           id={field.id}
           className="text-input form-field-input"
-          rows={4}
+          rows={field.rows ?? 4}
           style={inputStyle}
+          placeholder={field.placeholder}
           value={typeof value === 'string' ? value : ''}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -190,18 +266,37 @@ export function FieldInput({
           role="radiogroup"
           aria-label={field.label}
         >
-          {field.options.map((option) => (
-            <label key={option.id} className="form-option-row">
-              <input
-                type="radio"
-                name={field.id}
-                value={option.id}
-                checked={value === option.id}
-                onChange={() => onChange(option.id)}
-              />
-              {option.label}
-            </label>
-          ))}
+          {optionsWithOther.map((option) => {
+            const isOtherRow = option.id === OTHER_OPTION_ID;
+            const selected = isOtherRow
+              ? value === OTHER_OPTION_ID ||
+                (typeof value === 'string' &&
+                  value.length > 0 &&
+                  !field.options.some((o) => o.id === value))
+              : value === option.id;
+            return (
+              <label key={option.id} className="form-option-row">
+                <input
+                  type="radio"
+                  name={field.id}
+                  value={option.id}
+                  checked={selected}
+                  onChange={() => onChange(isOtherRow ? OTHER_OPTION_ID : option.id)}
+                />
+                {option.label}
+                {isOtherRow && selected ? (
+                  <input
+                    type="text"
+                    className="text-input form-option-other-input"
+                    placeholder="Please specify"
+                    value={value === OTHER_OPTION_ID ? '' : typeof value === 'string' ? value : ''}
+                    onChange={(event) => onChange(event.target.value || OTHER_OPTION_ID)}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                ) : null}
+              </label>
+            );
+          })}
         </div>
       ) : null}
 
@@ -210,21 +305,45 @@ export function FieldInput({
           className={`form-option-list ${useOptionGrid ? 'form-option-list--grid' : ''}`}
           style={inputStyle}
         >
-          {field.options.map((option) => {
-            const selected = Array.isArray(value) && value.includes(option.id);
+          {optionsWithOther.map((option) => {
+            const isOtherRow = option.id === OTHER_OPTION_ID;
+            const current = Array.isArray(value) ? value : [];
+            const otherEntry = current.find((v) => !field.options.some((o) => o.id === v));
+            const selected = isOtherRow ? otherEntry !== undefined : current.includes(option.id);
             return (
               <label key={option.id} className="form-option-row">
                 <input
                   type="checkbox"
                   checked={selected}
                   onChange={() => {
-                    const current = Array.isArray(value) ? value : [];
+                    if (isOtherRow) {
+                      onChange(
+                        selected
+                          ? current.filter((v) => v !== otherEntry)
+                          : [...current, OTHER_OPTION_ID],
+                      );
+                      return;
+                    }
                     onChange(
                       selected ? current.filter((v) => v !== option.id) : [...current, option.id],
                     );
                   }}
                 />
                 {option.label}
+                {isOtherRow && selected ? (
+                  <input
+                    type="text"
+                    className="text-input form-option-other-input"
+                    placeholder="Please specify"
+                    value={otherEntry === OTHER_OPTION_ID ? '' : (otherEntry ?? '')}
+                    onChange={(event) => {
+                      const text = event.target.value;
+                      const rest = current.filter((v) => v !== otherEntry);
+                      onChange([...rest, text || OTHER_OPTION_ID]);
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                ) : null}
               </label>
             );
           })}
@@ -232,20 +351,40 @@ export function FieldInput({
       ) : null}
 
       {field.type === 'dropdown' ? (
-        <select
-          id={field.id}
-          className="text-input form-field-input"
-          style={inputStyle}
-          value={typeof value === 'string' ? value : ''}
-          onChange={(event) => onChange(event.target.value)}
-        >
-          <option value="">Select…</option>
-          {field.options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <>
+          <select
+            id={field.id}
+            className="text-input form-field-input"
+            style={inputStyle}
+            value={
+              typeof value === 'string' && field.options.some((o) => o.id === value)
+                ? value
+                : allowOther && typeof value === 'string' && value.length > 0
+                  ? OTHER_OPTION_ID
+                  : ''
+            }
+            onChange={(event) => onChange(event.target.value || undefined)}
+          >
+            <option value="">{field.placeholder || 'Select…'}</option>
+            {optionsWithOther.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {allowOther &&
+          typeof value === 'string' &&
+          value.length > 0 &&
+          !field.options.some((o) => o.id === value) ? (
+            <input
+              type="text"
+              className="text-input form-field-input form-option-other-input"
+              placeholder="Please specify"
+              value={value === OTHER_OPTION_ID ? '' : value}
+              onChange={(event) => onChange(event.target.value || OTHER_OPTION_ID)}
+            />
+          ) : null}
+        </>
       ) : null}
 
       {field.type === 'date' ? (
@@ -277,6 +416,7 @@ export function FieldInput({
           className="text-input form-field-input"
           style={inputStyle}
           autoComplete="email"
+          placeholder={field.placeholder}
           value={typeof value === 'string' ? value : ''}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -300,10 +440,78 @@ export function FieldInput({
         />
       ) : null}
 
-      {field.type === 'address' ? <AddressControl value={value} onChange={onChange} /> : null}
+      {field.type === 'address' ? (
+        <AddressControl
+          value={value}
+          onChange={onChange}
+          includeCountry={field.includeCountry ?? false}
+        />
+      ) : null}
 
       {field.type === 'choice_matrix' ? (
         <ChoiceMatrixControl field={field} value={value} onChange={onChange} />
+      ) : null}
+
+      {field.type === 'number' ? (
+        <div className="form-number-field">
+          {field.prefix ? <span className="form-number-field-affix">{field.prefix}</span> : null}
+          <input
+            id={field.id}
+            type="number"
+            className="text-input form-field-input"
+            style={inputStyle}
+            placeholder={field.placeholder}
+            min={field.validation?.min}
+            max={field.validation?.max}
+            step={field.validation?.step}
+            value={typeof value === 'string' ? value : ''}
+            onChange={(event) => onChange(event.target.value)}
+          />
+          {field.suffix ? <span className="form-number-field-affix">{field.suffix}</span> : null}
+        </div>
+      ) : null}
+
+      {field.type === 'phone' ? (
+        <div className="form-number-field">
+          {field.defaultCountryCode ? (
+            <span className="form-number-field-affix">{field.defaultCountryCode}</span>
+          ) : null}
+          <input
+            id={field.id}
+            type="tel"
+            className="text-input form-field-input"
+            style={inputStyle}
+            autoComplete="tel"
+            placeholder={field.placeholder ?? '+61 4XX XXX XXX'}
+            value={typeof value === 'string' ? value : ''}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </div>
+      ) : null}
+
+      {field.type === 'website' ? (
+        <input
+          id={field.id}
+          type="url"
+          className="text-input form-field-input"
+          style={inputStyle}
+          autoComplete="url"
+          placeholder={field.placeholder ?? 'https://example.com'}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      ) : null}
+
+      {field.type === 'rating' ? (
+        <RatingControl field={field} value={value} onChange={onChange} />
+      ) : null}
+
+      {field.type === 'opinion_scale' ? (
+        <OpinionScaleControl field={field} value={value} onChange={onChange} />
+      ) : null}
+
+      {field.type === 'legal' ? (
+        <LegalControl field={field} value={value} onChange={onChange} />
       ) : null}
 
       {error ? <p className="form-field-error">{error}</p> : null}
@@ -327,23 +535,45 @@ interface FileUploadControlProps {
 function FileUploadControl({ field, value, onChange, onUploadFile }: FileUploadControlProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  // fileId -> original filename, purely a display nicety (SubmissionFile rows already
+  // carry filename server-side; this just avoids a round-trip to show it immediately
+  // after upload). Keyed by id rather than a parallel array so removing one file mid-list
+  // can't desync the id/name pairing.
+  const [fileNames, setFileNames] = useState<Record<string, string>>({});
 
-  const currentFileId = typeof value === 'string' ? value : undefined;
+  const multiple = field.multiple === true;
+  const currentFileIds = multiple
+    ? Array.isArray(value)
+      ? value
+      : []
+    : typeof value === 'string' && value
+      ? [value]
+      : [];
+  const atMaxFiles =
+    multiple && field.maxFiles !== undefined && currentFileIds.length >= field.maxFiles;
   const accept = field.validation?.acceptedTypes?.join(',');
 
   async function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files ?? []);
     // Reset immediately so picking the same file again after a "Remove" still fires onChange.
     event.target.value = '';
-    if (!file || !onUploadFile) return;
+    if (files.length === 0 || !onUploadFile) return;
+
+    const remainingSlots = multiple
+      ? (field.maxFiles ?? Number.POSITIVE_INFINITY) - currentFileIds.length
+      : 1;
+    const toUpload = files.slice(0, Math.max(0, remainingSlots));
 
     setUploading(true);
     setUploadError(null);
     try {
-      const fileId = await onUploadFile(field.id, file);
-      setFileName(file.name);
-      onChange(fileId);
+      const uploaded: string[] = [];
+      for (const file of toUpload) {
+        const fileId = await onUploadFile(field.id, file);
+        setFileNames((prev) => ({ ...prev, [fileId]: file.name }));
+        uploaded.push(fileId);
+      }
+      onChange(multiple ? [...currentFileIds, ...uploaded] : uploaded[0]);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
     } finally {
@@ -351,34 +581,45 @@ function FileUploadControl({ field, value, onChange, onUploadFile }: FileUploadC
     }
   }
 
-  function handleRemove() {
-    setFileName(null);
+  function handleRemove(fileId: string) {
     setUploadError(null);
-    onChange(undefined);
+    if (multiple) {
+      onChange(currentFileIds.filter((id) => id !== fileId));
+    } else {
+      onChange(undefined);
+    }
   }
 
   return (
     <div className="form-field-file">
-      {currentFileId && !uploading ? (
-        <div className="form-field-file-status">
-          <span>{fileName ?? 'File uploaded'} ✓</span>
-          <button
-            type="button"
-            className="button button--ghost button--small"
-            onClick={handleRemove}
-          >
-            Remove
-          </button>
-        </div>
-      ) : (
+      {currentFileIds.length > 0 ? (
+        <ul className="form-field-file-list">
+          {currentFileIds.map((fileId) => (
+            <li key={fileId} className="form-field-file-status">
+              <span>{fileNames[fileId] ?? 'File uploaded'} ✓</span>
+              <button
+                type="button"
+                className="button button--ghost button--small"
+                onClick={() => handleRemove(fileId)}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {!atMaxFiles ? (
         <input
           id={field.id}
           type="file"
           className="form-field-file-input"
           accept={accept}
+          multiple={multiple}
           disabled={uploading}
           onChange={handleChange}
         />
+      ) : (
+        <p className="form-field-help">Maximum of {field.maxFiles} files reached.</p>
       )}
       {uploading ? <p className="form-field-help">Uploading…</p> : null}
       {uploadError ? <p className="form-field-error">{uploadError}</p> : null}
@@ -454,9 +695,10 @@ function SignatureControl({ field, value, onChange, onUploadFile }: SignatureCon
 interface AddressControlProps {
   value: FieldValue;
   onChange: (value: FieldValue) => void;
+  includeCountry: boolean;
 }
 
-function AddressControl({ value, onChange }: AddressControlProps) {
+function AddressControl({ value, onChange, includeCountry }: AddressControlProps) {
   const address = parseAddressAnswer(value);
 
   function update(partial: Partial<typeof address>) {
@@ -495,6 +737,15 @@ function AddressControl({ value, onChange }: AddressControlProps) {
           onChange={(event) => update({ postcode: event.target.value })}
         />
       </div>
+      {includeCountry ? (
+        <input
+          type="text"
+          className="text-input form-field-input"
+          placeholder="Country"
+          value={address.country}
+          onChange={(event) => update({ country: event.target.value })}
+        />
+      ) : null}
     </div>
   );
 }
@@ -508,6 +759,144 @@ interface ChoiceMatrixControlProps {
   field: Extract<FormField, { type: 'choice_matrix' }>;
   value: FieldValue;
   onChange: (value: FieldValue) => void;
+}
+
+// ---------------------------------------------------------------------------
+// rating — a row of star buttons; the answer is the chosen star count as a plain string
+// (e.g. "4"), the same string-valued shape every other single-answer field uses.
+// ---------------------------------------------------------------------------
+
+interface RatingControlProps {
+  field: Extract<FormField, { type: 'rating' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+}
+
+// Path data for each RATING_ICON_OPTIONS value, all drawn on the same 18x18 viewBox so
+// swapping icons never shifts the control's layout/spacing.
+const RATING_ICON_PATHS: Record<string, string> = {
+  star: 'M9 2.7l1.8 3.65 4 .58-2.9 2.83.68 4-3.58-1.88-3.58 1.88.68-4-2.9-2.83 4-.58L9 2.7Z',
+  heart:
+    'M9 15.5S2.5 11.4 2.5 6.9C2.5 4.5 4.4 3 6.4 3 7.6 3 8.6 3.6 9 4.5 9.4 3.6 10.4 3 11.6 3c2 0 3.9 1.5 3.9 3.9 0 4.5-6.5 8.6-6.5 8.6Z',
+  thumb:
+    'M2.8 8.2h2.9v7.1H2.8a.7.7 0 0 1-.7-.7V8.9a.7.7 0 0 1 .7-.7Zm4.3.4 2.6-5.4a1.3 1.3 0 0 1 2.4.9l-.8 3.2h3.4a1.4 1.4 0 0 1 1.35 1.85l-1.5 4.9a1.4 1.4 0 0 1-1.34 1H7.1',
+};
+
+function RatingControl({ field, value, onChange }: RatingControlProps) {
+  const max = field.maxRating ?? 5;
+  const selected = typeof value === 'string' ? Number(value) : 0;
+  const iconPath = RATING_ICON_PATHS[field.icon ?? 'star'] ?? RATING_ICON_PATHS.star;
+  const style = field.color ? ({ '--form-rating-color': field.color } as CSSProperties) : undefined;
+
+  return (
+    <div className="form-rating" role="radiogroup" aria-label={field.label} style={style}>
+      {Array.from({ length: max }, (_, index) => index + 1).map((star) => (
+        <button
+          key={star}
+          type="button"
+          className={`form-rating-star ${star <= selected ? 'form-rating-star--filled' : ''}`}
+          aria-pressed={star <= selected}
+          aria-label={`${star} out of ${max}`}
+          onClick={() => onChange(star === selected ? undefined : String(star))}
+        >
+          <svg width="26" height="26" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path
+              d={iconPath}
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              fill={star <= selected ? 'currentColor' : 'none'}
+            />
+          </svg>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// opinion_scale — a horizontal row of numbered buttons (NPS-style); the answer is the
+// chosen number as a plain string, same shape as rating above.
+// ---------------------------------------------------------------------------
+
+interface OpinionScaleControlProps {
+  field: Extract<FormField, { type: 'opinion_scale' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+}
+
+function OpinionScaleControl({ field, value, onChange }: OpinionScaleControlProps) {
+  const min = field.scaleMin ?? 0;
+  const max = field.scaleMax ?? 10;
+  const steps = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+
+  return (
+    <div className="form-opinion-scale">
+      <div className="form-opinion-scale-row" role="radiogroup" aria-label={field.label}>
+        {steps.map((step) => {
+          const stepValue = String(step);
+          const selected = value === stepValue;
+          return (
+            <button
+              key={step}
+              type="button"
+              className={`form-opinion-scale-step ${selected ? 'form-opinion-scale-step--selected' : ''}`}
+              aria-pressed={selected}
+              onClick={() => onChange(selected ? undefined : stepValue)}
+            >
+              {step}
+            </button>
+          );
+        })}
+      </div>
+      {field.minLabel || field.maxLabel ? (
+        <div className="form-opinion-scale-labels">
+          <span>{field.minLabel}</span>
+          {field.midLabel ? (
+            <span className="form-opinion-scale-mid-label">{field.midLabel}</span>
+          ) : null}
+          <span>{field.maxLabel}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// legal — a single "I agree..." consent checkbox; the answer is the string "true" when
+// checked, undefined otherwise, so required-ness can reuse the generic isBlank() check
+// in validate-answers.ts without a dedicated boolean answer shape.
+// ---------------------------------------------------------------------------
+
+interface LegalControlProps {
+  field: Extract<FormField, { type: 'legal' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+}
+
+function LegalControl({ field, value, onChange }: LegalControlProps) {
+  const checked = value === 'true';
+  return (
+    <label className="form-legal-row">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked ? 'true' : undefined)}
+      />
+      <span>
+        {field.consentText}
+        {field.linkUrl ? (
+          <>
+            {' '}
+            <a href={field.linkUrl} target="_blank" rel="noreferrer" className="form-legal-link">
+              {field.linkLabel || 'View'}
+            </a>
+          </>
+        ) : null}
+      </span>
+    </label>
+  );
 }
 
 function ChoiceMatrixControl({ field, value, onChange }: ChoiceMatrixControlProps) {

@@ -167,6 +167,13 @@ export const SUBMISSION_EXPORT_STYLES = `
     font-size: 0.65rem;
     font-weight: 700;
   }
+  .export-rating {
+    display: flex;
+    gap: 0.15rem;
+    font-size: 1.15rem;
+    color: #ccc;
+  }
+  .export-rating-star--filled { color: var(--export-rating-color, #f5a623); }
   .export-section-break-wrap {
     display: flex;
     flex-direction: column;
@@ -201,6 +208,8 @@ export const SUBMISSION_EXPORT_STYLES = `
   .export-static-text-body p { margin: 0 0 0.65rem; line-height: 1.55; }
   .export-static-text-body p:last-child { margin-bottom: 0; }
   .export-image-field { text-align: center; margin-bottom: 0.5rem; }
+  .export-image-field--align-left { text-align: left; }
+  .export-image-field--align-right { text-align: right; }
   .export-image-field img {
     max-width: 100%;
     max-height: 120px;
@@ -220,6 +229,11 @@ export const SUBMISSION_EXPORT_STYLES = `
     border-radius: 3px;
     padding: 0.6rem 0.9rem;
     font-size: 0.875rem;
+  }
+  .export-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
   .export-signature img {
     max-width: 280px;

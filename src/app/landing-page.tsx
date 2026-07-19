@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import type { CSSProperties } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 
 function ArrowRightIcon() {
@@ -16,156 +15,81 @@ function ArrowRightIcon() {
   );
 }
 
-function BuilderIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <rect x="3.5" y="3.5" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
-      <rect
-        x="12.5"
-        y="3.5"
-        width="6"
-        height="6"
-        rx="1.2"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-      <rect
-        x="3.5"
-        y="12.5"
-        width="6"
-        height="6"
-        rx="1.2"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-      <rect
-        x="12.5"
-        y="12.5"
-        width="6"
-        height="6"
-        rx="1.2"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-    </svg>
-  );
-}
-
-function CollectIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <path
-        d="M11 3v12M6 10l5 5 5-5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M4 17h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function WorkflowIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <circle cx="5" cy="11" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="17" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="17" cy="17" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M7.3 10.2 14.5 6.2M7.3 11.8l7.2 4" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <path
-        d="M11 3 17 5.5V10.5c0 3.5-2.5 6-6 7.5-3.5-1.5-6-4-6-7.5V5.5L11 3Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.5 11 10.5 13 14 9"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-const FIELD_TYPES = [
-  'Short text',
-  'Long text',
-  'Dropdown',
-  'Checkbox',
-  'Date',
-  'File upload',
-  'Signature',
-  'Section break',
-  'Static text',
-  'Multi choice',
-] as const;
-
-const FEATURES = [
+const CAPABILITIES = [
   {
-    icon: BuilderIcon,
-    title: 'Drag-and-drop builder',
-    desc: '15+ field types, multi-page layouts, conditional logic, and custom branding — design forms that match your process.',
+    num: '01',
+    title: 'Design with precision',
+    desc: 'Drag fields onto a live canvas. Multi-page layouts, conditional logic, and brand colours that match your organisation.',
   },
   {
-    icon: CollectIcon,
-    title: 'Collect accurately',
-    desc: 'Validation, file uploads, e-signatures, and structured answers for intake and consent.',
+    num: '02',
+    title: 'Collect complete answers',
+    desc: 'Validation, file uploads, and e-signatures so intake and consent arrive structured — not as scattered PDFs.',
   },
   {
-    icon: WorkflowIcon,
-    title: 'Approval workflow',
-    desc: 'Draft, submit for review, approve, and publish — full lifecycle control for every form.',
+    num: '03',
+    title: 'Approve before it goes live',
+    desc: 'Draft, submit for review, approve, and publish. Every form has a clear lifecycle your team can trust.',
   },
   {
-    icon: ShieldIcon,
-    title: 'Secure by default',
-    desc: 'Authenticated admin access, audit trails, and data that stays under your control.',
+    num: '04',
+    title: 'Review in one workspace',
+    desc: 'Search, filter, and inspect submissions from a central admin portal — audit trails included.',
   },
 ] as const;
 
-const TEMPLATES = [
+const USE_CASES = [
   {
-    tag: 'Healthcare',
+    domain: 'Healthcare',
     title: 'Client intake',
-    desc: 'Collect demographics, referrals, and consent in one flow.',
-    accent: '#3a9e8f',
+    desc: 'Demographics, referrals, and consent in a single branded flow.',
   },
   {
-    tag: 'Compliance',
-    title: 'Service agreement',
-    desc: 'Multi-page agreements with e-signatures and file uploads.',
-    accent: '#4a90c4',
+    domain: 'Compliance',
+    title: 'Service agreements',
+    desc: 'Multi-page agreements with e-signatures and supporting uploads.',
   },
   {
-    tag: 'Operations',
-    title: 'Incident report',
+    domain: 'Operations',
+    title: 'Incident reports',
     desc: 'Structured reporting with conditional follow-up fields.',
-    accent: '#7b6fc4',
   },
   {
-    tag: 'Admin',
-    title: 'Support plan',
-    desc: 'Goals, outcomes, and review dates on a branded form.',
-    accent: '#00a960',
+    domain: 'Admin',
+    title: 'Support plans',
+    desc: 'Goals, outcomes, and review dates on a form your team owns.',
+  },
+] as const;
+
+const STEPS = [
+  {
+    title: 'Design',
+    desc: 'Start from a template or blank canvas. Add fields, pages, logic, and brand colours.',
+  },
+  {
+    title: 'Approve & publish',
+    desc: 'Submit for review, publish when ready, and share a secure link with clients or staff.',
+  },
+  {
+    title: 'Collect & review',
+    desc: 'Submissions arrive instantly. Search, filter, and review from the admin workspace.',
   },
 ] as const;
 
 export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const primaryHref = isAuthenticated ? '/forms' : '/login';
   const primaryLabel = isAuthenticated ? 'Go to portal' : 'Sign in to admin';
+  const secondaryHref = isAuthenticated ? '/forms' : '/signup';
+  const secondaryLabel = isAuthenticated ? 'Open workspace' : 'Create account';
 
   return (
     <div className="landing">
+      <div className="landing-atmosphere" aria-hidden="true">
+        <div className="landing-atmosphere-orb landing-atmosphere-orb--a" />
+        <div className="landing-atmosphere-orb landing-atmosphere-orb--b" />
+        <div className="landing-atmosphere-grid" />
+      </div>
+
       <header className="landing-nav">
         <div className="landing-nav-inner">
           <Link href="/" className="landing-brand">
@@ -173,9 +97,9 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
             <span>Clickforms</span>
           </Link>
           <nav className="landing-nav-links" aria-label="Primary">
-            <a href="#features">Features</a>
-            <a href="#templates">Use cases</a>
-            <a href="#how-it-works">How it works</a>
+            <a href="#capabilities">Capabilities</a>
+            <a href="#product">Product</a>
+            <a href="#workflow">Workflow</a>
           </nav>
           <div className="landing-nav-actions">
             {isAuthenticated ? (
@@ -197,269 +121,295 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
       </header>
 
       <section className="landing-hero">
-        <div className="landing-container landing-hero-inner">
-          <div className="landing-hero-copy">
-            <p className="landing-kicker-hero">Clickforms platform</p>
-            <h1 className="landing-hero-title">
-              Forms that move
-              <span className="landing-hero-accent"> as fast as your team</span>
-            </h1>
-            <p className="landing-hero-lead">
-              Build intake, consent, and service agreement forms. Collect signatures, route
-              approvals, and review submissions — your in-house replacement for scattered form
-              workflows.
-            </p>
-            <div className="landing-hero-actions">
-              <Link className="landing-btn landing-btn--primary landing-btn--lg" href={primaryHref}>
-                {primaryLabel}
-                <ArrowRightIcon />
-              </Link>
-              <a className="landing-btn landing-btn--ghost landing-btn--lg" href="#features">
-                Explore features
-              </a>
-            </div>
-            <div className="landing-hero-metrics">
-              <div className="landing-metric">
-                <strong>15+</strong>
-                <span>field types</span>
-              </div>
-              <div className="landing-metric-divider" />
-              <div className="landing-metric">
-                <strong>E-sign</strong>
-                <span>built in</span>
-              </div>
-              <div className="landing-metric-divider" />
-              <div className="landing-metric">
-                <strong>Multi-page</strong>
-                <span>forms</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="landing-hero-stage" aria-hidden="true">
-            <div className="landing-mock landing-mock--builder">
-              <div className="landing-mock-bar">
-                <span className="landing-mock-dot landing-mock-dot--r" />
-                <span className="landing-mock-dot landing-mock-dot--y" />
-                <span className="landing-mock-dot landing-mock-dot--g" />
-                <span className="landing-mock-bar-title">Consent form · Builder</span>
-              </div>
-              <div className="landing-mock-builder-body">
-                <div className="landing-mock-palette">
-                  <small>Fields</small>
-                  <div className="landing-mock-chip">Text</div>
-                  <div className="landing-mock-chip landing-mock-chip--on">Signature</div>
-                  <div className="landing-mock-chip">Upload</div>
-                  <div className="landing-mock-chip">Date</div>
-                </div>
-                <div className="landing-mock-canvas">
-                  <div className="landing-mock-banner">Participant details</div>
-                  <div className="landing-mock-input-row">
-                    <div className="landing-mock-field">
-                      <span className="landing-mock-field-label">Full name</span>
-                      <div className="landing-mock-input landing-mock-input--filled" />
-                    </div>
-                  </div>
-                  <div className="landing-mock-input-row landing-mock-input-row--2">
-                    <div className="landing-mock-field">
-                      <span className="landing-mock-field-label">Email</span>
-                      <div className="landing-mock-input landing-mock-input--filled" />
-                    </div>
-                    <div className="landing-mock-field">
-                      <span className="landing-mock-field-label">Phone</span>
-                      <div className="landing-mock-input" />
-                    </div>
-                  </div>
-                  <div className="landing-mock-banner landing-mock-banner--sig">Consent</div>
-                  <div className="landing-mock-sig">
-                    <svg viewBox="0 0 140 44" aria-hidden="true">
-                      <path
-                        d="M6 30 C 24 6, 42 42, 58 20 S 88 4, 118 28"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="landing-container landing-hero-intro">
+          <p className="landing-brand-signal landing-anim landing-anim--1">Clickforms</p>
+          <h1 className="landing-hero-title landing-anim landing-anim--2">
+            Forms that run your operations — not the other way around
+          </h1>
+          <p className="landing-hero-lead landing-anim landing-anim--3">
+            Build intake, consent, and service agreements. Collect signatures, route approvals, and
+            review submissions in one secure workspace.
+          </p>
+          <div className="landing-hero-actions landing-anim landing-anim--4">
+            <Link className="landing-btn landing-btn--primary landing-btn--lg" href={primaryHref}>
+              {primaryLabel}
+              <ArrowRightIcon />
+            </Link>
+            <a className="landing-btn landing-btn--ghost landing-btn--lg" href="#product">
+              See the product
+            </a>
           </div>
         </div>
 
-        <div className="landing-container">
-          <div className="landing-field-strip">
-            <p className="landing-field-strip-label">Field types included</p>
-            <div className="landing-field-strip-list">
-              {FIELD_TYPES.map((field) => (
-                <span key={field}>{field}</span>
-              ))}
+        <div className="landing-hero-plane landing-anim landing-anim--5" aria-hidden="true">
+          <div className="landing-hero-plane-inner">
+            <div className="landing-stage">
+              <div className="landing-stage-chrome">
+                <div className="landing-stage-dots">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="landing-stage-tabs">
+                  <span className="landing-stage-tab landing-stage-tab--active">Builder</span>
+                  <span className="landing-stage-tab">Preview</span>
+                  <span className="landing-stage-tab">Settings</span>
+                </div>
+                <div className="landing-stage-status">
+                  <span className="landing-stage-status-dot" />
+                  Draft · Consent form
+                </div>
+              </div>
+              <div className="landing-stage-body">
+                <aside className="landing-stage-rail">
+                  <p className="landing-stage-rail-label">Fields</p>
+                  {['Short text', 'Date', 'File upload', 'Signature', 'Section'].map((label, i) => (
+                    <div
+                      key={label}
+                      className={`landing-stage-field-chip${i === 3 ? ' landing-stage-field-chip--active' : ''}`}
+                    >
+                      {label}
+                    </div>
+                  ))}
+                </aside>
+                <div className="landing-stage-canvas">
+                  <div className="landing-stage-banner">Participant details</div>
+                  <div className="landing-stage-row">
+                    <div className="landing-stage-field">
+                      <span>Full name</span>
+                      <div className="landing-stage-input landing-stage-input--filled">
+                        Jordan Ellis
+                      </div>
+                    </div>
+                  </div>
+                  <div className="landing-stage-row landing-stage-row--split">
+                    <div className="landing-stage-field">
+                      <span>Email</span>
+                      <div className="landing-stage-input landing-stage-input--filled">
+                        jordan@example.org
+                      </div>
+                    </div>
+                    <div className="landing-stage-field">
+                      <span>Date of birth</span>
+                      <div className="landing-stage-input">Select date</div>
+                    </div>
+                  </div>
+                  <div className="landing-stage-banner landing-stage-banner--secondary">
+                    Consent & signature
+                  </div>
+                  <div className="landing-stage-sig">
+                    <svg
+                      className="landing-sig-path"
+                      viewBox="0 0 180 48"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M8 32 C 28 8, 48 44, 68 22 S 108 6, 148 30"
+                        stroke="currentColor"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span>Jordan Ellis · 18 Jul 2026</span>
+                  </div>
+                </div>
+                <aside className="landing-stage-props">
+                  <p className="landing-stage-rail-label">Field</p>
+                  <p className="landing-stage-props-title">Signature</p>
+                  <div className="landing-stage-prop">
+                    <span>Required</span>
+                    <strong>Yes</strong>
+                  </div>
+                  <div className="landing-stage-prop">
+                    <span>Capture date</span>
+                    <strong>On</strong>
+                  </div>
+                  <div className="landing-stage-prop">
+                    <span>Page</span>
+                    <strong>2 of 2</strong>
+                  </div>
+                </aside>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="landing-section" id="features">
+      <section className="landing-section" id="capabilities">
         <div className="landing-container">
-          <div className="landing-section-head landing-section-head--center">
-            <p className="landing-kicker">Platform</p>
-            <h2 className="landing-h2">
-              Build. Collect. Approve.
-              <br />
-              <span className="landing-h2-muted">All in one place.</span>
-            </h2>
+          <div className="landing-section-head">
+            <p className="landing-eyebrow">Capabilities</p>
+            <h2 className="landing-h2">Everything your form workflow needs — in one place</h2>
           </div>
-
-          <div className="landing-features">
-            {FEATURES.map((f) => (
-              <article key={f.title} className="landing-feature-card">
-                <div className="landing-feature-icon">
-                  <f.icon />
-                </div>
-                <h3>{f.title}</h3>
-                <p>{f.desc}</p>
+          <div className="landing-capabilities">
+            {CAPABILITIES.map((item) => (
+              <article key={item.num} className="landing-capability">
+                <span className="landing-capability-num">{item.num}</span>
+                <h3>{item.title}</h3>
+                <p>{item.desc}</p>
               </article>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div className="landing-panels">
-            <article className="landing-panel">
-              <div className="landing-panel-copy">
-                <h3>See the builder in action</h3>
-                <p>Drag fields onto the canvas, arrange pages, and preview as you go.</p>
-              </div>
-              <div className="landing-panel-visual">
-                <div className="landing-mini-builder">
+      <section className="landing-section landing-section--product" id="product">
+        <div className="landing-container">
+          <div className="landing-product-block">
+            <div className="landing-product-copy">
+              <p className="landing-eyebrow">Builder</p>
+              <h2 className="landing-h2">Compose forms the way your process actually works</h2>
+              <p className="landing-section-lead">
+                Fifteen-plus field types, multi-page structure, and live preview. Design once —
+                publish when the team is ready.
+              </p>
+              <ul className="landing-checklist">
+                <li>Conditional logic and section breaks</li>
+                <li>File uploads and e-signatures</li>
+                <li>Organisation branding on every page</li>
+              </ul>
+            </div>
+            <div className="landing-product-visual" aria-hidden="true">
+              <div className="landing-mini-stage landing-mini-stage--builder">
+                <div className="landing-mini-stage-bar">
+                  <span>Intake form</span>
+                  <span className="landing-mini-badge">Editing</span>
+                </div>
+                <div className="landing-mini-stage-grid">
                   <div className="landing-mini-palette">
-                    {['Text', 'Choice', 'Sign', 'File'].map((f) => (
+                    {['Text', 'Choice', 'Sign', 'File', 'Date'].map((f) => (
                       <span key={f}>{f}</span>
                     ))}
                   </div>
                   <div className="landing-mini-canvas">
-                    <div className="landing-mini-bar" />
-                    <div className="landing-mini-lines">
-                      <div />
-                      <div />
-                      <div className="landing-mini-lines--half" />
-                    </div>
+                    <div className="landing-mini-block landing-mini-block--green" />
+                    <div className="landing-mini-line" />
+                    <div className="landing-mini-line landing-mini-line--short" />
+                    <div className="landing-mini-block" />
+                    <div className="landing-mini-line" />
                   </div>
                 </div>
               </div>
-            </article>
+            </div>
+          </div>
 
-            <article className="landing-panel">
-              <div className="landing-panel-copy">
-                <h3>Review every submission</h3>
-                <p>Search, filter, and inspect responses from a central admin workspace.</p>
-              </div>
-              <div className="landing-panel-visual">
-                <div className="landing-mini-table">
-                  <div className="landing-mini-table-head">
+          <div className="landing-product-block landing-product-block--reverse">
+            <div className="landing-product-copy">
+              <p className="landing-eyebrow">Submissions</p>
+              <h2 className="landing-h2">Review every response without leaving the portal</h2>
+              <p className="landing-section-lead">
+                A clear workspace for search, filter, and inspection — so compliance and operations
+                stay aligned.
+              </p>
+              <ul className="landing-checklist">
+                <li>Instant arrival as forms are completed</li>
+                <li>Status tracking for review workflows</li>
+                <li>Export-ready structured answers</li>
+              </ul>
+            </div>
+            <div className="landing-product-visual" aria-hidden="true">
+              <div className="landing-mini-stage landing-mini-stage--table">
+                <div className="landing-mini-stage-bar">
+                  <span>Submissions</span>
+                  <span className="landing-mini-badge landing-mini-badge--soft">12 today</span>
+                </div>
+                <div className="landing-table">
+                  <div className="landing-table-head">
                     <span>Form</span>
                     <span>Submitted</span>
                     <span>Status</span>
                   </div>
-                  <div className="landing-mini-table-row">
+                  <div className="landing-table-row">
                     <span>Client intake</span>
                     <span>Today, 9:14</span>
-                    <span className="landing-mini-pill landing-mini-pill--green">Complete</span>
+                    <span className="landing-status landing-status--ok">Complete</span>
                   </div>
-                  <div className="landing-mini-table-row">
+                  <div className="landing-table-row">
                     <span>Consent form</span>
                     <span>Today, 8:02</span>
-                    <span className="landing-mini-pill landing-mini-pill--green">Complete</span>
+                    <span className="landing-status landing-status--ok">Complete</span>
                   </div>
-                  <div className="landing-mini-table-row">
+                  <div className="landing-table-row">
                     <span>Incident report</span>
                     <span>Yesterday</span>
-                    <span className="landing-mini-pill landing-mini-pill--amber">Review</span>
+                    <span className="landing-status landing-status--warn">Review</span>
+                  </div>
+                  <div className="landing-table-row">
+                    <span>Service agreement</span>
+                    <span>Yesterday</span>
+                    <span className="landing-status landing-status--ok">Complete</span>
                   </div>
                 </div>
               </div>
-            </article>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="landing-section landing-section--alt" id="templates">
+      <section className="landing-section landing-section--cases" id="use-cases">
         <div className="landing-container">
           <div className="landing-section-head">
-            <p className="landing-kicker">Use cases</p>
-            <h2 className="landing-h2">Built for the forms you run every day</h2>
+            <p className="landing-eyebrow">Use cases</p>
+            <h2 className="landing-h2">Built for the forms your team runs every day</h2>
             <p className="landing-section-lead">
-              From client onboarding to incident reporting — templates and workflows your team
-              already knows.
+              From client onboarding to incident reporting — workflows your organisation already
+              understands.
             </p>
           </div>
-          <div className="landing-template-grid">
-            {TEMPLATES.map((t) => (
-              <article
-                key={t.title}
-                className="landing-template-card"
-                style={{ '--tpl-accent': t.accent } as CSSProperties}
-              >
-                <span className="landing-template-tag">{t.tag}</span>
-                <h3>{t.title}</h3>
-                <p>{t.desc}</p>
+          <div className="landing-cases">
+            {USE_CASES.map((item) => (
+              <article key={item.title} className="landing-case">
+                <span className="landing-case-domain">{item.domain}</span>
+                <h3>{item.title}</h3>
+                <p>{item.desc}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="landing-section" id="how-it-works">
+      <section className="landing-section" id="workflow">
         <div className="landing-container">
           <div className="landing-section-head landing-section-head--center">
-            <p className="landing-kicker">How it works</p>
+            <p className="landing-eyebrow">Workflow</p>
             <h2 className="landing-h2">Live in three steps</h2>
           </div>
-          <ol className="landing-timeline">
-            <li className="landing-timeline-step">
-              <div className="landing-timeline-marker">1</div>
-              <div className="landing-timeline-body">
-                <h3>Design</h3>
-                <p>
-                  Start from a template or blank canvas. Add fields, pages, logic, and brand
-                  colours.
-                </p>
-              </div>
-            </li>
-            <li className="landing-timeline-step">
-              <div className="landing-timeline-marker">2</div>
-              <div className="landing-timeline-body">
-                <h3>Approve & publish</h3>
-                <p>
-                  Submit for review, publish when ready, and share a secure link with clients or
-                  staff.
-                </p>
-              </div>
-            </li>
-            <li className="landing-timeline-step">
-              <div className="landing-timeline-marker">3</div>
-              <div className="landing-timeline-body">
-                <h3>Collect & review</h3>
-                <p>
-                  Submissions arrive instantly. Search, filter, and review from the admin workspace.
-                </p>
-              </div>
-            </li>
+          <ol className="landing-steps">
+            {STEPS.map((step, index) => (
+              <li key={step.title} className="landing-step">
+                <span className="landing-step-index">{String(index + 1).padStart(2, '0')}</span>
+                <h3>{step.title}</h3>
+                <p>{step.desc}</p>
+              </li>
+            ))}
           </ol>
         </div>
       </section>
 
       <section className="landing-cta">
         <div className="landing-container landing-cta-inner">
-          <h2 className="landing-cta-title">Ready to modernise your form workflows?</h2>
+          <p className="landing-cta-brand">Clickforms</p>
+          <h2 className="landing-cta-title">Ready when your team is</h2>
           <p className="landing-cta-lead">
             {isAuthenticated
               ? 'Continue to your portal to build forms, review submissions, and manage workflows.'
-              : "Sign in to build forms, review submissions, and manage your team's workflows."}
+              : 'Sign in to build forms, review submissions, and manage your organisation’s workflows.'}
           </p>
-          <Link className="landing-btn landing-btn--white landing-btn--lg" href={primaryHref}>
-            {primaryLabel}
-            <ArrowRightIcon />
-          </Link>
+          <div className="landing-cta-actions">
+            <Link className="landing-btn landing-btn--white landing-btn--lg" href={primaryHref}>
+              {primaryLabel}
+              <ArrowRightIcon />
+            </Link>
+            {!isAuthenticated ? (
+              <Link
+                className="landing-btn landing-btn--ghost-light landing-btn--lg"
+                href={secondaryHref}
+              >
+                {secondaryLabel}
+              </Link>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -469,7 +419,7 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
             <BrandMark size={24} id="footer" />
             <span>Clickforms</span>
           </Link>
-          <p>Clickforms · Internal forms platform</p>
+          <p>Internal forms platform</p>
         </div>
       </footer>
     </div>

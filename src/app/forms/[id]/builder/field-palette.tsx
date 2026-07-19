@@ -381,6 +381,134 @@ function PaletteIcon({ type }: { type: FieldType }) {
           />
         </svg>
       );
+    case 'number':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path
+            d="M5 3.5L4 14.5M13 3.5l-1 11M2.5 6.5h13M2 11.5h13"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case 'phone':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path
+            d="M4 2.5h2.2l1 3-1.5 1.3a9 9 0 0 0 4.5 4.5l1.3-1.5 3 1v2.2c0 .9-.75 1.6-1.65 1.5C7.9 14 4 10.1 3.5 5.15A1.5 1.5 0 0 1 5 3.5"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </svg>
+      );
+    case 'website':
+      return (
+        <svg {...common} aria-hidden="true">
+          <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.4" />
+          <ellipse cx="9" cy="9" rx="2.8" ry="6.5" stroke="currentColor" strokeWidth="1.3" />
+          <line x1="2.5" y1="9" x2="15.5" y2="9" stroke="currentColor" strokeWidth="1.3" />
+        </svg>
+      );
+    case 'rating':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path
+            d="M9 2.7l1.8 3.65 4 .58-2.9 2.83.68 4-3.58-1.88-3.58 1.88.68-4-2.9-2.83 4-.58L9 2.7Z"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </svg>
+      );
+    case 'opinion_scale':
+      return (
+        <svg {...common} aria-hidden="true">
+          <line
+            x1="2"
+            y1="9"
+            x2="16"
+            y2="9"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+          {[2, 5.5, 9, 12.5, 16].map((x) => (
+            <line
+              key={x}
+              x1={x}
+              y1="6.5"
+              x2={x}
+              y2="11.5"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+            />
+          ))}
+          <circle cx="9" cy="9" r="2.2" fill="currentColor" />
+        </svg>
+      );
+    case 'legal':
+      return (
+        <svg {...common} aria-hidden="true">
+          <rect
+            x="2"
+            y="3"
+            width="14"
+            height="12"
+            rx="1.5"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <path
+            d="M4.8 6.5h8.4M4.8 9h8.4M4.8 11.5h5"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+          />
+          <circle
+            cx="13.2"
+            cy="12.8"
+            r="3"
+            fill="var(--color-surface, #fff)"
+            stroke="currentColor"
+            strokeWidth="1.2"
+          />
+          <path
+            d="M11.9 12.8l.9.9 1.6-1.8"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case 'hidden':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path
+            d="M2.5 9S5 4.5 9 4.5 15.5 9 15.5 9 13 13.5 9 13.5 2.5 9 2.5 9Z"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinejoin="round"
+          />
+          <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1.3" />
+          <line
+            x1="3"
+            y1="15"
+            x2="15"
+            y2="3"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
     default:
       return null;
   }
@@ -475,11 +603,15 @@ export function FieldPalette({
   onAddColumnLayout: (columns: ColumnCount) => void;
 }) {
   const groups: { label: string; types: FieldType[] }[] = [
-    { label: 'Text', types: ['short_text', 'paragraph', 'email', 'address'] },
-    { label: 'Choice', types: ['multi_choice', 'checkbox', 'dropdown', 'choice_matrix'] },
+    {
+      label: 'Text',
+      types: ['short_text', 'paragraph', 'email', 'phone', 'website', 'number', 'address'],
+    },
+    { label: 'Choice', types: ['multi_choice', 'checkbox', 'dropdown', 'choice_matrix', 'legal'] },
+    { label: 'Rating & scale', types: ['rating', 'opinion_scale'] },
     { label: 'Date & time', types: ['date', 'time'] },
     { label: 'Files & sign', types: ['file_upload', 'signature'] },
-    { label: 'Layout', types: ['section_break', 'static_text', 'image'] },
+    { label: 'Layout', types: ['section_break', 'static_text', 'image', 'hidden'] },
   ];
 
   const columnCounts: ColumnCount[] = [2, 3, 4];

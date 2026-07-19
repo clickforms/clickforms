@@ -12,9 +12,19 @@ export interface AddressAnswer {
   suburb: string;
   state: string;
   postcode: string;
+  // Only ever populated when the field's `includeCountry` setting is on — omitted
+  // (empty string) forms and forms saved before this field existed both parse the same
+  // way, since JSON.parse simply won't find a `country` key on either.
+  country: string;
 }
 
-const EMPTY_ADDRESS: AddressAnswer = { street: '', suburb: '', state: '', postcode: '' };
+const EMPTY_ADDRESS: AddressAnswer = {
+  street: '',
+  suburb: '',
+  state: '',
+  postcode: '',
+  country: '',
+};
 
 export function parseAddressAnswer(value: string | string[] | undefined): AddressAnswer {
   if (typeof value !== 'string' || !value) return EMPTY_ADDRESS;
@@ -27,6 +37,7 @@ export function parseAddressAnswer(value: string | string[] | undefined): Addres
       suburb: typeof record.suburb === 'string' ? record.suburb : '',
       state: typeof record.state === 'string' ? record.state : '',
       postcode: typeof record.postcode === 'string' ? record.postcode : '',
+      country: typeof record.country === 'string' ? record.country : '',
     };
   } catch {
     return EMPTY_ADDRESS;
@@ -42,7 +53,8 @@ export function isAddressAnswerBlank(address: AddressAnswer): boolean {
     !address.street.trim() &&
     !address.suburb.trim() &&
     !address.state.trim() &&
-    !address.postcode.trim()
+    !address.postcode.trim() &&
+    !address.country.trim()
   );
 }
 
@@ -51,6 +63,7 @@ export function formatAddressAnswer(address: AddressAnswer): string {
     address.street,
     [address.suburb, address.state].filter(Boolean).join(' '),
     address.postcode,
+    address.country,
   ]
     .map((part) => part.trim())
     .filter((part) => part.length > 0)

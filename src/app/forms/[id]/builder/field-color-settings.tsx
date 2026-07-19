@@ -33,48 +33,45 @@ export function FieldColorSettings({ field, canEdit, onUpdateField }: FieldColor
   const backgroundDefault = isSectionBreak ? DEFAULT_SECTION_COLOR : '#ffffff';
 
   return (
-    <div className="settings-section">
-      <p className="settings-section-title">Appearance</p>
-      <div className="field-color-settings">
+    <div className="field-color-settings">
+      <FieldColorPicker
+        label={isSectionBreak ? 'Section background' : 'Background'}
+        value={colored.backgroundColor}
+        defaultColor={
+          isSectionBreak ? (colored.backgroundColor ?? DEFAULT_SECTION_COLOR) : backgroundDefault
+        }
+        canEdit={canEdit}
+        onChange={(backgroundColor) => onUpdateField(field.id, { backgroundColor })}
+      />
+      <FieldColorPicker
+        label="Border"
+        value={colored.borderColor}
+        defaultColor={DEFAULT_FIELD_BORDER_COLOR}
+        canEdit={canEdit}
+        onChange={(borderColor) => onUpdateField(field.id, { borderColor })}
+      />
+      {/* static_text has independent "Color" pickers per heading/body in its Heading
+       * style / Body style sections instead — a shared swatch here would be redundant
+       * and wouldn't actually apply once a heading/body color is set (those take
+       * precedence as more specific inline styles). */}
+      {!isStaticText ? (
         <FieldColorPicker
-          label={isSectionBreak ? 'Section background' : 'Background'}
-          value={colored.backgroundColor}
-          defaultColor={
-            isSectionBreak ? (colored.backgroundColor ?? DEFAULT_SECTION_COLOR) : backgroundDefault
-          }
+          label="Label & text"
+          value={colored.textColor}
+          defaultColor={DEFAULT_FIELD_TEXT_COLOR}
           canEdit={canEdit}
-          onChange={(backgroundColor) => onUpdateField(field.id, { backgroundColor })}
+          onChange={(textColor) => onUpdateField(field.id, { textColor })}
         />
+      ) : null}
+      {hasInputControls ? (
         <FieldColorPicker
-          label="Border"
-          value={colored.borderColor}
-          defaultColor={DEFAULT_FIELD_BORDER_COLOR}
+          label="Input area"
+          value={colored.inputBackgroundColor}
+          defaultColor={DEFAULT_FIELD_INPUT_BG_COLOR}
           canEdit={canEdit}
-          onChange={(borderColor) => onUpdateField(field.id, { borderColor })}
+          onChange={(inputBackgroundColor) => onUpdateField(field.id, { inputBackgroundColor })}
         />
-        {/* static_text has independent "Color" pickers per heading/body in its Heading
-         * style / Body style sections instead — a shared swatch here would be redundant
-         * and wouldn't actually apply once a heading/body color is set (those take
-         * precedence as more specific inline styles). */}
-        {!isStaticText ? (
-          <FieldColorPicker
-            label="Label & text"
-            value={colored.textColor}
-            defaultColor={DEFAULT_FIELD_TEXT_COLOR}
-            canEdit={canEdit}
-            onChange={(textColor) => onUpdateField(field.id, { textColor })}
-          />
-        ) : null}
-        {hasInputControls ? (
-          <FieldColorPicker
-            label="Input area"
-            value={colored.inputBackgroundColor}
-            defaultColor={DEFAULT_FIELD_INPUT_BG_COLOR}
-            canEdit={canEdit}
-            onChange={(inputBackgroundColor) => onUpdateField(field.id, { inputBackgroundColor })}
-          />
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }

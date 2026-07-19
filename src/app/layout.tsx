@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Poppins } from 'next/font/google';
+import { Inter, Poppins, Space_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
 import './globals.css';
 
@@ -7,12 +7,18 @@ import './globals.css';
 // actually loaded, so it was silently falling back to system fonts). Poppins for
 // headings/section banners — a rounder, bolder geometric sans that reads closer to the
 // reference incident-report form the client wants to match, without touching body
-// copy legibility.
+// copy legibility. Space Grotesk for landing display — sharper editorial weight.
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const poppins = Poppins({
   subsets: ['latin'],
   weight: ['600', '700', '800'],
   variable: '--font-poppins',
+  display: 'swap',
+});
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-display',
   display: 'swap',
 });
 
@@ -42,7 +48,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en-AU" className={`${inter.variable} ${poppins.variable}`}>
+    <html lang="en-AU" className={`${inter.variable} ${poppins.variable} ${spaceGrotesk.variable}`}>
       <body>{children}</body>
     </html>
   );

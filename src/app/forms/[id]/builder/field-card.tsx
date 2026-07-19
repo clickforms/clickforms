@@ -3,7 +3,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { MouseEvent } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 import { useState } from 'react';
 import { COLUMN_CHILD_FIELD_TYPES, FIELD_TYPE_LABELS } from '@/app/forms/[id]/builder/field-meta';
 import { DatePickerField } from '@/components/date-picker/date-picker-field';
@@ -249,7 +249,7 @@ function FieldPreview({
         <input
           className="text-input field-preview-input"
           type="text"
-          placeholder="Short answer"
+          placeholder={field.placeholder || 'Short answer'}
           disabled
           style={inputStyle}
         />
@@ -258,8 +258,8 @@ function FieldPreview({
       return (
         <textarea
           className="text-input field-preview-input"
-          rows={3}
-          placeholder="Long answer"
+          rows={field.rows ?? 3}
+          placeholder={field.placeholder || 'Long answer'}
           disabled
           style={inputStyle}
         />
@@ -269,10 +269,19 @@ function FieldPreview({
         <div className="field-preview-options">
           {field.options.map((option) => (
             <label key={option.id} className="field-preview-option">
-              <input type="radio" disabled />
+              <input type="radio" disabled checked={field.defaultValue === option.id} readOnly />
               <span>{option.label || 'Untitled option'}</span>
             </label>
           ))}
+          {field.allowOther ? (
+            <label className="field-preview-option field-preview-option--other">
+              <input type="radio" disabled />
+              <span>Other</span>
+            </label>
+          ) : null}
+          {field.randomizeOrder ? (
+            <span className="field-preview-hint">Order shown to respondents is randomized</span>
+          ) : null}
         </div>
       );
     case 'checkbox':
@@ -284,15 +293,25 @@ function FieldPreview({
               <span>{option.label || 'Untitled option'}</span>
             </label>
           ))}
+          {field.allowOther ? (
+            <label className="field-preview-option field-preview-option--other">
+              <input type="checkbox" disabled />
+              <span>Other</span>
+            </label>
+          ) : null}
+          {field.randomizeOrder ? (
+            <span className="field-preview-hint">Order shown to respondents is randomized</span>
+          ) : null}
         </div>
       );
     case 'dropdown':
       return (
         <select className="text-input field-preview-input" disabled style={inputStyle}>
-          <option>Select an option</option>
+          <option>{field.placeholder || 'Select an option'}</option>
           {field.options.map((option) => (
             <option key={option.id}>{option.label || 'Untitled option'}</option>
           ))}
+          {field.allowOther ? <option>Other</option> : null}
         </select>
       );
     case 'date':
@@ -330,7 +349,11 @@ function FieldPreview({
     case 'file_upload':
       return (
         <div className="field-preview-dropzone" style={inputStyle}>
-          <span>Drop a file here or click to upload</span>
+          <span>
+            {field.multiple
+              ? `Drop files here or click to upload${field.maxFiles ? ` (up to ${field.maxFiles})` : ''}`
+              : 'Drop a file here or click to upload'}
+          </span>
           {field.validation?.acceptedTypes && field.validation.acceptedTypes.length > 0 && (
             <span className="field-preview-hint">
               Accepted: {field.validation.acceptedTypes.join(', ')}
@@ -347,9 +370,10 @@ function FieldPreview({
     case 'image': {
       const src =
         field.imageStorageKey && formId ? getFieldImageSrc({ formId, fieldId: field.id }) : null;
+      const align = field.align ?? 'center';
       if (src) {
         return (
-          <div className="field-preview-image-wrap">
+          <div className={`field-preview-image-wrap field-preview-image-wrap--align-${align}`}>
             {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
             <img
               src={src}
@@ -357,6 +381,9 @@ function FieldPreview({
               className="field-preview-image"
               style={resolveImageStyle(field)}
             />
+            {field.linkUrl ? (
+              <span className="field-preview-hint">Links to {field.linkUrl}</span>
+            ) : null}
           </div>
         );
       }
@@ -425,6 +452,15 @@ function FieldPreview({
               style={inputStyle}
             />
           </div>
+          {field.includeCountry ? (
+            <input
+              className="text-input field-preview-input"
+              type="text"
+              placeholder="Country"
+              disabled
+              style={inputStyle}
+            />
+          ) : null}
         </div>
       );
     case 'choice_matrix':
@@ -452,9 +488,167 @@ function FieldPreview({
           </tbody>
         </table>
       );
+    case 'number':
+      return (
+        <div className="field-preview-number">
+          {field.prefix ? <span className="field-preview-affix">{field.prefix}</span> : null}
+          <input
+            className="text-input field-preview-input"
+            type="number"
+            placeholder={field.placeholder || '0'}
+            disabled
+            style={inputStyle}
+          />
+          {field.suffix ? <span className="field-preview-affix">{field.suffix}</span> : null}
+        </div>
+      );
+    case 'phone':
+      return (
+        <div className="field-preview-number">
+          {field.defaultCountryCode ? (
+            <span className="field-preview-affix">{field.defaultCountryCode}</span>
+          ) : null}
+          <input
+            className="text-input field-preview-input"
+            type="tel"
+            placeholder={field.placeholder || '+61 4XX XXX XXX'}
+            disabled
+            style={inputStyle}
+          />
+        </div>
+      );
+    case 'website':
+      return (
+        <input
+          className="text-input field-preview-input"
+          type="url"
+          placeholder={field.placeholder || 'https://example.com'}
+          disabled
+          style={inputStyle}
+        />
+      );
+    case 'rating': {
+      const max = field.maxRating ?? 5;
+      const color = field.color;
+      return (
+        <div
+          className="field-preview-rating"
+          style={color ? ({ color } as CSSProperties) : undefined}
+        >
+          {Array.from({ length: max }, (_, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed-length star row has no other stable identity
+            <RatingPreviewIcon key={index} icon={field.icon ?? 'star'} />
+          ))}
+        </div>
+      );
+    }
+    case 'opinion_scale': {
+      const min = field.scaleMin ?? 0;
+      const max = field.scaleMax ?? 10;
+      const steps = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+      return (
+        <div className="field-preview-opinion-scale">
+          <div className="field-preview-opinion-scale-row">
+            {steps.map((step) => (
+              <span key={step} className="field-preview-opinion-scale-step">
+                {step}
+              </span>
+            ))}
+          </div>
+          {field.minLabel || field.maxLabel || field.midLabel ? (
+            <div className="field-preview-opinion-scale-labels">
+              <span>{field.minLabel}</span>
+              {field.midLabel ? <span>{field.midLabel}</span> : null}
+              <span>{field.maxLabel}</span>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+    case 'legal':
+      return (
+        <label className="field-preview-option field-preview-legal">
+          <input type="checkbox" disabled />
+          <span>
+            {field.consentText}
+            {field.linkLabel ? (
+              <>
+                {' '}
+                <span className="field-preview-legal-link">{field.linkLabel}</span>
+              </>
+            ) : null}
+          </span>
+        </label>
+      );
+    case 'hidden':
+      return (
+        <div className="field-preview-hidden">
+          <EyeOffIcon />
+          <span>
+            Hidden from respondents
+            {field.sourceParam ? (
+              <>
+                {' '}
+                — filled from <code>?{field.sourceParam}=</code>
+              </>
+            ) : field.defaultValue ? (
+              <> — always "{field.defaultValue}"</>
+            ) : null}
+          </span>
+        </div>
+      );
     default:
       return null;
   }
+}
+
+// Mirrors RATING_ICON_PATHS in field-input.tsx (same viewBox/paths) so the builder
+// canvas preview matches what respondents actually see on the published form.
+const RATING_PREVIEW_ICON_PATHS: Record<string, string> = {
+  star: 'M9 2.7l1.8 3.65 4 .58-2.9 2.83.68 4-3.58-1.88-3.58 1.88.68-4-2.9-2.83 4-.58L9 2.7Z',
+  heart:
+    'M9 15.5S2.5 11.4 2.5 6.9C2.5 4.5 4.4 3 6.4 3 7.6 3 8.6 3.6 9 4.5 9.4 3.6 10.4 3 11.6 3c2 0 3.9 1.5 3.9 3.9 0 4.5-6.5 8.6-6.5 8.6Z',
+  thumb:
+    'M2.8 8.2h2.9v7.1H2.8a.7.7 0 0 1-.7-.7V8.9a.7.7 0 0 1 .7-.7Zm4.3.4 2.6-5.4a1.3 1.3 0 0 1 2.4.9l-.8 3.2h3.4a1.4 1.4 0 0 1 1.35 1.85l-1.5 4.9a1.4 1.4 0 0 1-1.34 1H7.1',
+};
+
+function RatingPreviewIcon({ icon }: { icon: string }) {
+  const path = RATING_PREVIEW_ICON_PATHS[icon] ?? RATING_PREVIEW_ICON_PATHS.star;
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path
+        d={path}
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path
+        d="M2.5 9S5 4.5 9 4.5 15.5 9 15.5 9 13 13.5 9 13.5 2.5 9 2.5 9Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1.3" />
+      <line
+        x1="3"
+        y1="15"
+        x2="15"
+        y2="3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
 interface FieldCardProps {

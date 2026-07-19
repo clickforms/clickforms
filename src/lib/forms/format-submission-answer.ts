@@ -35,7 +35,9 @@ export function formatSubmissionAnswer(
 
     case 'short_text':
     case 'paragraph':
-    case 'email': {
+    case 'email':
+    case 'phone':
+    case 'website': {
       if (typeof value !== 'string' || !value) {
         return { kind: 'empty' };
       }
@@ -111,6 +113,44 @@ export function formatSubmissionAnswer(
           return { row: row.label, column: column?.label ?? columnId ?? '—' };
         }),
       };
+    }
+
+    case 'number': {
+      if (typeof value !== 'string' || !value) {
+        return { kind: 'empty' };
+      }
+      const text = [field.prefix, value, field.suffix].filter(Boolean).join('');
+      return { kind: 'text', text };
+    }
+
+    case 'rating': {
+      if (typeof value !== 'string' || !value) {
+        return { kind: 'empty' };
+      }
+      const max = field.maxRating ?? 5;
+      return { kind: 'text', text: `${value} / ${max}` };
+    }
+
+    case 'opinion_scale': {
+      if (typeof value !== 'string' || !value) {
+        return { kind: 'empty' };
+      }
+      const max = field.scaleMax ?? 10;
+      return { kind: 'text', text: `${value} / ${max}` };
+    }
+
+    case 'legal': {
+      if (value !== 'true') {
+        return { kind: 'empty' };
+      }
+      return { kind: 'text', text: 'Agreed' };
+    }
+
+    case 'hidden': {
+      if (typeof value !== 'string' || !value) {
+        return { kind: 'empty' };
+      }
+      return { kind: 'text', text: value };
     }
 
     default: {

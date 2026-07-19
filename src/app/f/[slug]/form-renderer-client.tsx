@@ -1,10 +1,11 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FieldInput } from '@/app/f/[slug]/field-input';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getVisibleFieldIds } from '@/lib/forms/conditional-logic';
+import { resolveFieldDefaultAnswer } from '@/lib/forms/field-defaults';
 import { getFieldImageSrc } from '@/lib/forms/field-image';
 import { resolveImageSpacingStyle, resolveImageStyle } from '@/lib/forms/field-styles';
 import { getFieldWidthClass } from '@/lib/forms/field-width';
@@ -76,6 +77,38 @@ export function FormRendererClient({
   const [pageIndex, setPageIndex] = useState(0);
   const [answers, setAnswers] = useState<FormAnswers>({});
   const [errors, setErrors] = useState<AnswerErrors>({});
+
+  // Hidden fields (see hiddenFieldSchema in lib/forms/schema.ts) never render a visible
+  // input — FieldInput returns null for them — so this is the only place their value
+  // gets set: read once on mount from the public URL's query string (?ref=partner_x),
+  // falling back to the admin-configured default when the param is absent. Runs in an
+  // effect rather than the useState initializer above so server- and first-client-render
+  // both start from an identical empty `answers` object (no window access during SSR),
+  // avoiding a hydration mismatch — hidden fields have no visible output anyway, so the
+  // one-render delay before they're populated is invisible to the respondent.
+  //
+  // The same effect also seeds every *visible* field type that now carries a
+  // `defaultValue` (short_text/paragraph/email/phone/website/number/multi_choice/dropdown,
+  // plus date's 'today'|fixed-date shape) — pre-filling once on mount rather than via each
+  // input's initial `value` prop keeps `answers` (the single source of truth used by
+  // validation/submit/conditional-logic) in sync from the start, so an untouched
+  // default-valued field still submits its default instead of an empty answer.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setAnswers((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const field of Object.values(schema.fields)) {
+        if (field.id in next) continue; // don't clobber an already-set value on re-render
+        const value = resolveFieldDefaultAnswer(field, params);
+        if (value !== undefined) {
+          next[field.id] = value;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [schema.fields]);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);

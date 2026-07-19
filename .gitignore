@@ -39,6 +39,10 @@ yarn-error.log*
 !.vscode/extensions.json
 *.pem
 
+# AWS Client VPN: CA key, server/client certs, and .ovpn configs (embeds private keys) —
+# generated locally by scripts/setup-client-vpn.sh, never commit
+.vpn/
+
 # Vercel (unused, but harmless to ignore if it ever appears)
 .vercel
 

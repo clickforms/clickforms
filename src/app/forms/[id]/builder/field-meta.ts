@@ -27,6 +27,13 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   image: 'Image',
   address: 'Address',
   choice_matrix: 'Choice matrix',
+  number: 'Number',
+  phone: 'Phone number',
+  website: 'Website',
+  rating: 'Rating',
+  opinion_scale: 'Opinion scale',
+  legal: 'Legal / consent',
+  hidden: 'Hidden field',
 };
 
 /** Default label given to a freshly-added field before the admin renames it. */
@@ -47,6 +54,13 @@ export const FIELD_TYPE_DEFAULT_LABEL: Record<FieldType, string> = {
   image: 'Image',
   address: 'Address question',
   choice_matrix: 'Rating question',
+  number: 'Number question',
+  phone: 'Phone number question',
+  website: 'Website question',
+  rating: 'Rating question',
+  opinion_scale: 'Opinion scale question',
+  legal: 'I agree to the terms',
+  hidden: 'Hidden field',
 };
 
 function newOption(label: string): FieldOption {
@@ -111,6 +125,26 @@ export function createDefaultField(type: FieldType): FormField {
         rows: [newOption('Row 1'), newOption('Row 2')],
         columns: [newOption('Disagree'), newOption('Neutral'), newOption('Agree')],
       };
+    case 'number':
+      return { id, type, label, required: false };
+    case 'phone':
+      return { id, type, label, required: false };
+    case 'website':
+      return { id, type, label, required: false };
+    case 'rating':
+      return { id, type, label, required: false };
+    case 'opinion_scale':
+      return { id, type, label, required: false };
+    case 'legal':
+      return {
+        id,
+        type,
+        label,
+        required: true,
+        consentText: 'I agree to the Terms of Service and Privacy Policy.',
+      };
+    case 'hidden':
+      return { id, type, label, required: false };
     default: {
       const exhaustiveCheck: never = type;
       throw new Error(`Unhandled field type: ${exhaustiveCheck}`);

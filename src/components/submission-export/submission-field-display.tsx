@@ -1,9 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { SubmissionExportAssets } from '@/lib/forms/build-submission-export-assets';
-import {
-  resolveSubmissionFileDataUrl,
-  resolveSubmissionFileName,
-} from '@/lib/forms/build-submission-export-assets';
+import { resolveSubmissionFileDataUrl } from '@/lib/forms/build-submission-export-assets';
 import { parseAddressAnswer, parseChoiceMatrixAnswer } from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import {
@@ -77,11 +74,28 @@ export function SubmissionFieldDisplay({
   if (field.type === 'image') {
     const src = assets.fieldImages[field.id];
     if (!src) return null;
+    const align = field.align ?? 'center';
     return (
-      <div className="export-image-field" style={resolveImageSpacingStyle(field)}>
+      <div
+        className={`export-image-field export-image-field--align-${align}`}
+        style={resolveImageSpacingStyle(field)}
+      >
         {field.label ? <p className="export-image-caption">{field.label}</p> : null}
         {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
         <img src={src} alt={field.alt ?? field.label} style={resolveImageStyle(field)} />
+      </div>
+    );
+  }
+
+  if (field.type === 'hidden') {
+    // Not on the live public form, but still shown in the export/admin view so the
+    // captured value (tracking id, referral source, etc.) is actually reviewable —
+    // see the schema comment on hiddenFieldSchema for the full rationale.
+    if (typeof value !== 'string' || !value) return null;
+    return (
+      <div className="export-field-group">
+        <div className="export-field-label">{field.label} (hidden field)</div>
+        <input className="export-input" readOnly value={value} />
       </div>
     );
   }
@@ -131,12 +145,34 @@ export function SubmissionFieldDisplay({
       </div>
       {field.helpText ? <p className="export-field-help">{field.helpText}</p> : null}
 
-      {field.type === 'short_text' || field.type === 'email' ? (
+      {field.type === 'short_text' || field.type === 'email' || field.type === 'phone' ? (
         <input
           className="export-input"
           style={inputStyle}
           readOnly
           value={typeof value === 'string' ? value : ''}
+        />
+      ) : null}
+
+      {field.type === 'website' ? (
+        <input
+          className="export-input"
+          style={inputStyle}
+          readOnly
+          value={typeof value === 'string' ? value : ''}
+        />
+      ) : null}
+
+      {field.type === 'number' ? (
+        <input
+          className="export-input"
+          style={inputStyle}
+          readOnly
+          value={
+            typeof value === 'string' && value
+              ? [field.prefix, value, field.suffix].filter(Boolean).join('')
+              : ''
+          }
         />
       ) : null}
 
@@ -169,8 +205,11 @@ export function SubmissionFieldDisplay({
           className="export-input"
           style={inputStyle}
           readOnly
+          // A value that doesn't match any real option id is a respondent-typed "Other"
+          // answer (see OTHER_OPTION_ID in field-input.tsx) — shown as-is rather than
+          // falling back to the raw sentinel/id, since that free text *is* the answer.
           value={
-            typeof value === 'string' && value
+            typeof value === 'string'
               ? (field.options.find((option) => option.id === value)?.label ?? value)
               : ''
           }
@@ -188,6 +227,15 @@ export function SubmissionFieldDisplay({
               <span>{option.label}</span>
             </div>
           ))}
+          {field.allowOther &&
+          typeof value === 'string' &&
+          value.length > 0 &&
+          !field.options.some((option) => option.id === value) ? (
+            <div className="export-option-row">
+              <OptionIndicator kind="radio" selected />
+              <span>Other: {value}</span>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -205,6 +253,19 @@ export function SubmissionFieldDisplay({
               </div>
             );
           })}
+          {field.allowOther && Array.isArray(value)
+            ? (() => {
+                const otherEntry = value.find(
+                  (entry) => !field.options.some((option) => option.id === entry),
+                );
+                return otherEntry !== undefined ? (
+                  <div className="export-option-row">
+                    <OptionIndicator kind="checkbox" selected />
+                    <span>Other: {otherEntry}</span>
+                  </div>
+                ) : null;
+              })()
+            : null}
         </div>
       ) : null}
 
@@ -217,14 +278,81 @@ export function SubmissionFieldDisplay({
       ) : null}
 
       {field.type === 'address' ? (
-        <AddressExportDisplay value={value} inputStyle={inputStyle} />
+        <AddressExportDisplay
+          value={value}
+          inputStyle={inputStyle}
+          includeCountry={field.includeCountry ?? false}
+        />
       ) : null}
 
       {field.type === 'choice_matrix' ? (
         <ChoiceMatrixExportDisplay field={field} value={value} />
       ) : null}
+
+      {field.type === 'rating' ? <RatingExportDisplay field={field} value={value} /> : null}
+
+      {field.type === 'opinion_scale' ? (
+        <OpinionScaleExportDisplay field={field} value={value} />
+      ) : null}
+
+      {field.type === 'legal' ? <LegalExportDisplay field={field} value={value} /> : null}
     </div>
   );
+}
+
+const RATING_EXPORT_GLYPHS: Record<string, [string, string]> = {
+  star: ['★', '☆'],
+  heart: ['♥', '♡'],
+  thumb: ['👍', '👍'],
+};
+
+function RatingExportDisplay({
+  field,
+  value,
+}: {
+  field: Extract<FormField, { type: 'rating' }>;
+  value: FieldValue;
+}) {
+  const max = field.maxRating ?? 5;
+  const selected = typeof value === 'string' ? Number(value) : 0;
+  const [filledGlyph, emptyGlyph] = RATING_EXPORT_GLYPHS[field.icon ?? 'star'] ?? ['★', '☆'];
+  return (
+    <div
+      className="export-rating"
+      style={field.color ? ({ '--export-rating-color': field.color } as CSSProperties) : undefined}
+    >
+      {Array.from({ length: max }, (_, index) => index + 1).map((star) => (
+        <span key={star} className={star <= selected ? 'export-rating-star--filled' : ''}>
+          {star <= selected ? filledGlyph : emptyGlyph}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function OpinionScaleExportDisplay({
+  field,
+  value,
+}: {
+  field: Extract<FormField, { type: 'opinion_scale' }>;
+  value: FieldValue;
+}) {
+  const min = field.scaleMin ?? 0;
+  const max = field.scaleMax ?? 10;
+  return (
+    <div className="export-input">
+      {typeof value === 'string' && value ? `${value} (${min}–${max} scale)` : ''}
+    </div>
+  );
+}
+
+function LegalExportDisplay({
+  value,
+}: {
+  field: Extract<FormField, { type: 'legal' }>;
+  value: FieldValue;
+}) {
+  return <div className="export-input">{value === 'true' ? '✓ Agreed' : 'Not agreed'}</div>;
 }
 
 function FileExportDisplay({
@@ -236,18 +364,28 @@ function FileExportDisplay({
   assets: SubmissionExportAssets;
   resolveFiles: (fieldId: string) => ResolvedSubmissionFile[];
 }) {
-  const imageUrl = resolveSubmissionFileDataUrl(assets, fieldId, resolveFiles);
-  const filename = resolveSubmissionFileName(fieldId, resolveFiles);
-  if (imageUrl) {
-    return (
-      <div className="export-signature">
-        {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
-        <img src={imageUrl} alt={filename ?? 'Uploaded file'} />
-      </div>
-    );
-  }
-  if (!filename) return <div className="export-file-status">No file uploaded</div>;
-  return <div className="export-file-status">{filename}</div>;
+  // Lists every resolved file for this field, not just the first — a `multiple`-enabled
+  // file_upload field can have several SubmissionFile rows sharing this fieldId (see the
+  // schema comment on fileUploadFieldSchema.multiple for why that required no DB change).
+  const files = resolveFiles(fieldId);
+  if (files.length === 0) return <div className="export-file-status">No file uploaded</div>;
+  return (
+    <div className="export-file-list">
+      {files.map((file) => {
+        const dataUrl = assets.submissionFiles[file.id];
+        return dataUrl ? (
+          <div key={file.id} className="export-signature">
+            {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
+            <img src={dataUrl} alt={file.filename} />
+          </div>
+        ) : (
+          <div key={file.id} className="export-file-status">
+            {file.filename}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function SignatureExportDisplay({
@@ -272,9 +410,11 @@ function SignatureExportDisplay({
 function AddressExportDisplay({
   value,
   inputStyle,
+  includeCountry,
 }: {
   value: FieldValue;
   inputStyle: CSSProperties;
+  includeCountry: boolean;
 }) {
   const address = parseAddressAnswer(typeof value === 'string' ? value : undefined);
   return (
@@ -309,6 +449,15 @@ function AddressExportDisplay({
           placeholder="Postcode"
         />
       </div>
+      {includeCountry ? (
+        <input
+          className="export-input"
+          style={inputStyle}
+          readOnly
+          value={address.country}
+          placeholder="Country"
+        />
+      ) : null}
     </div>
   );
 }

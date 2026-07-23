@@ -234,6 +234,19 @@ never deleted except via the 7-day untagged-image lifecycle rule).
   it's present with `docker compose exec app printenv ROOT_DOMAIN` after any deploy to a
   fresh box.
 
+- **The S3 bucket's CORS policy needs a wildcard org-subdomain entry, not just the bare
+  root domain.** Every public form is served from `<org-subdomain>.<root-domain>`
+  (`src/middleware.ts`), and file/signature uploads PUT straight from the respondent's
+  browser to S3 via a presigned URL — a cross-origin request S3 will silently reject
+  (surfacing as a plain "Failed to fetch" in the browser, no server-side log) unless that
+  exact `Origin` is in the bucket's `AllowedOrigins`. `scripts/s3-cors.json` must include
+  both `https://<root-domain>` and `https://*.<root-domain>` per environment, and
+  `put-bucket-cors` (via `scripts/setup-s3.sh`, or run by hand) has to be re-applied to the
+  live bucket any time that file changes — editing the repo file alone does nothing to a
+  bucket that was already provisioned. If uploads fail only in staging/production and never
+  on localhost, check this first with
+  `aws s3api get-bucket-cors --bucket <bucket> --region ap-southeast-2`.
+
 - **`./certs` must exist and be populated on the production box before first deploy.**
   `Caddyfile.production` references `/etc/caddy/certs/cloudflare-origin-cert.pem` and
   `-key.pem`, mounted from `/opt/clickforms/certs` — nothing creates this directory or its

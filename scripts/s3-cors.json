@@ -4,7 +4,9 @@
       "AllowedOrigins": [
         "http://localhost:3000",
         "https://staging.clickforms.com.au",
-        "https://clickforms.com.au"
+        "https://*.staging.clickforms.com.au",
+        "https://clickforms.com.au",
+        "https://*.clickforms.com.au"
       ],
       "AllowedMethods": ["PUT", "GET"],
       "AllowedHeaders": ["*"],

@@ -78,6 +78,17 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 RUN groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs nextjs
 
+# `useradd --system` above creates no home directory and sets no $HOME — fine for the
+# app itself, but Chromium's crash-reporting subsystem (crashpad) computes its crash
+# database path from $HOME internally. With $HOME unset/invalid, it spawns
+# `chrome_crashpad_handler` without a usable --database path, the handler exits
+# immediately, and it takes the whole `puppeteer.launch()` call down with it
+# ("Failed to launch the browser process" / "chrome_crashpad_handler: --database is
+# required" — see src/lib/forms/generate-submission-pdf.ts). /tmp is already
+# world-writable (sticky bit) regardless of which user owns it, so this needs no
+# matching mkdir/chown.
+ENV HOME=/tmp
+
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static

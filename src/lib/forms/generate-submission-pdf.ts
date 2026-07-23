@@ -1,9 +1,22 @@
+import { randomUUID } from 'node:crypto';
+import { rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import puppeteer from 'puppeteer';
 
 export async function generateSubmissionPdfFromPreviewUrl(
   previewUrl: string,
   cookieHeader: string | null,
 ): Promise<Buffer> {
+  // Explicit, guaranteed-writable, per-invocation profile dir — belt-and-braces
+  // alongside the Dockerfile's `ENV HOME=/tmp` fix for the exact same underlying
+  // issue (Chromium's crashpad crash-reporting subsystem computing paths from
+  // $HOME/the default profile dir and failing when that's missing/unwritable,
+  // surfacing as "chrome_crashpad_handler: --database is required"). A fresh dir
+  // per call also means two admins exporting PDFs at the same time never race on
+  // a shared default profile.
+  const userDataDir = join(tmpdir(), `clickforms-pdf-${randomUUID()}`);
+
   const browser = await puppeteer.launch({
     headless: true,
     // In production this points at the system Chromium installed via apt (see
@@ -12,6 +25,7 @@ export async function generateSubmissionPdfFromPreviewUrl(
     // this env var is unset and Puppeteer falls back to its normal downloaded
     // browser.
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    userDataDir,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -77,6 +91,9 @@ export async function generateSubmissionPdfFromPreviewUrl(
     return Buffer.from(pdf);
   } finally {
     await browser.close();
+    // Chrome doesn't clean this up itself on close — left alone, every export would
+    // leak a profile directory under /tmp indefinitely.
+    await rm(userDataDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 

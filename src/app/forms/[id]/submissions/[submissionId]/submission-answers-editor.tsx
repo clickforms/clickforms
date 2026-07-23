@@ -66,6 +66,16 @@ function ChevronIcon() {
   );
 }
 
+// Content-Disposition looks like `attachment; filename="some-form-2026-07-23.pdf"` (see
+// submissionPdfFilename in lib/forms/generate-submission-pdf.ts) — a plain quoted-string
+// extraction is enough since that filename is already sanitized server-side (lowercased,
+// non-alphanumerics collapsed to hyphens) and never contains a literal `"`.
+function parseFilenameFromContentDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const match = /filename="?([^";]+)"?/i.exec(header);
+  return match?.[1]?.trim() || null;
+}
+
 // Mirrors computePanelStyle in app/forms/form-actions-menu.tsx — same "anchor the panel
 // under the trigger, flip above if it would overflow the viewport" behavior, kept as a
 // separate copy since the two menus don't share a component yet.
@@ -91,7 +101,8 @@ function computePanelStyle(trigger: HTMLElement, panel: HTMLElement): CSSPropert
 }
 
 interface SubmissionActionsMenuProps {
-  exportHref: string;
+  isExporting: boolean;
+  onExport: () => Promise<void>;
   canEditAnswers: boolean;
   canDelete: boolean;
   onEdit: () => void;
@@ -99,7 +110,8 @@ interface SubmissionActionsMenuProps {
 }
 
 function SubmissionActionsMenu({
-  exportHref,
+  isExporting,
+  onExport,
   canEditAnswers,
   canDelete,
   onEdit,
@@ -170,15 +182,29 @@ function SubmissionActionsMenu({
         }}
       >
         <li role="none">
-          <a
+          <button
+            type="button"
             className="actions-menu-item"
             role="menuitem"
-            href={exportHref}
-            download
-            onClick={() => setOpen(false)}
+            disabled={isExporting}
+            onClick={() => {
+              // Deliberately not closing the menu immediately (unlike every other item) —
+              // the export can take a few seconds (server-side PDF rendering via
+              // Puppeteer), and closing right away would throw away the only place the
+              // "Exporting…" label is visible, leaving no feedback that anything is
+              // happening at all. Closes itself once the request settles either way.
+              void onExport().then(() => setOpen(false));
+            }}
           >
-            Export PDF
-          </a>
+            {isExporting ? (
+              <>
+                <span className="actions-menu-spinner" aria-hidden="true" />
+                Exporting…
+              </>
+            ) : (
+              'Export PDF'
+            )}
+          </button>
         </li>
         {canEditAnswers ? (
           <li role="none">
@@ -270,6 +296,7 @@ export function SubmissionAnswersEditor({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const router = useRouter();
   const toast = useToast();
 
@@ -382,6 +409,41 @@ export function SubmissionAnswersEditor({
     }
   }
 
+  // Fetches the PDF as a blob instead of the old plain `<a href download>` — that approach
+  // gave zero feedback while Puppeteer rendered server-side (seconds, not instant), and
+  // when generation failed, the browser had no way to tell a JSON error body from a real
+  // PDF: with no Content-Disposition on the error response and no filename on the link, it
+  // fell back to guessing "pdf.json" from the URL + response MIME type and downloaded the
+  // *error* under that name — a corrupt-looking, silently-wrong file instead of a visible
+  // failure. Fetching lets us check res.ok before ever touching the browser's download UI.
+  async function handleExportPdf() {
+    setIsExporting(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/submissions/${submissionId}/export/pdf`);
+      if (!res.ok) {
+        throw new Error(await readApiError(res, 'Failed to export PDF'));
+      }
+
+      const blob = await res.blob();
+      const filename =
+        parseFilenameFromContentDisposition(res.headers.get('Content-Disposition')) ??
+        'submission.pdf';
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export PDF');
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   async function handleConfirmDelete() {
     setIsDeleting(true);
     try {
@@ -406,7 +468,8 @@ export function SubmissionAnswersEditor({
         <h1>Submission</h1>
         <div className="submission-detail-header-actions">
           <SubmissionActionsMenu
-            exportHref={`/api/forms/${formId}/submissions/${submissionId}/export/pdf`}
+            isExporting={isExporting}
+            onExport={handleExportPdf}
             canEditAnswers={canEditAnswers}
             canDelete={canDelete}
             onEdit={() => setEditing(true)}

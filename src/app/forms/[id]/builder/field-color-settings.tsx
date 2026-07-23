@@ -3,6 +3,7 @@
 import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import type { FieldPatch } from '@/app/forms/[id]/builder/schema-mutations';
 import {
+  DEFAULT_DIVIDER_COLOR,
   DEFAULT_FIELD_BORDER_COLOR,
   DEFAULT_FIELD_INPUT_BG_COLOR,
   DEFAULT_FIELD_TEXT_COLOR,
@@ -21,6 +22,7 @@ export function FieldColorSettings({ field, canEdit, onUpdateField }: FieldColor
   const isSectionBreak = field.type === 'section_break';
   const isStaticText = field.type === 'static_text';
   const isImage = field.type === 'image';
+  const isDivider = field.type === 'divider';
   const hasInputControls = !isLayoutOnlyField(field.type) && !isImage;
 
   const colored = field as FormField & {
@@ -29,6 +31,23 @@ export function FieldColorSettings({ field, canEdit, onUpdateField }: FieldColor
     textColor?: string;
     inputBackgroundColor?: string;
   };
+
+  // A divider has no border or input surface of its own — its "background" swatch
+  // (backgroundColor) is really the line's own color, so it gets a single, differently
+  // labeled picker instead of the full background/border/text/input set below.
+  if (isDivider) {
+    return (
+      <div className="field-color-settings">
+        <FieldColorPicker
+          label="Line color"
+          value={colored.backgroundColor}
+          defaultColor={colored.backgroundColor ?? DEFAULT_DIVIDER_COLOR}
+          canEdit={canEdit}
+          onChange={(backgroundColor) => onUpdateField(field.id, { backgroundColor })}
+        />
+      </div>
+    );
+  }
 
   const backgroundDefault = isSectionBreak ? DEFAULT_SECTION_COLOR : '#ffffff';
 

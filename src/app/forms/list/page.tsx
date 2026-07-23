@@ -20,7 +20,12 @@ export default async function FormsListPage() {
       const forms = await tx.form.findMany({
         where: formsListWhere(session.user.organizationId, session.user.role, session.user.id),
         orderBy: { updatedAt: 'desc' },
-        include: { creator: { select: { name: true, email: true } } },
+        include: {
+          creator: { select: { name: true, email: true } },
+          // Only the latest version's id is needed — compared against currentVersionId
+          // below to tell whether the live version has pending, unpublished edits.
+          versions: { orderBy: { versionNumber: 'desc' }, take: 1, select: { id: true } },
+        },
       });
       const responseCounts = await tx.submission.groupBy({
         by: ['formId'],
@@ -58,6 +63,9 @@ export default async function FormsListPage() {
     createdByName: form.creator.name ?? form.creator.email,
     isOwnForm: form.createdBy === session.user.id,
     isPrivate: form.isPrivate,
+    // Drive the Live/Live·pending/Draft indicator — see src/lib/forms/live-status.ts.
+    currentVersionId: form.currentVersionId,
+    latestVersionId: form.versions[0]?.id ?? null,
   }));
 
   const memberSummaries = orgMembers.map((member) => ({

@@ -8,6 +8,9 @@ import { withOrgContext } from '@/lib/db';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getFieldImageSrc } from '@/lib/forms/field-image';
 import {
+  resolveDividerCaptionStyle,
+  resolveDividerLineStyle,
+  resolveDividerWrapStyle,
   resolveFieldContainerStyle,
   resolveImageSpacingStyle,
   resolveImageStyle,
@@ -238,6 +241,32 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                   );
                 }
 
+                if (field.type === 'divider') {
+                  const captionEl = field.label ? (
+                    <span
+                      className="submission-divider-caption"
+                      style={resolveDividerCaptionStyle(field)}
+                    >
+                      {field.label}
+                    </span>
+                  ) : null;
+                  return (
+                    <div key={fieldId} className="submission-divider-wrap">
+                      <div
+                        className="submission-divider-box"
+                        style={resolveDividerWrapStyle(field)}
+                      >
+                        {(field.captionPosition ?? 'above') === 'above' ? captionEl : null}
+                        <div
+                          className="submission-divider-line"
+                          style={resolveDividerLineStyle(field)}
+                        />
+                        {field.captionPosition === 'below' ? captionEl : null}
+                      </div>
+                    </div>
+                  );
+                }
+
                 if (field.type === 'static_text') {
                   // field.body is rich HTML from RichTextEditor (see builder/rich-text-editor.tsx),
                   // with merge-field tokens resolved against this submission's actual answers —
@@ -283,6 +312,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                           if (!child || child.type === 'column_layout') return null;
                           if (
                             child.type === 'section_break' ||
+                            child.type === 'divider' ||
                             child.type === 'static_text' ||
                             child.type === 'image'
                           ) {

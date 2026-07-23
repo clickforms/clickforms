@@ -9,8 +9,9 @@ interface PageProps {
 
 // Public route, no session — specs/03-form-renderer.md: "An unauthenticated respondent
 // can open a form's public URL... Draft versions are never publicly reachable." Only a
-// form with status='published' resolves here, and only its currentVersionId's schema is
-// ever shown (never a newer unpublished draft the admin might be mid-edit on).
+// form with a currentVersionId resolves here (see getPublishedFormBySlug), and only that
+// version's schema is ever shown — never a newer draft the admin might be mid-edit on,
+// even while status has moved off 'published' for that draft's own approval pipeline.
 export default async function PublicFormPage({ params }: PageProps) {
   const { slug } = await params;
 

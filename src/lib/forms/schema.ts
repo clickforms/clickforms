@@ -25,6 +25,7 @@ export const FIELD_TYPES = [
   'file_upload',
   'signature',
   'section_break',
+  'divider',
   'column_layout',
   'static_text',
   'image',
@@ -53,11 +54,12 @@ export const OPTION_FIELD_TYPES = [
   'dropdown',
 ] as const satisfies readonly FieldType[];
 
-// section_break is a visual divider/heading, not a real input — it never has an answer
-// and "required" is meaningless for it. Excluding it from validation/conditional-logic
+// section_break/divider are visual, not real inputs — they never have an answer and
+// "required" is meaningless for them. Excluding them from validation/conditional-logic
 // target lists happens at the point of use (see conditional-logic.ts), not here.
 export const LAYOUT_ONLY_FIELD_TYPES = [
   'section_break',
+  'divider',
   'column_layout',
   'image',
   'static_text',
@@ -340,6 +342,45 @@ const sectionBreakFieldSchema = baseFieldSchema.extend({
   type: z.literal('section_break'),
 });
 
+// A plain horizontal rule — distinct from section_break, which renders as a colored,
+// labeled banner (effectively a "header"). The divider is the actual thin-line/spacer
+// element, with an optional short caption.
+//
+// dividerWidthPx/thicknessPx are continuous pixel values rather than the discrete
+// full/half/third `width` enum every other field uses — the builder canvas lets an admin
+// drag a handle to resize this field directly (see the resize handles in field-card.tsx),
+// which needs a real number to grow/shrink smoothly instead of snapping between presets.
+export const DIVIDER_WIDTH_MIN_PX = 40;
+export const DIVIDER_WIDTH_MAX_PX = 900;
+export const DEFAULT_DIVIDER_WIDTH_PX = 300;
+export const DIVIDER_THICKNESS_MIN_PX = 1;
+export const DIVIDER_THICKNESS_MAX_PX = 24;
+export const DEFAULT_DIVIDER_THICKNESS_PX = 2;
+// Matches --color-border-strong in globals.css (the line's CSS default when no
+// backgroundColor override is set) so the color-picker's "default" swatch isn't a lie.
+export const DEFAULT_DIVIDER_COLOR = '#cbd5e1';
+
+export const DIVIDER_CAPTION_POSITIONS = ['above', 'below'] as const;
+export type DividerCaptionPosition = (typeof DIVIDER_CAPTION_POSITIONS)[number];
+
+const dividerFieldSchema = baseFieldSchema.extend({
+  type: z.literal('divider'),
+  // Overrides base's required `label` — a divider's caption is optional; most are a bare
+  // line with no text at all.
+  label: z.string().optional(),
+  dividerWidthPx: z.number().min(DIVIDER_WIDTH_MIN_PX).max(DIVIDER_WIDTH_MAX_PX).optional(),
+  thicknessPx: z.number().min(DIVIDER_THICKNESS_MIN_PX).max(DIVIDER_THICKNESS_MAX_PX).optional(),
+  // undefined defaults to 'above' (the original, only rendering position).
+  captionPosition: z.enum(DIVIDER_CAPTION_POSITIONS).optional(),
+  // Same shape as static_text's independent heading/body style props (see
+  // staticTextFieldSchema above) — reuses the same shared TextStyleControls UI.
+  captionFontWeight: z.enum(FONT_WEIGHT_OPTIONS).optional(),
+  captionFontFamily: z.enum(FONT_FAMILY_OPTIONS).optional(),
+  captionFontSize: z.number().min(TEXT_FONT_SIZE_MIN_PX).max(TEXT_FONT_SIZE_MAX_PX).optional(),
+  captionAlign: z.enum(TEXT_ALIGN_OPTIONS).optional(),
+  captionColor: hexColorSchema,
+});
+
 const columnLayoutFieldSchema = baseFieldSchema.extend({
   type: z.literal('column_layout'),
   columns: z.union([z.literal(2), z.literal(3), z.literal(4)]),
@@ -589,6 +630,7 @@ const formFieldUnionSchema = z.discriminatedUnion('type', [
   fileUploadFieldSchema,
   signatureFieldSchema,
   sectionBreakFieldSchema,
+  dividerFieldSchema,
   columnLayoutFieldSchema,
   staticTextFieldSchema,
   imageFieldSchema,

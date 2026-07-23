@@ -15,26 +15,213 @@ function ArrowRightIcon() {
   );
 }
 
+function LayoutIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <rect x="3" y="3" width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 8.5h16" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 8.5V19" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="8.25" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M7.5 11.2l2.3 2.3 4.7-5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function StampIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <path
+        d="M11 3.5c-2 0-3.4 1.5-3.4 3.3 0 1.6 1 2.4 1 3.7H6.8c-1 0-1.8.8-1.8 1.8v2.2h12.4v-2.2c0-1-.8-1.8-1.8-1.8h-1.9c0-1.3 1.1-2.1 1.1-3.7 0-1.8-1.5-3.3-3.4-3.3-.1 0-.3 0-.4.02.1-.02.2-.02.4-.02Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M4 18.5h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <circle cx="9.75" cy="9.75" r="6.25" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M14.5 14.5 19 19" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <path
+        d="M11 2.75 18 5.5v5c0 5-3 8-7 9-4-1-7-4-7-9v-5l7-2.75Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 11l2.1 2.1L14.3 8.8"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function UsersIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <circle cx="8.25" cy="7.5" r="2.75" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M3.25 17.5c0-2.9 2.24-5.25 5-5.25s5 2.35 5 5.25"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 8.25a2.5 2.5 0 1 0 0-5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15.75 12.5c2.15.4 3.75 2.3 3.75 4.6"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <rect
+        x="4.5"
+        y="10"
+        width="13"
+        height="8.5"
+        rx="1.8"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M7.25 10V7.25a3.75 3.75 0 0 1 7.5 0V10"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path
+        d="M4.5 6.75 9 11.25l4.5-4.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const CAPABILITIES = [
   {
     num: '01',
+    icon: LayoutIcon,
     title: 'Design with precision',
     desc: 'Drag fields onto a live canvas. Multi-page layouts, conditional logic, and brand colours that match your organisation.',
   },
   {
     num: '02',
+    icon: CheckCircleIcon,
     title: 'Collect complete answers',
-    desc: 'Validation, file uploads, and e-signatures so intake and consent arrive structured — not as scattered PDFs.',
+    desc: 'Twenty-plus field types, validation, file uploads, and e-signatures so intake and consent arrive structured — not as scattered PDFs.',
   },
   {
     num: '03',
+    icon: StampIcon,
     title: 'Approve before it goes live',
     desc: 'Draft, submit for review, approve, and publish. Every form has a clear lifecycle your team can trust.',
   },
   {
     num: '04',
+    icon: SearchIcon,
     title: 'Review in one workspace',
     desc: 'Search, filter, and inspect submissions from a central admin portal — audit trails included.',
+  },
+] as const;
+
+const STATS = [
+  { value: '20+', label: 'Field types, from e-signatures to conditional logic' },
+  { value: '100%', label: 'Submissions kept in a structured, exportable format' },
+  { value: 'Unlimited', label: 'Pages, branches, and approval steps per form' },
+  { value: 'Full', label: 'Audit trail on every form and every response' },
+] as const;
+
+const SECURITY_FEATURES = [
+  {
+    icon: ShieldIcon,
+    title: 'Private by default, shared on purpose',
+    desc: 'Every form can be scoped to its creator or opened to the whole organisation — never public by accident.',
+  },
+  {
+    icon: UsersIcon,
+    title: 'Role-based access',
+    desc: 'Admins, editors, and reviewers see exactly what their role allows. Ownership transfers cleanly when people move on.',
+  },
+  {
+    icon: SearchIcon,
+    title: 'Full audit trail',
+    desc: 'Every publish, approval, and edit is logged — so compliance reviews and incident follow-ups have a clear record.',
+  },
+  {
+    icon: LockIcon,
+    title: 'Secure storage for sensitive uploads',
+    desc: 'Signatures, ID documents, and attachments are stored in access-controlled cloud storage, never in a shared inbox.',
+  },
+] as const;
+
+const FAQS = [
+  {
+    q: 'Can I match Clickforms to our brand?',
+    a: 'Yes. Set your primary colour, logo, and submit-button styling once in organisation settings, and every form your team publishes inherits it automatically.',
+  },
+  {
+    q: 'Does it handle multi-page forms with branching logic?',
+    a: 'Yes — build any number of pages, and show or hide individual fields or whole sections based on earlier answers, all without writing code.',
+  },
+  {
+    q: 'Who can see a submitted form?',
+    a: 'You choose. Forms default to visible across your organisation, or you can restrict a form to just its creator. Every view and edit is recorded in the audit trail.',
+  },
+  {
+    q: 'Can we collect signatures and file uploads?',
+    a: 'Yes — e-signature capture and file/image uploads (with size and type limits you control) are both built-in field types, alongside 20+ others.',
+  },
+  {
+    q: 'What happens to a form before it goes live?',
+    a: 'Forms move through a clear draft → review → published lifecycle, so nothing reaches respondents until your team has actually signed off on it.',
   },
 ] as const;
 
@@ -99,7 +286,8 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
           <nav className="landing-nav-links" aria-label="Primary">
             <a href="#capabilities">Capabilities</a>
             <a href="#product">Product</a>
-            <a href="#workflow">Workflow</a>
+            <a href="#security">Security</a>
+            <a href="#faq">FAQ</a>
           </nav>
           <div className="landing-nav-actions">
             {isAuthenticated ? (
@@ -139,6 +327,12 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
               See the product
             </a>
           </div>
+          <ul className="landing-hero-pills landing-anim landing-anim--4">
+            <li>Conditional logic</li>
+            <li>E-signatures</li>
+            <li>Org branding</li>
+            <li>Audit trail</li>
+          </ul>
         </div>
 
         <div className="landing-hero-plane landing-anim landing-anim--5" aria-hidden="true">
@@ -236,6 +430,17 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
         </div>
       </section>
 
+      <section className="landing-stats">
+        <div className="landing-container landing-stats-inner">
+          {STATS.map((stat) => (
+            <div key={stat.label} className="landing-stat">
+              <span className="landing-stat-value">{stat.value}</span>
+              <span className="landing-stat-label">{stat.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="landing-section" id="capabilities">
         <div className="landing-container">
           <div className="landing-section-head">
@@ -243,13 +448,19 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
             <h2 className="landing-h2">Everything your form workflow needs — in one place</h2>
           </div>
           <div className="landing-capabilities">
-            {CAPABILITIES.map((item) => (
-              <article key={item.num} className="landing-capability">
-                <span className="landing-capability-num">{item.num}</span>
-                <h3>{item.title}</h3>
-                <p>{item.desc}</p>
-              </article>
-            ))}
+            {CAPABILITIES.map((item) => {
+              const Icon = item.icon;
+              return (
+                <article key={item.num} className="landing-capability">
+                  <span className="landing-capability-icon">
+                    <Icon />
+                  </span>
+                  <span className="landing-capability-num">{item.num}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.desc}</p>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -347,6 +558,33 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
         </div>
       </section>
 
+      <section className="landing-section landing-section--tinted" id="security">
+        <div className="landing-container">
+          <div className="landing-section-head">
+            <p className="landing-eyebrow">Security &amp; trust</p>
+            <h2 className="landing-h2">Built to survive a compliance review</h2>
+            <p className="landing-section-lead">
+              Every form, submission, and permission change leaves a trace — so your team can answer
+              "who saw this" without digging through email.
+            </p>
+          </div>
+          <div className="landing-security-grid">
+            {SECURITY_FEATURES.map((item) => {
+              const Icon = item.icon;
+              return (
+                <article key={item.title} className="landing-security-item">
+                  <span className="landing-security-icon">
+                    <Icon />
+                  </span>
+                  <h3>{item.title}</h3>
+                  <p>{item.desc}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       <section className="landing-section landing-section--cases" id="use-cases">
         <div className="landing-container">
           <div className="landing-section-head">
@@ -387,6 +625,30 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
         </div>
       </section>
 
+      <section className="landing-section" id="faq">
+        <div className="landing-container landing-faq-layout">
+          <div className="landing-section-head">
+            <p className="landing-eyebrow">FAQ</p>
+            <h2 className="landing-h2">Questions worth answering upfront</h2>
+            <p className="landing-section-lead">
+              Can't find what you're after? Sign in and ask your admin, or reach your Clickforms
+              workspace owner directly.
+            </p>
+          </div>
+          <div className="landing-faq-list">
+            {FAQS.map((item, index) => (
+              <details key={item.q} className="landing-faq-item" open={index === 0}>
+                <summary className="landing-faq-question">
+                  <span>{item.q}</span>
+                  <ChevronDownIcon />
+                </summary>
+                <p className="landing-faq-answer">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="landing-cta">
         <div className="landing-container landing-cta-inner">
           <p className="landing-cta-brand">Clickforms</p>
@@ -414,12 +676,37 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
       </section>
 
       <footer className="landing-footer">
-        <div className="landing-container landing-footer-inner">
-          <Link href="/" className="landing-brand landing-brand--footer">
-            <BrandMark size={24} id="footer" />
-            <span>Clickforms</span>
-          </Link>
-          <p>Internal forms platform</p>
+        <div className="landing-container landing-footer-top">
+          <div className="landing-footer-brand-col">
+            <Link href="/" className="landing-brand landing-brand--footer">
+              <BrandMark size={24} id="footer" />
+              <span>Clickforms</span>
+            </Link>
+            <p className="landing-footer-tagline">
+              The forms platform for teams that need every submission to hold up.
+            </p>
+          </div>
+          <div className="landing-footer-col">
+            <p className="landing-footer-col-title">Product</p>
+            <a href="#capabilities">Capabilities</a>
+            <a href="#product">Builder &amp; submissions</a>
+            <a href="#security">Security &amp; trust</a>
+          </div>
+          <div className="landing-footer-col">
+            <p className="landing-footer-col-title">Learn more</p>
+            <a href="#use-cases">Use cases</a>
+            <a href="#workflow">Workflow</a>
+            <a href="#faq">FAQ</a>
+          </div>
+          <div className="landing-footer-col">
+            <p className="landing-footer-col-title">Account</p>
+            <Link href="/login">Sign in</Link>
+            <Link href="/signup">Create account</Link>
+          </div>
+        </div>
+        <div className="landing-container landing-footer-bottom">
+          <p>© {new Date().getFullYear()} Clickforms. All rights reserved.</p>
+          <p>Built for regulated, detail-heavy workflows.</p>
         </div>
       </footer>
     </div>

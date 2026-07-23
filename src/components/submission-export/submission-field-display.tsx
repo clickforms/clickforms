@@ -5,6 +5,9 @@ import { parseAddressAnswer, parseChoiceMatrixAnswer } from '@/lib/forms/compoun
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import {
   fieldHasCustomAppearance,
+  resolveDividerCaptionStyle,
+  resolveDividerLineStyle,
+  resolveDividerWrapStyle,
   resolveFieldContainerStyle,
   resolveFieldInputStyle,
   resolveImageSpacingStyle,
@@ -67,6 +70,23 @@ export function SubmissionFieldDisplay({
           <h3 className="export-section-break-title">{field.label}</h3>
         </div>
         {field.helpText ? <p className="export-section-instruction">{field.helpText}</p> : null}
+      </div>
+    );
+  }
+
+  if (field.type === 'divider') {
+    const captionEl = field.label ? (
+      <span className="export-divider-caption" style={resolveDividerCaptionStyle(field)}>
+        {field.label}
+      </span>
+    ) : null;
+    return (
+      <div className="export-divider-wrap">
+        <div className="export-divider-box" style={resolveDividerWrapStyle(field)}>
+          {(field.captionPosition ?? 'above') === 'above' ? captionEl : null}
+          <div className="export-divider-line" style={resolveDividerLineStyle(field)} />
+          {field.captionPosition === 'below' ? captionEl : null}
+        </div>
       </div>
     );
   }

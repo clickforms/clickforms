@@ -3,6 +3,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { FieldCard } from '@/app/forms/[id]/builder/field-card';
+import type { FieldPatch } from '@/app/forms/[id]/builder/schema-mutations';
 import type { FieldType, FormField, FormPage } from '@/lib/forms/schema';
 
 export const CANVAS_DROPPABLE_ID = 'canvas-dropzone';
@@ -17,6 +18,10 @@ interface CanvasProps {
   onRemoveField: (fieldId: string) => void;
   onDuplicateField: (fieldId: string) => void;
   onAddColumnField: (layoutId: string, slotIndex: number, type: FieldType) => void;
+  /** Live field-property updates from in-canvas controls (currently just the divider's
+   * drag-to-resize handles) — distinct from onEditFieldDetails, which opens the full
+   * settings modal instead of patching inline. */
+  onUpdateField: (fieldId: string, patch: FieldPatch) => void;
   canEdit: boolean;
   visibleFieldIds: Set<string>;
   fieldIdsWithRules: Set<string>;
@@ -32,6 +37,7 @@ export function Canvas({
   onRemoveField,
   onDuplicateField,
   onAddColumnField,
+  onUpdateField,
   canEdit,
   visibleFieldIds,
   fieldIdsWithRules,
@@ -79,6 +85,7 @@ export function Canvas({
                   onEditFieldDetails={onEditFieldDetails}
                   onRemoveField={onRemoveField}
                   onAddColumnField={onAddColumnField}
+                  onUpdateField={onUpdateField}
                   onRemove={() => onRemoveField(field.id)}
                   onDuplicate={() => onDuplicateField(field.id)}
                 />

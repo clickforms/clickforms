@@ -200,6 +200,30 @@ export const SUBMISSION_EXPORT_STYLES = `
     font-size: 0.875rem;
     line-height: 1.55;
   }
+  .export-divider-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  .export-divider-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 100%;
+  }
+  .export-divider-caption {
+    align-self: stretch;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #444;
+    text-align: center;
+  }
+  .export-divider-line {
+    width: 100%;
+    border-radius: 999px;
+    background-color: #d0d3d9;
+  }
   .export-static-text-heading {
     margin: 0 0 0.5rem;
     font-weight: 700;
@@ -285,6 +309,7 @@ export const SUBMISSION_EXPORT_STYLES = `
   .export-field-group,
   .export-option-list,
   .export-section-break-wrap,
+  .export-divider-wrap,
   .export-choice-matrix-wrap,
   .export-address-field,
   .export-signature,

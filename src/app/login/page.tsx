@@ -26,12 +26,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <div className="login-page">
       <div className="login-shell">
-        <Link href="/" className="login-brand">
+        <Link href="/" className="login-brand landing-anim landing-anim--1">
           <BrandMark id="login" />
           <span>Clickforms</span>
         </Link>
 
-        <div className="login-card">
+        <div className="login-card landing-anim landing-anim--2">
           <div className="login-card-header">
             <h1>Sign in to admin</h1>
             <p>Use your organisation email and password to access the forms workspace.</p>
@@ -39,7 +39,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <LoginForm callbackUrl={callbackUrl} initialError={params.error} />
         </div>
 
-        <p className="login-meta">Internal forms platform · Admin access only</p>
+        <p className="login-meta landing-anim landing-anim--3">
+          Internal forms platform · Admin access only
+        </p>
       </div>
     </div>
   );

@@ -8,14 +8,16 @@ import { AdminSidebar } from '@/app/forms/admin-sidebar';
 import { ToastProvider } from '@/components/toast';
 
 const COLLAPSE_STORAGE_KEY = 'forms-admin-sidebar-collapsed';
+const THEME_STORAGE_KEY = 'forms-admin-theme';
 
 interface AdminShellClientProps {
   email: string;
+  name: string | null;
   userRole: UserRole;
   children: ReactNode;
 }
 
-export function AdminShellClient({ email, userRole, children }: AdminShellClientProps) {
+export function AdminShellClient({ email, name, userRole, children }: AdminShellClientProps) {
   // Two independent booleans behind one button, because the sidebar means something
   // different at each breakpoint: on desktop it's "narrow icon rail vs full width"
   // (persisted, since that's a standing preference); on mobile it's "overlay open vs
@@ -24,13 +26,28 @@ export function AdminShellClient({ email, userRole, children }: AdminShellClient
   // a given viewport width, since the CSS for each is scoped to its own media query.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Dark/light theme for the authenticated app shell only — scoped to .admin-shell (see
+  // the [data-theme='dark'] overrides in globals.css) so the public marketing/auth pages,
+  // which have their own light-only design, are never affected by this.
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
     if (window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === '1') {
       setSidebarCollapsed(true);
     }
+    if (window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark') {
+      setIsDarkTheme(true);
+    }
   }, []);
+
+  function toggleTheme() {
+    setIsDarkTheme((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(THEME_STORAGE_KEY, next ? 'dark' : 'light');
+      return next;
+    });
+  }
 
   // Close the mobile overlay automatically after navigating — otherwise it stays open
   // over the newly-loaded page and the visitor has to dismiss it by hand every time.
@@ -58,8 +75,13 @@ export function AdminShellClient({ email, userRole, children }: AdminShellClient
 
   return (
     <ToastProvider>
-      <div className={shellClassName}>
-        <AdminSidebar collapsed={sidebarCollapsed} userRole={userRole} />
+      <div className={shellClassName} data-theme={isDarkTheme ? 'dark' : 'light'}>
+        <AdminSidebar
+          collapsed={sidebarCollapsed}
+          userRole={userRole}
+          isDarkTheme={isDarkTheme}
+          onToggleTheme={toggleTheme}
+        />
         {/* Tapping the scrim closes the overlay, same as tapping the hamburger again —
             only rendered/visible below the 768px breakpoint (see globals.css). */}
         <button
@@ -70,7 +92,7 @@ export function AdminShellClient({ email, userRole, children }: AdminShellClient
           onClick={() => setMobileNavOpen(false)}
         />
         <div className="admin-content">
-          <AdminHeader email={email} onToggleSidebar={toggleSidebar} />
+          <AdminHeader email={email} name={name} onToggleSidebar={toggleSidebar} />
           <main className="admin-main">{children}</main>
         </div>
       </div>

@@ -127,21 +127,19 @@ export function FormTopNav({ formId, formName, slug, responseCount }: FormTopNav
     : `/f/${slug}/preview`;
   const previewLabel = submissionId ? 'Preview response' : 'Preview';
 
-  // Order and labels mirror a typical admin top tab bar: Form Builder, Form Settings, Form
-  // Responses — with the responses tab carrying a count badge so it's obvious at a glance.
   const navItems: NavItem[] = [
     {
       kind: 'link',
       key: 'builder',
       href: `/forms/${formId}/builder`,
-      label: 'Form Builder',
+      label: 'Builder',
       icon: <BuilderIcon />,
       match: (path) => path.includes(`/forms/${formId}/builder`),
     },
     {
       kind: 'disabled',
       key: 'settings',
-      label: 'Form Settings',
+      label: 'Settings',
       icon: <SettingsIcon />,
       hint: 'Emails, workflows, and permissions — not built yet',
     },
@@ -149,7 +147,7 @@ export function FormTopNav({ formId, formName, slug, responseCount }: FormTopNav
       kind: 'link',
       key: 'responses',
       href: `/forms/${formId}/submissions`,
-      label: 'Form Responses',
+      label: 'Responses',
       icon: <ResponsesIcon />,
       match: (path) => path.includes(`/forms/${formId}/submissions`),
       badge: responseCount,

@@ -26,6 +26,7 @@ function isBlank(value: string | string[] | undefined): boolean {
 function validateField(field: FormField, value: string | string[] | undefined): string | null {
   switch (field.type) {
     case 'section_break':
+    case 'divider':
     case 'column_layout':
     case 'image':
     case 'static_text':

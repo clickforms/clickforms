@@ -13,8 +13,17 @@ import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
 // top-level `prisma` client. Every write that follows a lookup here still goes through
 // withOrgContext(form.organizationId, ...), same as every other mutating route.
 
-/** A published form always has a currentVersionId — publish() sets both together
- * (src/app/api/forms/[id]/publish/route.ts) — so callers can rely on the narrowed type.
+/** Whether a form is live to respondents is driven by `currentVersionId` alone, not by
+ * `status`. `status` tracks the draft → approved → published approval pipeline for
+ * whichever version is currently being *edited* — editing a live form forks a new draft
+ * version and resets `status` to 'draft' for that new version's approval, but must not
+ * take the previously-published version offline (specs/02-form-builder.md: "leaving the
+ * live one untouched for in-flight submissions"). Gating this lookup on `status`
+ * previously did exactly that: the public page 404'd the instant anyone so much as
+ * autosaved an edit to a live form. `currentVersionId` only changes via an explicit
+ * publish/unpublish action (see form-workflow.ts), so it's the only reliable signal.
+ * Archived forms are excluded even if `currentVersionId` is still set, since archiving
+ * doesn't clear it — see PATCH /api/forms/[id]'s `archived` branch.
  *
  * `organizationId` is required: `forms.slug` is only unique per-org (schema.prisma
  * `@@unique([organizationId, slug])`), so an unscoped lookup could return the wrong
@@ -26,7 +35,7 @@ export async function getPublishedFormBySlug(
   organizationId: string,
 ): Promise<Form & { currentVersionId: string }> {
   const form = await prisma.form.findFirst({
-    where: { slug, status: 'published', organizationId },
+    where: { slug, organizationId, status: { not: 'archived' }, currentVersionId: { not: null } },
   });
   if (!form?.currentVersionId) {
     throw new NotFoundError('Form');

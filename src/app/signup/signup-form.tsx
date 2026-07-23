@@ -73,10 +73,10 @@ export function SignupForm() {
 
   if (submittedEmail) {
     return (
-      <div className="signup-form">
+      <div className="signup-form landing-anim landing-anim--1">
         <div className="signup-check-email">
           <div className="signup-check-email-icon" aria-hidden="true">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 28 28" fill="none" aria-hidden="true">
               <rect
                 x="3"
                 y="6"

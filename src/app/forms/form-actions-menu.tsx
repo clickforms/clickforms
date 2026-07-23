@@ -15,6 +15,7 @@ import { createPortal } from 'react-dom';
 import {
   type FormWorkflowAction,
   getWorkflowStepForStatus,
+  shouldShowTakeOfflineAction,
 } from '@/lib/forms/form-workflow-client';
 
 interface FormActionsMenuProps {
@@ -22,6 +23,9 @@ interface FormActionsMenuProps {
   /** Absolute public URL on the org's subdomain — see src/app/forms/list/page.tsx. */
   formUrl: string;
   status: FormStatus;
+  /** Whether a version is currently reachable by respondents — drives "View form" and
+   *  the "Take offline" action independent of `status` (see live-status.ts). */
+  isLive: boolean;
   canEdit: boolean;
   onRename: () => void;
   onDuplicate: () => void;
@@ -379,6 +383,7 @@ export function FormActionsMenu({
   formId,
   formUrl,
   status,
+  isLive,
   canEdit,
   onRename,
   onDuplicate,
@@ -470,6 +475,21 @@ export function FormActionsMenu({
       });
     }
 
+    // Secondary control: a form can be live (isLive) while status has already moved off
+    // 'published' — e.g. someone edited it, which resets status to 'draft' for the new
+    // draft's own approval without taking the old version offline. The ladder button
+    // above then reads "Approve"/"Publish" (for the new draft), so taking the currently
+    // *live* version offline needs its own entry. Skip it when the ladder button is
+    // already "Unpublish" to avoid showing the same action twice.
+    if (shouldShowTakeOfflineAction(status, isLive)) {
+      items.push({
+        kind: 'button',
+        label: 'Take offline',
+        icon: <UnpublishIcon />,
+        onClick: () => onWorkflow('unpublish'),
+      });
+    }
+
     items.push({
       kind: 'button',
       label: isArchived ? 'Restore' : 'Archive',
@@ -499,7 +519,7 @@ export function FormActionsMenu({
     });
   }
 
-  if (status === 'published') {
+  if (isLive) {
     items.push({
       kind: 'link',
       label: 'View form',

@@ -248,6 +248,21 @@ function PaletteIcon({ type }: { type: FieldType }) {
           />
         </svg>
       );
+    case 'divider':
+      return (
+        <svg {...common} aria-hidden="true">
+          <line
+            x1="2"
+            y1="9"
+            x2="16"
+            y2="9"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeDasharray="3 2.5"
+          />
+        </svg>
+      );
     case 'column_layout':
       return (
         <svg {...common} aria-hidden="true">
@@ -611,7 +626,7 @@ export function FieldPalette({
     { label: 'Rating & scale', types: ['rating', 'opinion_scale'] },
     { label: 'Date & time', types: ['date', 'time'] },
     { label: 'Files & sign', types: ['file_upload', 'signature'] },
-    { label: 'Layout', types: ['section_break', 'static_text', 'image', 'hidden'] },
+    { label: 'Layout', types: ['section_break', 'divider', 'static_text', 'image', 'hidden'] },
   ];
 
   const columnCounts: ColumnCount[] = [2, 3, 4];

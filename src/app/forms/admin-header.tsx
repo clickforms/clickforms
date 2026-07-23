@@ -1,9 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
-import { useState } from 'react';
-import { LogoutConfirmModal } from '@/app/forms/logout-confirm-modal';
+import { AccountMenu } from '@/app/forms/account-menu';
 
 function MenuIcon() {
   return (
@@ -53,20 +51,13 @@ function getPageTitle(pathname: string): string {
 
 interface AdminHeaderProps {
   email: string;
+  name: string | null;
   onToggleSidebar: () => void;
 }
 
-export function AdminHeader({ email, onToggleSidebar }: AdminHeaderProps) {
+export function AdminHeader({ email, name, onToggleSidebar }: AdminHeaderProps) {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
-  const displayEmail = email.length > 24 ? `${email.slice(0, 21)}…` : email;
-  const [logoutOpen, setLogoutOpen] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
-
-  async function handleConfirmSignOut() {
-    setIsSigningOut(true);
-    await signOut({ callbackUrl: '/login' });
-  }
 
   return (
     <header className="admin-header">
@@ -82,20 +73,8 @@ export function AdminHeader({ email, onToggleSidebar }: AdminHeaderProps) {
         <h1 className="admin-header-title">{title}</h1>
       </div>
       <div className="admin-header-right">
-        <span className="admin-header-account" title={email}>
-          {displayEmail}
-        </span>
-        <button type="button" className="admin-header-signout" onClick={() => setLogoutOpen(true)}>
-          Sign out
-        </button>
+        <AccountMenu email={email} name={name} />
       </div>
-
-      <LogoutConfirmModal
-        open={logoutOpen}
-        isSigningOut={isSigningOut}
-        onClose={() => setLogoutOpen(false)}
-        onConfirm={handleConfirmSignOut}
-      />
     </header>
   );
 }

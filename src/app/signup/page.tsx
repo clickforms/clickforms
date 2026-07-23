@@ -10,6 +10,20 @@ export const metadata = {
   description: 'Create your organisation and start building forms.',
 };
 
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+      <path
+        d="M2.5 6.5l2.5 2.5 5.5-5.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const BENEFITS = [
   {
     title: 'Build once, reuse everywhere',
@@ -34,7 +48,7 @@ export default async function SignupPage() {
   return (
     <div className="signup-page">
       <div className="signup-layout">
-        <aside className="signup-aside">
+        <aside className="signup-aside landing-anim landing-anim--1">
           <Link href="/" className="signup-aside-brand">
             <BrandMark id="signup-aside" size={36} />
             <span>Clickforms</span>
@@ -53,7 +67,9 @@ export default async function SignupPage() {
           <ul className="signup-aside-benefits">
             {BENEFITS.map((benefit) => (
               <li key={benefit.title} className="signup-aside-benefit">
-                <span className="signup-aside-benefit-mark" aria-hidden="true" />
+                <span className="signup-aside-benefit-mark" aria-hidden="true">
+                  <CheckIcon />
+                </span>
                 <div>
                   <strong>{benefit.title}</strong>
                   <span>{benefit.body}</span>
@@ -67,7 +83,10 @@ export default async function SignupPage() {
           </p>
         </aside>
 
-        <section className="signup-panel" aria-labelledby="signup-panel-title">
+        <section
+          className="signup-panel landing-anim landing-anim--2"
+          aria-labelledby="signup-panel-title"
+        >
           <div className="signup-panel-header">
             <p className="signup-panel-kicker">Get started</p>
             <h2 id="signup-panel-title">Create your organisation</h2>

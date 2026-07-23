@@ -51,7 +51,7 @@ export function findParentColumnLayout(
 
 /** Field types that can live inside a column slot (not nested layouts/sections). */
 export function isColumnChildFieldType(type: FieldType): boolean {
-  return type !== 'column_layout' && type !== 'section_break';
+  return type !== 'column_layout' && type !== 'section_break' && type !== 'divider';
 }
 
 export function addPage(schema: FormSchema, page: FormPage): FormSchema {
@@ -192,7 +192,12 @@ export function removeField(schema: FormSchema, fieldId: string): FormSchema {
 export function replaceFieldType(schema: FormSchema, fieldId: string, type: FieldType): FormSchema {
   const existing = schema.fields[fieldId];
   if (!existing) return schema;
-  if (existing.type === 'column_layout' || existing.type === 'section_break') return schema;
+  if (
+    existing.type === 'column_layout' ||
+    existing.type === 'section_break' ||
+    existing.type === 'divider'
+  )
+    return schema;
   if (!isColumnChildFieldType(type)) return schema;
   if (existing.type === type) return schema;
 

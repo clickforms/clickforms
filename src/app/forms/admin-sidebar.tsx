@@ -80,6 +80,47 @@ function UsersIcon() {
   );
 }
 
+function BuildingIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <rect x="4" y="2.5" width="8" height="13" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M12 7.5h2a0.5 0.5 0 0 1 0.5 0.5v7a0.5 0.5 0 0 1-0.5 0.5h-2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <line
+        x1="6.5"
+        y1="5.5"
+        x2="9.5"
+        y2="5.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="6.5"
+        y1="8.5"
+        x2="9.5"
+        y2="8.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="6.5"
+        y1="11.5"
+        x2="9.5"
+        y2="11.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function LogsIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -100,15 +141,28 @@ function LogsIcon() {
   );
 }
 
-function SettingsIcon() {
+function SunIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <circle cx="9" cy="9" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
       <path
-        d="M9 2.5v1.6M9 13.9v1.6M2.5 9h1.6M13.9 9h1.6M4.4 4.4l1.1 1.1M12.5 12.5l1.1 1.1M4.4 13.6l1.1-1.1M12.5 5.5l1.1-1.1"
+        d="M8 1.5v1.4M8 13.1v1.4M2.9 2.9l1 1M12.1 12.1l1 1M1.5 8h1.4M13.1 8h1.4M2.9 13.1l1-1M12.1 3.9l1-1"
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M13.8 9.9A5.8 5.8 0 1 1 6.1 2.2a4.6 4.6 0 0 0 7.7 7.7Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -133,7 +187,7 @@ interface NavDisabledItem {
 type NavItem = NavLinkItem | NavDisabledItem;
 
 function buildNavSections(canManageUsersFlag: boolean): NavSection[] {
-  return [
+  const sections: NavSection[] = [
     {
       label: 'Overview',
       items: [
@@ -163,10 +217,9 @@ function buildNavSections(canManageUsersFlag: boolean): NavSection[] {
     {
       label: 'Admin',
       items: [
-        // Files (org-wide submission file browser) and Users both cross form-ownership
-        // boundaries a `member` role can't otherwise see (see formsListWhere in
-        // lib/user-roles.ts) — gated the same way: a real link for admins, an inert
-        // placeholder for everyone else.
+        // Files (org-wide submission file browser) crosses form-ownership boundaries a
+        // `member` role can't otherwise see (see formsListWhere in lib/user-roles.ts) —
+        // a real link for admins, an inert placeholder for everyone else.
         canManageUsersFlag
           ? {
               kind: 'link',
@@ -177,20 +230,41 @@ function buildNavSections(canManageUsersFlag: boolean): NavSection[] {
               match: (pathname) => pathname.startsWith('/forms/files'),
             }
           : { kind: 'disabled', key: 'files', label: 'Files', icon: <FilesIcon /> },
-        canManageUsersFlag
-          ? {
-              kind: 'link',
-              key: 'users',
-              href: '/forms/users',
-              label: 'Users',
-              icon: <UsersIcon />,
-              match: (pathname) => pathname.startsWith('/forms/users'),
-            }
-          : { kind: 'disabled', key: 'users', label: 'Users', icon: <UsersIcon /> },
         { kind: 'disabled', key: 'logs', label: 'Logs', icon: <LogsIcon /> },
       ],
     },
   ];
+
+  // Org-super-admin-only section — unlike the "Admin" section above (which always shows,
+  // with disabled placeholders for lower roles), this one is only relevant to org admins
+  // at all, so it's omitted entirely rather than shown-but-disabled. Consolidates the two
+  // org-wide-authority pages (Users, Organisation Details) that used to live in different
+  // places (top-level "Admin" section / nested inside Account Settings) into one spot.
+  if (canManageUsersFlag) {
+    sections.push({
+      label: 'Organisation',
+      items: [
+        {
+          kind: 'link',
+          key: 'users',
+          href: '/forms/users',
+          label: 'Users',
+          icon: <UsersIcon />,
+          match: (pathname) => pathname.startsWith('/forms/users'),
+        },
+        {
+          kind: 'link',
+          key: 'organisation',
+          href: '/forms/organisation',
+          label: 'Organisation Details',
+          icon: <BuildingIcon />,
+          match: (pathname) => pathname.startsWith('/forms/organisation'),
+        },
+      ],
+    });
+  }
+
+  return sections;
 }
 
 interface NavSection {
@@ -233,7 +307,45 @@ function NavEntry({
   );
 }
 
-export function AdminSidebar({ collapsed, userRole }: { collapsed: boolean; userRole: UserRole }) {
+function ThemeToggle({
+  isDarkTheme,
+  onToggleTheme,
+}: {
+  isDarkTheme: boolean;
+  onToggleTheme: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      role="switch"
+      aria-checked={isDarkTheme}
+      onClick={onToggleTheme}
+    >
+      <span className="theme-toggle-left">
+        <span className="admin-sidebar-nav-icon">{isDarkTheme ? <MoonIcon /> : <SunIcon />}</span>
+        <span className="admin-sidebar-nav-item-label">
+          {isDarkTheme ? 'Dark mode' : 'Light mode'}
+        </span>
+      </span>
+      <span className="theme-toggle-track" aria-hidden="true">
+        <span className="theme-toggle-thumb" />
+      </span>
+    </button>
+  );
+}
+
+export function AdminSidebar({
+  collapsed,
+  userRole,
+  isDarkTheme,
+  onToggleTheme,
+}: {
+  collapsed: boolean;
+  userRole: UserRole;
+  isDarkTheme: boolean;
+  onToggleTheme: () => void;
+}) {
   const pathname = usePathname();
   const navSections = buildNavSections(canManageUsers(userRole));
 
@@ -258,17 +370,7 @@ export function AdminSidebar({ collapsed, userRole }: { collapsed: boolean; user
       </nav>
 
       <div className="admin-sidebar-footer">
-        <p className="admin-sidebar-section-label">My company</p>
-        <Link
-          href="/forms/settings"
-          className={`admin-sidebar-nav-item ${pathname.startsWith('/forms/settings') ? 'admin-sidebar-nav-item--active' : ''}`}
-          aria-label={collapsed ? 'Account Settings' : undefined}
-        >
-          <span className="admin-sidebar-nav-icon">
-            <SettingsIcon />
-          </span>
-          <span className="admin-sidebar-nav-item-label">Account Settings</span>
-        </Link>
+        <ThemeToggle isDarkTheme={isDarkTheme} onToggleTheme={onToggleTheme} />
       </div>
     </aside>
   );

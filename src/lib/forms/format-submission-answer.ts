@@ -28,6 +28,7 @@ export function formatSubmissionAnswer(
 ): FormattedSubmissionAnswer {
   switch (field.type) {
     case 'section_break':
+    case 'divider':
     case 'column_layout':
     case 'image':
     case 'static_text':

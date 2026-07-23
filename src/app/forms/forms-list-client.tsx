@@ -7,6 +7,7 @@ import { CreateFormModal } from '@/app/forms/create-form-modal';
 import { DeleteFormModal } from '@/app/forms/delete-form-modal';
 import { FormActionsMenu } from '@/app/forms/form-actions-menu';
 import { TransferFormModal } from '@/app/forms/transfer-form-modal';
+import { LiveStatusBadge } from '@/components/live-status-badge';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
 import { type FormWorkflowAction, runFormWorkflow } from '@/lib/forms/form-workflow-client';
@@ -29,19 +30,17 @@ interface FormSummary {
   isOwnForm: boolean;
   /** Opt-out flag: hidden from everyone but the creator when true (see formsListWhere). */
   isPrivate: boolean;
+  /** The version currently served to respondents, if any — see src/lib/forms/live-status.ts. */
+  currentVersionId: string | null;
+  /** The version being edited (most recent by versionNumber). Diverging from
+   *  currentVersionId means there are unpublished changes waiting. */
+  latestVersionId: string | null;
 }
 
 interface OrgMember {
   id: string;
   name: string;
 }
-
-const STATUS_BADGE: Record<FormStatus, { label: string; className: string }> = {
-  draft: { label: 'Draft', className: 'badge--draft' },
-  approved: { label: 'Approved', className: 'badge--approved' },
-  published: { label: 'Published', className: 'badge--success' },
-  archived: { label: 'Archived', className: 'badge--neutral' },
-};
 
 type SortColumn = 'name' | 'createdAt' | 'updatedAt' | 'responseCount' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -105,7 +104,7 @@ export function FormsListClient({
       if (!response.ok) {
         throw new Error(await readApiError(response, 'Failed to duplicate form'));
       }
-      const { form: newForm } = await response.json();
+      const { form: newForm, version: newVersion } = await response.json();
       setForms((current) => [
         {
           id: newForm.id,
@@ -123,6 +122,9 @@ export function FormsListClient({
           createdByName: currentUserDisplayName,
           isOwnForm: true,
           isPrivate: false,
+          // A duplicate always starts as an unpublished draft — never live.
+          currentVersionId: null,
+          latestVersionId: newVersion?.id ?? null,
         },
         ...current,
       ]);
@@ -182,14 +184,20 @@ export function FormsListClient({
       const body = await runFormWorkflow(form.id, action);
       setForms((current) =>
         current.map((entry) =>
-          entry.id === form.id ? { ...entry, status: body.form.status as FormStatus } : entry,
+          entry.id === form.id
+            ? {
+                ...entry,
+                status: body.form.status as FormStatus,
+                currentVersionId: body.form.currentVersionId,
+              }
+            : entry,
         ),
       );
 
       const messages: Record<FormWorkflowAction, string> = {
         approve: 'Form approved — ready to publish',
         publish: 'Form published',
-        unpublish: 'Form unpublished',
+        unpublish: 'Form taken offline',
         'revert-to-draft': 'Form reverted to draft',
       };
       toast.success(messages[action]);
@@ -369,7 +377,9 @@ export function FormsListClient({
               </thead>
               <tbody>
                 {visibleForms.map((form) => {
-                  const badge = STATUS_BADGE[form.status];
+                  const isLive = form.currentVersionId !== null && form.status !== 'archived';
+                  const hasPendingChanges =
+                    isLive && form.latestVersionId !== form.currentVersionId;
                   return (
                     <tr key={form.id}>
                       <td data-label="Form name">
@@ -403,7 +413,11 @@ export function FormsListClient({
                       </td>
                       <td data-label="Responses">{form.responseCount}</td>
                       <td data-label="Status">
-                        <span className={`badge ${badge.className}`}>{badge.label}</span>
+                        <LiveStatusBadge
+                          status={form.status}
+                          isLive={isLive}
+                          hasPendingChanges={hasPendingChanges}
+                        />
                       </td>
                       <td data-label="Created by">
                         {form.createdByName}
@@ -418,6 +432,7 @@ export function FormsListClient({
                           formId={form.id}
                           formUrl={form.publicUrl}
                           status={form.status}
+                          isLive={isLive}
                           canEdit={canEdit}
                           onRename={() => {
                             setRenamingId(form.id);

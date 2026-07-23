@@ -48,15 +48,17 @@ import {
   updateField,
 } from '@/app/forms/[id]/builder/schema-mutations';
 import { useFormWorkspaceStatus } from '@/app/forms/[id]/form-workspace-context';
+import { LiveStatusBadge } from '@/components/live-status-badge';
 import { useToast } from '@/components/toast';
 import { extractApiError, getErrorMessage } from '@/lib/error-message';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getVisibleFieldIds } from '@/lib/forms/conditional-logic';
-import { FORM_STATUS_BADGE_CLASS, FORM_STATUS_LABEL } from '@/lib/forms/form-status';
 import {
+  type FormWorkflowAction,
   type FormWorkflowResult,
   getWorkflowStepForStatus,
   runFormWorkflow,
+  shouldShowTakeOfflineAction,
 } from '@/lib/forms/form-workflow-client';
 import type {
   ColumnCount,
@@ -88,6 +90,9 @@ interface BuilderClientProps {
   formId: string;
   formName: string;
   initialVersion: (VersionMeta & { schema: FormSchema }) | null;
+  /** The version currently served to respondents, if any — independent of `status`
+   *  (see src/lib/forms/live-status.ts). */
+  initialCurrentVersionId: string | null;
   canEdit: boolean;
 }
 
@@ -122,6 +127,7 @@ export function BuilderClient({
   formId,
   formName: _formName,
   initialVersion,
+  initialCurrentVersionId,
   canEdit,
 }: BuilderClientProps) {
   const toast = useToast();
@@ -138,6 +144,10 @@ export function BuilderClient({
         }
       : null,
   );
+  // Drives the Live/Live·pending indicator and the "Take offline" action — only changes
+  // via an explicit publish/unpublish, never as a side effect of editing (see
+  // applyWorkflowResult and public-lookup.ts's getPublishedFormBySlug).
+  const [currentVersionId, setCurrentVersionId] = useState<string | null>(initialCurrentVersionId);
   const [activePageId, setActivePageId] = useState<string>(() => schema.pages[0]?.id ?? '');
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   // Which field's settings modal is open, if any — separate from selection so selecting a
@@ -254,6 +264,7 @@ export function BuilderClient({
       throw new Error('Server did not return an updated form status');
     }
     setFormStatus(nextStatus);
+    setCurrentVersionId(body.form.currentVersionId ?? null);
     if (body.version) {
       setVersion({
         id: body.version.id,
@@ -265,27 +276,37 @@ export function BuilderClient({
     }
   }
 
-  async function handleWorkflowAction() {
-    const step = getWorkflowStepForStatus(formStatus);
-    if (!step || !canEdit || !canRunWorkflow) return;
+  async function runWorkflowAction(action: FormWorkflowAction) {
+    if (!canEdit || isWorkflowBusy) return;
 
     setIsWorkflowBusy(true);
     try {
       await ensureSaved();
-      const body = await runFormWorkflow(formId, step.action);
+      const body = await runFormWorkflow(formId, action);
       applyWorkflowResult(body);
 
-      const messages: Record<string, string> = {
+      const messages: Record<FormWorkflowAction, string> = {
         approve: 'Form approved — ready to publish',
         publish: `Published as v${body.version?.versionNumber ?? ''}`.trim(),
-        unpublish: 'Form unpublished',
+        unpublish: 'Form taken offline',
+        'revert-to-draft': 'Form reverted to draft',
       };
-      toast.success(messages[step.action] ?? 'Status updated');
+      toast.success(messages[action] ?? 'Status updated');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Something went wrong'));
     } finally {
       setIsWorkflowBusy(false);
     }
+  }
+
+  async function handleWorkflowAction() {
+    const step = getWorkflowStepForStatus(formStatus);
+    if (!step || !canRunWorkflow) return;
+    await runWorkflowAction(step.action);
+  }
+
+  async function handleTakeOffline() {
+    await runWorkflowAction('unpublish');
   }
 
   function handleSelectField(fieldId: string) {
@@ -509,7 +530,13 @@ export function BuilderClient({
       : formStatus === 'approved'
         ? version?.publishedAt !== null || hasDraftVersion
         : formStatus === 'published');
-  const isLive = formStatus === 'published' && !isSaveBusy;
+  // Truth of "is this reachable by respondents right now" — see live-status.ts. Not
+  // gated on !isSaveBusy: autosaving a schema edit never changes currentVersionId, so
+  // there's nothing to debounce here (unlike the old formStatus-based check, which used
+  // to flicker because status itself is what autosave changes).
+  const isLive = currentVersionId !== null && formStatus !== 'archived';
+  const hasPendingChanges = isLive && version?.id !== currentVersionId;
+  const showTakeOffline = shouldShowTakeOfflineAction(formStatus, isLive);
 
   return (
     <div className="builder">
@@ -530,22 +557,41 @@ export function BuilderClient({
             <>
               <button
                 type="button"
-                className="button button--ghost"
+                className="button button--ghost button--small"
                 onClick={() => setShowFormSettings(true)}
               >
                 Form settings
               </button>
               <SaveStatusBadge status={saveStatus} error={saveError} />
-              <span className={`badge builder-status-badge ${FORM_STATUS_BADGE_CLASS[formStatus]}`}>
-                {FORM_STATUS_LABEL[formStatus]}
-              </span>
-              {isLive ? <span className="builder-live-badge">Live</span> : null}
+              <LiveStatusBadge
+                status={formStatus}
+                isLive={isLive}
+                hasPendingChanges={hasPendingChanges}
+              />
+              {showTakeOffline ? (
+                <button
+                  type="button"
+                  className="button button--ghost button--small"
+                  onClick={() => void handleTakeOffline()}
+                  disabled={isWorkflowBusy}
+                  title="Take the currently live version offline"
+                >
+                  {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
+                </button>
+              ) : null}
               {workflowStep ? (
                 <button
                   type="button"
-                  className={canRunWorkflow ? 'button' : 'button button--ghost'}
+                  className={
+                    canRunWorkflow ? 'button button--small' : 'button button--ghost button--small'
+                  }
                   onClick={() => void handleWorkflowAction()}
                   disabled={isWorkflowBusy || !canRunWorkflow}
+                  title={
+                    hasPendingChanges
+                      ? 'Your published form still shows the old version until you publish these changes'
+                      : undefined
+                  }
                 >
                   {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
                 </button>
@@ -590,6 +636,7 @@ export function BuilderClient({
                 onRemoveField={handleRemoveField}
                 onDuplicateField={handleDuplicateField}
                 onAddColumnField={handleAddColumnField}
+                onUpdateField={handleUpdateField}
                 canEdit={canEdit}
                 visibleFieldIds={visibleFieldIds}
                 fieldIdsWithRules={fieldIdsWithRules}

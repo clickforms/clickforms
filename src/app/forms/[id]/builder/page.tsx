@@ -80,6 +80,7 @@ export default async function FormBuilderPage({ params }: PageProps) {
             }
           : null
       }
+      initialCurrentVersionId={form.currentVersionId}
       canEdit={canEdit}
     />
   );

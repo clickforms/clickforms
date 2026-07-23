@@ -4,7 +4,7 @@ import { extractApiError } from '@/lib/error-message';
 export type FormWorkflowAction = 'approve' | 'publish' | 'unpublish' | 'revert-to-draft';
 
 export interface FormWorkflowResult {
-  form: { id: string; status: string };
+  form: { id: string; status: string; currentVersionId: string | null };
   version?: { id: string; versionNumber: number; publishedAt: string | Date | null };
 }
 
@@ -26,6 +26,18 @@ export function getWorkflowStepForStatus(status: FormStatus): WorkflowStep | nul
     default:
       return null;
   }
+}
+
+/** Whether a secondary "Take offline" control should show alongside the primary
+ *  approve/publish/unpublish ladder button. Needed once a form is live but `status` has
+ *  moved off 'published' — e.g. someone edited a live form, which resets `status` to
+ *  'draft' for the *new* draft's own approval pipeline without touching what's still
+ *  being served (see public-lookup.ts). In that case the ladder's next step is
+ *  "Approve"/"Publish" for the new draft, so taking the *old* live version offline needs
+ *  its own control. When `status === 'published'`, the ladder button already is
+ *  "Unpublish" — no second control needed. */
+export function shouldShowTakeOfflineAction(status: FormStatus, isLive: boolean): boolean {
+  return isLive && status !== 'published' && status !== 'archived';
 }
 
 const ACTION_PATH: Record<FormWorkflowAction, string> = {

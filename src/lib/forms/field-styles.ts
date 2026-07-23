@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
 import {
+  DEFAULT_DIVIDER_THICKNESS_PX,
+  DEFAULT_DIVIDER_WIDTH_PX,
   FONT_FAMILY_CSS,
   type FontFamily,
   type FontWeightOption,
@@ -149,6 +151,66 @@ export function resolveSectionBreakStyle(field: FormField): CSSProperties {
   }
   if (colored.textColor) {
     style.color = colored.textColor;
+  }
+
+  return style;
+}
+
+type DividerField = FormField & { dividerWidthPx?: number; thicknessPx?: number };
+
+/** Width of a divider's line, in px — the container it sits in is always full-row, but the
+ * rule itself can be narrower and is centered (see .divider-line in globals.css). Drag-resized
+ * on the canvas (see the resize handles in field-card.tsx), hence a real px number rather than
+ * the full/half/third `width` enum every other field type uses. */
+export function resolveDividerWrapStyle(field: FormField): CSSProperties {
+  const divider = field as DividerField;
+  return { width: `${divider.dividerWidthPx ?? DEFAULT_DIVIDER_WIDTH_PX}px` };
+}
+
+/** Thickness (and optional custom color) of a divider's line itself. */
+export function resolveDividerLineStyle(field: FormField): CSSProperties {
+  const divider = field as DividerField;
+  const colored = asColoredField(field);
+  const style: CSSProperties = {
+    height: `${divider.thicknessPx ?? DEFAULT_DIVIDER_THICKNESS_PX}px`,
+  };
+  if (colored.backgroundColor) {
+    style.backgroundColor = colored.backgroundColor;
+  }
+  return style;
+}
+
+type DividerCaptionStyledField = FormField & {
+  captionFontWeight?: FontWeightOption;
+  captionFontFamily?: FontFamily;
+  captionFontSize?: number;
+  captionAlign?: TextAlign;
+  captionColor?: string;
+};
+
+/** Styles for a divider's optional caption — same shape as static_text's independent
+ * heading/body style props (see resolveStaticTextHeadingStyle above), reusing the same
+ * shared TextStyleControls settings-panel UI. */
+export function resolveDividerCaptionStyle(field: FormField): CSSProperties {
+  const styled = field as DividerCaptionStyledField;
+  const style: CSSProperties = {};
+
+  const fontWeight = resolveFontWeight(styled.captionFontWeight);
+  if (fontWeight !== undefined) {
+    style.fontWeight = fontWeight;
+  }
+  if (styled.captionFontFamily) {
+    const fontFamily = FONT_FAMILY_CSS[styled.captionFontFamily];
+    if (fontFamily) style.fontFamily = fontFamily;
+  }
+  if (styled.captionFontSize) {
+    style.fontSize = `${styled.captionFontSize}px`;
+  }
+  if (styled.captionColor) {
+    style.color = styled.captionColor;
+  }
+  if (styled.captionAlign) {
+    style.textAlign = styled.captionAlign;
   }
 
   return style;

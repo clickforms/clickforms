@@ -20,7 +20,15 @@ import {
   type ConditionalRule,
   DATE_DISPLAY_FORMAT_LABEL,
   DATE_DISPLAY_FORMATS,
+  DEFAULT_DIVIDER_THICKNESS_PX,
+  DEFAULT_DIVIDER_WIDTH_PX,
   DEFAULT_FIELD_TEXT_COLOR,
+  DIVIDER_CAPTION_POSITIONS,
+  DIVIDER_THICKNESS_MAX_PX,
+  DIVIDER_THICKNESS_MIN_PX,
+  DIVIDER_WIDTH_MAX_PX,
+  DIVIDER_WIDTH_MIN_PX,
+  type DividerCaptionPosition,
   type FieldType,
   FONT_FAMILY_LABEL,
   FONT_FAMILY_OPTIONS,
@@ -585,6 +593,99 @@ function ContentExtras({
             }
           />
         </label>
+      );
+
+    case 'divider':
+      return (
+        <>
+          <div className="settings-subsection">
+            <p className="settings-subsection-title">Size</p>
+            <label className="settings-field">
+              <span className="settings-label">Width (px)</span>
+              <input
+                type="number"
+                className="text-input"
+                disabled={!canEdit}
+                min={DIVIDER_WIDTH_MIN_PX}
+                max={DIVIDER_WIDTH_MAX_PX}
+                value={field.dividerWidthPx ?? DEFAULT_DIVIDER_WIDTH_PX}
+                onChange={(event) => {
+                  const raw = Number(event.target.value);
+                  if (Number.isNaN(raw)) return;
+                  onUpdateField(field.id, {
+                    dividerWidthPx: Math.min(
+                      DIVIDER_WIDTH_MAX_PX,
+                      Math.max(DIVIDER_WIDTH_MIN_PX, raw),
+                    ),
+                  });
+                }}
+              />
+              <span className="settings-field-hint">
+                Or drag the handle at the right edge of the line on the canvas.
+              </span>
+            </label>
+            <label className="settings-field">
+              <span className="settings-label">Thickness (px)</span>
+              <input
+                type="number"
+                className="text-input"
+                disabled={!canEdit}
+                min={DIVIDER_THICKNESS_MIN_PX}
+                max={DIVIDER_THICKNESS_MAX_PX}
+                value={field.thicknessPx ?? DEFAULT_DIVIDER_THICKNESS_PX}
+                onChange={(event) => {
+                  const raw = Number(event.target.value);
+                  if (Number.isNaN(raw)) return;
+                  onUpdateField(field.id, {
+                    thicknessPx: Math.min(
+                      DIVIDER_THICKNESS_MAX_PX,
+                      Math.max(DIVIDER_THICKNESS_MIN_PX, raw),
+                    ),
+                  });
+                }}
+              />
+              <span className="settings-field-hint">
+                Or drag the handle at the bottom edge of the line on the canvas.
+              </span>
+            </label>
+          </div>
+          <div className="settings-subsection">
+            <p className="settings-subsection-title">Caption</p>
+            <label className="settings-field">
+              <span className="settings-label">Placement</span>
+              <select
+                className="text-input"
+                disabled={!canEdit}
+                value={field.captionPosition ?? 'above'}
+                onChange={(event) =>
+                  onUpdateField(field.id, {
+                    captionPosition: event.target.value as DividerCaptionPosition,
+                  })
+                }
+              >
+                {DIVIDER_CAPTION_POSITIONS.map((position) => (
+                  <option key={position} value={position}>
+                    {position === 'above' ? 'Above the line' : 'Below the line'}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <TextStyleControls
+              radioGroupName={`divider-caption-align-${field.id}`}
+              fontWeight={field.captionFontWeight ?? 'default'}
+              onFontWeightChange={(value) => onUpdateField(field.id, { captionFontWeight: value })}
+              fontFamily={field.captionFontFamily ?? 'default'}
+              onFontFamilyChange={(value) => onUpdateField(field.id, { captionFontFamily: value })}
+              fontSize={field.captionFontSize}
+              onFontSizeChange={(value) => onUpdateField(field.id, { captionFontSize: value })}
+              color={field.captionColor}
+              onColorChange={(value) => onUpdateField(field.id, { captionColor: value })}
+              align={field.captionAlign ?? 'center'}
+              onAlignChange={(value) => onUpdateField(field.id, { captionAlign: value })}
+              canEdit={canEdit}
+            />
+          </div>
+        </>
       );
 
     case 'column_layout':
@@ -1385,6 +1486,7 @@ export function FieldSettingsPanel({
   const isImage = field.type === 'image';
   const isStaticText = field.type === 'static_text';
   const isSectionBreak = field.type === 'section_break';
+  const isDivider = field.type === 'divider';
   const isColumnLayout = field.type === 'column_layout';
   const isHidden = field.type === 'hidden';
   const isColumnChild = Boolean(findParentColumnLayout(schema, field.id));
@@ -1413,23 +1515,25 @@ export function FieldSettingsPanel({
   // but never a column layout (no surface of its own to color) or a hidden field
   // (nothing rendered).
   const showAppearanceGroup =
-    (isSectionBreak || isStaticText || isImage || !isLayoutOnly) && !isHidden;
+    (isSectionBreak || isDivider || isStaticText || isImage || !isLayoutOnly) && !isHidden;
 
   return (
     <div className="settings-panel" key={field.id}>
       <div className="settings-panel-header">
         <p className="settings-panel-title">
           {isSectionBreak
-            ? 'Section settings'
-            : isColumnLayout
-              ? 'Column section settings'
-              : isImage
-                ? 'Image settings'
-                : isStaticText
-                  ? 'Formatted text settings'
-                  : isHidden
-                    ? 'Hidden field settings'
-                    : 'Field settings'}
+            ? 'Header settings'
+            : isDivider
+              ? 'Divider settings'
+              : isColumnLayout
+                ? 'Column section settings'
+                : isImage
+                  ? 'Image settings'
+                  : isStaticText
+                    ? 'Formatted text settings'
+                    : isHidden
+                      ? 'Hidden field settings'
+                      : 'Field settings'}
         </p>
         {canEdit && !isColumnChild ? (
           <button
@@ -1468,8 +1572,8 @@ export function FieldSettingsPanel({
           <label className="settings-field">
             <span className="settings-label">
               {isSectionBreak || isColumnLayout
-                ? 'Section title'
-                : isImage
+                ? 'Header title'
+                : isImage || isDivider
                   ? 'Caption (optional)'
                   : isHidden
                     ? 'Internal name'
@@ -1477,9 +1581,13 @@ export function FieldSettingsPanel({
             </span>
             <input
               className="text-input"
-              value={field.label}
+              value={field.label ?? ''}
               disabled={!canEdit}
-              onChange={(event) => onUpdateField(field.id, { label: event.target.value })}
+              onChange={(event) =>
+                onUpdateField(field.id, {
+                  label: isDivider ? event.target.value || undefined : event.target.value,
+                })
+              }
             />
             {isHidden ? (
               <span className="settings-field-hint">

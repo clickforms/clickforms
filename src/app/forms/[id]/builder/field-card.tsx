@@ -3,14 +3,18 @@
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { CSSProperties, MouseEvent } from 'react';
-import { useState } from 'react';
+import type { CSSProperties, MouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { COLUMN_CHILD_FIELD_TYPES, FIELD_TYPE_LABELS } from '@/app/forms/[id]/builder/field-meta';
+import type { FieldPatch } from '@/app/forms/[id]/builder/schema-mutations';
 import { DatePickerField } from '@/components/date-picker/date-picker-field';
 import { TimePickerField } from '@/components/time-picker/time-picker-field';
 import { getFieldImageSrc } from '@/lib/forms/field-image';
 import {
   fieldHasCustomAppearance,
+  resolveDividerCaptionStyle,
+  resolveDividerLineStyle,
+  resolveDividerWrapStyle,
   resolveFieldContainerStyle,
   resolveFieldInputStyle,
   resolveImageStyle,
@@ -20,7 +24,16 @@ import {
 } from '@/lib/forms/field-styles';
 import { getFieldWidthClass } from '@/lib/forms/field-width';
 import { resolveMergeFieldsForPreview } from '@/lib/forms/merge-fields';
-import type { FieldType, FormField } from '@/lib/forms/schema';
+import {
+  DEFAULT_DIVIDER_THICKNESS_PX,
+  DEFAULT_DIVIDER_WIDTH_PX,
+  DIVIDER_THICKNESS_MAX_PX,
+  DIVIDER_THICKNESS_MIN_PX,
+  DIVIDER_WIDTH_MAX_PX,
+  DIVIDER_WIDTH_MIN_PX,
+  type FieldType,
+  type FormField,
+} from '@/lib/forms/schema';
 
 /** Synthetic dnd-kit droppable id for an empty column slot — parsed back out in
  * builder-client.tsx's handleDragEnd via parseColumnSlotDroppableId(). */
@@ -673,6 +686,10 @@ interface FieldCardProps {
   onRemoveField?: (fieldId: string) => void;
   /** Fills an empty column slot with a freshly-created field of the chosen type. */
   onAddColumnField?: (layoutId: string, slotIndex: number, type: FieldType) => void;
+  /** Live field-property patch from in-canvas controls — currently only used by the
+   * divider's drag-to-resize handles. Optional because nested column children never need
+   * it (divider fields can't be placed in a column slot). */
+  onUpdateField?: (fieldId: string, patch: FieldPatch) => void;
   onRemove: () => void;
   onDuplicate: () => void;
 }
@@ -709,6 +726,211 @@ function DragHandleCue({ light = false }: { light?: boolean }) {
   );
 }
 
+function clampPx(value: number, min: number, max: number): number {
+  return Math.round(Math.min(max, Math.max(min, value)));
+}
+
+/** Drag-to-resize handles for the divider field's line width (right edge) and thickness
+ * (bottom edge) — the only field type in the builder with continuous, free-form resizing
+ * rather than a preset picker, so the interaction lives locally here rather than as a
+ * shared abstraction. Values commit live via onUpdateField on every pointermove, same as
+ * every other in-place field edit in the builder (no separate draft/commit step). */
+function DividerResizeHandles({
+  field,
+  onUpdateField,
+}: {
+  field: Extract<FormField, { type: 'divider' }>;
+  onUpdateField: (fieldId: string, patch: FieldPatch) => void;
+}) {
+  function startResize(axis: 'width' | 'thickness', event: ReactPointerEvent) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startWidth = field.dividerWidthPx ?? DEFAULT_DIVIDER_WIDTH_PX;
+    const startThickness = field.thicknessPx ?? DEFAULT_DIVIDER_THICKNESS_PX;
+
+    function handleMove(moveEvent: PointerEvent) {
+      if (axis === 'width') {
+        // The line is centered in its box, so dragging the right-edge handle out by
+        // `deltaPx` widens the box by 2x that (both sides grow to stay centered).
+        const deltaPx = (moveEvent.clientX - startX) * 2;
+        onUpdateField(field.id, {
+          dividerWidthPx: clampPx(startWidth + deltaPx, DIVIDER_WIDTH_MIN_PX, DIVIDER_WIDTH_MAX_PX),
+        });
+      } else {
+        const deltaPx = moveEvent.clientY - startY;
+        onUpdateField(field.id, {
+          thicknessPx: clampPx(
+            startThickness + deltaPx,
+            DIVIDER_THICKNESS_MIN_PX,
+            DIVIDER_THICKNESS_MAX_PX,
+          ),
+        });
+      }
+    }
+
+    function handleUp() {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    }
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="field-resize-handle field-resize-handle--width"
+        aria-label="Drag to resize divider width"
+        title="Drag to resize width"
+        onMouseDown={stopSelectPropagation}
+        onPointerDown={(event) => startResize('width', event)}
+      />
+      <button
+        type="button"
+        className="field-resize-handle field-resize-handle--thickness"
+        aria-label="Drag to resize divider thickness"
+        title="Drag to resize thickness"
+        onMouseDown={stopSelectPropagation}
+        onPointerDown={(event) => startResize('thickness', event)}
+      />
+    </>
+  );
+}
+
+function KebabIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <circle cx="7" cy="3" r="1.3" fill="currentColor" />
+      <circle cx="7" cy="7" r="1.3" fill="currentColor" />
+      <circle cx="7" cy="11" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Compact "⋮" menu used in place of the full-card FieldActionOverlay for fields (so far
+ * just the divider) where that overlay's inset:0 panel would sit on top of controls the
+ * admin actually needs to reach — the resize handles and the line itself here. Same three
+ * actions, opened on click rather than shown on hover, so nothing overlaps by default. */
+function DividerActionsMenu({
+  onEditDetails,
+  onDuplicate,
+  onRemove,
+}: {
+  onEditDetails: () => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: stops the click-to-select mousedown handler on the parent card from firing when interacting with this menu, same pattern as stopSelectPropagation elsewhere in this file
+    <div
+      className={['field-card-kebab', open ? 'field-card-kebab--open' : '']
+        .filter(Boolean)
+        .join(' ')}
+      ref={wrapperRef}
+      onMouseDown={stopSelectPropagation}
+    >
+      <button
+        type="button"
+        className="field-action-button"
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((prev) => !prev);
+        }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Field actions"
+        title="More actions"
+      >
+        <KebabIcon />
+      </button>
+      {open ? (
+        // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern, matches FormActionsMenu's panel elsewhere in the app
+        <ul className="field-card-kebab-panel" role="menu">
+          <li role="none">
+            <button
+              type="button"
+              className="actions-menu-item"
+              role="menuitem"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpen(false);
+                onEditDetails();
+              }}
+            >
+              <span className="actions-menu-icon">
+                <EditIcon />
+              </span>
+              Edit
+            </button>
+          </li>
+          <li role="none">
+            <button
+              type="button"
+              className="actions-menu-item"
+              role="menuitem"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpen(false);
+                onDuplicate();
+              }}
+            >
+              <span className="actions-menu-icon">
+                <CopyIcon />
+              </span>
+              Duplicate
+            </button>
+          </li>
+          <li role="none">
+            <button
+              type="button"
+              className="actions-menu-item actions-menu-item--danger"
+              role="menuitem"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpen(false);
+                onRemove();
+              }}
+            >
+              <span className="actions-menu-icon">
+                <TrashIcon />
+              </span>
+              Remove
+            </button>
+          </li>
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 export function FieldCard({
   field,
   fields,
@@ -724,6 +946,7 @@ export function FieldCard({
   onEditFieldDetails,
   onRemoveField,
   onAddColumnField,
+  onUpdateField,
   onRemove,
   onDuplicate,
   selectedFieldId = null,
@@ -874,7 +1097,7 @@ export function FieldCard({
           style={resolveSectionBreakStyle(field)}
         >
           {canEdit && <DragHandleCue light />}
-          <span className="section-break-title">{field.label || 'New section'}</span>
+          <span className="section-break-title">{field.label || 'Header'}</span>
           {canEdit && (
             <FieldActionOverlay
               light
@@ -887,6 +1110,53 @@ export function FieldCard({
         {field.helpText ? (
           <p className="section-break-instruction-preview">{field.helpText}</p>
         ) : null}
+      </div>
+    );
+  }
+
+  if (field.type === 'divider') {
+    return (
+      // biome-ignore lint/a11y/noStaticElementInteractions: canvas field-selection via mousedown, part of the dnd-kit drag/select model — see PointerSensor setup in builder-client.tsx
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={[
+          'divider-field-wrap',
+          'field-width--full',
+          canEdit ? 'field-card--draggable' : '',
+          selected ? 'divider-field-wrap--selected' : '',
+          isDragging ? 'field-card--dragging' : '',
+          !visibleInPreview ? 'field-card--hidden-preview' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        onMouseDown={(event) => handleFieldSelectMouseDown(event, onSelect)}
+        {...dragProps}
+      >
+        {canEdit && <DragHandleCue />}
+        <div className="divider-resize-box" style={resolveDividerWrapStyle(field)}>
+          {field.label && (field.captionPosition ?? 'above') === 'above' ? (
+            <span className="divider-caption" style={resolveDividerCaptionStyle(field)}>
+              {field.label}
+            </span>
+          ) : null}
+          <div className="divider-line" style={resolveDividerLineStyle(field)} />
+          {field.label && field.captionPosition === 'below' ? (
+            <span className="divider-caption" style={resolveDividerCaptionStyle(field)}>
+              {field.label}
+            </span>
+          ) : null}
+          {canEdit && onUpdateField && (
+            <DividerResizeHandles field={field} onUpdateField={onUpdateField} />
+          )}
+        </div>
+        {canEdit && (
+          <DividerActionsMenu
+            onEditDetails={onEditDetails}
+            onDuplicate={onDuplicate}
+            onRemove={onRemove}
+          />
+        )}
       </div>
     );
   }

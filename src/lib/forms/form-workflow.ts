@@ -79,21 +79,31 @@ export async function publishForm(
   return { form: updatedForm, version: publishedVersion };
 }
 
-/** published → approved (take offline, keep approval) */
+/** Takes the current live version offline (clears currentVersionId). Available whenever
+ *  the form actually has a live version — not gated on `status === 'published'`, since
+ *  editing a live form resets `status` to 'draft' for the *new* draft's approval pipeline
+ *  without taking the old version offline (see public-lookup.ts). So a form can be live
+ *  with `status` anywhere in draft/approved/published, and this needs to reach all of
+ *  those. */
 export async function unpublishForm(
   tx: Prisma.TransactionClient,
   form: Form,
 ): Promise<{ form: Form; version: FormVersion | null }> {
   assertNotArchived(form);
-  if (form.status !== 'published') {
-    throw new InvalidRequestError('Only published forms can be unpublished');
+  if (!form.currentVersionId) {
+    throw new InvalidRequestError('This form is not currently live');
   }
 
   const latest = await getLatestFormVersion(tx, form.id);
 
+  // Only step the pipeline back to 'approved' if it still said 'published' — if a
+  // pending edit already reset it to 'draft', that reflects the *new* draft's own
+  // approval state and taking the old version offline shouldn't change it.
+  const nextStatus = form.status === 'published' ? 'approved' : form.status;
+
   const updatedForm = await tx.form.update({
     where: { id: form.id },
-    data: { status: 'approved', currentVersionId: null },
+    data: { status: nextStatus, currentVersionId: null },
   });
 
   return { form: updatedForm, version: latest };

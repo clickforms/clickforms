@@ -15,6 +15,9 @@ import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getFieldImageSrc } from '@/lib/forms/field-image';
 import {
   fieldHasCustomAppearance,
+  resolveDividerCaptionStyle,
+  resolveDividerLineStyle,
+  resolveDividerWrapStyle,
   resolveFieldContainerStyle,
   resolveFieldInputStyle,
   resolveImageSpacingStyle,
@@ -142,6 +145,23 @@ export function FieldInput({
           <h3 className="form-section-break-title">{field.label}</h3>
         </div>
         {field.helpText ? <p className="form-section-instruction">{field.helpText}</p> : null}
+      </div>
+    );
+  }
+
+  if (field.type === 'divider') {
+    const captionEl = field.label ? (
+      <span className="form-divider-caption" style={resolveDividerCaptionStyle(field)}>
+        {field.label}
+      </span>
+    ) : null;
+    return (
+      <div className="form-divider-wrap">
+        <div className="form-divider-box" style={resolveDividerWrapStyle(field)}>
+          {(field.captionPosition ?? 'above') === 'above' ? captionEl : null}
+          <div className="form-divider-line" style={resolveDividerLineStyle(field)} />
+          {field.captionPosition === 'below' ? captionEl : null}
+        </div>
       </div>
     );
   }

@@ -1,9 +1,11 @@
-import type {
-  ColumnCount,
-  ConditionOperator,
-  FieldOption,
-  FieldType,
-  FormField,
+import {
+  type ColumnCount,
+  type ConditionOperator,
+  DEFAULT_DIVIDER_THICKNESS_PX,
+  DEFAULT_DIVIDER_WIDTH_PX,
+  type FieldOption,
+  type FieldType,
+  type FormField,
 } from '@/lib/forms/schema';
 
 // Shared, non-component constants/helpers for the builder — kept out of builder-client.tsx
@@ -21,7 +23,8 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   email: 'Email',
   file_upload: 'File upload',
   signature: 'Signature',
-  section_break: 'New section',
+  section_break: 'Header',
+  divider: 'Divider',
   column_layout: 'Columns',
   static_text: 'Formatted Text',
   image: 'Image',
@@ -48,7 +51,8 @@ export const FIELD_TYPE_DEFAULT_LABEL: Record<FieldType, string> = {
   email: 'Email question',
   file_upload: 'File upload',
   signature: 'Signature',
-  section_break: 'New section',
+  section_break: 'Header',
+  divider: 'Divider',
   column_layout: 'Column section',
   static_text: 'Formatted Text',
   image: 'Image',
@@ -99,6 +103,18 @@ export function createDefaultField(type: FieldType): FormField {
       return { id, type, label, required: false };
     case 'section_break':
       return { id, type, label, required: false };
+    case 'divider':
+      // label is optional (an empty caption is the common case — a bare line), but every
+      // other field type sets one, so default to '' rather than reusing FIELD_TYPE_DEFAULT_LABEL's
+      // copy, which would show up as a visible caption most admins didn't ask for.
+      return {
+        id,
+        type,
+        label: '',
+        required: false,
+        dividerWidthPx: DEFAULT_DIVIDER_WIDTH_PX,
+        thicknessPx: DEFAULT_DIVIDER_THICKNESS_PX,
+      };
     case 'column_layout':
       throw new Error('Use createColumnLayoutField() for column layouts');
     case 'static_text':
@@ -179,7 +195,7 @@ export const COLUMN_LAYOUT_LABELS: Record<ColumnCount, string> = {
 /** Field types allowed inside a column slot (everything except nested layouts/sections). */
 export const COLUMN_CHILD_FIELD_TYPES: FieldType[] = (
   Object.keys(FIELD_TYPE_LABELS) as FieldType[]
-).filter((type) => type !== 'column_layout' && type !== 'section_break');
+).filter((type) => type !== 'column_layout' && type !== 'section_break' && type !== 'divider');
 
 /** Operators valid for a rule whose trigger field is of `triggerType` (spec 02: constrain
  * the operator choices based on the trigger field's type — checkbox answers are arrays, so

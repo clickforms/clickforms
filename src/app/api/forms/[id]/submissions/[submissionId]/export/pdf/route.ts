@@ -6,6 +6,7 @@ import {
   submissionPdfFilename,
 } from '@/lib/forms/generate-submission-pdf';
 import { requireSession } from '@/lib/session';
+import { buildOrgFormUrl } from '@/lib/tenant';
 
 interface RouteContext {
   params: Promise<{ id: string; submissionId: string }>;
@@ -33,16 +34,34 @@ export async function GET(request: Request, { params }: RouteContext): Promise<N
         return null;
       }
 
-      return { form, submission };
+      const organization = await tx.organization.findUnique({
+        where: { id: session.user.organizationId },
+        select: { subdomain: true },
+      });
+      if (!organization) {
+        return null;
+      }
+
+      return { form, submission, organization };
     });
 
     if (!result) {
       throw new NotFoundError('Submission');
     }
 
-    const { form, submission } = result;
-    const origin = new URL(request.url).origin;
-    const previewUrl = `${origin}/f/${form.slug}/submissions/${submission.id}/preview`;
+    const { form, submission, organization } = result;
+    // NOT new URL(request.url).origin — behind Caddy (which terminates TLS and proxies
+    // to the app container over plain HTTP) that resolves to the container's own bind
+    // address, e.g. "https://0.0.0.0:3000", which Puppeteer then fails to load with
+    // net::ERR_SSL_PROTOCOL_ERROR (HTTPS attempted against a plain-HTTP internal port
+    // that was never reachable to begin with). The preview page is also only reachable
+    // on the org's own subdomain in the first place (see src/middleware.ts) — building
+    // that directly, the same way every other public-form link in this codebase does
+    // (buildOrgFormUrl), sidesteps both problems at once.
+    const previewUrl = buildOrgFormUrl(
+      organization.subdomain,
+      `/f/${form.slug}/submissions/${submission.id}/preview`,
+    );
     const pdfBuffer = await generateSubmissionPdfFromPreviewUrl(
       previewUrl,
       request.headers.get('cookie'),

@@ -18,6 +18,15 @@ export async function generateSubmissionPdfFromPreviewUrl(
       // Docker's default /dev/shm is 64MB, which Chrome reliably exhausts and
       // crashes on mid-render; fall back to disk-backed shared memory instead.
       '--disable-dev-shm-usage',
+      // Debian's `chromium` apt package (see Dockerfile) ships with crashpad crash
+      // reporting on by default, which tries to spawn `chrome_crashpad_handler` on
+      // launch — that subprocess needs a --database directory Puppeteer never
+      // configures, so it exits immediately ("chrome_crashpad_handler: --database
+      // is required") and takes the whole browser launch down with it in
+      // production ("Failed to launch the browser process"). This feature is only
+      // useful for reporting Chrome's own crashes upstream to Google, which we'd
+      // never see anyway — disable it outright rather than configuring a dump dir.
+      '--disable-crash-reporter',
     ],
   });
 

@@ -59,6 +59,20 @@ export async function generateSubmissionPdfFromPreviewUrl(
     }
     await page.setExtraHTTPHeaders(headers);
 
+    // Puppeteer's default viewport (800x600) is what actually lays out the page's CSS —
+    // page.pdf()'s width/height below only set the *output paper size*, not the layout
+    // viewport, and nothing sizes the two to match on its own. Left at the default, the
+    // page renders its content at 800px wide, then gets printed onto an ~960px-usable-
+    // width page (11in minus the margins below): different Chromium builds handle that
+    // mismatch differently (scale to fit vs. clip at the paper edge), which is exactly
+    // why exports looked fine locally (Puppeteer's own bundled Chrome-for-Testing) but
+    // came out with content cut off along the right edge in production (Debian's
+    // apt-installed `chromium`, a different build entirely — see Dockerfile). Setting an
+    // explicit viewport matching the printable width (960px, the same width
+    // .export-form's own max-width targets — see submission-export-styles.ts) removes
+    // the ambiguity outright, independent of whichever Chromium build renders it.
+    await page.setViewport({ width: 960, height: 1280 });
+
     await page.goto(previewUrl, { waitUntil: 'load', timeout: 30_000 });
 
     // page.pdf() defaults to Chromium's separate "print" CSS media pipeline,

@@ -38,6 +38,11 @@
   --color-warning-soft: #fef3e0;
   --color-warning-border: #fbd999;
 
+  /* Lavender — secondary accent, used sparingly alongside the primary green */
+  --color-lavender: #d3ccff;
+  --color-lavender-soft: #efecff;
+  --color-lavender-strong: #7c5cfa;
+
   /* Dark sidebar */
   --sidebar-bg: #1a1d24;
   --sidebar-brand: #55ea8c;
@@ -103,6 +108,10 @@
   --color-warning-soft: rgba(251, 191, 36, 0.16);
   --color-warning-border: rgba(251, 191, 36, 0.4);
 
+  --color-lavender: rgba(139, 124, 246, 0.22);
+  --color-lavender-soft: rgba(139, 124, 246, 0.14);
+  --color-lavender-strong: #c4b5fd;
+
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
   --shadow-header: 0 1px 0 rgba(255, 255, 255, 0.04);
   --shadow-button: 0 1px 2px rgba(85, 234, 140, 0.4);
@@ -144,11 +153,6 @@
 .admin-shell[data-theme="dark"] .form-error {
   background-color: rgba(248, 113, 113, 0.12);
   border-color: rgba(248, 113, 113, 0.35);
-}
-
-.admin-shell[data-theme="dark"] .dashboard-metric-icon--responses {
-  color: #5eead4;
-  background: rgba(85, 234, 140, 0.14);
 }
 
 .admin-shell[data-theme="dark"] .dashboard-metric-icon--drafts {
@@ -1014,26 +1018,78 @@ a {
 }
 
 .dashboard-header {
+  position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 1.5rem;
   flex-wrap: wrap;
-  padding-top: 0.15rem;
+  padding: 1.85rem 2rem 2rem;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-soft) 0%,
+    var(--color-surface) 42%,
+    var(--color-lavender-soft) 100%
+  );
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius-lg) + 4px);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.dashboard-header-deco {
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.dashboard-header-deco--a {
+  top: -3rem;
+  right: 16%;
+  width: 8.5rem;
+  height: 8.5rem;
+  background: rgba(85, 234, 140, 0.16);
+}
+
+.dashboard-header-deco--b {
+  right: -2.5rem;
+  bottom: -3.5rem;
+  width: 11rem;
+  height: 11rem;
+  background: var(--color-lavender);
+  opacity: 0.4;
 }
 
 .dashboard-header-copy {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   max-width: 34rem;
 }
 
 .dashboard-kicker {
-  margin: 0 0 0.35rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.65rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-primary);
+  color: var(--color-primary-hover);
+}
+
+.dashboard-kicker::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: currentColor;
 }
 
 .dashboard-greeting {
@@ -1054,6 +1110,8 @@ a {
 }
 
 .dashboard-header-actions {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1140,13 +1198,13 @@ a {
 }
 
 .dashboard-metric-icon--responses {
-  color: #1f6f57;
-  background: #edf7f2;
+  color: var(--color-lavender-strong);
+  background: var(--color-lavender-soft);
 }
 
 .dashboard-metric:has(.dashboard-metric-icon--responses) {
-  --dashboard-metric-accent: #3fa98a;
-  --dashboard-metric-ring: rgba(31, 111, 87, 0.1);
+  --dashboard-metric-accent: var(--color-lavender-strong);
+  --dashboard-metric-ring: rgba(124, 92, 250, 0.12);
 }
 
 .dashboard-metric-icon--drafts {
@@ -1196,7 +1254,7 @@ a {
   gap: 1rem;
   padding: 1.15rem 1.25rem 1rem;
   border-bottom: 1px solid var(--color-border);
-  background: linear-gradient(180deg, #fbfcfd 0%, var(--color-surface) 100%);
+  background: linear-gradient(180deg, var(--color-surface-sunken) 0%, var(--color-surface) 100%);
 }
 
 .dashboard-panel-title {
@@ -1269,13 +1327,23 @@ a {
   letter-spacing: 0.02em;
   color: var(--color-primary-hover);
   background: var(--color-primary-soft);
-  border: 1px solid color-mix(in srgb, var(--color-success-border) 70%, transparent);
-  box-shadow: 0 0 0 3px rgba(85, 234, 140, 0.06);
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 8%, transparent);
   transition: box-shadow 0.15s ease;
 }
 
+.dashboard-recent-mark--tint-b {
+  color: var(--color-lavender-strong);
+  background: var(--color-lavender-soft);
+}
+
+.dashboard-recent-mark--tint-c {
+  color: var(--color-text-muted);
+  background: var(--color-surface-sunken);
+}
+
 .dashboard-recent-row:hover .dashboard-recent-mark {
-  box-shadow: 0 0 0 4px rgba(85, 234, 140, 0.1);
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 14%, transparent);
 }
 
 /* Chevron affordance — hidden at rest, eases in on row hover/focus to signal the row is

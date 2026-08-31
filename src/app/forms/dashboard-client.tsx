@@ -47,6 +47,12 @@ function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+const RECENT_MARK_TINTS = [
+  '',
+  'dashboard-recent-mark--tint-b',
+  'dashboard-recent-mark--tint-c',
+] as const;
+
 function formInitial(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return 'F';
@@ -154,6 +160,8 @@ export function DashboardClient({
       <div className="dashboard-glow" aria-hidden="true" />
 
       <header className="dashboard-header dashboard-in dashboard-in--1">
+        <div className="dashboard-header-deco dashboard-header-deco--a" aria-hidden="true" />
+        <div className="dashboard-header-deco dashboard-header-deco--b" aria-hidden="true" />
         <div className="dashboard-header-copy">
           <p className="dashboard-kicker">{formatTodayLabel(now)}</p>
           <h2 className="dashboard-greeting">
@@ -248,10 +256,13 @@ export function DashboardClient({
             </Link>
           </div>
           <ul className="dashboard-recent">
-            {recentForms.map((form) => (
+            {recentForms.map((form, index) => (
               <li key={form.id}>
                 <Link href={`/forms/${form.id}/builder`} className="dashboard-recent-row">
-                  <span className="dashboard-recent-mark" aria-hidden="true">
+                  <span
+                    className={`dashboard-recent-mark ${RECENT_MARK_TINTS[index % RECENT_MARK_TINTS.length]}`}
+                    aria-hidden="true"
+                  >
                     {formInitial(form.name)}
                   </span>
                   <div className="dashboard-recent-copy">

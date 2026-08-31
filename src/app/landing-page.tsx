@@ -190,21 +190,31 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
 
       <section className="landing-testimonials">
         <div className="landing-container">
-          <div className="landing-section-head landing-section-head--center">
-            <h2>Echoes from the field</h2>
+          <div className="landing-testimonials-head">
+            <span className="landing-page-hero-eyebrow">Trusted by care and compliance teams</span>
+            <h2 className="landing-testimonials-title">Echoes from the field</h2>
           </div>
-          <div className="landing-testimonials-track">
-            {TESTIMONIALS.map((item) => (
-              <blockquote key={item.name} className="landing-testimonial">
-                <p>&ldquo;{item.quote}&rdquo;</p>
-                <footer>
-                  <strong>{item.name}</strong>
-                  <span>{item.role}</span>
-                </footer>
-              </blockquote>
+
+          <div className="landing-testimonials-grid">
+            {TESTIMONIALS.map((item, index) => (
+              <div key={item.name} className="landing-testimonial-col">
+                <div className="landing-testimonial-card">
+                  <div className="landing-testimonial-bubble">
+                    <p>&ldquo;{item.quote}&rdquo;</p>
+                  </div>
+                </div>
+                <span className="landing-testimonial-number">{index + 1}</span>
+                <p className="landing-testimonial-name">{item.name}</p>
+                <p className="landing-testimonial-role">{item.role}</p>
+              </div>
             ))}
           </div>
-          <p className="landing-testimonials-meta">Trusted by care and compliance teams</p>
+
+          <div className="landing-testimonials-cta">
+            <Link className="landing-btn landing-btn--soft landing-btn--lg" href="/contact">
+              Share your story
+            </Link>
+          </div>
         </div>
       </section>
 

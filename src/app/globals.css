@@ -5762,7 +5762,7 @@ textarea.form-field-input {
   gap: 2.25rem;
   width: 100%;
   min-height: var(--landing-nav-h);
-  padding: 0.65rem 3.5rem;
+  padding: 0.65rem 7rem;
 }
 
 .landing-brand {

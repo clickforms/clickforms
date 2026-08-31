@@ -7194,16 +7194,16 @@ textarea.form-field-input {
 
 /* Footer */
 .landing-footer {
-  padding: 2rem 0 2.5rem;
-  background: #fff;
+  padding: 4rem 0 2.5rem;
+  background: var(--landing-soft);
   border-top: 1px solid var(--landing-border);
 }
 
 .landing-footer-top {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
-  padding-bottom: 2.25rem;
+  gap: 2.5rem;
+  padding-bottom: 2.75rem;
 }
 
 .landing-footer-brand-col {
@@ -7258,6 +7258,38 @@ textarea.form-field-input {
   margin: 0;
   font-size: 0.8125rem;
   color: rgba(27, 27, 47, 0.48);
+}
+
+.landing-footer-social-col {
+  gap: 0.85rem;
+}
+
+.landing-footer-social {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.landing-footer-social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 999px;
+  border: 1px solid var(--landing-border);
+  background: #fff;
+  color: var(--landing-muted);
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.landing-footer-social-link:hover {
+  color: var(--landing-ink);
+  border-color: rgba(17, 17, 17, 0.24);
+  background: var(--landing-primary-light, #fff);
 }
 
 /* Floating chat — MasterRemit-style help affordance */
@@ -7380,7 +7412,7 @@ textarea.form-field-input {
   }
 
   .landing-footer-top {
-    grid-template-columns: 1.4fr repeat(3, 1fr);
+    grid-template-columns: 1.4fr repeat(4, 1fr);
     gap: 2.5rem;
   }
 

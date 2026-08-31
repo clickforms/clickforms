@@ -1,5 +1,20 @@
 import Link from 'next/link';
 import { BrandMark } from '@/components/brand-mark';
+import {
+  FacebookIcon,
+  InstagramIcon,
+  LinkedInIcon,
+  XIcon,
+  YouTubeIcon,
+} from '@/components/landing/landing-icons';
+
+const SOCIAL_LINKS = [
+  { label: 'Facebook', href: '#', icon: FacebookIcon },
+  { label: 'LinkedIn', href: '#', icon: LinkedInIcon },
+  { label: 'YouTube', href: '#', icon: YouTubeIcon },
+  { label: 'Instagram', href: '#', icon: InstagramIcon },
+  { label: 'X', href: '#', icon: XIcon },
+] as const;
 
 export function LandingFooter() {
   return (
@@ -33,6 +48,16 @@ export function LandingFooter() {
           <p className="landing-footer-col-title">Account</p>
           <Link href="/login">Sign in</Link>
           <Link href="/signup">Create account</Link>
+        </div>
+        <div className="landing-footer-col landing-footer-social-col">
+          <p className="landing-footer-col-title">Stay connected</p>
+          <div className="landing-footer-social">
+            {SOCIAL_LINKS.map(({ label, href, icon: Icon }) => (
+              <a key={label} href={href} aria-label={label} className="landing-footer-social-link">
+                <Icon />
+              </a>
+            ))}
+          </div>
         </div>
       </div>
       <div className="landing-container landing-footer-bottom">

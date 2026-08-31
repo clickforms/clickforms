@@ -72,28 +72,6 @@ function LiveIcon() {
   );
 }
 
-function ResponsesIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <rect
-        x="3.25"
-        y="4.25"
-        width="11.5"
-        height="9.5"
-        rx="1.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M3.5 6.5l5.5 3.25L14.5 6.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function DraftsIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -111,6 +89,20 @@ function DraftsIcon() {
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+      <path
+        d="M3 7.7 6 10.6l6-6.4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -159,64 +151,73 @@ export function DashboardClient({
     <div className="dashboard">
       <div className="dashboard-glow" aria-hidden="true" />
 
-      <header className="dashboard-header dashboard-in dashboard-in--1">
-        <div className="dashboard-header-deco dashboard-header-deco--a" aria-hidden="true" />
-        <div className="dashboard-header-deco dashboard-header-deco--b" aria-hidden="true" />
-        <div className="dashboard-header-copy">
-          <p className="dashboard-kicker">{formatTodayLabel(now)}</p>
-          <h2 className="dashboard-greeting">
-            {greeting}, {firstName}
-          </h2>
-          <p className="dashboard-lede">
-            {isEmpty
-              ? 'Create your first form and publish it to your organisation subdomain.'
-              : 'Overview of what is live, what is collecting responses, and what still needs work.'}
-          </p>
-        </div>
-        <div className="dashboard-header-actions">
-          <Link href="/forms/list" className="button button--ghost dashboard-secondary">
-            All forms
-          </Link>
-          {canEdit ? (
-            <button
-              type="button"
-              className="button dashboard-primary"
-              onClick={() => setIsCreateModalOpen(true)}
-            >
-              <PlusIcon /> New form
-            </button>
-          ) : null}
-        </div>
-      </header>
+      <section className="dashboard-hero dashboard-in dashboard-in--1">
+        <div className="dashboard-hero-deco dashboard-hero-deco--a" aria-hidden="true" />
+        <div className="dashboard-hero-deco dashboard-hero-deco--b" aria-hidden="true" />
 
-      <section className="dashboard-metrics dashboard-in dashboard-in--2" aria-label="Overview">
-        <article className="dashboard-metric">
-          <div className="dashboard-metric-top">
-            <span className="dashboard-metric-icon dashboard-metric-icon--live">
+        <div className="dashboard-hero-grid">
+          <div>
+            <p className="dashboard-hero-kicker">{formatTodayLabel(now)}</p>
+            <h2 className="dashboard-hero-title">
+              {greeting}, {firstName}
+            </h2>
+            <p className="dashboard-hero-lead">
+              {isEmpty
+                ? 'Create your first form and publish it to your organisation subdomain.'
+                : 'Overview of what is live, what is collecting responses, and what still needs work.'}
+            </p>
+            <div className="dashboard-hero-actions">
+              <Link href="/forms/list" className="button button--ghost dashboard-secondary">
+                All forms
+              </Link>
+              {canEdit ? (
+                <button
+                  type="button"
+                  className="button dashboard-primary"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  <PlusIcon /> New form
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="dashboard-hero-widget">
+            <div className="dashboard-hero-widget-top">
               <LiveIcon />
-            </span>
-            <span className="dashboard-metric-label">Live forms</span>
+              <span>Today&apos;s snapshot</span>
+            </div>
+            <ul className="dashboard-hero-widget-list">
+              <li>
+                <span className="dashboard-hero-widget-row-label">
+                  <CheckIcon />
+                  Live forms
+                </span>
+                <span className="dashboard-hero-widget-pill dashboard-hero-widget-pill--live">
+                  {stats.liveForms}
+                </span>
+              </li>
+              <li>
+                <span className="dashboard-hero-widget-row-label">
+                  <CheckIcon />
+                  Responses
+                </span>
+                <span className="dashboard-hero-widget-pill">{stats.totalResponses}</span>
+              </li>
+              <li>
+                <span className="dashboard-hero-widget-row-label">
+                  <CheckIcon />
+                  Drafts
+                </span>
+                <span className="dashboard-hero-widget-pill">{stats.draftForms}</span>
+              </li>
+            </ul>
+            <Link href="/forms/list" className="dashboard-hero-widget-cta">
+              View all forms
+              <ArrowIcon />
+            </Link>
           </div>
-          <p className="dashboard-metric-value dashboard-metric-value--live">{stats.liveForms}</p>
-        </article>
-        <article className="dashboard-metric">
-          <div className="dashboard-metric-top">
-            <span className="dashboard-metric-icon dashboard-metric-icon--responses">
-              <ResponsesIcon />
-            </span>
-            <span className="dashboard-metric-label">Responses</span>
-          </div>
-          <p className="dashboard-metric-value">{stats.totalResponses}</p>
-        </article>
-        <article className="dashboard-metric">
-          <div className="dashboard-metric-top">
-            <span className="dashboard-metric-icon dashboard-metric-icon--drafts">
-              <DraftsIcon />
-            </span>
-            <span className="dashboard-metric-label">Drafts</span>
-          </div>
-          <p className="dashboard-metric-value">{stats.draftForms}</p>
-        </article>
+        </div>
       </section>
 
       {isEmpty ? (

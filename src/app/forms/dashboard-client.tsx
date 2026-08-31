@@ -156,7 +156,7 @@ export function DashboardClient({
         <div className="dashboard-hero-deco dashboard-hero-deco--b" aria-hidden="true" />
 
         <div className="dashboard-hero-grid">
-          <div>
+          <div className="dashboard-hero-copy">
             <p className="dashboard-hero-kicker">{formatTodayLabel(now)}</p>
             <h2 className="dashboard-hero-title">
               {greeting}, {firstName}

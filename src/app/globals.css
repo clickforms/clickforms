@@ -1055,9 +1055,13 @@ a {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 2rem;
   align-items: center;
+}
+
+.dashboard-hero-copy {
+  min-width: 0;
 }
 
 .dashboard-hero-kicker {
@@ -1122,6 +1126,8 @@ a {
 
 .dashboard-hero-widget {
   position: relative;
+  width: 100%;
+  min-width: 0;
   max-width: 24rem;
   background: var(--color-surface);
   border-radius: 1.25rem;
@@ -1216,7 +1222,7 @@ a {
 
 @media (min-width: 860px) {
   .dashboard-hero-grid {
-    grid-template-columns: 1fr 22rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
     gap: 3rem;
   }
 }

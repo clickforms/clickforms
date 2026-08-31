@@ -5786,6 +5786,10 @@ textarea.form-field-input {
   transform-origin: bottom left;
 }
 
+.landing-brand-wordmark-forms {
+  font-size: 1.3em;
+}
+
 .landing-brand--footer {
   color: #111;
 }

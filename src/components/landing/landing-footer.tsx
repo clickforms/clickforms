@@ -25,7 +25,7 @@ export function LandingFooter() {
             <BrandMark size={30} id="footer" />
             <span className="landing-brand-wordmark">
               <span>Click</span>
-              <span>forms</span>
+              <span className="landing-brand-wordmark-forms">forms</span>
             </span>
           </Link>
           <p className="landing-footer-tagline">

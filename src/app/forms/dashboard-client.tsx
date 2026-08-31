@@ -152,9 +152,6 @@ export function DashboardClient({
       <div className="dashboard-glow" aria-hidden="true" />
 
       <section className="dashboard-hero dashboard-in dashboard-in--1">
-        <div className="dashboard-hero-deco dashboard-hero-deco--a" aria-hidden="true" />
-        <div className="dashboard-hero-deco dashboard-hero-deco--b" aria-hidden="true" />
-
         <div className="dashboard-hero-grid">
           <div className="dashboard-hero-copy">
             <p className="dashboard-hero-kicker">{formatTodayLabel(now)}</p>
@@ -245,15 +242,6 @@ export function DashboardClient({
           className="dashboard-recent-panel dashboard-in dashboard-in--3"
           aria-labelledby="dashboard-recent-heading"
         >
-          <div
-            className="dashboard-recent-panel-deco dashboard-recent-panel-deco--a"
-            aria-hidden="true"
-          />
-          <div
-            className="dashboard-recent-panel-deco dashboard-recent-panel-deco--b"
-            aria-hidden="true"
-          />
-
           <div className="dashboard-recent-panel-header">
             <div>
               <h3 id="dashboard-recent-heading" className="dashboard-recent-panel-title">

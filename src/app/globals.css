@@ -5796,28 +5796,34 @@ textarea.form-field-input {
   display: none;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  gap: 0.35rem;
   justify-self: center;
+  font-family: var(--font-body);
 }
 
 .landing-nav-link {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  color: #111;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.75rem;
+  color: #3f3f47;
+  font-size: 1.0625rem;
+  font-weight: 400;
   text-decoration: none;
-  transition: opacity 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .landing-nav-link:hover {
-  opacity: 0.72;
+  background: var(--landing-soft);
 }
 
 .landing-nav-link svg {
-  margin-top: 0.1rem;
-  opacity: 0.7;
+  margin-top: 0.05rem;
+  opacity: 0.6;
+  transition: transform 0.15s;
 }
 
 .landing-nav-actions {
@@ -5828,8 +5834,17 @@ textarea.form-field-input {
 }
 
 .landing-nav-link[data-active] {
-  opacity: 0.72;
-  font-weight: 600;
+  background: var(--landing-soft);
+  color: var(--landing-ink);
+}
+
+.landing-nav-link[aria-expanded="true"] {
+  background: var(--landing-soft);
+  color: var(--landing-ink);
+}
+
+.landing-nav-link[aria-expanded="true"] svg {
+  transform: rotate(180deg);
 }
 
 .landing-nav-dropdown {
@@ -5839,51 +5854,37 @@ textarea.form-field-input {
 .landing-nav-link--btn {
   background: none;
   border: none;
-  padding: 0;
   font-family: inherit;
   cursor: pointer;
 }
 
 .landing-nav-dropdown-panel {
   position: absolute;
-  top: calc(100% + 0.85rem);
-  left: 50%;
-  transform: translateX(-50%);
+  top: calc(100% + 0.6rem);
+  left: 0;
   z-index: 110;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  min-width: 15.5rem;
-  padding: 0.5rem;
+  min-width: 15rem;
+  padding: 0.75rem;
   background: #fff;
-  border: 1px solid var(--landing-border);
-  border-radius: 0.9rem;
+  border-radius: 1.25rem;
   box-shadow: var(--landing-shadow);
 }
 
 .landing-nav-dropdown-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 0.6rem;
-  color: var(--landing-ink);
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.75rem;
+  color: #3f3f47;
+  font-size: 1.0625rem;
+  font-weight: 400;
   text-decoration: none;
   transition: background 0.12s;
 }
 
 .landing-nav-dropdown-item:hover {
   background: var(--landing-soft);
-}
-
-.landing-nav-dropdown-item-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.landing-nav-dropdown-item-desc {
-  font-size: 0.78rem;
-  color: var(--landing-muted);
+  color: var(--landing-ink);
 }
 
 /* Buttons */

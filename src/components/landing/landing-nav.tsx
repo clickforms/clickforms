@@ -7,16 +7,8 @@ import { BrandMark } from '@/components/brand-mark';
 import { NavCaretIcon, SendIcon } from '@/components/landing/landing-icons';
 
 const PRODUCT_SUBLINKS = [
-  {
-    label: 'Services',
-    href: '/product/services',
-    description: 'What Clickforms handles for your team',
-  },
-  {
-    label: 'How it works',
-    href: '/product/how-it-works',
-    description: 'Build, publish, collect, review',
-  },
+  { label: 'Services', href: '/product/services' },
+  { label: 'How it works', href: '/product/how-it-works' },
 ] as const;
 
 const NAV_LINKS = [
@@ -87,8 +79,7 @@ export function LandingNav({ isAuthenticated = false }: { isAuthenticated?: bool
                     role="menuitem"
                     onClick={() => setProductOpen(false)}
                   >
-                    <span className="landing-nav-dropdown-item-label">{item.label}</span>
-                    <span className="landing-nav-dropdown-item-desc">{item.description}</span>
+                    {item.label}
                   </Link>
                 ))}
               </div>

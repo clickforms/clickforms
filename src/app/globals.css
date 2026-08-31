@@ -7065,12 +7065,18 @@ textarea.form-field-input {
 .landing-cta {
   padding: 6rem 0 6.5rem;
   background: #d3ccff;
+  overflow: hidden;
 }
 
 .landing-cta-inner {
-  max-width: 34rem;
-  margin: 0 auto;
-  text-align: center;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3.5rem;
+  align-items: center;
+}
+
+.landing-cta-content {
+  max-width: 30rem;
 }
 
 .landing-cta-title {
@@ -7084,8 +7090,7 @@ textarea.form-field-input {
 }
 
 .landing-cta-lead {
-  margin: 1rem auto 0;
-  max-width: 30rem;
+  margin: 1rem 0 0;
   font-size: 1.0625rem;
   line-height: 1.65;
   color: rgba(27, 27, 47, 0.68);
@@ -7094,7 +7099,6 @@ textarea.form-field-input {
 .landing-cta-features {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 0.6rem 1.5rem;
   margin: 1.75rem 0 0;
   padding: 0;
@@ -7118,13 +7122,65 @@ textarea.form-field-input {
 .landing-cta-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 0.75rem;
   margin-top: 2rem;
 }
 
 .landing-cta .landing-btn--ghost {
   border-color: rgba(27, 27, 47, 0.25);
+}
+
+/* Decorative photo-collage visual, mirrors the outcomes section's approach — rotated
+   gradient panels standing in for photography (no photo library to draw from), plus a
+   rotated "sticker note" card in front of it. */
+.landing-cta-visual {
+  position: relative;
+  min-height: 20rem;
+}
+
+.landing-cta-visual-photo {
+  position: absolute;
+  top: 1.5rem;
+  left: 1rem;
+  width: 62%;
+  aspect-ratio: 4 / 5;
+  border-radius: 1rem;
+  background: linear-gradient(155deg, #3c2a72, var(--landing-purple) 70%);
+  box-shadow: 0 24px 48px rgba(27, 27, 47, 0.18);
+  transform: rotate(-4deg);
+}
+
+.landing-cta-visual-note {
+  position: absolute;
+  top: 0;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 55%;
+  padding: 1.5rem 1.35rem;
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 40px rgba(27, 27, 47, 0.22);
+  transform: rotate(4deg);
+  font-family: var(--landing-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--landing-ink);
+  text-transform: uppercase;
+}
+
+@media (min-width: 900px) {
+  .landing-cta-inner {
+    grid-template-columns: 1fr 1.15fr;
+    gap: 3rem;
+  }
+
+  .landing-cta-visual {
+    order: -1;
+  }
 }
 
 .landing-cta .landing-btn--ghost:hover {

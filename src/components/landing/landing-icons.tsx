@@ -223,6 +223,21 @@ export function ExportIcon() {
   );
 }
 
+export function DocumentIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path
+        d="M5 2h5.5L14 5.5V15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M10.5 2v3.5H14" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M6 9.5h6M6 12h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function PhoneIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">

@@ -4,9 +4,12 @@ import { getServerSession } from 'next-auth';
 import { LandingChatBubble } from '@/components/landing/landing-chat-bubble';
 import { LandingCta } from '@/components/landing/landing-cta';
 import { LandingFooter } from '@/components/landing/landing-footer';
+import { ArrowRightIcon, DocumentIcon } from '@/components/landing/landing-icons';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
+
+const TINTS = ['tint-a', 'tint-b', 'tint-c'] as const;
 
 const RESOURCE_STATS = [
   { value: '20+', label: 'Field types built in' },
@@ -50,17 +53,38 @@ export default async function ResourcesPage() {
 
       <section className="landing-form-types">
         <div className="landing-container">
+          <div className="landing-section-head landing-section-head--center">
+            <span className="landing-page-hero-eyebrow">Form library</span>
+            <h2>Built for the forms you already run</h2>
+            <p className="landing-section-lead">
+              Eight ready-made categories, each with the fields, logic, and signatures your workflow
+              needs.
+            </p>
+          </div>
+
           <div className="landing-form-types-grid">
-            {FORM_TYPES.map((form) => (
+            {FORM_TYPES.map((form, index) => (
               <article key={form.name} className="landing-form-type">
+                <span
+                  className={`landing-form-type-icon landing-form-type-icon--${TINTS[index % TINTS.length]}`}
+                >
+                  <DocumentIcon />
+                </span>
                 <h3>{form.name}</h3>
                 <p>{form.tags}</p>
               </article>
             ))}
           </div>
-          <p className="landing-form-types-more">
-            Need something else? <Link href={secondaryHref}>Start from a blank canvas</Link>
-          </p>
+
+          <div className="landing-form-types-more-wrap">
+            <p className="landing-form-types-more">
+              <span>Need something else?</span>
+              <Link href={secondaryHref}>
+                Start from a blank canvas
+                <ArrowRightIcon />
+              </Link>
+            </p>
+          </div>
         </div>
       </section>
 

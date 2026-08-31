@@ -6806,21 +6806,21 @@ textarea.form-field-input {
 
 /* Form types grid */
 .landing-form-types {
-  padding: 4.5rem 0;
+  padding: 5rem 0 5.5rem;
   background: #fff;
 }
 
 .landing-form-types-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .landing-form-type {
-  padding: 1.1rem 1.15rem;
+  padding: 1.5rem 1.4rem;
   background: #fff;
   border: 1px solid var(--landing-border);
-  border-radius: 0.9rem;
+  border-radius: 1.1rem;
   transition:
     border-color 0.15s,
     box-shadow 0.15s,
@@ -6829,13 +6829,38 @@ textarea.form-field-input {
 
 .landing-form-type:hover {
   border-color: rgba(85, 234, 140, 0.4);
-  box-shadow: 0 10px 24px rgba(27, 27, 47, 0.06);
-  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(27, 27, 47, 0.08);
+  transform: translateY(-3px);
+}
+
+.landing-form-type-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 1rem;
+  border-radius: 0.75rem;
+}
+
+.landing-form-type-icon--tint-a {
+  background: rgba(85, 234, 140, 0.14);
+  color: var(--landing-primary-dark);
+}
+
+.landing-form-type-icon--tint-b {
+  background: rgba(92, 45, 145, 0.12);
+  color: var(--landing-purple);
+}
+
+.landing-form-type-icon--tint-c {
+  background: rgba(27, 27, 47, 0.06);
+  color: var(--landing-ink);
 }
 
 .landing-form-type h3 {
-  margin: 0 0 0.25rem;
-  font-size: 0.9375rem;
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--landing-ink);
 }
@@ -6848,19 +6873,38 @@ textarea.form-field-input {
 }
 
 .landing-form-types-more {
-  margin: 1.5rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 3rem auto 0;
+  padding: 0.85rem 1.5rem;
+  background: var(--landing-soft);
+  border: 1px solid var(--landing-border);
+  border-radius: 999px;
   font-size: 0.9375rem;
   color: var(--landing-muted);
 }
 
+.landing-form-types-more-wrap {
+  display: flex;
+  justify-content: center;
+}
+
 .landing-form-types-more a {
-  color: var(--landing-primary-dark);
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--landing-ink);
+  font-weight: 700;
   text-decoration: none;
 }
 
-.landing-form-types-more a:hover {
-  text-decoration: underline;
+.landing-form-types-more a svg {
+  transition: transform 0.15s;
+}
+
+.landing-form-types-more a:hover svg {
+  transform: translateX(0.2rem);
 }
 
 /* Steps — /product/how-it-works */

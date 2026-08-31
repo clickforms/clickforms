@@ -1,6 +1,11 @@
-/** Clickforms brand mark — green rounded square with three form-field lines. */
-export function BrandMark({ size = 28, id = 'brand' }: { size?: number; id?: string }) {
-  const gradId = `${id}-grad`;
+import { BRAND_PRIMARY } from '@/components/brand-colors';
+
+/**
+ * Clickforms brand mark — solid green rounded square with a white "C" monogram.
+ * `id` is accepted (unused) for backward compatibility with existing call sites that
+ * pass a unique id per instance — no longer needed now the fill is solid, not a gradient.
+ */
+export function BrandMark({ size = 28 }: { size?: number; id?: string }) {
   return (
     <svg
       width={size}
@@ -10,16 +15,18 @@ export function BrandMark({ size = 28, id = 'brand' }: { size?: number; id?: str
       aria-hidden="true"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <rect x="1" y="1" width="30" height="30" rx="8" fill={`url(#${gradId})`} />
-      <path d="M8 11h16" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M8 16h10" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M8 21h16" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-      <defs>
-        <linearGradient id={gradId} x1="1" y1="1" x2="31" y2="31">
-          <stop stopColor="#00c471" />
-          <stop offset="1" stopColor="#008f52" />
-        </linearGradient>
-      </defs>
+      <rect x="0" y="0" width="32" height="32" rx="8" fill={BRAND_PRIMARY} />
+      <text
+        x="16"
+        y="23"
+        fontFamily="Poppins, Arial, sans-serif"
+        fontWeight="800"
+        fontSize="19"
+        fill="#fff"
+        textAnchor="middle"
+      >
+        C
+      </text>
     </svg>
   );
 }

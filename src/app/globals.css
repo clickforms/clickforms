@@ -6838,11 +6838,11 @@ textarea.form-field-input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3.25rem;
-  height: 3.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   margin-bottom: 1.1rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.4);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.65);
   color: #111;
 }
 

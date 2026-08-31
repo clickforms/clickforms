@@ -5914,8 +5914,7 @@ textarea.form-field-input {
 .landing-btn--outline {
   background: #fff;
   color: #111;
-  border: 1.5px solid #111;
-  border-radius: 0.65rem;
+  border: 1px solid rgba(17, 17, 17, 0.14);
   box-shadow: none;
 }
 

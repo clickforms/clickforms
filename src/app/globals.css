@@ -6727,36 +6727,77 @@ textarea.form-field-input {
 
 /* Subpage header — Product/Resources/Contact/Help pages, in place of the full home hero */
 .landing-page-hero {
-  padding: 3.5rem 0 3rem;
+  position: relative;
+  padding: 5.5rem 0 4rem;
   background: var(--landing-soft);
   text-align: center;
+  overflow: hidden;
+}
+
+.landing-page-hero-deco {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.landing-page-hero-deco--a {
+  top: -3.5rem;
+  left: 8%;
+  width: 11rem;
+  height: 11rem;
+  background: rgba(85, 234, 140, 0.22);
+}
+
+.landing-page-hero-deco--b {
+  top: -2.5rem;
+  right: 10%;
+  width: 9rem;
+  height: 9rem;
+  background: rgba(92, 45, 145, 0.12);
 }
 
 .landing-page-hero-eyebrow {
-  display: inline-block;
-  margin: 0 0 0.85rem;
-  padding: 0.3rem 0.75rem;
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 1rem;
+  padding: 0.35rem 0.85rem;
   border-radius: 999px;
   background: rgba(85, 234, 140, 0.14);
   color: var(--landing-primary-dark);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
+.landing-page-hero-eyebrow::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--landing-primary-dark);
+}
+
 .landing-page-hero-title {
+  position: relative;
+  z-index: 1;
   margin: 0 auto;
-  max-width: 32rem;
+  max-width: 34rem;
   font-family: var(--landing-display);
-  font-size: clamp(2rem, 4.5vw, 2.75rem);
-  font-weight: 700;
+  font-size: clamp(2.35rem, 5.2vw, 3.35rem);
+  font-weight: 800;
   letter-spacing: -0.04em;
-  line-height: 1.1;
+  line-height: 1.05;
+  color: var(--landing-ink);
 }
 
 .landing-page-hero-lead {
-  margin: 1rem auto 0;
+  position: relative;
+  z-index: 1;
+  margin: 1.1rem auto 0;
   max-width: 36rem;
   font-size: 1.0625rem;
   line-height: 1.65;

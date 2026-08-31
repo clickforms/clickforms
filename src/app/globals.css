@@ -6427,9 +6427,160 @@ textarea.form-field-input {
 }
 
 /* Stories */
-.landing-stories {
-  padding: 4.5rem 0;
+/* Outcomes — clean two-column editorial block, mirrors the priority section's layout
+   but with a photo-collage-style visual instead of a dashboard preview card. */
+.landing-outcomes {
+  padding: 5rem 0;
   background: #fff;
+  overflow: hidden;
+}
+
+.landing-outcomes-inner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+.landing-outcomes-copy h2 {
+  margin: 0;
+  max-width: 15ch;
+  font-family: var(--landing-display);
+  font-size: clamp(2.1rem, 4.2vw, 2.85rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.landing-outcomes-copy p {
+  margin: 1.1rem 0 1.75rem;
+  max-width: 32rem;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--landing-muted);
+}
+
+.landing-outcomes-visual {
+  position: relative;
+  min-height: 22rem;
+}
+
+.landing-outcomes-photo {
+  position: absolute;
+  width: 60%;
+  aspect-ratio: 3 / 4;
+  border-radius: 1.1rem;
+  box-shadow: 0 24px 48px rgba(27, 27, 47, 0.16);
+}
+
+.landing-outcomes-photo--a {
+  top: 3rem;
+  left: 0;
+  background: linear-gradient(150deg, #c8f9dc, var(--landing-primary) 70%);
+  transform: rotate(-4deg);
+}
+
+.landing-outcomes-photo--b {
+  top: 0;
+  right: 0;
+  width: 55%;
+  background: linear-gradient(150deg, #d9c9f5, #8b5fd4 75%);
+  transform: rotate(3deg);
+}
+
+.landing-outcomes-tag {
+  position: absolute;
+  top: -0.9rem;
+  left: -0.75rem;
+  padding: 0.5rem 0.85rem;
+  background: #fff;
+  border-radius: 0.6rem;
+  box-shadow: 0 10px 22px rgba(27, 27, 47, 0.14);
+  transform: rotate(-6deg);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--landing-ink);
+}
+
+.landing-outcomes-badge {
+  position: absolute;
+  top: -0.75rem;
+  right: -0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--landing-ink);
+  color: #fff;
+  border-radius: 0.65rem;
+  font-size: 1.1rem;
+  box-shadow: 0 10px 22px rgba(27, 27, 47, 0.18);
+}
+
+.landing-outcomes-card {
+  position: absolute;
+  left: 45%;
+  bottom: 1.5rem;
+  width: min(80%, 17rem);
+  padding: 1.1rem 1.25rem;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 20px 44px rgba(27, 27, 47, 0.18);
+}
+
+.landing-outcomes-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--landing-ink);
+}
+
+.landing-outcomes-card-header a {
+  font-weight: 600;
+  color: var(--landing-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.landing-outcomes-progress {
+  display: flex;
+  gap: 0.3rem;
+  margin: 0.85rem 0 0.7rem;
+}
+
+.landing-outcomes-progress-seg {
+  flex: 1;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: var(--landing-border);
+}
+
+.landing-outcomes-progress-seg--done {
+  background: var(--landing-primary);
+}
+
+.landing-outcomes-progress-seg--active {
+  background: #f5a623;
+}
+
+.landing-outcomes-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--landing-muted);
+}
+
+@media (min-width: 900px) {
+  .landing-outcomes-inner {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
 }
 
 .landing-section-head {
@@ -6494,58 +6645,6 @@ textarea.form-field-input {
   max-width: 36rem;
   font-size: 1.0625rem;
   line-height: 1.65;
-  color: var(--landing-muted);
-}
-
-.landing-stories-track {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding-bottom: 0.5rem;
-  -webkit-overflow-scrolling: touch;
-}
-
-.landing-story {
-  flex: 0 0 min(85vw, 22rem);
-  scroll-snap-align: start;
-  padding: 1rem;
-  background: var(--landing-soft);
-  border: 1px solid var(--landing-border);
-  border-radius: 1.1rem;
-}
-
-.landing-story-visual {
-  height: 10rem;
-  margin-bottom: 1rem;
-  border-radius: 0.85rem;
-}
-
-.landing-story--a .landing-story-visual {
-  background: linear-gradient(135deg, #c8f9dc, var(--landing-primary));
-}
-
-.landing-story--b .landing-story-visual {
-  background: linear-gradient(135deg, #d9c9f5, #8b5fd4);
-}
-
-.landing-story--c .landing-story-visual {
-  background: linear-gradient(135deg, #c8f0e4, #5ec9a8);
-}
-
-.landing-story h3 {
-  margin: 0 0 0.5rem;
-  font-family: var(--landing-display);
-  font-size: 1.0625rem;
-  font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: -0.02em;
-}
-
-.landing-story p {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.6;
   color: var(--landing-muted);
 }
 

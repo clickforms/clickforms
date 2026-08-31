@@ -18,24 +18,6 @@ const TRUST_STATS = [
   { value: 'Full', label: 'Audit trail coverage' },
 ] as const;
 
-const STORIES = [
-  {
-    title: 'A care team replaced scattered PDFs with one intake flow',
-    caption: 'Intake, consent, and service agreements now live in a single branded workspace.',
-    tone: 'a',
-  },
-  {
-    title: 'Compliance reviews went from days to hours',
-    caption: 'Every submission arrives structured, searchable, and export-ready.',
-    tone: 'b',
-  },
-  {
-    title: 'Approvals finally match how the team actually works',
-    caption: 'Draft, review, publish — nothing goes live until sign-off is recorded.',
-    tone: 'c',
-  },
-] as const;
-
 const TESTIMONIALS = [
   {
     quote:
@@ -165,27 +147,44 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
         </div>
       </section>
 
-      <section className="landing-stories" id="stories">
-        <div className="landing-container">
-          <div className="landing-section-head landing-section-head--center">
-            <h2>Helping teams create better outcomes</h2>
-            <p className="landing-section-lead">
-              From intake to approval — workflows your organisation already runs, now in one place.
+      <section className="landing-outcomes" id="stories">
+        <div className="landing-container landing-outcomes-inner">
+          <div className="landing-outcomes-copy">
+            <h2>Helping teams create better outcomes.</h2>
+            <p>
+              From intake to approval — workflows your organisation already runs, now in one place,
+              with nothing left to chase down after the fact.
             </p>
+            <Link
+              className="landing-btn landing-btn--dark landing-btn--lg"
+              href="/product/how-it-works"
+            >
+              See how it works
+            </Link>
           </div>
-          <div className="landing-stories-track">
-            {STORIES.map((story) => (
-              <article key={story.title} className={`landing-story landing-story--${story.tone}`}>
-                <div className="landing-story-visual" />
-                <h3>{story.title}</h3>
-                <p>{story.caption}</p>
-              </article>
-            ))}
+          <div className="landing-outcomes-visual" aria-hidden="true">
+            <div className="landing-outcomes-photo landing-outcomes-photo--a">
+              <span className="landing-outcomes-tag">Intake sent</span>
+            </div>
+            <div className="landing-outcomes-photo landing-outcomes-photo--b">
+              <span className="landing-outcomes-badge">
+                <CheckIcon />
+              </span>
+            </div>
+            <div className="landing-outcomes-card">
+              <div className="landing-outcomes-card-header">
+                <span>Review in progress</span>
+                <Link href="/product/how-it-works">Track</Link>
+              </div>
+              <div className="landing-outcomes-progress">
+                <span className="landing-outcomes-progress-seg landing-outcomes-progress-seg--done" />
+                <span className="landing-outcomes-progress-seg landing-outcomes-progress-seg--done" />
+                <span className="landing-outcomes-progress-seg landing-outcomes-progress-seg--active" />
+                <span className="landing-outcomes-progress-seg" />
+              </div>
+              <p className="landing-outcomes-card-meta">Should complete in 6 min</p>
+            </div>
           </div>
-          <p className="landing-form-types-more">
-            Want to see how the workflow fits together?{' '}
-            <Link href="/product/how-it-works">See how it works</Link>
-          </p>
         </div>
       </section>
 

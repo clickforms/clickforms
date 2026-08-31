@@ -92,26 +92,37 @@ export default async function ServicesPage() {
         </div>
       </section>
 
-      <section className="landing-band">
+      <section className="landing-band landing-band--showcase">
         <div className="landing-band-deco landing-band-deco--a" aria-hidden="true" />
         <div className="landing-band-deco landing-band-deco--b" aria-hidden="true" />
-        <div className="landing-container landing-band-inner">
-          <span className="landing-band-eyebrow">Included, not extra</span>
-          <h2>Everything a regulated workflow needs, out of the box</h2>
-          <p>
-            No plugins to install and no separate tools to pay for — every service form starts with
-            the same compliance-grade foundation.
-          </p>
-          <div className="landing-band-grid">
-            {SERVICE_FEATURES.map((feature) => (
-              <div key={feature.title} className="landing-band-feature">
-                <span className="landing-band-feature-icon">
-                  <CheckIcon />
-                </span>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
-              </div>
-            ))}
+        <div className="landing-container">
+          <div className="landing-band-showcase-head">
+            <span className="landing-band-eyebrow">Included, not extra</span>
+            <h2>Everything a regulated workflow needs, out of the box</h2>
+          </div>
+
+          <div className="landing-band-showcase-card">
+            <div className="landing-band-showcase-intro">
+              <p>What&apos;s included</p>
+              <p>
+                No plugins to install and no separate tools to pay for — every service form starts
+                here.
+              </p>
+            </div>
+            <div className="landing-band-showcase-divider" aria-hidden="true" />
+            <div className="landing-band-showcase-items">
+              {SERVICE_FEATURES.map((feature) => (
+                <div key={feature.title} className="landing-band-showcase-item">
+                  <span className="landing-band-showcase-icon">
+                    <CheckIcon />
+                  </span>
+                  <div>
+                    <h3>{feature.title}</h3>
+                    <p>{feature.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

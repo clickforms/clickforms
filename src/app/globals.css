@@ -7228,6 +7228,133 @@ textarea.form-field-input {
   }
 }
 
+/* "Showcase" band — big centered headline over a floating white detail card */
+.landing-band--showcase {
+  padding-bottom: 5.5rem;
+}
+
+.landing-band-showcase-head {
+  position: relative;
+  z-index: 1;
+  max-width: 46rem;
+  margin: 0 auto 3rem;
+  text-align: center;
+}
+
+.landing-band-showcase-head .landing-band-eyebrow {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.landing-band-showcase-head h2 {
+  max-width: none;
+  margin: 0 auto;
+  font-size: clamp(2.35rem, 5.4vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+}
+
+.landing-band-showcase-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding: 1.75rem;
+  background: #fff;
+  border-radius: 1.5rem;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+}
+
+.landing-band-showcase-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.landing-band-showcase-intro p:first-child {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--landing-ink);
+}
+
+.landing-band-showcase-intro p:last-child {
+  margin: 0;
+  max-width: 18rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--landing-muted);
+}
+
+.landing-band-showcase-divider {
+  display: none;
+}
+
+.landing-band-showcase-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.landing-band-showcase-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.landing-band-showcase-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(85, 234, 140, 0.14);
+  color: var(--landing-primary-dark);
+}
+
+.landing-band-showcase-item h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--landing-ink);
+}
+
+.landing-band-showcase-item p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--landing-muted);
+}
+
+@media (min-width: 860px) {
+  .landing-band-showcase-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 2.5rem 3rem;
+  }
+
+  .landing-band-showcase-intro {
+    flex: 0 0 13rem;
+  }
+
+  .landing-band-showcase-divider {
+    display: block;
+    align-self: stretch;
+    width: 1px;
+    background: var(--landing-border);
+  }
+
+  .landing-band-showcase-items {
+    flex: 1;
+    flex-direction: row;
+    gap: 2.5rem;
+  }
+}
+
 /* Purple gradient quote band */
 .landing-quote-band {
   padding: 4.75rem 0;

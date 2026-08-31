@@ -12,22 +12,24 @@
       text-anchor="middle"
     >C</text>
   </g>
-  <text
-    x="210"
-    y="98"
-    fill="#111111"
-    font-family="Poppins, Inter, system-ui, sans-serif"
-    font-size="62"
-    font-weight="800"
-    letter-spacing="-0.5"
-  >CLICK</text>
-  <text
-    x="210"
-    y="158"
-    fill="#111111"
-    font-family="Poppins, Inter, system-ui, sans-serif"
-    font-size="62"
-    font-weight="800"
-    letter-spacing="-0.5"
-  >FORMS</text>
+  <g transform="skewX(-8) translate(2 0)">
+    <text
+      x="210"
+      y="98"
+      fill="#111111"
+      font-family="Poppins, Inter, system-ui, sans-serif"
+      font-size="62"
+      font-weight="800"
+      letter-spacing="-0.5"
+    >CLICK</text>
+    <text
+      x="210"
+      y="158"
+      fill="#111111"
+      font-family="Poppins, Inter, system-ui, sans-serif"
+      font-size="62"
+      font-weight="800"
+      letter-spacing="-0.5"
+    >FORMS</text>
+  </g>
 </svg>

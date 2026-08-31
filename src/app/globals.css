@@ -7128,12 +7128,12 @@ textarea.form-field-input {
 }
 
 /* The shared eyebrow pill is a near-transparent mint tint, tuned for a white/soft
-   background — on the CTA's #d3ccff lavender it nearly disappeared. Give it a solid
-   white chip here instead so it stays legible. */
+   background — on the CTA's #d3ccff lavender it nearly disappeared. Use the brand
+   purple here instead: same colour family as the lavender background, with white
+   text for strong contrast. */
 .landing-cta .landing-page-hero-eyebrow {
-  background: #fff;
-  color: var(--landing-primary-dark);
-  box-shadow: 0 1px 2px rgba(27, 27, 47, 0.08);
+  background: var(--landing-purple);
+  color: #fff;
 }
 
 /* Footer */

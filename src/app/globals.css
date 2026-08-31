@@ -6988,75 +6988,90 @@ textarea.form-field-input {
 }
 
 /* Contact page */
-.landing-contact {
-  padding: 4.5rem 0;
+.landing-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.landing-contact-hero {
+  padding: 5.5rem 0 6rem;
   background: #fff;
 }
 
-.landing-contact-grid {
+.landing-contact-hero-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2.5rem;
+  gap: 3rem;
 }
 
-.landing-contact-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.landing-contact-hero-copy {
+  padding-top: 0.25rem;
 }
 
-.landing-contact-item {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 1.1rem 1.25rem;
-  background: var(--landing-soft);
-  border: 1px solid var(--landing-border);
-  border-radius: 1rem;
+.landing-contact-hero-copy h1 {
+  margin: 0.85rem 0 0;
+  max-width: 18ch;
+  font-family: var(--landing-display);
+  font-size: clamp(2.35rem, 5vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
   color: var(--landing-ink);
-  text-decoration: none;
-  transition:
-    border-color 0.15s,
-    transform 0.15s;
 }
 
-.landing-contact-item:hover {
-  border-color: rgba(85, 234, 140, 0.4);
-  transform: translateY(-2px);
-}
-
-.landing-contact-item-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: rgba(85, 234, 140, 0.16);
-  color: var(--landing-primary-dark);
-}
-
-.landing-contact-item-label {
-  display: block;
-  font-size: 0.75rem;
+.landing-contact-hero-copy p {
+  margin: 1.25rem 0 0;
+  max-width: 26rem;
+  font-size: 1.0625rem;
+  line-height: 1.65;
   color: var(--landing-muted);
 }
 
-.landing-contact-item-value {
-  display: block;
-  font-size: 0.95rem;
+.landing-contact-hero-copy p a {
+  color: var(--landing-ink);
   font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.landing-contact-hero-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 2rem 0 0;
+}
+
+.landing-contact-hero-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: fit-content;
+  color: var(--landing-ink);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+
+.landing-contact-hero-links a svg {
+  flex-shrink: 0;
+  color: var(--landing-primary-dark);
+}
+
+.landing-contact-hero-links a:hover {
+  text-decoration: underline;
 }
 
 .landing-contact-form {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-  padding: 1.75rem;
-  background: var(--landing-soft);
-  border: 1px solid var(--landing-border);
-  border-radius: 1.25rem;
+  gap: 1.35rem;
 }
 
 .landing-form-field {
@@ -7065,37 +7080,121 @@ textarea.form-field-input {
   gap: 0.4rem;
 }
 
-.landing-form-field label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--landing-ink);
-}
-
 .landing-form-field input,
+.landing-form-field select,
 .landing-form-field textarea {
   width: 100%;
-  padding: 0.7rem 0.95rem;
+  padding: 0.95rem 1.1rem;
   font: inherit;
   font-size: 0.9375rem;
   color: var(--landing-ink);
   background: #fff;
   border: 1px solid var(--landing-border);
-  border-radius: 0.65rem;
+  border-radius: 0.9rem;
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
 }
 
+.landing-form-field select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' stroke='%23636370' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.1rem center;
+  padding-right: 2.5rem;
+}
+
 .landing-form-field textarea {
   resize: vertical;
-  min-height: 7rem;
+  min-height: 8rem;
 }
 
 .landing-form-field input:focus,
+.landing-form-field select:focus,
 .landing-form-field textarea:focus {
   border-color: var(--landing-primary-dark);
   outline: none;
   box-shadow: 0 0 0 3.5px rgba(85, 234, 140, 0.18);
+}
+
+.landing-form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.landing-form-row .landing-form-field:first-child {
+  flex: 0 0 6.5rem;
+}
+
+.landing-form-row .landing-form-field:last-child {
+  flex: 1;
+}
+
+.landing-form-phone-code {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.95rem 0.85rem;
+  background: #fff;
+  border: 1px solid var(--landing-border);
+  border-radius: 0.9rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--landing-ink);
+}
+
+.landing-form-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2.25rem 1.5rem;
+  background: var(--landing-soft);
+  border: 1.5px dashed var(--landing-border);
+  border-radius: 1rem;
+  color: var(--landing-muted);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.landing-form-upload:hover {
+  border-color: rgba(85, 234, 140, 0.5);
+}
+
+.landing-form-upload-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 0.5rem;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--landing-ink);
+}
+
+.landing-form-upload-label {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--landing-ink);
+}
+
+.landing-form-upload-hint {
+  max-width: 22rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.landing-form-upload input[type="file"] {
+  display: none;
+}
+
+.landing-btn--block {
+  width: 100%;
+  border-radius: 0.9rem;
+  padding: 1.05rem 1.5rem;
+  font-size: 1rem;
 }
 
 .landing-contact-form-note {
@@ -7105,9 +7204,9 @@ textarea.form-field-input {
 }
 
 @media (min-width: 900px) {
-  .landing-contact-grid {
+  .landing-contact-hero-grid {
     grid-template-columns: 0.85fr 1.15fr;
-    align-items: start;
+    gap: 4rem;
   }
 }
 
@@ -7657,26 +7756,6 @@ textarea.form-field-input {
   color: #0f2718;
   border-radius: 999px;
   box-shadow: 0 10px 22px rgba(27, 27, 47, 0.18);
-}
-
-/* Contact page — floating reply-time chip on the form card */
-.landing-contact-form-wrap {
-  position: relative;
-}
-
-.landing-contact-form-tag {
-  position: absolute;
-  top: -0.9rem;
-  left: 1.75rem;
-  z-index: 1;
-  padding: 0.5rem 0.85rem;
-  background: var(--landing-ink);
-  color: #fff;
-  border-radius: 0.6rem;
-  box-shadow: 0 10px 22px rgba(27, 27, 47, 0.18);
-  transform: rotate(-3deg);
-  font-size: 0.8125rem;
-  font-weight: 800;
 }
 
 /* Help page — FAQ list + sidebar */

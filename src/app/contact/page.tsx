@@ -5,7 +5,6 @@ import { LandingContactForm } from '@/components/landing/landing-contact-form';
 import { LandingFooter } from '@/components/landing/landing-footer';
 import { MailIcon, PhoneIcon } from '@/components/landing/landing-icons';
 import { LandingNav } from '@/components/landing/landing-nav';
-import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
 
 export const metadata: Metadata = {
@@ -21,39 +20,28 @@ export default async function ContactPage() {
     <div className="landing">
       <LandingNav isAuthenticated={isAuthenticated} />
 
-      <LandingPageHero
-        eyebrow="Contact"
-        title="Get in touch"
-        lead="Questions about a form, your account, or Clickforms in general — we're happy to help."
-      />
-
-      <section className="landing-contact">
-        <div className="landing-container landing-contact-grid">
-          <div className="landing-contact-info">
-            <a className="landing-contact-item" href="mailto:admin@clickforms.com.au">
-              <span className="landing-contact-item-icon">
+      <section className="landing-contact-hero">
+        <div className="landing-container landing-contact-hero-grid">
+          <div className="landing-contact-hero-copy">
+            <span className="landing-page-hero-eyebrow">Contact &amp; support</span>
+            <h1>What can we help you with?</h1>
+            <p>
+              Explore our <Link href="/help">Help Center</Link> for answers on common questions, or
+              fill out the form and we&apos;ll get back to you within one business day.
+            </p>
+            <div className="landing-contact-hero-links">
+              <a href="mailto:admin@clickforms.com.au">
                 <MailIcon />
-              </span>
-              <span>
-                <span className="landing-contact-item-label">Email</span>
-                <span className="landing-contact-item-value">admin@clickforms.com.au</span>
-              </span>
-            </a>
-            <a className="landing-contact-item" href="tel:+61415282494">
-              <span className="landing-contact-item-icon">
+                admin@clickforms.com.au
+              </a>
+              <a href="tel:+61415282494">
                 <PhoneIcon />
-              </span>
-              <span>
-                <span className="landing-contact-item-label">Phone</span>
-                <span className="landing-contact-item-value">+61 415 282 494</span>
-              </span>
-            </a>
+                +61 415 282 494
+              </a>
+            </div>
           </div>
 
-          <div className="landing-contact-form-wrap">
-            <span className="landing-contact-form-tag">Replies within 1 business day</span>
-            <LandingContactForm />
-          </div>
+          <LandingContactForm />
         </div>
       </section>
 

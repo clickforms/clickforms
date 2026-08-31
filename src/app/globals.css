@@ -784,6 +784,7 @@ a {
   margin: 0;
   padding: 1.5rem;
   width: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 

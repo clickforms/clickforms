@@ -5787,7 +5787,7 @@ textarea.form-field-input {
 }
 
 .landing-brand--footer {
-  color: var(--landing-ink);
+  color: #111;
 }
 
 .landing-nav-links {
@@ -7217,7 +7217,7 @@ textarea.form-field-input {
   max-width: 22rem;
   font-size: 0.875rem;
   line-height: 1.55;
-  color: var(--landing-muted);
+  color: #111;
 }
 
 .landing-footer-col {
@@ -7232,18 +7232,18 @@ textarea.form-field-input {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(27, 27, 47, 0.4);
+  color: #111;
 }
 
 .landing-footer-col a {
   font-size: 0.875rem;
-  color: var(--landing-muted);
+  color: #111;
   text-decoration: none;
-  transition: color 0.15s;
+  transition: opacity 0.15s;
 }
 
 .landing-footer-col a:hover {
-  color: var(--landing-ink);
+  opacity: 0.65;
 }
 
 .landing-footer-bottom {
@@ -7257,7 +7257,7 @@ textarea.form-field-input {
 .landing-footer-bottom p {
   margin: 0;
   font-size: 0.8125rem;
-  color: rgba(27, 27, 47, 0.48);
+  color: #111;
 }
 
 .landing-footer-social-col {
@@ -7279,17 +7279,15 @@ textarea.form-field-input {
   border-radius: 999px;
   border: 1px solid var(--landing-border);
   background: #fff;
-  color: var(--landing-muted);
+  color: #111;
   transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s;
+    opacity 0.15s,
+    border-color 0.15s;
 }
 
 .landing-footer-social-link:hover {
-  color: var(--landing-ink);
+  opacity: 0.65;
   border-color: rgba(17, 17, 17, 0.24);
-  background: var(--landing-primary-light, #fff);
 }
 
 /* Floating chat — MasterRemit-style help affordance */

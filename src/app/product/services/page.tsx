@@ -4,7 +4,13 @@ import { getServerSession } from 'next-auth';
 import { LandingChatBubble } from '@/components/landing/landing-chat-bubble';
 import { LandingCta } from '@/components/landing/landing-cta';
 import { LandingFooter } from '@/components/landing/landing-footer';
-import { ArrowRightIcon, CheckIcon } from '@/components/landing/landing-icons';
+import {
+  ArrowRightIcon,
+  CheckIcon,
+  ExportIcon,
+  SignatureIcon,
+  UploadIcon,
+} from '@/components/landing/landing-icons';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
@@ -130,23 +136,65 @@ export default async function ServicesPage() {
       <section className="landing-promos">
         <div className="landing-container landing-promos-grid">
           <article className="landing-promo landing-promo--invite">
+            <div className="landing-promo-deco landing-promo-deco--a" aria-hidden="true" />
+            <div className="landing-promo-deco landing-promo-deco--b" aria-hidden="true" />
             <p className="landing-promo-eyebrow">Invite your team</p>
             <h3>Bring coordinators, reviewers, and admins into one workspace</h3>
             <p>
               Role-based access keeps everyone in the right lane — admins, editors, and reviewers
               see exactly what their role allows.
             </p>
+            <div className="landing-promo-flow" aria-hidden="true">
+              <span className="landing-promo-flow-step">
+                <span className="landing-promo-flow-step-icon">A</span>
+                Admin
+              </span>
+              <ArrowRightIcon />
+              <span className="landing-promo-flow-step">
+                <span className="landing-promo-flow-step-icon">E</span>
+                Editor
+              </span>
+              <ArrowRightIcon />
+              <span className="landing-promo-flow-step">
+                <span className="landing-promo-flow-step-icon">R</span>
+                Reviewer
+              </span>
+            </div>
             <Link className="landing-btn landing-btn--white landing-btn--sm" href={secondaryHref}>
               {secondaryLabel}
             </Link>
           </article>
           <article className="landing-promo landing-promo--app">
+            <div className="landing-promo-deco landing-promo-deco--a" aria-hidden="true" />
+            <div className="landing-promo-deco landing-promo-deco--b" aria-hidden="true" />
             <p className="landing-promo-eyebrow">Built for regulated workflows</p>
             <h3>Signatures, uploads, and audit trails — out of the box</h3>
             <p>
               E-signatures, file uploads, conditional logic, and export-ready submissions without
               wiring together five different tools.
             </p>
+            <div className="landing-promo-flow" aria-hidden="true">
+              <span className="landing-promo-flow-step">
+                <span className="landing-promo-flow-step-icon">
+                  <SignatureIcon />
+                </span>
+                Sign
+              </span>
+              <ArrowRightIcon />
+              <span className="landing-promo-flow-step">
+                <span className="landing-promo-flow-step-icon">
+                  <UploadIcon />
+                </span>
+                Upload
+              </span>
+              <ArrowRightIcon />
+              <span className="landing-promo-flow-step">
+                <span className="landing-promo-flow-step-icon">
+                  <ExportIcon />
+                </span>
+                Export
+              </span>
+            </div>
             <Link
               className="landing-btn landing-btn--ghost-light landing-btn--sm"
               href="/resources"

@@ -6384,20 +6384,55 @@ textarea.form-field-input {
 
 /* Promo cards */
 .landing-promos {
-  padding: 0 0 4.5rem;
+  padding: 0 0 5rem;
   background: var(--landing-soft);
 }
 
 .landing-promos-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .landing-promo {
-  padding: 2rem 1.75rem;
-  border-radius: 1.25rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 2.25rem 2rem;
+  border-radius: 1.5rem;
   color: #fff;
+  overflow: hidden;
+  box-shadow: 0 20px 44px rgba(27, 27, 47, 0.16);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.landing-promo:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 56px rgba(27, 27, 47, 0.22);
+}
+
+.landing-promo-deco {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+.landing-promo-deco--a {
+  top: -3.5rem;
+  right: -2.5rem;
+  width: 10rem;
+  height: 10rem;
+}
+
+.landing-promo-deco--b {
+  bottom: -4rem;
+  left: -3rem;
+  width: 11rem;
+  height: 11rem;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .landing-promo--invite {
@@ -6414,6 +6449,8 @@ textarea.form-field-input {
 }
 
 .landing-promo-eyebrow {
+  position: relative;
+  z-index: 1;
   margin: 0 0 0.65rem;
   font-size: 0.75rem;
   font-weight: 700;
@@ -6423,6 +6460,8 @@ textarea.form-field-input {
 }
 
 .landing-promo h3 {
+  position: relative;
+  z-index: 1;
   margin: 0 0 0.75rem;
   max-width: 22ch;
   font-family: var(--landing-display);
@@ -6433,11 +6472,61 @@ textarea.form-field-input {
 }
 
 .landing-promo p {
+  position: relative;
+  z-index: 1;
   margin: 0 0 1.35rem;
   max-width: 34rem;
   font-size: 0.9375rem;
   line-height: 1.65;
   opacity: 0.9;
+}
+
+.landing-promo-flow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.75rem;
+}
+
+.landing-promo-flow > svg {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.landing-promo-flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.85rem 0.4rem 0.4rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.landing-promo-flow-step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--landing-ink);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.landing-promo .landing-btn {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  margin-top: auto;
 }
 
 /* Stories */

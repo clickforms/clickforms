@@ -17,14 +17,38 @@ const RESOURCE_STATS = [
 ] as const;
 
 const FORM_TYPES = [
-  { name: 'Client intake', tags: 'Demographics, referrals, consent' },
-  { name: 'Service agreements', tags: 'Multi-page, e-signature, uploads' },
-  { name: 'Consent forms', tags: 'Branded, conditional logic' },
-  { name: 'Support plans', tags: 'Goals, outcomes, review dates' },
-  { name: 'Incident reports', tags: 'Structured follow-up fields' },
-  { name: 'Referrals', tags: 'Routing, file attachments' },
-  { name: 'Staff onboarding', tags: 'Role-based access, approvals' },
-  { name: 'Participant reviews', tags: 'Signatures, PDF export' },
+  {
+    name: 'Client intake',
+    tags: 'We capture demographics, referrals, and consent in a single guided form, so new clients are fully onboarded before their first appointment — no chasing paperwork after the fact.',
+  },
+  {
+    name: 'Service agreements',
+    tags: 'Multi-page agreements with e-signature and file uploads built in, so clients can review, sign, and attach supporting documents from any device without printing a thing.',
+  },
+  {
+    name: 'Consent forms',
+    tags: 'Branded to match your organisation, with conditional logic that only shows the clauses that apply — every consent is recorded, timestamped, and easy to produce later.',
+  },
+  {
+    name: 'Support plans',
+    tags: 'Track goals, outcomes, and review dates in one structured record, so progress is easy to report on and nothing falls through the cracks between reviews.',
+  },
+  {
+    name: 'Incident reports',
+    tags: 'Structured follow-up fields make sure every incident is logged consistently, routed to the right reviewer, and searchable when compliance asks for the history.',
+  },
+  {
+    name: 'Referrals',
+    tags: 'Route referrals to the right team automatically, with file attachments included, so nothing gets lost in an inbox between the referral and the first contact.',
+  },
+  {
+    name: 'Staff onboarding',
+    tags: 'Role-based access and approval steps mean new hires only see what applies to them, and every sign-off is recorded as part of the same workflow.',
+  },
+  {
+    name: 'Participant reviews',
+    tags: 'Signatures and PDF export built in, so completed reviews are ready to file or share the moment they’re submitted — no separate export step required.',
+  },
 ] as const;
 
 export const metadata: Metadata = {

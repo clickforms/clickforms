@@ -6834,10 +6834,6 @@ textarea.form-field-input {
   margin-top: 3rem;
 }
 
-.landing-form-type {
-  max-width: 22rem;
-}
-
 .landing-form-type-icon {
   display: inline-flex;
   align-items: center;
@@ -8101,7 +8097,7 @@ textarea.form-field-input {
 
 @media (min-width: 1024px) {
   .landing-form-types-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 /* Login page — same soft forest-ink language as the landing page (mint wash, rounded

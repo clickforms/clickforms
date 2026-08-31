@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { ArrowRightIcon } from '@/components/landing/landing-icons';
+import { ArrowRightIcon, CheckIcon } from '@/components/landing/landing-icons';
+
+const CTA_FEATURES = ['Free to start', 'No credit card required', 'Set up in minutes'] as const;
 
 export function LandingCta({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const primaryHref = isAuthenticated ? '/forms' : '/login';
@@ -10,22 +12,30 @@ export function LandingCta({ isAuthenticated = false }: { isAuthenticated?: bool
   return (
     <section className="landing-cta">
       <div className="landing-container landing-cta-inner">
+        <span className="landing-page-hero-eyebrow">Get started</span>
         <h2 className="landing-cta-title">Ready when your team is</h2>
         <p className="landing-cta-lead">
           {isAuthenticated
-            ? 'Continue to your portal to build forms, review submissions, and manage workflows.'
-            : 'Sign in to build forms, review submissions, and manage your organisation’s workflows.'}
+            ? 'Continue to your portal to build forms, review submissions, and manage workflows — everything your team publishes stays branded, structured, and audit-ready.'
+            : 'Sign in to build forms, review submissions, and manage your organisation’s workflows — no setup calls, no lengthy onboarding, just a workspace that’s ready when you are.'}
         </p>
+
+        <ul className="landing-cta-features">
+          {CTA_FEATURES.map((feature) => (
+            <li key={feature}>
+              <CheckIcon />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+
         <div className="landing-cta-actions">
-          <Link className="landing-btn landing-btn--white landing-btn--lg" href={primaryHref}>
+          <Link className="landing-btn landing-btn--dark landing-btn--lg" href={primaryHref}>
             {primaryLabel}
             <ArrowRightIcon />
           </Link>
           {!isAuthenticated ? (
-            <Link
-              className="landing-btn landing-btn--ghost-light landing-btn--lg"
-              href={secondaryHref}
-            >
+            <Link className="landing-btn landing-btn--ghost landing-btn--lg" href={secondaryHref}>
               {secondaryLabel}
             </Link>
           ) : null}

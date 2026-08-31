@@ -5760,10 +5760,9 @@ textarea.form-field-input {
   align-items: center;
   justify-content: flex-start;
   gap: 2.25rem;
-  max-width: var(--landing-max);
+  width: 100%;
   min-height: var(--landing-nav-h);
-  margin: 0 auto;
-  padding: 0.65rem 1.25rem;
+  padding: 0.65rem 2rem;
 }
 
 .landing-brand {

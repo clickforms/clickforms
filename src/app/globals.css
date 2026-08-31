@@ -6384,7 +6384,7 @@ textarea.form-field-input {
 
 /* Promo cards */
 .landing-promos {
-  padding: 0 0 6.5rem;
+  padding: 6.5rem 0;
   background: var(--landing-soft);
 }
 

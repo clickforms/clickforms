@@ -9,8 +9,6 @@ import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
 
-const TINTS = ['tint-a', 'tint-b', 'tint-c'] as const;
-
 const RESOURCE_STATS = [
   { value: '20+', label: 'Field types built in' },
   { value: '8', label: 'Ready-made form categories' },
@@ -63,11 +61,9 @@ export default async function ResourcesPage() {
           </div>
 
           <div className="landing-form-types-grid">
-            {FORM_TYPES.map((form, index) => (
+            {FORM_TYPES.map((form) => (
               <article key={form.name} className="landing-form-type">
-                <span
-                  className={`landing-form-type-icon landing-form-type-icon--${TINTS[index % TINTS.length]}`}
-                >
+                <span className="landing-form-type-icon">
                   <DocumentIcon />
                 </span>
                 <h3>{form.name}</h3>

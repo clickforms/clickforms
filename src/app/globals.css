@@ -6384,7 +6384,7 @@ textarea.form-field-input {
 
 /* Promo cards */
 .landing-promos {
-  padding: 0 0 5rem;
+  padding: 0 0 6.5rem;
   background: var(--landing-soft);
 }
 
@@ -6398,19 +6398,16 @@ textarea.form-field-input {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 2.25rem 2rem;
+  min-height: 27rem;
+  padding: 3rem 2.25rem 3.25rem;
   border-radius: 1.5rem;
   color: #fff;
   overflow: hidden;
-  box-shadow: 0 20px 44px rgba(27, 27, 47, 0.16);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
 .landing-promo:hover {
   transform: translateY(-4px);
-  box-shadow: 0 28px 56px rgba(27, 27, 47, 0.22);
 }
 
 .landing-promo-deco {
@@ -6442,6 +6439,21 @@ textarea.form-field-input {
     var(--landing-primary) 45%,
     var(--landing-primary-dark)
   );
+  color: #111;
+}
+
+.landing-promo--invite .landing-promo-flow > svg {
+  color: rgba(17, 17, 17, 0.4);
+}
+
+.landing-promo--invite .landing-promo-flow-step {
+  background: rgba(17, 17, 17, 0.08);
+  border-color: rgba(17, 17, 17, 0.12);
+}
+
+.landing-promo--invite .landing-promo-flow-step-icon {
+  background: rgba(17, 17, 17, 0.14);
+  color: #111;
 }
 
 .landing-promo--app {
@@ -6501,8 +6513,8 @@ textarea.form-field-input {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.85rem 0.4rem 0.4rem;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
   font-size: 0.8125rem;
   font-weight: 700;
@@ -6516,8 +6528,8 @@ textarea.form-field-input {
   height: 1.6rem;
   flex-shrink: 0;
   border-radius: 999px;
-  background: #fff;
-  color: var(--landing-ink);
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
   font-size: 0.7rem;
   font-weight: 800;
 }

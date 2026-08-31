@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 666 184" fill="none" role="img" aria-label="Clickforms">
+  <title>Clickforms</title>
+  <g transform="translate(0 0) scale(5.75)">
+    <rect width="32" height="32" rx="8" fill="url(#clickforms-logo-grad)"/>
+    <path d="M8 11h16" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M8 16h10" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M8 21h16" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+  </g>
+  <text
+    x="210"
+    y="118"
+    fill="#111111"
+    font-family="Poppins, Inter, system-ui, sans-serif"
+    font-size="78"
+    font-weight="800"
+    letter-spacing="-1.5"
+  >Clickforms</text>
+  <defs>
+    <linearGradient id="clickforms-logo-grad" x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7ef0a8"/>
+      <stop offset="0.55" stop-color="#55ea8c"/>
+      <stop offset="1" stop-color="#3dd975"/>
+    </linearGradient>
+  </defs>
+</svg>

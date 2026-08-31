@@ -5758,8 +5758,8 @@ textarea.form-field-input {
 .landing-nav-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  justify-content: flex-start;
+  gap: 2.25rem;
   max-width: var(--landing-max);
   min-height: var(--landing-nav-h);
   margin: 0 auto;
@@ -5772,7 +5772,6 @@ textarea.form-field-input {
   gap: 0.65rem;
   color: #111;
   text-decoration: none;
-  justify-self: start;
 }
 
 .landing-brand-wordmark {
@@ -5795,9 +5794,7 @@ textarea.form-field-input {
 .landing-nav-links {
   display: none;
   align-items: center;
-  justify-content: center;
   gap: 0.35rem;
-  justify-self: center;
   font-family: var(--font-body);
 }
 
@@ -5830,7 +5827,7 @@ textarea.form-field-input {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  justify-self: end;
+  margin-left: auto;
 }
 
 .landing-nav-link[data-active] {

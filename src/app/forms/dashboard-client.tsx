@@ -242,24 +242,34 @@ export function DashboardClient({
         </section>
       ) : (
         <section
-          className="dashboard-panel dashboard-in dashboard-in--3"
+          className="dashboard-recent-panel dashboard-in dashboard-in--3"
           aria-labelledby="dashboard-recent-heading"
         >
-          <div className="dashboard-panel-header">
+          <div
+            className="dashboard-recent-panel-deco dashboard-recent-panel-deco--a"
+            aria-hidden="true"
+          />
+          <div
+            className="dashboard-recent-panel-deco dashboard-recent-panel-deco--b"
+            aria-hidden="true"
+          />
+
+          <div className="dashboard-recent-panel-header">
             <div>
-              <h3 id="dashboard-recent-heading" className="dashboard-panel-title">
+              <h3 id="dashboard-recent-heading" className="dashboard-recent-panel-title">
                 Recent forms
               </h3>
-              <p className="dashboard-panel-subtitle">Jump back into what you last edited</p>
+              <p className="dashboard-recent-panel-subtitle">Jump back into what you last edited</p>
             </div>
-            <Link href="/forms/list" className="dashboard-panel-link">
+            <Link href="/forms/list" className="dashboard-recent-panel-link">
               View all <ArrowIcon />
             </Link>
           </div>
-          <ul className="dashboard-recent">
+
+          <ul className="dashboard-recent-cards">
             {recentForms.map((form, index) => (
               <li key={form.id}>
-                <Link href={`/forms/${form.id}/builder`} className="dashboard-recent-row">
+                <Link href={`/forms/${form.id}/builder`} className="dashboard-recent-card">
                   <span
                     className={`dashboard-recent-mark ${RECENT_MARK_TINTS[index % RECENT_MARK_TINTS.length]}`}
                     aria-hidden="true"

@@ -58,10 +58,10 @@ export default async function HowItWorksPage() {
             <h2>From a blank canvas to a signed submission</h2>
             <p>No code, no separate tools — just a form your team can trust end to end.</p>
           </div>
-          <div className="landing-steps-grid">
+          <div className="landing-timeline">
             {STEPS.map((step, index) => (
-              <article key={step.title} className="landing-step">
-                <span className="landing-step-number">{index + 1}</span>
+              <article key={step.title} className="landing-timeline-step">
+                <span className="landing-timeline-marker">{index + 1}</span>
                 <h3>{step.title}</h3>
                 <p>{step.description}</p>
               </article>

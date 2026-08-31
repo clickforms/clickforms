@@ -6828,56 +6828,91 @@ textarea.form-field-input {
   background: #111111;
 }
 
-.landing-steps-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
+.landing-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
 }
 
-.landing-step {
-  padding: 1.5rem 1.35rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 1.1rem;
+.landing-timeline-step {
+  position: relative;
+  padding-left: 3.75rem;
+  min-height: 2.7rem;
 }
 
-.landing-step-number {
+.landing-timeline-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 2.7rem;
+  bottom: -2.25rem;
+  left: 1.35rem;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.landing-timeline-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
-  margin-bottom: 0.9rem;
+  width: 2.7rem;
+  height: 2.7rem;
   border-radius: 999px;
   background: var(--landing-primary);
   color: #0f2718;
   font-weight: 800;
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
+  box-shadow: 0 0 0 6px rgba(85, 234, 140, 0.14);
 }
 
-.landing-step h3 {
+.landing-timeline-step h3 {
   margin: 0 0 0.4rem;
   font-size: 1.0625rem;
   font-weight: 700;
   color: #fff;
 }
 
-.landing-step p {
+.landing-timeline-step p {
   margin: 0;
+  max-width: 30rem;
   font-size: 0.875rem;
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.65);
 }
 
-@media (min-width: 640px) {
-  .landing-steps-grid {
-    grid-template-columns: repeat(2, 1fr);
+@media (min-width: 900px) {
+  .landing-timeline {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.5rem;
   }
-}
 
-@media (min-width: 1024px) {
-  .landing-steps-grid {
-    grid-template-columns: repeat(4, 1fr);
+  .landing-timeline-step {
+    flex: 1;
+    padding-left: 0;
+    padding-right: 1.75rem;
+    min-height: 0;
+  }
+
+  .landing-timeline-marker {
+    position: static;
+    margin-bottom: 1.5rem;
+  }
+
+  .landing-timeline-step:not(:last-child)::before {
+    top: 1.35rem;
+    bottom: auto;
+    left: 3.2rem;
+    right: 0;
+    width: auto;
+    height: 1px;
+  }
+
+  .landing-timeline-step p {
+    max-width: none;
   }
 }
 

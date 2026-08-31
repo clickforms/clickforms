@@ -22,7 +22,7 @@ export function BrandMark({ size = 28 }: { size?: number; id?: string }) {
         fontFamily="Poppins, Arial, sans-serif"
         fontWeight="800"
         fontSize="19"
-        fill="#fff"
+        fill="#111111"
         textAnchor="middle"
       >
         C

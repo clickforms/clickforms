@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { LandingContactForm } from '@/components/landing/landing-contact-form';
 import { LandingFooter } from '@/components/landing/landing-footer';
@@ -49,7 +50,28 @@ export default async function ContactPage() {
             </a>
           </div>
 
-          <LandingContactForm />
+          <div className="landing-contact-form-wrap">
+            <span className="landing-contact-form-tag">Replies within 1 business day</span>
+            <LandingContactForm />
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-band landing-band--center">
+        <div className="landing-band-deco landing-band-deco--a" aria-hidden="true" />
+        <div className="landing-band-deco landing-band-deco--b" aria-hidden="true" />
+        <div className="landing-container landing-band-inner">
+          <span className="landing-band-eyebrow">Looking for a quick answer?</span>
+          <h2>Check the Help Center before you write in</h2>
+          <p>
+            Branding, logic, access, and file uploads — the questions we hear most, answered without
+            waiting on a reply.
+          </p>
+          <div className="landing-band-actions">
+            <Link className="landing-btn landing-btn--cta landing-btn--lg" href="/help">
+              Visit Help Center
+            </Link>
+          </div>
         </div>
       </section>
 

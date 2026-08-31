@@ -6665,7 +6665,7 @@ textarea.form-field-input {
 /* Form types grid */
 .landing-form-types {
   padding: 4.5rem 0;
-  background: var(--landing-soft);
+  background: #fff;
 }
 
 .landing-form-types-grid {
@@ -6723,8 +6723,8 @@ textarea.form-field-input {
 
 /* Steps — /product/how-it-works */
 .landing-steps {
-  padding: 4.5rem 0;
-  background: #fff;
+  padding: 4.75rem 0;
+  background: #111111;
 }
 
 .landing-steps-grid {
@@ -6735,8 +6735,8 @@ textarea.form-field-input {
 
 .landing-step {
   padding: 1.5rem 1.35rem;
-  background: var(--landing-soft);
-  border: 1px solid var(--landing-border);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 1.1rem;
 }
 
@@ -6758,14 +6758,14 @@ textarea.form-field-input {
   margin: 0 0 0.4rem;
   font-size: 1.0625rem;
   font-weight: 700;
-  color: var(--landing-ink);
+  color: #fff;
 }
 
 .landing-step p {
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.6;
-  color: var(--landing-muted);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 @media (min-width: 640px) {
@@ -7004,7 +7004,7 @@ textarea.form-field-input {
 /* FAQ */
 .landing-section {
   padding: 4.5rem 0;
-  background: var(--landing-soft);
+  background: #fff;
 }
 
 .landing-faq-layout {
@@ -7059,6 +7059,342 @@ textarea.form-field-input {
   font-size: 0.9rem;
   line-height: 1.65;
   color: var(--landing-muted);
+}
+
+/* Shared dark "band" section — used across subpages for background variety */
+.landing-band {
+  position: relative;
+  padding: 4.75rem 0;
+  background: #111111;
+  color: #fff;
+  overflow: hidden;
+}
+
+.landing-band-deco {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(85, 234, 140, 0.22), transparent 70%);
+  pointer-events: none;
+}
+
+.landing-band-deco--a {
+  top: -4rem;
+  right: -3rem;
+  width: 16rem;
+  height: 16rem;
+}
+
+.landing-band-deco--b {
+  bottom: -5rem;
+  left: -4rem;
+  width: 18rem;
+  height: 18rem;
+}
+
+.landing-band-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-band--center {
+  text-align: center;
+}
+
+.landing-band--center .landing-band-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.landing-band-eyebrow {
+  display: inline-block;
+  margin: 0 0 0.85rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(85, 234, 140, 0.16);
+  color: var(--landing-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.landing-band h2 {
+  margin: 0;
+  max-width: 26ch;
+  font-family: var(--landing-display);
+  font-size: clamp(1.85rem, 3.6vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: #fff;
+}
+
+.landing-band--center h2 {
+  max-width: 30ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.landing-band p {
+  margin: 0.9rem 0 0;
+  max-width: 34rem;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.landing-band--center p {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.landing-band-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.landing-band--center .landing-band-actions {
+  justify-content: center;
+}
+
+.landing-band-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+}
+
+.landing-band-feature {
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.1rem;
+}
+
+.landing-band-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  margin-bottom: 0.9rem;
+  border-radius: 999px;
+  background: var(--landing-primary);
+  color: #0f2718;
+}
+
+.landing-band-feature h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.landing-band-feature p {
+  margin: 0;
+  max-width: none;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.landing-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.landing-band--center .landing-topics {
+  justify-content: center;
+}
+
+.landing-topic-chip {
+  padding: 0.65rem 1.15rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .landing-band-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Purple gradient quote band */
+.landing-quote-band {
+  padding: 4.75rem 0;
+  background: linear-gradient(135deg, #7b4fc9, var(--landing-purple) 50%, #3f1f6e);
+  color: #fff;
+}
+
+.landing-quote-band blockquote {
+  margin: 0;
+  max-width: 42rem;
+  font-family: var(--landing-display);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+}
+
+.landing-quote-band cite {
+  display: block;
+  margin-top: 1.5rem;
+  font-style: normal;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* Stats strip (Resources page) */
+.landing-stats {
+  padding: 3.75rem 0;
+  background: var(--landing-soft);
+}
+
+.landing-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.75rem 1rem;
+  text-align: center;
+}
+
+.landing-stats-value {
+  display: block;
+  font-family: var(--landing-display);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--landing-ink);
+}
+
+.landing-stats-label {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--landing-muted);
+}
+
+@media (min-width: 640px) {
+  .landing-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Floating chip decoration reused on priority-style visuals across subpages */
+.landing-priority-visual {
+  position: relative;
+}
+
+.landing-priority-tag {
+  position: absolute;
+  top: -0.9rem;
+  right: 1.5rem;
+  z-index: 1;
+  padding: 0.5rem 0.85rem;
+  background: var(--landing-ink);
+  color: #fff;
+  border-radius: 0.6rem;
+  box-shadow: 0 10px 22px rgba(27, 27, 47, 0.18);
+  transform: rotate(4deg);
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.landing-priority-badge {
+  position: absolute;
+  bottom: -0.85rem;
+  left: 1.75rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--landing-primary);
+  color: #0f2718;
+  border-radius: 999px;
+  box-shadow: 0 10px 22px rgba(27, 27, 47, 0.18);
+}
+
+/* Contact page — floating reply-time chip on the form card */
+.landing-contact-form-wrap {
+  position: relative;
+}
+
+.landing-contact-form-tag {
+  position: absolute;
+  top: -0.9rem;
+  left: 1.75rem;
+  z-index: 1;
+  padding: 0.5rem 0.85rem;
+  background: var(--landing-ink);
+  color: #fff;
+  border-radius: 0.6rem;
+  box-shadow: 0 10px 22px rgba(27, 27, 47, 0.18);
+  transform: rotate(-3deg);
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+/* Help page — FAQ list + sidebar */
+.landing-faq-aside {
+  padding: 1.75rem;
+  background: var(--landing-soft);
+  border: 1px solid var(--landing-border);
+  border-radius: 1.25rem;
+  align-self: start;
+}
+
+.landing-faq-aside h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--landing-ink);
+}
+
+.landing-faq-aside p {
+  margin: 0 0 1.35rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--landing-muted);
+}
+
+@media (min-width: 900px) {
+  .landing-faq-layout {
+    grid-template-columns: 1fr 19rem;
+  }
+}
+
+/* Steps section head (How it works — dark band) */
+.landing-steps-head {
+  max-width: 32rem;
+  margin: 0 0 2.5rem;
+}
+
+.landing-steps-head h2 {
+  margin: 0.75rem 0 0;
+  font-family: var(--landing-display);
+  font-size: clamp(1.85rem, 3.6vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: #fff;
+}
+
+.landing-steps-head p {
+  margin: 0.85rem 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 /* CTA */

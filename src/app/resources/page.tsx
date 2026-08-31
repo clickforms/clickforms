@@ -8,6 +8,13 @@ import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
 
+const RESOURCE_STATS = [
+  { value: '20+', label: 'Field types built in' },
+  { value: '8', label: 'Ready-made form categories' },
+  { value: '100%', label: 'Structured submissions' },
+  { value: 'Full', label: 'Audit trail coverage' },
+] as const;
+
 const FORM_TYPES = [
   { name: 'Client intake', tags: 'Demographics, referrals, consent' },
   { name: 'Service agreements', tags: 'Multi-page, e-signature, uploads' },
@@ -29,6 +36,7 @@ export default async function ResourcesPage() {
   const session = await getServerSession(authOptions);
   const isAuthenticated = Boolean(session?.user);
   const secondaryHref = isAuthenticated ? '/forms' : '/signup';
+  const secondaryLabel = isAuthenticated ? 'Open workspace' : 'Start from a blank canvas';
 
   return (
     <div className="landing">
@@ -53,6 +61,35 @@ export default async function ResourcesPage() {
           <p className="landing-form-types-more">
             Need something else? <Link href={secondaryHref}>Start from a blank canvas</Link>
           </p>
+        </div>
+      </section>
+
+      <section className="landing-band landing-band--center">
+        <div className="landing-band-deco landing-band-deco--a" aria-hidden="true" />
+        <div className="landing-band-deco landing-band-deco--b" aria-hidden="true" />
+        <div className="landing-container landing-band-inner">
+          <span className="landing-band-eyebrow">Don&apos;t see it here?</span>
+          <h2>Start from a blank canvas instead</h2>
+          <p>
+            Every field type above is available from scratch, too — build exactly the form your
+            workflow needs, then reuse it as a template next time.
+          </p>
+          <div className="landing-band-actions">
+            <Link className="landing-btn landing-btn--cta landing-btn--lg" href={secondaryHref}>
+              {secondaryLabel}
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-stats">
+        <div className="landing-container landing-stats-grid">
+          {RESOURCE_STATS.map((stat) => (
+            <div key={stat.label}>
+              <span className="landing-stats-value">{stat.value}</span>
+              <span className="landing-stats-label">{stat.label}</span>
+            </div>
+          ))}
         </div>
       </section>
 

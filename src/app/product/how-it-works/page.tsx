@@ -53,6 +53,11 @@ export default async function HowItWorksPage() {
 
       <section className="landing-steps">
         <div className="landing-container">
+          <div className="landing-steps-head">
+            <span className="landing-band-eyebrow">Four steps</span>
+            <h2>From a blank canvas to a signed submission</h2>
+            <p>No code, no separate tools — just a form your team can trust end to end.</p>
+          </div>
           <div className="landing-steps-grid">
             {STEPS.map((step, index) => (
               <article key={step.title} className="landing-step">
@@ -75,42 +80,58 @@ export default async function HowItWorksPage() {
               and what your review can trust.
             </p>
           </div>
-          <div className="landing-hero-widget">
-            <div className="landing-widget-header">
-              <BoltIcon />
-              <span>3 forms live · Intake ready to publish</span>
-            </div>
+          <div className="landing-priority-visual" aria-hidden="true">
+            <span className="landing-priority-tag">Live</span>
+            <div className="landing-hero-widget">
+              <div className="landing-widget-header">
+                <BoltIcon />
+                <span>3 forms live · Intake ready to publish</span>
+              </div>
 
-            <div className="landing-widget-stack">
-              <div className="landing-widget-field">
-                <span>You collect</span>
-                <div className="landing-widget-input">
-                  <strong>Client intake</strong>
-                  <span className="landing-widget-tag">Intake</span>
+              <div className="landing-widget-stack">
+                <div className="landing-widget-field">
+                  <span>You collect</span>
+                  <div className="landing-widget-input">
+                    <strong>Client intake</strong>
+                    <span className="landing-widget-tag">Intake</span>
+                  </div>
+                </div>
+                <div className="landing-widget-field">
+                  <span>Team receives</span>
+                  <div className="landing-widget-input">
+                    <strong>Structured submission</strong>
+                    <span className="landing-widget-tag">Signed</span>
+                  </div>
                 </div>
               </div>
-              <div className="landing-widget-field">
-                <span>Team receives</span>
-                <div className="landing-widget-input">
-                  <strong>Structured submission</strong>
-                  <span className="landing-widget-tag">Signed</span>
-                </div>
-              </div>
-            </div>
 
-            <ul className="landing-widget-features">
-              <li>
-                <CheckIcon />
-                <span>Branded forms</span>
-                <span className="landing-widget-pill">Your colours</span>
-              </li>
-              <li>
-                <CheckIcon />
-                <span>Arrives</span>
-                <span className="landing-widget-pill">Instantly</span>
-              </li>
-            </ul>
+              <ul className="landing-widget-features">
+                <li>
+                  <CheckIcon />
+                  <span>Branded forms</span>
+                  <span className="landing-widget-pill">Your colours</span>
+                </li>
+                <li>
+                  <CheckIcon />
+                  <span>Arrives</span>
+                  <span className="landing-widget-pill">Instantly</span>
+                </li>
+              </ul>
+            </div>
+            <span className="landing-priority-badge">
+              <CheckIcon />
+            </span>
           </div>
+        </div>
+      </section>
+
+      <section className="landing-quote-band">
+        <div className="landing-container">
+          <blockquote>
+            &ldquo;Audit trails made our last review straightforward. We could show exactly who
+            published what, and when.&rdquo;
+          </blockquote>
+          <cite>Daniel R., Quality &amp; risk</cite>
         </div>
       </section>
 

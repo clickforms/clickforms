@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { LandingChatBubble } from '@/components/landing/landing-chat-bubble';
 import { LandingCta } from '@/components/landing/landing-cta';
@@ -7,6 +8,14 @@ import { ChevronDownIcon } from '@/components/landing/landing-icons';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
+
+const TOPICS = [
+  'Billing & plans',
+  'Branding & design',
+  'Security & access',
+  'Signatures & uploads',
+  'Approvals & audit trail',
+] as const;
 
 const FAQS = [
   {
@@ -58,6 +67,33 @@ export default async function HelpPage() {
                 </summary>
                 <p className="landing-faq-answer">{item.a}</p>
               </details>
+            ))}
+          </div>
+
+          <aside className="landing-faq-aside">
+            <h3>Still stuck?</h3>
+            <p>
+              Sign in and ask your workspace admin, or send our team a message — we reply within one
+              business day.
+            </p>
+            <Link className="landing-btn landing-btn--dark landing-btn--sm" href="/contact">
+              Contact us
+            </Link>
+          </aside>
+        </div>
+      </section>
+
+      <section className="landing-band landing-band--center">
+        <div className="landing-band-deco landing-band-deco--a" aria-hidden="true" />
+        <div className="landing-band-deco landing-band-deco--b" aria-hidden="true" />
+        <div className="landing-container landing-band-inner">
+          <span className="landing-band-eyebrow">Browse by topic</span>
+          <h2>Answers organised the way you think about them</h2>
+          <div className="landing-topics">
+            {TOPICS.map((topic) => (
+              <span key={topic} className="landing-topic-chip">
+                {topic}
+              </span>
             ))}
           </div>
         </div>

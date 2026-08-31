@@ -4,10 +4,28 @@ import { getServerSession } from 'next-auth';
 import { LandingChatBubble } from '@/components/landing/landing-chat-bubble';
 import { LandingCta } from '@/components/landing/landing-cta';
 import { LandingFooter } from '@/components/landing/landing-footer';
-import { ArrowRightIcon } from '@/components/landing/landing-icons';
+import { ArrowRightIcon, CheckIcon } from '@/components/landing/landing-icons';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
+
+const SERVICE_FEATURES = [
+  {
+    title: 'Signatures & uploads',
+    description:
+      'Capture e-signatures and file uploads as built-in field types — no third-party tools to wire up.',
+  },
+  {
+    title: 'Conditional logic',
+    description:
+      'Show only the questions that apply, based on earlier answers, across any number of pages.',
+  },
+  {
+    title: 'Approval workflows',
+    description:
+      'Route submissions to the right reviewer, with a full audit trail of who signed off and when.',
+  },
+] as const;
 
 export const metadata: Metadata = {
   title: 'Services | Clickforms',
@@ -48,6 +66,7 @@ export default async function ServicesPage() {
             </Link>
           </div>
           <div className="landing-priority-visual" aria-hidden="true">
+            <span className="landing-priority-tag">Compliance-ready</span>
             <div className="landing-preview-card">
               <div className="landing-preview-header">
                 <span>Submissions</span>
@@ -66,6 +85,33 @@ export default async function ServicesPage() {
                 <span>Review</span>
               </div>
             </div>
+            <span className="landing-priority-badge">
+              <CheckIcon />
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-band">
+        <div className="landing-band-deco landing-band-deco--a" aria-hidden="true" />
+        <div className="landing-band-deco landing-band-deco--b" aria-hidden="true" />
+        <div className="landing-container landing-band-inner">
+          <span className="landing-band-eyebrow">Included, not extra</span>
+          <h2>Everything a regulated workflow needs, out of the box</h2>
+          <p>
+            No plugins to install and no separate tools to pay for — every service form starts with
+            the same compliance-grade foundation.
+          </p>
+          <div className="landing-band-grid">
+            {SERVICE_FEATURES.map((feature) => (
+              <div key={feature.title} className="landing-band-feature">
+                <span className="landing-band-feature-icon">
+                  <CheckIcon />
+                </span>
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

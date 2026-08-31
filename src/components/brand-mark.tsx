@@ -41,7 +41,7 @@ export function BrandLogo({
   className?: string;
   priority?: boolean;
 }) {
-  const width = Math.round(height * (666 / 184));
+  const width = Math.round(height * (480 / 184));
   return (
     // biome-ignore lint/performance/noImgElement: static brand lockup from /public; next/image adds little here
     <img

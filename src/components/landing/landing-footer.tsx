@@ -8,7 +8,10 @@ export function LandingFooter() {
         <div className="landing-footer-brand-col">
           <Link href="/" className="landing-brand landing-brand--footer">
             <BrandMark size={24} id="footer" />
-            <span className="landing-brand-wordmark">Clickforms</span>
+            <span className="landing-brand-wordmark">
+              <span>Click</span>
+              <span>forms</span>
+            </span>
           </Link>
           <p className="landing-footer-tagline">
             The forms platform for teams that need every submission to hold up.

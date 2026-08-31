@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 666 184" fill="none" role="img" aria-label="Clickforms">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 184" fill="none" role="img" aria-label="Clickforms">
   <title>Clickforms</title>
   <g transform="translate(0 0) scale(5.75)">
     <rect width="32" height="32" rx="8" fill="#55ea8c"/>
@@ -14,11 +14,20 @@
   </g>
   <text
     x="210"
-    y="118"
+    y="98"
     fill="#111111"
     font-family="Poppins, Inter, system-ui, sans-serif"
-    font-size="78"
+    font-size="62"
     font-weight="800"
-    letter-spacing="-1.5"
-  >Clickforms</text>
+    letter-spacing="-0.5"
+  >CLICK</text>
+  <text
+    x="210"
+    y="158"
+    fill="#111111"
+    font-family="Poppins, Inter, system-ui, sans-serif"
+    font-size="62"
+    font-weight="800"
+    letter-spacing="-0.5"
+  >FORMS</text>
 </svg>

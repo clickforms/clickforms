@@ -7,7 +7,7 @@ export function LandingFooter() {
       <div className="landing-container landing-footer-top">
         <div className="landing-footer-brand-col">
           <Link href="/" className="landing-brand landing-brand--footer">
-            <BrandMark size={24} id="footer" />
+            <BrandMark size={30} id="footer" />
             <span className="landing-brand-wordmark">
               <span>Click</span>
               <span>forms</span>

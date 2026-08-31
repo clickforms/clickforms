@@ -57,7 +57,7 @@ export function LandingNav({ isAuthenticated = false }: { isAuthenticated?: bool
     <header className="landing-nav">
       <div className="landing-nav-inner">
         <Link href="/" className="landing-brand">
-          <BrandMark id="nav" />
+          <BrandMark id="nav" size={36} />
           <span className="landing-brand-wordmark">
             <span>Click</span>
             <span>forms</span>

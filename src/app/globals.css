@@ -814,6 +814,18 @@ a {
   min-height: 0;
 }
 
+/* On the builder specifically, the nav-tabs row and the page-switcher row read as one
+   continuous card — no gap between them, just the hairline border each already carries
+   — rather than two separate floating pills. (Submissions/settings, which use
+   .form-workspace without .builder, keep the default gap and a fully-rounded nav bar.) */
+.form-workspace:has(.builder) {
+  gap: 0;
+}
+
+.form-workspace:has(.builder) .form-top-nav {
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
 .form-workspace-content {
   flex: 1;
   min-width: 0;
@@ -2529,7 +2541,10 @@ a {
   max-width: none;
   align-self: stretch;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  /* No top border — .form-top-nav directly above already supplies that line via its own
+     border-bottom, so the two rows read as one seamless card, not two stacked ones. */
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-card);
   overflow: hidden;

@@ -2743,6 +2743,41 @@ a {
   list-style: none;
 }
 
+/* Two-line menu item — icon + label on top, a muted explainer line underneath. Used for
+   actions whose effect isn't obvious from the label alone (e.g. "Take offline" actually
+   stopping the public link vs. "Set to draft" not doing that). */
+.actions-menu-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.actions-menu-item-hint {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--color-text-subtle);
+}
+
+/* Groups the back-step ("Set to draft") and forward-step (Approve/Publish/Unpublish)
+   controls as one visual unit — same approval ladder, two directions — kept apart from
+   Take offline (in the kebab menu) so the two can't read as the same kind of action. */
+.builder-header-stage {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.builder-header-stage-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  gap: 0;
+  color: var(--color-text-muted);
+}
+
 .builder-readonly-badge {
   font-size: 0.6875rem;
   font-weight: 600;

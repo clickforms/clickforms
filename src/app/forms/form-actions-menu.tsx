@@ -43,7 +43,15 @@ interface FormActionsMenuProps {
 
 type MenuItem =
   | { kind: 'link'; label: string; href: string; icon: ReactNode; external?: boolean }
-  | { kind: 'button'; label: string; icon: ReactNode; onClick: () => void }
+  | {
+      kind: 'button';
+      label: string;
+      icon: ReactNode;
+      onClick: () => void;
+      /** Muted explainer line under the label — for actions whose effect isn't obvious
+       *  from the label alone (see "Take offline" vs. "Set to draft"). */
+      hint?: string;
+    }
   | { kind: 'disabled'; label: string; icon: ReactNode; title?: string }
   | { kind: 'divider' }
   | { kind: 'danger'; label: string; icon: ReactNode; onClick: () => void };
@@ -363,7 +371,14 @@ function MenuEntry({ item, onClose }: { item: MenuItem; onClose: () => void }) {
           }}
         >
           <span className="actions-menu-icon">{item.icon}</span>
-          {item.label}
+          {item.hint ? (
+            <span className="actions-menu-item-text">
+              {item.label}
+              <span className="actions-menu-item-hint">{item.hint}</span>
+            </span>
+          ) : (
+            item.label
+          )}
         </button>
       </li>
     );
@@ -511,11 +526,36 @@ export function FormActionsMenu({
         ) : (
           <UnpublishIcon />
         );
+      // Only publish/unpublish change what respondents can reach — approve is purely a
+      // pipeline step, so it gets no hint (nothing to explain).
+      const hint =
+        workflowStep.action === 'publish'
+          ? 'Makes the form live and publicly reachable'
+          : workflowStep.action === 'unpublish'
+            ? 'Stops the public link from working'
+            : undefined;
       items.push({
         kind: 'button',
         label: workflowStep.label,
         icon,
         onClick: () => onWorkflow(workflowStep.action),
+        hint,
+      });
+    }
+
+    // Grouped with the ladder button above — same approval stage, the other direction.
+    // Works from any non-draft, non-archived status. If the form is currently live this
+    // does NOT unpublish it — the live version keeps serving respondents until "Take
+    // offline"/"Unpublish" (below, past the divider) is used explicitly; this only resets
+    // the approval pipeline so editing starts a fresh draft. Kept apart from Take offline
+    // so the two can't read as the same kind of action.
+    if (status === 'approved' || status === 'published') {
+      items.push({
+        kind: 'button',
+        label: 'Set to draft',
+        icon: <RevertToDraftIcon />,
+        onClick: () => onWorkflow('revert-to-draft'),
+        hint: isLive ? 'Stays live — only resets the approval status' : undefined,
       });
     }
 
@@ -526,24 +566,13 @@ export function FormActionsMenu({
     // *live* version offline needs its own entry. Skip it when the ladder button is
     // already "Unpublish" to avoid showing the same action twice.
     if (shouldShowTakeOfflineAction(status, isLive)) {
+      items.push({ kind: 'divider' });
       items.push({
         kind: 'button',
         label: 'Take offline',
         icon: <UnpublishIcon />,
         onClick: () => onWorkflow('unpublish'),
-      });
-    }
-
-    // Works from any non-draft, non-archived status. If the form is currently live this
-    // does NOT unpublish it — the live version keeps serving respondents until "Take
-    // offline"/"Unpublish" is used explicitly; this only resets the approval pipeline so
-    // editing starts a fresh draft.
-    if (status === 'approved' || status === 'published') {
-      items.push({
-        kind: 'button',
-        label: 'Set to draft',
-        icon: <RevertToDraftIcon />,
-        onClick: () => onWorkflow('revert-to-draft'),
+        hint: 'Stops the public link from working',
       });
     }
 

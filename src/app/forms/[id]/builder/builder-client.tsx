@@ -830,55 +830,60 @@ export function BuilderClient({
                           <span className="actions-menu-icon">
                             <TakeOfflineIcon />
                           </span>
-                          {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
-                        </button>
-                      </li>
-                    ) : null}
-                    {formStatus === 'approved' || formStatus === 'published' ? (
-                      <li>
-                        <button
-                          type="button"
-                          className="actions-menu-item"
-                          onClick={() => {
-                            setMoreMenuOpen(false);
-                            void handleRevertToDraft();
-                          }}
-                          disabled={isWorkflowBusy}
-                          title={
-                            isLive
-                              ? 'Stays live until you take it offline — this only resets the approval status for editing'
-                              : undefined
-                          }
-                        >
-                          <span className="actions-menu-icon">
-                            <RevertToDraftIcon />
+                          <span className="actions-menu-item-text">
+                            {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
+                            <span className="actions-menu-item-hint">
+                              Stops the public link from working
+                            </span>
                           </span>
-                          Set to draft
                         </button>
                       </li>
                     ) : null}
                   </ul>
                 </DropdownMenu>
-                {workflowStep ? (
-                  <button
-                    type="button"
-                    className={
-                      canRunWorkflow
-                        ? 'button builder-header-cta'
-                        : 'button button--ghost button--small'
-                    }
-                    onClick={() => void handleWorkflowAction()}
-                    disabled={isWorkflowBusy || !canRunWorkflow}
-                    title={
-                      hasPendingChanges
-                        ? 'Your published form still shows the old version until you publish these changes'
-                        : undefined
-                    }
-                  >
-                    {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
-                    {!isWorkflowBusy && canRunWorkflow ? <ArrowRightIcon /> : null}
-                  </button>
-                ) : null}
+                {/* Paired as one control: the back-step button and the ladder button are
+                    the two directions of the same approval stage, kept visually together
+                    and away from Take offline (in the kebab above) so "go back to draft"
+                    can't be mistaken for "go offline" — see revertFormToDraft's docs for
+                    why those are different things. */}
+                <div className="builder-header-stage">
+                  {formStatus === 'approved' || formStatus === 'published' ? (
+                    <button
+                      type="button"
+                      className="button button--ghost button--small builder-header-stage-back"
+                      onClick={() => void handleRevertToDraft()}
+                      disabled={isWorkflowBusy}
+                      aria-label="Set to draft"
+                      title={
+                        isLive
+                          ? 'Set to draft — stays live until you take it offline, this only resets the approval status'
+                          : 'Set to draft'
+                      }
+                    >
+                      <RevertToDraftIcon />
+                    </button>
+                  ) : null}
+                  {workflowStep ? (
+                    <button
+                      type="button"
+                      className={
+                        canRunWorkflow
+                          ? 'button builder-header-cta'
+                          : 'button button--ghost button--small'
+                      }
+                      onClick={() => void handleWorkflowAction()}
+                      disabled={isWorkflowBusy || !canRunWorkflow}
+                      title={
+                        hasPendingChanges
+                          ? 'Your published form still shows the old version until you publish these changes'
+                          : undefined
+                      }
+                    >
+                      {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
+                      {!isWorkflowBusy && canRunWorkflow ? <ArrowRightIcon /> : null}
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </>
           ) : null}

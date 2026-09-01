@@ -155,23 +155,17 @@ function TakeOfflineIcon() {
   );
 }
 
+/* Same overlapping-squares glyph as field-card.tsx's CopyIcon, kept as a separate
+   component here since that one lives in a different file. */
 function ShareLinkIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M6.7 9.3l2.6-2.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <rect x="6" y="6" width="8" height="8" rx="1.4" stroke="currentColor" strokeWidth="1.4" />
       <path
-        d="M7.5 4.3l1.2-1.2a2.3 2.3 0 0 1 3.3 3.3L10.8 7.6"
+        d="M4 10.2V4.8A1.8 1.8 0 0 1 5.8 3h5.4"
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.5 11.7l-1.2 1.2a2.3 2.3 0 0 1-3.3-3.3l1.2-1.2"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </svg>
   );

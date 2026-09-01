@@ -65,17 +65,10 @@ export default async function SubmissionsListPage({ params }: PageProps) {
   return (
     <div>
       <div className="submissions-page-header">
-        <div>
-          <h1 className="submissions-page-title">Responses</h1>
-          <p className="submissions-page-subtitle">
-            Every response submitted through this form, newest first.
-          </p>
-        </div>
-        {submissions.length > 0 ? (
-          <span className="submissions-count-badge">
-            {submissions.length} {submissions.length === 1 ? 'response' : 'responses'}
-          </span>
-        ) : null}
+        <h1 className="submissions-page-title">Responses</h1>
+        <p className="submissions-page-subtitle">
+          Every response submitted through this form, newest first.
+        </p>
       </div>
 
       <SubmissionsListClient

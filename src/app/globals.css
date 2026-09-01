@@ -910,16 +910,6 @@ a {
   color: var(--color-primary);
 }
 
-.form-top-nav-tab--disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.form-top-nav-tab--disabled:hover {
-  background-color: transparent;
-  color: var(--color-text-muted);
-}
-
 .form-top-nav-tab-icon {
   display: flex;
   align-items: center;

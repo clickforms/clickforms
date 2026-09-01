@@ -70,20 +70,6 @@ function ResponsesIcon() {
   );
 }
 
-function SettingsIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M4 4l1 1M11 11l1 1M4 12l1-1M11 5l1-1"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function PreviewIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -105,17 +91,14 @@ interface FormTopNavProps {
   responseCount: number;
 }
 
-type NavItem =
-  | {
-      kind: 'link';
-      key: string;
-      href: string;
-      label: string;
-      icon: ReactNode;
-      match: (path: string) => boolean;
-      badge?: number;
-    }
-  | { kind: 'disabled'; key: string; label: string; icon: ReactNode; hint: string };
+interface NavItem {
+  key: string;
+  href: string;
+  label: string;
+  icon: ReactNode;
+  match: (path: string) => boolean;
+  badge?: number;
+}
 
 export function FormTopNav({ formId, formName, slug, responseCount }: FormTopNavProps) {
   const pathname = usePathname();
@@ -129,7 +112,6 @@ export function FormTopNav({ formId, formName, slug, responseCount }: FormTopNav
 
   const navItems: NavItem[] = [
     {
-      kind: 'link',
       key: 'builder',
       href: `/forms/${formId}/builder`,
       label: 'Builder',
@@ -137,14 +119,6 @@ export function FormTopNav({ formId, formName, slug, responseCount }: FormTopNav
       match: (path) => path.includes(`/forms/${formId}/builder`),
     },
     {
-      kind: 'disabled',
-      key: 'settings',
-      label: 'Settings',
-      icon: <SettingsIcon />,
-      hint: 'Emails, workflows, and permissions — not built yet',
-    },
-    {
-      kind: 'link',
       key: 'responses',
       href: `/forms/${formId}/submissions`,
       label: 'Responses',
@@ -155,17 +129,6 @@ export function FormTopNav({ formId, formName, slug, responseCount }: FormTopNav
   ];
 
   function renderItem(item: NavItem) {
-    if (item.kind === 'disabled') {
-      return (
-        <li key={item.key} className="form-top-nav-item">
-          <span className="form-top-nav-tab form-top-nav-tab--disabled" title={item.hint}>
-            <span className="form-top-nav-tab-icon">{item.icon}</span>
-            <span className="form-top-nav-tab-label">{item.label}</span>
-          </span>
-        </li>
-      );
-    }
-
     const isActive = item.match(pathname);
 
     return (

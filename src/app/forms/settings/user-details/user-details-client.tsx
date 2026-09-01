@@ -90,7 +90,7 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
             </p>
           ) : null}
 
-          <dl className="contact-details-list contact-details-list--table">
+          <dl className="contact-details-list contact-details-list--table contact-details-list--wide-inputs">
             <div className="contact-details-row">
               <dt>
                 <span>Full name</span>

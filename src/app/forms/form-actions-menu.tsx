@@ -286,6 +286,26 @@ function PublishIcon() {
   );
 }
 
+function RevertToDraftIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M4 4.5A5.5 5.5 0 1 1 3 8"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4 2v3H1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ChevronIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -511,6 +531,19 @@ export function FormActionsMenu({
         label: 'Take offline',
         icon: <UnpublishIcon />,
         onClick: () => onWorkflow('unpublish'),
+      });
+    }
+
+    // Works from any non-draft, non-archived status. If the form is currently live this
+    // does NOT unpublish it — the live version keeps serving respondents until "Take
+    // offline"/"Unpublish" is used explicitly; this only resets the approval pipeline so
+    // editing starts a fresh draft.
+    if (status === 'approved' || status === 'published') {
+      items.push({
+        kind: 'button',
+        label: 'Set to draft',
+        icon: <RevertToDraftIcon />,
+        onClick: () => onWorkflow('revert-to-draft'),
       });
     }
 

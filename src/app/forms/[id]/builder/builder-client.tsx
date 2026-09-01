@@ -219,6 +219,26 @@ function SettingsIcon() {
   );
 }
 
+function RevertToDraftIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M4 4.5A5.5 5.5 0 1 1 3 8"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4 2v3H1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function SaveStatusBadge({ status, error }: { status: SaveStatus; error: string | null }) {
   switch (status) {
     case 'pending':
@@ -439,6 +459,10 @@ export function BuilderClient({
 
   async function handleTakeOffline() {
     await runWorkflowAction('unpublish');
+  }
+
+  async function handleRevertToDraft() {
+    await runWorkflowAction('revert-to-draft');
   }
 
   async function handleCopyLink() {
@@ -807,6 +831,29 @@ export function BuilderClient({
                             <TakeOfflineIcon />
                           </span>
                           {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
+                        </button>
+                      </li>
+                    ) : null}
+                    {formStatus === 'approved' || formStatus === 'published' ? (
+                      <li>
+                        <button
+                          type="button"
+                          className="actions-menu-item"
+                          onClick={() => {
+                            setMoreMenuOpen(false);
+                            void handleRevertToDraft();
+                          }}
+                          disabled={isWorkflowBusy}
+                          title={
+                            isLive
+                              ? 'Stays live until you take it offline — this only resets the approval status for editing'
+                              : undefined
+                          }
+                        >
+                          <span className="actions-menu-icon">
+                            <RevertToDraftIcon />
+                          </span>
+                          Set to draft
                         </button>
                       </li>
                     ) : null}

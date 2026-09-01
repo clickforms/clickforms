@@ -109,7 +109,13 @@ export async function unpublishForm(
   return { form: updatedForm, version: latest };
 }
 
-/** approved | published → draft (take offline and return to editing) */
+/** approved | published → draft, for editing. Deliberately does NOT touch
+ *  `currentVersionId` — if the form is currently live, it stays live (still served to
+ *  respondents under its published version) right up until it's explicitly unpublished
+ *  via unpublishForm/"Take offline". This only resets the approval *pipeline*, the same
+ *  way editing a live form already does automatically (see shouldResetToDraftOnSchemaEdit
+ *  in api/forms/[id]/route.ts) — it just lets the user trigger that reset on demand
+ *  instead of only as a side effect of typing into a field. */
 export async function revertFormToDraft(
   tx: Prisma.TransactionClient,
   form: Form,
@@ -122,12 +128,15 @@ export async function revertFormToDraft(
   const latest = await getLatestFormVersion(tx, form.id);
   if (!latest) throw new NotFoundError('Form version');
 
+  // A published version's schema must never be mutated in place (see
+  // getOrCreateDraftVersion) — if the latest version is already live, editing continues
+  // on a fresh copy rather than on the version currentVersionId still points at.
   const editableVersion =
     latest.publishedAt !== null ? await getOrCreateDraftVersion(tx, form) : latest;
 
   const updatedForm = await tx.form.update({
     where: { id: form.id },
-    data: { status: 'draft', currentVersionId: null },
+    data: { status: 'draft' },
   });
 
   return { form: updatedForm, version: editableVersion };

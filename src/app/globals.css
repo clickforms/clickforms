@@ -160,16 +160,6 @@
   background: rgba(148, 163, 184, 0.14);
 }
 
-.admin-shell[data-theme="dark"] .live-status--draft {
-  background-color: rgba(139, 124, 246, 0.16);
-  color: #c4b5fd;
-  border-color: rgba(139, 124, 246, 0.35);
-}
-
-.admin-shell[data-theme="dark"] .live-status--draft .live-status-dot {
-  background-color: #c4b5fd;
-}
-
 .admin-shell[data-theme="dark"] .live-status--approved {
   background-color: rgba(56, 189, 248, 0.14);
   color: #7dd3fc;
@@ -381,13 +371,13 @@ a {
 }
 
 .live-status--draft {
-  background-color: #ece9fb;
-  color: var(--color-secondary-hover);
-  border-color: #d7d2f5;
+  background-color: var(--color-warning-soft);
+  color: var(--color-warning-hover);
+  border-color: var(--color-warning-border);
 }
 
 .live-status--draft .live-status-dot {
-  background-color: var(--color-secondary-hover);
+  background-color: var(--color-warning);
 }
 
 .live-status--approved {
@@ -3900,7 +3890,7 @@ a {
   height: 1.6rem;
   flex-shrink: 0;
   background: none;
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-pill);
   color: var(--color-text-muted);
   cursor: pointer;
@@ -3924,20 +3914,20 @@ a {
   align-items: center;
   gap: 0.4rem;
   padding: 0.3rem 0.65rem;
-  background-color: transparent;
+  background-color: var(--color-lavender-soft);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
-  color: var(--color-text);
+  color: var(--color-lavender-strong);
   cursor: pointer;
   transition: background-color 0.12s ease;
 }
 
 .page-switcher-trigger:hover {
-  background-color: var(--color-surface-sunken);
+  background-color: color-mix(in srgb, var(--color-lavender-soft) 65%, var(--color-lavender) 35%);
 }
 
 .page-switcher-trigger > svg:first-child {
-  color: var(--color-text-subtle);
+  color: var(--color-lavender-strong);
 }
 
 .page-switcher-trigger-label {
@@ -4069,14 +4059,11 @@ a {
   cursor: not-allowed;
 }
 
-/* Dashed border reuses the app's existing "add zone" language (canvas-empty,
-   column-layout-wrap) so this reads as an action, not another page pill. */
 .page-tab-add {
   margin-left: 0.15rem;
   padding: 0.25rem 0.65rem !important;
   font-family: var(--font-poppins), var(--font-body);
   font-size: 0.75rem !important;
-  border-style: dashed;
   color: var(--color-text-muted);
 }
 

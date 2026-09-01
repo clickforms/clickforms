@@ -108,6 +108,20 @@ interface DragPayload {
   columnLayoutColumns?: ColumnCount;
 }
 
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3.5 8.3 6.5 11.3 12.5 4.7"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function PlusIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -704,6 +718,7 @@ export function BuilderClient({
                         : undefined
                     }
                   >
+                    {!isWorkflowBusy && canRunWorkflow ? <CheckIcon /> : null}
                     {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
                   </button>
                 ) : null}

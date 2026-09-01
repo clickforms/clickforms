@@ -2633,6 +2633,92 @@ a {
   border-color: var(--color-border-strong);
 }
 
+.builder-header-share svg:last-child {
+  color: var(--color-text-subtle);
+}
+
+/* Share dropdown — holds both "copy the link" and "open the live form", so the one
+   trigger covers what used to need a separate Copy link button and no way at all to
+   view the live (published) form instead of just the draft Preview. */
+.share-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 17.5rem;
+  padding: 0.75rem;
+}
+
+.share-panel-label {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.share-panel-url-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.5rem;
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.share-panel-url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.share-panel-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.share-panel-copy:hover {
+  background-color: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+}
+
+.share-panel-view-live {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background-color: var(--color-text);
+  color: var(--color-surface);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.12s ease;
+}
+
+.share-panel-view-live:hover {
+  background-color: #000;
+}
+
 .builder-header .button--small {
   padding: 0.3rem 0.7rem;
   font-size: 0.75rem;

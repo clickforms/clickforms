@@ -170,6 +170,55 @@ function ShareLinkIcon() {
   );
 }
 
+function ChevronDownIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3.5 6 8 10.5 12.5 6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M6.5 4H4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V9.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.5 2.5H13.5V6.5M13 3 8 8"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M4 4l1 1M11 11l1 1M4 12l1-1M11 5l1-1"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function SaveStatusBadge({ status, error }: { status: SaveStatus; error: string | null }) {
   switch (status) {
     case 'pending':
@@ -224,6 +273,8 @@ export function BuilderClient({
   const [showMobilePalette, setShowMobilePalette] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareTriggerRef = useRef<HTMLButtonElement>(null);
   const [mockAnswers, setMockAnswers] = useState<FormAnswers>({});
   const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
 
@@ -653,65 +704,114 @@ export function BuilderClient({
           {!canEdit ? <span className="builder-readonly-badge">Read-only</span> : null}
           {canEdit ? (
             <>
-              <button
-                type="button"
-                className="button button--ghost button--small"
-                onClick={() => setShowFormSettings(true)}
-              >
-                Form settings
-              </button>
               <SaveStatusBadge status={saveStatus} error={saveError} />
               <span className="builder-header-divider" aria-hidden="true" />
               <div className="builder-header-status-group">
-                {showTakeOffline ? (
+                {isLive ? (
                   <>
+                    {/* Replaces the old plain "Copy link" button — this is also where
+                        "view the live form from here" lives, so copying the link and
+                        opening it sit together instead of needing a second control. */}
                     <button
-                      ref={moreMenuTriggerRef}
+                      ref={shareTriggerRef}
                       type="button"
-                      className="button button--ghost button--small builder-header-kebab"
-                      onClick={() => setMoreMenuOpen((value) => !value)}
+                      className="button button--ghost builder-header-share"
+                      onClick={() => setShareOpen((value) => !value)}
                       aria-haspopup="true"
-                      aria-label="More actions"
                     >
-                      <KebabIcon />
+                      <ShareLinkIcon /> Share
+                      <ChevronDownIcon />
                     </button>
                     <DropdownMenu
-                      open={moreMenuOpen}
-                      onOpenChange={setMoreMenuOpen}
-                      triggerRef={moreMenuTriggerRef}
+                      open={shareOpen}
+                      onOpenChange={setShareOpen}
+                      triggerRef={shareTriggerRef}
+                      panelClassName="actions-menu-panel share-panel"
                       align="end"
                     >
-                      <ul className="builder-more-menu-list">
-                        <li>
-                          <button
-                            type="button"
-                            className="actions-menu-item"
-                            onClick={() => {
-                              setMoreMenuOpen(false);
-                              void handleTakeOffline();
-                            }}
-                            disabled={isWorkflowBusy}
-                          >
-                            <span className="actions-menu-icon">
-                              <TakeOfflineIcon />
-                            </span>
-                            {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
-                          </button>
-                        </li>
-                      </ul>
+                      <p className="share-panel-label">Live link</p>
+                      <div className="share-panel-url-row">
+                        <span className="share-panel-url" title={publicUrl}>
+                          {publicUrl}
+                        </span>
+                        <button
+                          type="button"
+                          className="share-panel-copy"
+                          onClick={() => {
+                            setShareOpen(false);
+                            void handleCopyLink();
+                          }}
+                          aria-label="Copy live link"
+                          title="Copy link"
+                        >
+                          <ShareLinkIcon />
+                        </button>
+                      </div>
+                      <a
+                        href={publicUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="share-panel-view-live"
+                        onClick={() => setShareOpen(false)}
+                      >
+                        View live form
+                        <ExternalLinkIcon />
+                      </a>
                     </DropdownMenu>
                   </>
                 ) : null}
-                {isLive ? (
-                  <button
-                    type="button"
-                    className="button button--ghost builder-header-share"
-                    onClick={() => void handleCopyLink()}
-                    title={publicUrl}
-                  >
-                    <ShareLinkIcon /> Copy link
-                  </button>
-                ) : null}
+                <button
+                  ref={moreMenuTriggerRef}
+                  type="button"
+                  className="button button--ghost button--small builder-header-kebab"
+                  onClick={() => setMoreMenuOpen((value) => !value)}
+                  aria-haspopup="true"
+                  aria-label="More actions"
+                >
+                  <KebabIcon />
+                </button>
+                <DropdownMenu
+                  open={moreMenuOpen}
+                  onOpenChange={setMoreMenuOpen}
+                  triggerRef={moreMenuTriggerRef}
+                  align="end"
+                >
+                  <ul className="builder-more-menu-list">
+                    <li>
+                      <button
+                        type="button"
+                        className="actions-menu-item"
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          setShowFormSettings(true);
+                        }}
+                      >
+                        <span className="actions-menu-icon">
+                          <SettingsIcon />
+                        </span>
+                        Form settings
+                      </button>
+                    </li>
+                    {showTakeOffline ? (
+                      <li>
+                        <button
+                          type="button"
+                          className="actions-menu-item"
+                          onClick={() => {
+                            setMoreMenuOpen(false);
+                            void handleTakeOffline();
+                          }}
+                          disabled={isWorkflowBusy}
+                        >
+                          <span className="actions-menu-icon">
+                            <TakeOfflineIcon />
+                          </span>
+                          {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
+                        </button>
+                      </li>
+                    ) : null}
+                  </ul>
+                </DropdownMenu>
                 {workflowStep ? (
                   <button
                     type="button"

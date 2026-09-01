@@ -160,16 +160,6 @@
   background: rgba(148, 163, 184, 0.14);
 }
 
-.admin-shell[data-theme="dark"] .live-status--approved {
-  background-color: rgba(56, 189, 248, 0.14);
-  color: #7dd3fc;
-  border-color: rgba(56, 189, 248, 0.35);
-}
-
-.admin-shell[data-theme="dark"] .live-status--approved .live-status-dot {
-  background-color: #7dd3fc;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -380,14 +370,19 @@ a {
   background-color: var(--color-warning);
 }
 
+/* Lavender, not blue — blue was a one-off hue with no other use in the app; lavender is
+   the established secondary accent (Page 1 pill, search field), so "Approved · not
+   live" now reads as on-brand rather than an unrelated fourth color. Token-based, so the
+   dark-theme override this used to need (a second hardcoded blue) is gone — it re-themes
+   the same way the other live-status tones already do. */
 .live-status--approved {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border-color: #bae6fd;
+  background-color: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  border-color: var(--color-lavender);
 }
 
 .live-status--approved .live-status-dot {
-  background-color: #0369a1;
+  background-color: var(--color-lavender-strong);
 }
 
 .live-status--archived {

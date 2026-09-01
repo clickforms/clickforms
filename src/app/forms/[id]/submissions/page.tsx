@@ -64,7 +64,12 @@ export default async function SubmissionsListPage({ params }: PageProps) {
 
   return (
     <div>
-      <h1>Responses</h1>
+      <div className="submissions-page-header">
+        <h1 className="submissions-page-title">Responses</h1>
+        <p className="submissions-page-subtitle">
+          Every response submitted through this form, newest first.
+        </p>
+      </div>
 
       <SubmissionsListClient
         formId={form.id}

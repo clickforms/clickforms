@@ -15,6 +15,20 @@ interface SubmissionSummary {
   createdAt: string;
 }
 
+function ResponsesEmptyIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <path
+        d="M4 4.5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-6.5L8 19v-3.5H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M7 9h8M7 12h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const SUBMISSION_STATUS_BADGE: Record<SubmissionStatus, { label: string; className: string }> = {
   in_progress: { label: 'In progress', className: 'badge--neutral' },
   submitted: { label: 'Submitted', className: 'badge--success' },
@@ -66,8 +80,14 @@ export function SubmissionsListClient({
 
   if (submissions.length === 0) {
     return (
-      <div className="card empty-state">
-        <p>No submissions yet for this form.</p>
+      <div className="card submissions-empty-state">
+        <span className="submissions-empty-icon" aria-hidden="true">
+          <ResponsesEmptyIcon />
+        </span>
+        <p className="submissions-empty-title">No responses yet</p>
+        <p className="submissions-empty-hint">
+          Once someone submits this form, their response will show up here.
+        </p>
       </div>
     );
   }
@@ -82,8 +102,7 @@ export function SubmissionsListClient({
                 <th>Submitted at</th>
                 <th>Status</th>
                 <th>IP address</th>
-                <th>Details</th>
-                {canDelete ? <th aria-label="Actions" /> : null}
+                <th aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
@@ -100,25 +119,25 @@ export function SubmissionsListClient({
                       <span className={`badge ${badge.className}`}>{badge.label}</span>
                     </td>
                     <td data-label="IP address">{submission.ipAddress ?? '—'}</td>
-                    <td data-label="Details">
-                      <Link
-                        className="button button--secondary button--small"
-                        href={`/forms/${formId}/submissions/${submission.id}`}
-                      >
-                        View
-                      </Link>
-                    </td>
-                    {canDelete ? (
-                      <td data-label="Actions">
-                        <button
-                          type="button"
-                          className="button button--danger button--small"
-                          onClick={() => setDeletingId(submission.id)}
+                    <td data-label="Actions">
+                      <div className="submissions-row-actions">
+                        <Link
+                          className="button button--ghost button--small"
+                          href={`/forms/${formId}/submissions/${submission.id}`}
                         >
-                          Delete
-                        </button>
-                      </td>
-                    ) : null}
+                          View
+                        </Link>
+                        {canDelete ? (
+                          <button
+                            type="button"
+                            className="button button--ghost button--small button--ghost-danger"
+                            onClick={() => setDeletingId(submission.id)}
+                          >
+                            Delete
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}

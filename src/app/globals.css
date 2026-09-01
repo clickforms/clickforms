@@ -2697,10 +2697,12 @@ a {
    .builder-workspace — the field list stays put while only the canvas (the actual
    form) scrolls. Field settings now open in a modal instead of a persistent panel.
    Fixed (not percentage) width so the palette stays a narrow, constant-width rail and
-   the canvas column — not the palette — gets the space a wider viewport adds. */
+   the canvas column — not the palette — gets the space a wider viewport adds. Wide
+   enough that the longest field label ("Legal / consent") doesn't ellipsis in the
+   2-column grid below. */
 .builder-palette {
-  width: 19rem;
-  max-width: 19rem;
+  width: 23rem;
+  max-width: 23rem;
   flex-shrink: 0;
   min-height: 0;
   min-width: 0;

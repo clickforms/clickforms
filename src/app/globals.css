@@ -2842,20 +2842,37 @@ a {
   color: var(--color-text-muted);
 }
 
+/* Lavender is the palette's one deliberate accent (see .page-switcher-trigger-icon and
+   the "Page 1" pill) — reused here so the search field, the first thing a builder sees
+   in the sidebar, gets a touch of the same colour rather than sitting flat grey. */
 .palette-search {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   margin: 0 0.1rem 0.85rem;
-  padding: 0.5rem 0.65rem;
-  background-color: var(--color-surface-sunken);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding: 0.55rem 0.8rem;
+  background-color: var(--color-lavender-soft);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.palette-search:hover {
+  background-color: color-mix(in srgb, var(--color-lavender-soft) 65%, var(--color-lavender) 35%);
+}
+
+.palette-search:focus-within {
+  background-color: var(--color-surface);
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
 }
 
 .palette-search-icon {
   display: inline-flex;
-  color: var(--color-text-subtle);
+  color: var(--color-lavender-strong);
   flex-shrink: 0;
 }
 
@@ -2866,11 +2883,14 @@ a {
   border: none;
   outline: none;
   font-size: 0.8125rem;
+  font-weight: 500;
   color: var(--color-text);
 }
 
 .palette-search input::placeholder {
-  color: var(--color-text-subtle);
+  color: var(--color-lavender-strong);
+  opacity: 0.65;
+  font-weight: 500;
 }
 
 .palette-groups {

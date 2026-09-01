@@ -175,6 +175,27 @@ function TrashIcon() {
   );
 }
 
+function CloudUploadIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M6.2 15h8.1a3.2 3.2 0 0 0 .5-6.36 4.3 4.3 0 0 0-8.4-1.2A3.6 3.6 0 0 0 6.2 15Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 12.5V8m0 0-2 2m2-2 2 2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 // Always mounted when canEdit; CSS reveals it on hover (see .field-card-action-overlay
 // in globals.css) rather than on click/selection. Mirrors a common "click and drag to
 // move the field or: [Edit] [Duplicate] [Delete]" panel, offering the same three actions
@@ -359,21 +380,29 @@ function FieldPreview({
           style={inputStyle}
         />
       );
-    case 'file_upload':
+    case 'file_upload': {
+      const hint = [
+        field.validation?.acceptedTypes?.length
+          ? `Accepted: ${field.validation.acceptedTypes.join(', ')}`
+          : null,
+        field.validation?.maxSizeMb ? `Max. file size: ${field.validation.maxSizeMb}MB` : null,
+      ]
+        .filter((part): part is string => part !== null)
+        .join(' · ');
       return (
-        <div className="field-preview-dropzone" style={inputStyle}>
-          <span>
-            {field.multiple
-              ? `Drop files here or click to upload${field.maxFiles ? ` (up to ${field.maxFiles})` : ''}`
-              : 'Drop a file here or click to upload'}
+        // Non-interactive mockup (no real <input>) — matches .form-field-file-dropzone on
+        // the live form 1:1 so the canvas is a true preview of what respondents see.
+        <div className="form-field-file-dropzone field-preview-dropzone" style={inputStyle}>
+          <span className="form-field-file-dropzone-icon" aria-hidden="true">
+            <CloudUploadIcon />
           </span>
-          {field.validation?.acceptedTypes && field.validation.acceptedTypes.length > 0 && (
-            <span className="field-preview-hint">
-              Accepted: {field.validation.acceptedTypes.join(', ')}
-            </span>
-          )}
+          <span className="form-field-file-dropzone-label">
+            {field.multiple ? 'Tap to upload documents' : 'Tap to upload a document'}
+          </span>
+          {hint ? <span className="form-field-file-dropzone-hint">{hint}</span> : null}
         </div>
       );
+    }
     case 'signature':
       return (
         <div className="field-preview-signature" style={inputStyle}>

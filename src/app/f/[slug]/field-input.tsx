@@ -545,6 +545,27 @@ export function FieldInput({
 // just the resulting fileId string, not an array.
 // ---------------------------------------------------------------------------
 
+function CloudUploadIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M6.2 15h8.1a3.2 3.2 0 0 0 .5-6.36 4.3 4.3 0 0 0-8.4-1.2A3.6 3.6 0 0 0 6.2 15Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 12.5V8m0 0-2 2m2-2 2 2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 interface FileUploadControlProps {
   field: Extract<FormField, { type: 'file_upload' }>;
   value: FieldValue;
@@ -572,6 +593,15 @@ function FileUploadControl({ field, value, onChange, onUploadFile }: FileUploadC
   const atMaxFiles =
     multiple && field.maxFiles !== undefined && currentFileIds.length >= field.maxFiles;
   const accept = field.validation?.acceptedTypes?.join(',');
+  const dropzoneLabel = multiple ? 'Tap to upload documents' : 'Tap to upload a document';
+  const dropzoneHint = [
+    field.validation?.acceptedTypes?.length
+      ? `Accepted: ${field.validation.acceptedTypes.join(', ')}`
+      : null,
+    field.validation?.maxSizeMb ? `Max. file size: ${field.validation.maxSizeMb}MB` : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(' · ');
 
   async function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -629,19 +659,32 @@ function FileUploadControl({ field, value, onChange, onUploadFile }: FileUploadC
         </ul>
       ) : null}
       {!atMaxFiles ? (
-        <input
-          id={field.id}
-          type="file"
-          className="form-field-file-input"
-          accept={accept}
-          multiple={multiple}
-          disabled={uploading}
-          onChange={handleChange}
-        />
+        <label
+          className={`form-field-file-dropzone ${uploading ? 'form-field-file-dropzone--disabled' : ''}`}
+          htmlFor={field.id}
+        >
+          <span className="form-field-file-dropzone-icon" aria-hidden="true">
+            <CloudUploadIcon />
+          </span>
+          <span className="form-field-file-dropzone-label">
+            {uploading ? 'Uploading…' : dropzoneLabel}
+          </span>
+          {dropzoneHint ? (
+            <span className="form-field-file-dropzone-hint">{dropzoneHint}</span>
+          ) : null}
+          <input
+            id={field.id}
+            type="file"
+            className="form-field-file-input"
+            accept={accept}
+            multiple={multiple}
+            disabled={uploading}
+            onChange={handleChange}
+          />
+        </label>
       ) : (
         <p className="form-field-help">Maximum of {field.maxFiles} files reached.</p>
       )}
-      {uploading ? <p className="form-field-help">Uploading…</p> : null}
       {uploadError ? <p className="form-field-error">{uploadError}</p> : null}
     </div>
   );

@@ -841,7 +841,7 @@ a {
   justify-content: space-between;
   gap: 0.75rem;
   min-height: var(--form-top-nav-height);
-  padding: 0.2rem 0.35rem 0.2rem 0.25rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.4rem;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -955,10 +955,12 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: 0.4rem;
-  border: 1px solid transparent;
-  color: var(--color-text-muted);
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-poppins), var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
   text-decoration: none;
@@ -971,7 +973,7 @@ a {
 
 .form-top-nav-preview:hover {
   background-color: var(--color-surface-sunken);
-  border-color: var(--color-border);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 
@@ -2543,6 +2545,22 @@ a {
   flex-shrink: 0;
 }
 
+/* Separates "configure the form" (Form settings, save status) from "its publish
+   state" (Live/Draft badge + the workflow action) — two different kinds of controls
+   that used to sit in one undifferentiated row. */
+.builder-header-divider {
+  width: 1px;
+  height: 1.15rem;
+  background-color: var(--color-border);
+  flex-shrink: 0;
+}
+
+.builder-header-status-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .builder-header .live-status {
   padding: 0.2rem 0.55rem 0.2rem 0.45rem;
   font-size: 0.6875rem;
@@ -3757,10 +3775,20 @@ a {
   cursor: not-allowed;
 }
 
+/* Dashed border reuses the app's existing "add zone" language (canvas-empty,
+   column-layout-wrap) so this reads as an action, not another page pill. */
 .page-tab-add {
-  margin-left: 0.15rem;
+  margin-left: 0.35rem;
   padding: 0.25rem 0.65rem !important;
+  font-family: var(--font-poppins), var(--font-body);
   font-size: 0.75rem !important;
+  border-style: dashed;
+  color: var(--color-text-muted);
+}
+
+.page-tab-add:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
 }
 
 /* Field settings panel */

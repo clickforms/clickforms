@@ -563,39 +563,42 @@ export function BuilderClient({
                 Form settings
               </button>
               <SaveStatusBadge status={saveStatus} error={saveError} />
-              <LiveStatusBadge
-                status={formStatus}
-                isLive={isLive}
-                hasPendingChanges={hasPendingChanges}
-              />
-              {showTakeOffline ? (
-                <button
-                  type="button"
-                  className="button button--ghost button--small"
-                  onClick={() => void handleTakeOffline()}
-                  disabled={isWorkflowBusy}
-                  title="Take the currently live version offline"
-                >
-                  {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
-                </button>
-              ) : null}
-              {workflowStep ? (
-                <button
-                  type="button"
-                  className={
-                    canRunWorkflow ? 'button button--small' : 'button button--ghost button--small'
-                  }
-                  onClick={() => void handleWorkflowAction()}
-                  disabled={isWorkflowBusy || !canRunWorkflow}
-                  title={
-                    hasPendingChanges
-                      ? 'Your published form still shows the old version until you publish these changes'
-                      : undefined
-                  }
-                >
-                  {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
-                </button>
-              ) : null}
+              <span className="builder-header-divider" aria-hidden="true" />
+              <div className="builder-header-status-group">
+                <LiveStatusBadge
+                  status={formStatus}
+                  isLive={isLive}
+                  hasPendingChanges={hasPendingChanges}
+                />
+                {showTakeOffline ? (
+                  <button
+                    type="button"
+                    className="button button--ghost button--small"
+                    onClick={() => void handleTakeOffline()}
+                    disabled={isWorkflowBusy}
+                    title="Take the currently live version offline"
+                  >
+                    {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
+                  </button>
+                ) : null}
+                {workflowStep ? (
+                  <button
+                    type="button"
+                    className={
+                      canRunWorkflow ? 'button button--small' : 'button button--ghost button--small'
+                    }
+                    onClick={() => void handleWorkflowAction()}
+                    disabled={isWorkflowBusy || !canRunWorkflow}
+                    title={
+                      hasPendingChanges
+                        ? 'Your published form still shows the old version until you publish these changes'
+                        : undefined
+                    }
+                  >
+                    {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
+                  </button>
+                ) : null}
+              </div>
             </>
           ) : null}
         </div>

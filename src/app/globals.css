@@ -6117,7 +6117,7 @@ textarea.form-field-input {
 }
 
 .signature-pad-tab--active {
-  color: var(--color-primary);
+  color: var(--color-text);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -6160,6 +6160,17 @@ textarea.form-field-input {
   align-items: center;
   gap: 0.6rem;
   padding-top: 0.6rem;
+}
+
+/* Solid black rather than brand green — same treatment as the builder's primary CTA
+   (.builder-header-cta), applied here too now that this control should read black. */
+.signature-pad-controls .button {
+  background-color: #111;
+  color: #fff;
+}
+
+.signature-pad-controls .button:hover:not(:disabled) {
+  background-color: #000;
 }
 
 .signature-pad-signed {

@@ -170,15 +170,23 @@ function ViewFormIcon() {
   );
 }
 
-function CopyLinkIcon() {
+function ShareLinkIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="6" y="6" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M6.7 9.3l2.6-2.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
       <path
-        d="M3.5 10V3.5A1.5 1.5 0 0 1 5 2h6.5"
+        d="M7.5 4.3l1.2-1.2a2.3 2.3 0 0 1 3.3 3.3L10.8 7.6"
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.5 11.7l-1.2 1.2a2.3 2.3 0 0 1-3.3-3.3l1.2-1.2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -546,8 +554,8 @@ export function FormActionsMenu({
       },
       {
         kind: 'button',
-        label: 'Copy link',
-        icon: <CopyLinkIcon />,
+        label: 'Share link',
+        icon: <ShareLinkIcon />,
         onClick: onCopyLink,
       },
     );

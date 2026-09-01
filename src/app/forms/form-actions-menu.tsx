@@ -505,16 +505,52 @@ export function FormActionsMenu({
     }
   }, [open]);
 
+  // Ordered most-used to least-used rather than by category: the everyday actions
+  // (get into the form, check/share the live version, see responses) come first;
+  // content actions (duplicate/rename) next; workflow/lifecycle changes and admin-ish
+  // actions (transfer, archive, privacy) after that, since those are occasional; Export
+  // responses is still disabled so it's parked near the bottom; Delete stays last of all
+  // regardless of frequency, both because it's rare and because destructive actions
+  // belong furthest from an accidental click.
   const items: MenuItem[] = [];
   const isArchived = status === 'archived';
   const workflowStep = getWorkflowStepForStatus(status);
 
+  items.push(
+    canEdit
+      ? { kind: 'link', label: 'Edit', href: `/forms/${formId}/builder`, icon: <EditIcon /> }
+      : { kind: 'link', label: 'View', href: `/forms/${formId}/builder`, icon: <EditIcon /> },
+  );
+
+  if (isLive) {
+    items.push(
+      {
+        kind: 'link',
+        label: 'View form',
+        href: formUrl,
+        icon: <ViewFormIcon />,
+        external: true,
+      },
+      {
+        kind: 'button',
+        label: 'Share link',
+        icon: <ShareLinkIcon />,
+        onClick: onCopyLink,
+      },
+    );
+  }
+
+  items.push({
+    kind: 'link',
+    label: 'View responses',
+    href: `/forms/${formId}/submissions`,
+    icon: <ResponsesIcon />,
+  });
+
   if (canEdit) {
     items.push(
-      { kind: 'link', label: 'Edit', href: `/forms/${formId}/builder`, icon: <EditIcon /> },
-      { kind: 'button', label: 'Rename', icon: <RenameIcon />, onClick: onRename },
       { kind: 'button', label: 'Duplicate', icon: <DuplicateIcon />, onClick: onDuplicate },
-      { kind: 'button', label: 'Transfer ownership', icon: <TransferIcon />, onClick: onTransfer },
+      { kind: 'button', label: 'Rename', icon: <RenameIcon />, onClick: onRename },
     );
 
     if (workflowStep) {
@@ -578,6 +614,13 @@ export function FormActionsMenu({
 
     items.push({
       kind: 'button',
+      label: 'Transfer ownership',
+      icon: <TransferIcon />,
+      onClick: onTransfer,
+    });
+
+    items.push({
+      kind: 'button',
       label: isArchived ? 'Restore' : 'Archive',
       icon: <LockIcon />,
       onClick: onToggleArchive,
@@ -596,42 +639,7 @@ export function FormActionsMenu({
     });
   }
 
-  if (!canEdit) {
-    items.push({
-      kind: 'link',
-      label: 'View',
-      href: `/forms/${formId}/builder`,
-      icon: <EditIcon />,
-    });
-  }
-
-  if (isLive) {
-    items.push(
-      {
-        kind: 'link',
-        label: 'View form',
-        href: formUrl,
-        icon: <ViewFormIcon />,
-        external: true,
-      },
-      {
-        kind: 'button',
-        label: 'Share link',
-        icon: <ShareLinkIcon />,
-        onClick: onCopyLink,
-      },
-    );
-  }
-
-  items.push(
-    {
-      kind: 'link',
-      label: 'View responses',
-      href: `/forms/${formId}/submissions`,
-      icon: <ResponsesIcon />,
-    },
-    { kind: 'disabled', label: 'Export responses', icon: <ExportIcon /> },
-  );
+  items.push({ kind: 'disabled', label: 'Export responses', icon: <ExportIcon /> });
 
   if (canEdit) {
     items.push(

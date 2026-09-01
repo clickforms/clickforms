@@ -92,10 +92,7 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
 
           <dl className="contact-details-list contact-details-list--table contact-details-list--wide-inputs">
             <div className="contact-details-row">
-              <dt>
-                <span>Full name</span>
-                <small>Shown to your team</small>
-              </dt>
+              <dt>Full name</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -107,10 +104,7 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>
-                <span>Phone</span>
-                <small>Optional contact number</small>
-              </dt>
+              <dt>Phone</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -123,10 +117,7 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>
-                <span>Email address</span>
-                <small>Managed by your organisation</small>
-              </dt>
+              <dt>Email address</dt>
               <dd className="contact-details-readonly">
                 <span className="contact-details-readonly-value">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">

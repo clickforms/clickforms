@@ -3953,7 +3953,7 @@ a {
   background-color: var(--color-lavender-soft);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
-  color: var(--color-lavender-strong);
+  color: var(--color-text);
   cursor: pointer;
   transition: background-color 0.12s ease;
 }

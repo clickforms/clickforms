@@ -52,15 +52,35 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
 
   return (
     <div className="settings-page">
-      <h1 className="settings-page-title">Account Settings</h1>
+      <header className="settings-page-header">
+        <p className="settings-page-kicker">Personal profile</p>
+        <h1 className="settings-page-title">Account settings</h1>
+        <p className="settings-page-lead">
+          Keep the details your team uses to identify and contact you up to date.
+        </p>
+      </header>
 
-      <div className="card contact-details-card">
+      <div className="card contact-details-card contact-details-card--profile">
         <div className="contact-details-header">
-          <h2 className="contact-details-title">Contact Details</h2>
-          <p className="contact-details-intro">
-            Your contact information is essential for us to communicate with you. Update your name
-            and phone number below. To change your email address, contact your organisation admin.
-          </p>
+          <span className="contact-details-header-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <title>Profile</title>
+              <circle cx="10" cy="6.75" r="3" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="M4.5 16c.4-2.55 2.7-4.25 5.5-4.25s5.1 1.7 5.5 4.25"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <div>
+            <h2 className="contact-details-title">Contact details</h2>
+            <p className="contact-details-intro">
+              Update the details your team uses to recognise and contact you. Your email is managed
+              by your organisation.
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -72,7 +92,10 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
 
           <dl className="contact-details-list">
             <div className="contact-details-row">
-              <dt>Full name</dt>
+              <dt>
+                <span>Full name</span>
+                <small>Shown to your team</small>
+              </dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -84,11 +107,41 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>Email address</dt>
-              <dd className="contact-details-readonly">{initialProfile.email}</dd>
+              <dt>
+                <span>Email address</span>
+                <small>Managed by your organisation</small>
+              </dt>
+              <dd className="contact-details-readonly">
+                <span className="contact-details-readonly-value">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <title>Email</title>
+                    <rect
+                      x="1.5"
+                      y="3.5"
+                      width="13"
+                      height="9"
+                      rx="1.5"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                    />
+                    <path
+                      d="M2 4.5l6 4.5 6-4.5"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {initialProfile.email}
+                </span>
+                <span className="contact-details-readonly-note">Contact an admin to update</span>
+              </dd>
             </div>
             <div className="contact-details-row">
-              <dt>Phone</dt>
+              <dt>
+                <span>Phone</span>
+                <small>Optional contact number</small>
+              </dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -103,6 +156,7 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
           </dl>
 
           <div className="contact-details-actions">
+            <p>Changes are saved to your profile immediately.</p>
             <button type="submit" className="button" disabled={isSaving}>
               {isSaving ? 'Saving…' : 'Save changes'}
             </button>

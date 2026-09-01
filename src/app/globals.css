@@ -10571,6 +10571,16 @@ textarea.form-field-input {
   padding: 1.1rem 1.5rem 1.1rem 0;
 }
 
+/* The email row's <dd> carries both this rule and .contact-details-readonly at once —
+   .contact-details-readonly is column-direction (stacks the value over the "Contact an
+   admin…" note), where align-items controls horizontal, not vertical, alignment. This
+   rule's align-items: center (meant for a normal single-line/input row) was winning on
+   specificity and centering that stack horizontally instead. Override back to flex-start
+   specifically for that combination. */
+.contact-details-list--table .contact-details-row dd.contact-details-readonly {
+  align-items: flex-start;
+}
+
 /* Separate opt-in from --table: Organisation settings wants its input filling the rest
    of the row, but Account settings' table (added later, same divider/no-row-lines
    treatment) keeps .contact-details-input's normal 320px cap — so this only applies

@@ -703,7 +703,7 @@ export function BuilderClient({
                     onClick={() => void handleCopyLink()}
                     title={publicUrl}
                   >
-                    <ShareLinkIcon /> Copy
+                    <ShareLinkIcon /> Copy link
                   </button>
                 ) : null}
                 {workflowStep ? (

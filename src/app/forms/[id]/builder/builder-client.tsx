@@ -853,14 +853,13 @@ export function BuilderClient({
                       className="button button--ghost button--small builder-header-stage-back"
                       onClick={() => void handleRevertToDraft()}
                       disabled={isWorkflowBusy}
-                      aria-label="Set to draft"
                       title={
                         isLive
-                          ? 'Set to draft — stays live until you take it offline, this only resets the approval status'
-                          : 'Set to draft'
+                          ? 'Stays live until you take it offline — this only resets the approval status'
+                          : undefined
                       }
                     >
-                      <RevertToDraftIcon />
+                      <RevertToDraftIcon /> Set to draft
                     </button>
                   ) : null}
                   {workflowStep ? (

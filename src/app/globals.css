@@ -2767,15 +2767,18 @@ a {
   gap: 0.3rem;
 }
 
+/* Labeled, not icon-only — an icon-only glyph here read as decorative and got missed
+   entirely; a visible "Set to draft" plus a stronger border makes both its presence and
+   its purpose obvious at a glance, matching Share/Copy link's treatment. */
 .builder-header-stage-back {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.9rem;
-  height: 1.9rem;
-  padding: 0;
-  gap: 0;
+  gap: 0.35rem;
   color: var(--color-text-muted);
+  border-color: var(--color-border-strong);
+}
+
+.builder-header-stage-back:hover:not(:disabled) {
+  color: var(--color-text);
+  background-color: var(--color-surface-sunken);
 }
 
 .builder-readonly-badge {

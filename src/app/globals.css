@@ -10542,17 +10542,6 @@ textarea.form-field-input {
   gap: 0.85rem;
 }
 
-/* Full-height vertical rule between the label and input columns — reads like a table's
-   cell divider now that the two columns sit close together. align-self: stretch
-   overrides the row's own align-items: center just for this cell, so the border runs the
-   full row height rather than only as tall as the label text. */
-.contact-details-list--wide-inputs .contact-details-row dt {
-  align-self: stretch;
-  justify-content: center;
-  padding-right: 1rem;
-  border-right: 1px solid var(--color-border);
-}
-
 .contact-details-list--wide-inputs .contact-details-input {
   width: 100%;
   max-width: none;

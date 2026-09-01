@@ -2625,9 +2625,9 @@ a {
    but above the small utility buttons (Form settings, Take offline) — the middle rung
    of the plain-text Preview -> outlined Share link -> solid Publish escalation. */
 .builder-header-share {
-  padding: 0.42rem 0.9rem;
+  padding: 0.32rem 0.7rem;
   font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   border-color: var(--color-border-strong);
 }
 

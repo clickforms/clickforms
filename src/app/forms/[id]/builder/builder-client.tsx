@@ -158,7 +158,7 @@ function TakeOfflineIcon() {
    component here since that one lives in a different file. */
 function ShareLinkIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <rect x="6" y="6" width="8" height="8" rx="1.4" stroke="currentColor" strokeWidth="1.4" />
       <path
         d="M4 10.2V4.8A1.8 1.8 0 0 1 5.8 3h5.4"

@@ -10532,10 +10532,16 @@ textarea.form-field-input {
 }
 
 /* Wide-input variant (Organisation settings) — keeps the label-left/input-right grid,
-   but lets the input fill the rest of the row instead of capping at .contact-details-input's
-   default 320px. Scoped to .contact-details-list--wide-inputs rather than changing
-   .contact-details-input itself, so the Account settings page's narrower inputs are
-   unaffected. */
+   but the label column shrinks to fit its own text (was a fixed minmax(10rem, ...)
+   column, leaving a wide gap before short labels like "ABN:") and the row gap tightens
+   so the input sits right next to the label instead of far across the row. Scoped to
+   .contact-details-list--wide-inputs rather than changing .contact-details-row itself,
+   so the Account settings page's wider label column is unaffected. */
+.contact-details-list--wide-inputs .contact-details-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.85rem;
+}
+
 .contact-details-list--wide-inputs .contact-details-input {
   width: 100%;
   max-width: none;

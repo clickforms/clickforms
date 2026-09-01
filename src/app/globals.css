@@ -10567,6 +10567,7 @@ textarea.form-field-input {
 .contact-details-list--table .contact-details-row dd {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   padding: 1.1rem 1.5rem 1.1rem 0;
 }
 
@@ -10582,8 +10583,10 @@ textarea.form-field-input {
 .contact-details-readonly {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.2rem;
   color: var(--color-text);
+  text-align: left;
 }
 
 .contact-details-readonly-value {

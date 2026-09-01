@@ -1,3 +1,10 @@
+/* Caveat — handwriting-style font for the "Type signature" mode of the signature pad
+   (src/app/f/[slug]/signature-pad.tsx). Loaded here via @import rather than next/font in
+   layout.tsx, since this is the one component that needs it and pulling in a whole extra
+   next/font setup for a single field type wasn't worth it. @import must be the first
+   rule in the stylesheet — nothing else may precede it. */
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap");
+
 /*
  * Design tokens — modern SaaS admin (dark sidebar + light workspace).
  * Accent: #55ea8c. Sidebar: charcoal. Content: cool gray canvas.
@@ -6112,19 +6119,31 @@ textarea.form-field-input {
   color: #444;
 }
 
+/* Now real toggle buttons (Draw/Type), not a disabled placeholder — reset the button
+   chrome so they still read as plain underlined text like before. */
 .signature-pad-tab {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
   font-weight: 600;
+  color: #999;
+  cursor: pointer;
+}
+
+.signature-pad-tab:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.signature-pad-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .signature-pad-tab--active {
   color: var(--color-text);
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-
-.signature-pad-tab--disabled {
-  color: #999;
-  cursor: not-allowed;
 }
 
 .signature-pad-divider {
@@ -6153,6 +6172,19 @@ textarea.form-field-input {
   border-radius: 3px;
   touch-action: none;
   cursor: crosshair;
+}
+
+/* Type mode: the canvas becomes a read-only live preview of the typed name (still what
+   actually gets exported via canvas.toBlob) rather than a drawing surface, so it drops
+   the crosshair cursor and sits right under the name input instead of standing alone. */
+.signature-pad-canvas--preview {
+  margin-top: 0.5rem;
+  cursor: default;
+}
+
+.signature-pad-type-input {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .signature-pad-controls {

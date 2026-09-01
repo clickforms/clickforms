@@ -1,7 +1,7 @@
 'use client';
 
 import type { PointerEvent as ReactPointerEvent } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Plain HTML5 canvas signature pad — Pointer Events (not separate mouse/touch listeners)
 // give us mouse + touch + pen drawing from one set of handlers, per specs/03: "supporting
@@ -11,6 +11,14 @@ import { useEffect, useRef, useState } from 'react';
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 220;
 const INK_COLOR = '#1f2a20';
+// Loaded via @font-face in globals.css rather than next/font in layout.tsx, so this
+// component's font dependency stays self-contained — canvas text needs the font to have
+// actually finished loading before fillText() is called (see the effect below), unlike
+// regular DOM text which repaints itself once a webfont arrives.
+const SIGNATURE_FONT_FAMILY = 'Caveat';
+const SIGNATURE_CANVAS_FONT = `56px "${SIGNATURE_FONT_FAMILY}", cursive`;
+
+type SignatureMode = 'draw' | 'type';
 
 interface SignaturePadProps {
   /** Called with the drawn signature as a PNG blob when the respondent confirms it. */
@@ -24,6 +32,16 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const [hasDrawing, setHasDrawing] = useState(false);
+  const [mode, setMode] = useState<SignatureMode>('draw');
+  const [typedName, setTypedName] = useState('');
+
+  const paintBlankCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }, []);
 
   // Paint a white background once on mount so the exported PNG isn't transparent (a
   // transparent signature can render invisible depending on where it's later viewed).
@@ -31,13 +49,58 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    paintBlankCanvas();
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = INK_COLOR;
-  }, []);
+  }, [paintBlankCanvas]);
+
+  // "Type signature" mode renders straight onto the same canvas used for drawing — same
+  // export path (canvas.toBlob in handleUseSignature) either way, no separate typed-vs-
+  // drawn branch needed downstream. document.fonts.load is required first: unlike DOM
+  // text, a canvas fillText() call that fires before the webfont finishes loading just
+  // silently draws with the fallback font and never repaints once the real one arrives.
+  useEffect(() => {
+    if (mode !== 'type') return;
+    let cancelled = false;
+
+    async function draw() {
+      if (typeof document !== 'undefined' && 'fonts' in document) {
+        try {
+          await document.fonts.load(SIGNATURE_CANVAS_FONT);
+        } catch {
+          // Font failed to load (offline, blocked request, etc.) — fall through and
+          // draw with whatever the browser substitutes rather than leaving it blank.
+        }
+      }
+      if (cancelled) return;
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (!canvas || !ctx) return;
+      paintBlankCanvas();
+      const name = typedName.trim();
+      if (!name) return;
+      ctx.fillStyle = INK_COLOR;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = SIGNATURE_CANVAS_FONT;
+      ctx.fillText(name, canvas.width / 2, canvas.height / 2, canvas.width - 64);
+    }
+
+    void draw();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, typedName, paintBlankCanvas]);
+
+  function handleModeChange(nextMode: SignatureMode) {
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    setHasDrawing(false);
+    setTypedName('');
+    paintBlankCanvas();
+  }
 
   function getPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
@@ -52,7 +115,7 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
   }
 
   function handlePointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (saving) return;
+    if (saving || mode !== 'draw') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     canvas.setPointerCapture(event.pointerId);
@@ -88,11 +151,11 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
   }
 
   function handleClear() {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (mode === 'type') {
+      setTypedName('');
+      return;
+    }
+    paintBlankCanvas();
     setHasDrawing(false);
   }
 
@@ -106,19 +169,30 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
     }, 'image/png');
   }
 
+  const hasContent = mode === 'draw' ? hasDrawing : typedName.trim().length > 0;
+
   return (
     <div className="signature-pad">
       <div className="signature-pad-toolbar">
-        <span className="signature-pad-tab signature-pad-tab--active">Draw signature</span>
+        <button
+          type="button"
+          className={`signature-pad-tab ${mode === 'draw' ? 'signature-pad-tab--active' : ''}`}
+          onClick={() => handleModeChange('draw')}
+          disabled={saving}
+        >
+          Draw signature
+        </button>
         <span className="signature-pad-divider" aria-hidden="true">
           |
         </span>
-        <span
-          className="signature-pad-tab signature-pad-tab--disabled"
-          title="Typed signatures — coming soon"
+        <button
+          type="button"
+          className={`signature-pad-tab ${mode === 'type' ? 'signature-pad-tab--active' : ''}`}
+          onClick={() => handleModeChange('type')}
+          disabled={saving}
         >
           Type signature
-        </span>
+        </button>
         <button
           type="button"
           className="signature-pad-clear"
@@ -128,11 +202,23 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
           Clear
         </button>
       </div>
+      {mode === 'type' ? (
+        <input
+          type="text"
+          className="text-input signature-pad-type-input"
+          value={typedName}
+          onChange={(event) => setTypedName(event.target.value)}
+          placeholder="Type your full name"
+          disabled={saving}
+          // biome-ignore lint/a11y/noAutofocus: switching into type mode is a deliberate action, focusing the field is expected
+          autoFocus
+        />
+      ) : null}
       <canvas
         ref={canvasRef}
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
-        className="signature-pad-canvas"
+        className={`signature-pad-canvas ${mode === 'type' ? 'signature-pad-canvas--preview' : ''}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={stopDrawing}
@@ -144,7 +230,7 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
           type="button"
           className="button button--small"
           onClick={handleUseSignature}
-          disabled={!hasDrawing || saving}
+          disabled={!hasContent || saving}
         >
           {saving ? 'Uploading…' : 'Use this signature'}
         </button>

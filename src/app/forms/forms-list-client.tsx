@@ -375,7 +375,11 @@ export function FormsListClient({
     <div>
       <div className="forms-list-header">
         {canEdit ? (
-          <button type="button" className="button" onClick={() => setIsCreateModalOpen(true)}>
+          <button
+            type="button"
+            className="button button--dark"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
             + New form
           </button>
         ) : null}

@@ -257,6 +257,16 @@ a {
   background-color: var(--color-danger-hover);
 }
 
+/* Solid black — same near-black tone already used for the signature pad and typed-name
+   controls, now available as a reusable variant rather than a one-off. */
+.button--dark {
+  background-color: #111;
+}
+
+.button--dark:hover {
+  background-color: #000;
+}
+
 /* Ghost button with danger-red text instead of a solid red fill — for a destructive
    action sitting next to other row-level actions (see the Responses table), where a
    filled red pill reads as louder/more urgent than a routine "Delete this row" action

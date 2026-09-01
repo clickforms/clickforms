@@ -6167,6 +6167,7 @@ textarea.form-field-input {
   width: 100%;
   height: 180px;
   display: block;
+  box-sizing: border-box;
   background-color: #ffffff;
   border: 1px solid #c8c8c8;
   border-radius: 3px;
@@ -6174,17 +6175,26 @@ textarea.form-field-input {
   cursor: crosshair;
 }
 
-/* Type mode: the canvas becomes a read-only live preview of the typed name (still what
-   actually gets exported via canvas.toBlob) rather than a drawing surface, so it drops
-   the crosshair cursor and sits right under the name input instead of standing alone. */
-.signature-pad-canvas--preview {
-  margin-top: 0.5rem;
-  cursor: default;
+/* Type mode's box in the same slot the canvas occupies in draw mode (shares
+   .signature-pad-canvas for size/border/background) — an <input>, not a canvas, so the
+   typed name repaints itself the instant the Caveat webfont loads, same as any other
+   DOM text; only the final export (handleUseSignature) needs the font-load handshake
+   canvas text requires. */
+.signature-pad-type-input {
+  padding: 0 1.25rem;
+  border: none;
+  outline: none;
+  font-family: "Caveat", cursive;
+  font-size: 2.5rem;
+  color: #1f2a20;
+  text-align: center;
+  cursor: text;
 }
 
-.signature-pad-type-input {
-  width: 100%;
-  box-sizing: border-box;
+.signature-pad-type-input::placeholder {
+  font-family: inherit;
+  font-size: 1.25rem;
+  color: var(--color-text-subtle);
 }
 
 .signature-pad-controls {

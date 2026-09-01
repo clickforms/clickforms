@@ -2579,10 +2579,13 @@ a {
   min-height: 3.25rem;
 }
 
+/* Governs both Copy link and the Publish/Approve CTA — higher specificity than
+   .builder-header-share (below), so that rule's padding/font-size never actually
+   applied; sizing lives here instead to avoid the two silently fighting again. */
 .builder-header .button:not(.button--small) {
   font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.8125rem;
-  padding: 0.5rem 1.1rem;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.85rem;
 }
 
 /* Primary CTA (Publish/Approve) — solid black rather than brand green, matching the
@@ -2623,11 +2626,10 @@ a {
 
 /* Share link sits a notch below the primary Publish/Approve button (full-size .button)
    but above the small utility buttons (Form settings, Take offline) — the middle rung
-   of the plain-text Preview -> outlined Share link -> solid Publish escalation. */
+   of the plain-text Preview -> outlined Share link -> solid Publish escalation. Sizing
+   comes from .builder-header .button:not(.button--small) above; this just sets the
+   border colour. */
 .builder-header-share {
-  padding: 0.32rem 0.7rem;
-  font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.75rem;
   border-color: var(--color-border-strong);
 }
 

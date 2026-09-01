@@ -49,7 +49,6 @@ import {
 } from '@/app/forms/[id]/builder/schema-mutations';
 import { useFormWorkspaceStatus } from '@/app/forms/[id]/form-workspace-context';
 import { DropdownMenu } from '@/components/dropdown-menu';
-import { LiveStatusBadge } from '@/components/live-status-badge';
 import { useToast } from '@/components/toast';
 import { extractApiError, getErrorMessage } from '@/lib/error-message';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
@@ -199,7 +198,7 @@ export function BuilderClient({
   publicUrl,
 }: BuilderClientProps) {
   const toast = useToast();
-  const { status: formStatus, setStatus: setFormStatus } = useFormWorkspaceStatus();
+  const { status: formStatus, setStatus: setFormStatus, syncLiveState } = useFormWorkspaceStatus();
   const [schema, setSchema] = useState<FormSchema>(
     initialVersion?.schema ?? createEmptyFormSchema(),
   );
@@ -619,6 +618,13 @@ export function BuilderClient({
   const hasPendingChanges = isLive && version?.id !== currentVersionId;
   const showTakeOffline = shouldShowTakeOfflineAction(formStatus, isLive);
 
+  // FormTopNav renders the Live/Draft badge (it lives in the shared top row, outside
+  // this component's tree), so push the values it needs up into context whenever they
+  // change rather than duplicating the badge here too.
+  useEffect(() => {
+    syncLiveState({ isLive, hasPendingChanges });
+  }, [isLive, hasPendingChanges, syncLiveState]);
+
   return (
     <div className="builder">
       <header className="builder-header">
@@ -646,11 +652,6 @@ export function BuilderClient({
               <SaveStatusBadge status={saveStatus} error={saveError} />
               <span className="builder-header-divider" aria-hidden="true" />
               <div className="builder-header-status-group">
-                <LiveStatusBadge
-                  status={formStatus}
-                  isLive={isLive}
-                  hasPendingChanges={hasPendingChanges}
-                />
                 {showTakeOffline ? (
                   <>
                     <button

@@ -947,6 +947,15 @@ a {
   color: var(--color-primary-hover);
 }
 
+/* Groups the Live/Draft badge with Preview on the right side of the top row, mirroring
+   .form-top-nav-tabs on the left. */
+.form-top-nav-end {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
 /* Deliberately the plainest of the three "do something with this form" actions —
    Preview (here), Share Link, and Publish escalate in visual weight (text → outline →
    solid), so the eye lands on Publish as the strongest call to action. */
@@ -2620,16 +2629,6 @@ a {
   font-family: var(--font-poppins), var(--font-body);
   font-size: 0.8125rem;
   border-color: var(--color-border-strong);
-}
-
-.builder-header .live-status {
-  padding: 0.2rem 0.55rem 0.2rem 0.45rem;
-  font-size: 0.6875rem;
-}
-
-.builder-header .live-status-dot {
-  width: 0.4rem;
-  height: 0.4rem;
 }
 
 .builder-header .button--small {

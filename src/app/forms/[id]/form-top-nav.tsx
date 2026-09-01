@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { useFormWorkspaceStatus } from '@/app/forms/[id]/form-workspace-context';
+import { LiveStatusBadge } from '@/components/live-status-badge';
 
 function BuilderIcon() {
   return (
@@ -102,6 +104,7 @@ interface NavItem {
 
 export function FormTopNav({ formId, formName, slug, responseCount }: FormTopNavProps) {
   const pathname = usePathname();
+  const { status, isLive, hasPendingChanges } = useFormWorkspaceStatus();
 
   const submissionDetailMatch = pathname.match(/\/forms\/[^/]+\/submissions\/([^/]+)$/);
   const submissionId = submissionDetailMatch?.[1] ?? null;
@@ -152,15 +155,18 @@ export function FormTopNav({ formId, formName, slug, responseCount }: FormTopNav
     <nav className="form-top-nav" aria-label={formName}>
       <ul className="form-top-nav-tabs">{navItems.map(renderItem)}</ul>
 
-      <Link
-        href={previewHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="form-top-nav-preview"
-      >
-        <PreviewIcon />
-        {previewLabel}
-      </Link>
+      <div className="form-top-nav-end">
+        <LiveStatusBadge status={status} isLive={isLive} hasPendingChanges={hasPendingChanges} />
+        <Link
+          href={previewHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="form-top-nav-preview"
+        >
+          <PreviewIcon />
+          {previewLabel}
+        </Link>
+      </div>
     </nav>
   );
 }

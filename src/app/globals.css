@@ -2662,6 +2662,10 @@ a {
   background-color: var(--color-surface-sunken);
 }
 
+/* Lavender wash rather than the old plain grey — a branded backdrop behind the
+   still-white, still-neutral palette/canvas cards. Keeping the actual editing
+   surfaces white (see .field-palette and .canvas) means this reads as "the room the
+   tool lives in" rather than affecting anything you're trying to read while editing. */
 .builder-workspace {
   display: flex;
   flex-direction: row;
@@ -2671,7 +2675,7 @@ a {
   flex: 1;
   min-height: 0;
   padding: 1.25rem 2rem 0;
-  background-color: var(--color-surface-sunken);
+  background-color: var(--color-lavender-soft);
   width: 100%;
   box-sizing: border-box;
 }
@@ -2689,7 +2693,7 @@ a {
   min-height: 0;
   min-width: 0;
   padding-left: 1rem;
-  background-color: var(--color-surface-sunken);
+  background-color: var(--color-lavender-soft);
   overflow-y: auto;
 }
 
@@ -2707,8 +2711,8 @@ a {
   overflow-y: auto;
   min-height: 0;
   min-width: 0;
-  background-color: var(--color-surface-sunken);
-  background-image: radial-gradient(var(--color-border-strong) 1px, transparent 0);
+  background-color: var(--color-lavender-soft);
+  background-image: radial-gradient(var(--color-lavender) 1.5px, transparent 0);
   background-size: 20px 20px;
 }
 
@@ -2930,7 +2934,7 @@ a {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 0.55rem;
-  background: var(--color-primary-soft);
+  background: color-mix(in srgb, var(--color-primary-soft) 65%, var(--color-primary) 35%);
   color: var(--color-primary-hover);
   flex-shrink: 0;
 }
@@ -2939,7 +2943,7 @@ a {
    the dashboard's recent-forms initials (green / lavender / neutral), so the palette
    reads a little livelier without any group being semantically "the purple one". */
 .palette-group:nth-of-type(2n) .palette-item-icon {
-  background: var(--color-lavender-soft);
+  background: color-mix(in srgb, var(--color-lavender-soft) 55%, var(--color-lavender) 45%);
   color: var(--color-lavender-strong);
 }
 
@@ -3013,8 +3017,8 @@ a {
   height: 3.5rem;
   margin-bottom: 1rem;
   border-radius: 50%;
-  background-color: var(--color-surface-sunken);
-  color: var(--color-text-subtle);
+  background-color: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
 }
 
 .canvas-empty-title {
@@ -3058,7 +3062,7 @@ a {
 
 .canvas-empty-quick-add-item:hover {
   border-color: var(--color-primary);
-  background-color: var(--color-surface-sunken);
+  background-color: var(--color-primary-soft);
 }
 
 .canvas-field-list {

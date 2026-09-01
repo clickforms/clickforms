@@ -10531,15 +10531,40 @@ textarea.form-field-input {
   font-size: 0.9375rem;
 }
 
-/* Wide-input variant (Organisation settings) — keeps the label-left/input-right grid,
-   but the label column shrinks to fit its own text (was a fixed minmax(10rem, ...)
-   column, leaving a wide gap before short labels like "ABN:") and the row gap tightens
-   so the input sits right next to the label instead of far across the row. Scoped to
-   .contact-details-list--wide-inputs rather than changing .contact-details-row itself,
-   so the Account settings page's wider label column is unaffected. */
-.contact-details-list--wide-inputs .contact-details-row {
+/* Wide-input variant (Organisation settings) — a real table: one shared grid for the
+   whole list (not a separate grid per row) so the label column's width — and therefore
+   the vertical divider between it and the input column — lines up identically on every
+   row. Each .contact-details-row becomes `display: contents` so its dt/dd drop straight
+   into the shared grid instead of nesting their own row-local grid; row-gap stays 0 so
+   the divider border on dt renders as one unbroken line down the whole table rather than
+   a dashed line with a gap at each row boundary — vertical breathing room between rows
+   comes from padding on dt/dd themselves instead. No horizontal row lines: only the
+   vertical column divider, plus one top border separating the list from the card header
+   above it. Scoped to .contact-details-list--wide-inputs so the Account settings page's
+   row-line layout is unaffected. */
+.contact-details-list--wide-inputs {
+  display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.85rem;
+  row-gap: 0;
+  column-gap: 0.85rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.contact-details-list--wide-inputs .contact-details-row {
+  display: contents;
+}
+
+.contact-details-list--wide-inputs .contact-details-row dt {
+  flex-direction: row;
+  align-items: center;
+  padding: 1.1rem 1rem 1.1rem 1.5rem;
+  border-right: 1px solid var(--color-border);
+}
+
+.contact-details-list--wide-inputs .contact-details-row dd {
+  display: flex;
+  align-items: center;
+  padding: 1.1rem 1.5rem 1.1rem 0;
 }
 
 .contact-details-list--wide-inputs .contact-details-input {

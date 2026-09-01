@@ -42,63 +42,97 @@ export function ChangePasswordClient() {
 
   return (
     <div className="settings-page">
-      <h1 className="settings-page-title">Account Settings</h1>
+      <header className="settings-page-header">
+        <p className="settings-page-kicker">Personal profile</p>
+        <h1 className="settings-page-title">Account settings</h1>
+        <p className="settings-page-lead">
+          Keep your account secure with a strong, unique password.
+        </p>
+      </header>
 
       <div className="card contact-details-card">
         <div className="contact-details-header">
-          <h2 className="contact-details-title">Change Password</h2>
-          <p className="contact-details-intro">
-            Choose a strong password with at least 8 characters.
-          </p>
+          <span className="contact-details-header-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <title>Password</title>
+              <rect
+                x="5"
+                y="9"
+                width="10"
+                height="7.5"
+                rx="1.3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M7 9V6.8a3 3 0 0 1 6 0V9"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <div>
+            <h2 className="contact-details-title">Change password</h2>
+            <p className="contact-details-intro">
+              Choose a strong password with at least 8 characters.
+            </p>
+          </div>
         </div>
 
-        <form className="settings-form" onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           {error ? (
-            <p className="form-error" role="alert">
+            <p className="form-error contact-details-error" role="alert">
               {error}
             </p>
           ) : null}
 
-          <label className="settings-field">
-            <span className="settings-label">Current password</span>
-            <input
-              className="text-input"
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(event) => setCurrentPassword(event.target.value)}
-              required
-              disabled={isSubmitting}
-            />
-          </label>
-
-          <label className="settings-field">
-            <span className="settings-label">New password</span>
-            <input
-              className="text-input"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              required
-              disabled={isSubmitting}
-            />
-          </label>
-
-          <label className="settings-field">
-            <span className="settings-label">Confirm new password</span>
-            <input
-              className="text-input"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              required
-              disabled={isSubmitting}
-            />
-          </label>
+          <dl className="contact-details-list contact-details-list--table contact-details-list--wide-inputs">
+            <div className="contact-details-row">
+              <dt>Current password</dt>
+              <dd>
+                <input
+                  className="text-input contact-details-input"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              </dd>
+            </div>
+            <div className="contact-details-row">
+              <dt>New password</dt>
+              <dd>
+                <input
+                  className="text-input contact-details-input"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              </dd>
+            </div>
+            <div className="contact-details-row">
+              <dt>Confirm new password</dt>
+              <dd>
+                <input
+                  className="text-input contact-details-input"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              </dd>
+            </div>
+          </dl>
 
           <div className="contact-details-actions">
             <button type="submit" className="button" disabled={isSubmitting}>

@@ -1,8 +1,18 @@
 'use client';
 
 import { useDraggable } from '@dnd-kit/core';
+import { useState } from 'react';
 import { COLUMN_LAYOUT_LABELS, FIELD_TYPE_LABELS } from '@/app/forms/[id]/builder/field-meta';
 import type { ColumnCount, FieldType } from '@/lib/forms/schema';
+
+function SearchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function PaletteIcon({ type }: { type: FieldType }) {
   const common = {
@@ -529,19 +539,6 @@ function PaletteIcon({ type }: { type: FieldType }) {
   }
 }
 
-/** Six-dot drag-handle glyph shown at the right edge of every palette item — a purely
- * decorative affordance (the whole button is draggable via useDraggable, not just this
- * icon) that signals "this is draggable" the way a typical builder palette does. */
-function GripIcon() {
-  return (
-    <svg width="10" height="16" viewBox="0 0 10 16" fill="none" aria-hidden="true">
-      {[2.5, 7.5, 12.5].map((y) =>
-        [2, 8].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.15" fill="currentColor" />),
-      )}
-    </svg>
-  );
-}
-
 function PaletteButton({ type, onAdd }: { type: FieldType; onAdd: (type: FieldType) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `palette:${type}`,
@@ -566,9 +563,6 @@ function PaletteButton({ type, onAdd }: { type: FieldType; onAdd: (type: FieldTy
         <PaletteIcon type={type} />
       </span>
       <span className="palette-item-label">{FIELD_TYPE_LABELS[type]}</span>
-      <span className="palette-item-grip">
-        <GripIcon />
-      </span>
     </button>
   );
 }
@@ -603,9 +597,6 @@ function ColumnLayoutButton({
         <PaletteIcon type="column_layout" />
       </span>
       <span className="palette-item-label">{COLUMN_LAYOUT_LABELS[columns]}</span>
-      <span className="palette-item-grip">
-        <GripIcon />
-      </span>
     </button>
   );
 }
@@ -617,6 +608,8 @@ export function FieldPalette({
   onAddField: (type: FieldType) => void;
   onAddColumnLayout: (columns: ColumnCount) => void;
 }) {
+  const [search, setSearch] = useState('');
+
   const groups: { label: string; types: FieldType[] }[] = [
     {
       label: 'Text',
@@ -630,26 +623,52 @@ export function FieldPalette({
   ];
 
   const columnCounts: ColumnCount[] = [2, 3, 4];
+  const query = search.trim().toLowerCase();
+
+  const filteredGroups = groups
+    .map((group) => ({
+      ...group,
+      types: group.types.filter((type) => FIELD_TYPE_LABELS[type].toLowerCase().includes(query)),
+      columnCounts:
+        group.label === 'Layout'
+          ? columnCounts.filter((columns) =>
+              COLUMN_LAYOUT_LABELS[columns].toLowerCase().includes(query),
+            )
+          : [],
+    }))
+    .filter((group) => group.types.length > 0 || group.columnCounts.length > 0);
 
   return (
     <div className="field-palette">
       <p className="field-palette-title">Fields</p>
+      <label className="palette-search">
+        <span className="palette-search-icon">
+          <SearchIcon />
+        </span>
+        <input
+          type="text"
+          placeholder="Search fields"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </label>
       <div className="palette-groups">
-        {groups.map((group) => (
+        {filteredGroups.map((group) => (
           <div key={group.label} className="palette-group">
             <p className="palette-group-label">{group.label}</p>
             <div className="palette-list">
               {group.types.map((type) => (
                 <PaletteButton key={type} type={type} onAdd={onAddField} />
               ))}
-              {group.label === 'Layout'
-                ? columnCounts.map((columns) => (
-                    <ColumnLayoutButton key={columns} columns={columns} onAdd={onAddColumnLayout} />
-                  ))
-                : null}
+              {group.columnCounts.map((columns) => (
+                <ColumnLayoutButton key={columns} columns={columns} onAdd={onAddColumnLayout} />
+              ))}
             </div>
           </div>
         ))}
+        {filteredGroups.length === 0 ? (
+          <p className="palette-empty">No fields match &ldquo;{search}&rdquo;.</p>
+        ) : null}
       </div>
     </div>
   );

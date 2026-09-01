@@ -48,6 +48,7 @@ import {
   updateField,
 } from '@/app/forms/[id]/builder/schema-mutations';
 import { useFormWorkspaceStatus } from '@/app/forms/[id]/form-workspace-context';
+import { DropdownMenu } from '@/components/dropdown-menu';
 import { LiveStatusBadge } from '@/components/live-status-badge';
 import { useToast } from '@/components/toast';
 import { extractApiError, getErrorMessage } from '@/lib/error-message';
@@ -105,6 +106,39 @@ interface DragPayload {
   source?: 'palette';
   fieldType?: FieldType;
   columnLayoutColumns?: ColumnCount;
+}
+
+function PlusIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function KebabIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="3.4" r="1.15" fill="currentColor" />
+      <circle cx="8" cy="8" r="1.15" fill="currentColor" />
+      <circle cx="8" cy="12.6" r="1.15" fill="currentColor" />
+    </svg>
+  );
+}
+
+function TakeOfflineIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M8 2.5v7M5 6.5 8 9.5l3-3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M3 12.5h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function ShareLinkIcon() {
@@ -180,6 +214,9 @@ export function BuilderClient({
   // field (to show its overlay on the canvas) doesn't itself pop the modal open.
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [showFormSettings, setShowFormSettings] = useState(false);
+  const [showMobilePalette, setShowMobilePalette] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [mockAnswers, setMockAnswers] = useState<FormAnswers>({});
   const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
 
@@ -543,6 +580,7 @@ export function BuilderClient({
   }
 
   const activePage = schema.pages.find((page) => page.id === activePageId);
+  const activePageIndex = schema.pages.findIndex((page) => page.id === activePageId);
   const editingField = editingFieldId ? (schema.fields[editingFieldId] ?? null) : null;
 
   const visibleFieldIds = useMemo(
@@ -606,15 +644,43 @@ export function BuilderClient({
                   hasPendingChanges={hasPendingChanges}
                 />
                 {showTakeOffline ? (
-                  <button
-                    type="button"
-                    className="button button--ghost button--small"
-                    onClick={() => void handleTakeOffline()}
-                    disabled={isWorkflowBusy}
-                    title="Take the currently live version offline"
-                  >
-                    {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
-                  </button>
+                  <>
+                    <button
+                      ref={moreMenuTriggerRef}
+                      type="button"
+                      className="button button--ghost button--small builder-header-kebab"
+                      onClick={() => setMoreMenuOpen((value) => !value)}
+                      aria-haspopup="true"
+                      aria-label="More actions"
+                    >
+                      <KebabIcon />
+                    </button>
+                    <DropdownMenu
+                      open={moreMenuOpen}
+                      onOpenChange={setMoreMenuOpen}
+                      triggerRef={moreMenuTriggerRef}
+                      align="end"
+                    >
+                      <ul className="builder-more-menu-list">
+                        <li>
+                          <button
+                            type="button"
+                            className="actions-menu-item"
+                            onClick={() => {
+                              setMoreMenuOpen(false);
+                              void handleTakeOffline();
+                            }}
+                            disabled={isWorkflowBusy}
+                          >
+                            <span className="actions-menu-icon">
+                              <TakeOfflineIcon />
+                            </span>
+                            {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
+                          </button>
+                        </li>
+                      </ul>
+                    </DropdownMenu>
+                  </>
                 ) : null}
                 {isLive ? (
                   <button
@@ -675,12 +741,15 @@ export function BuilderClient({
               <Canvas
                 formId={formId}
                 page={activePage}
+                pageIndex={activePageIndex}
+                pageCount={schema.pages.length}
                 fields={schema.fields}
                 selectedFieldId={selectedFieldId}
                 onSelectField={handleSelectField}
                 onEditFieldDetails={handleEditFieldDetails}
                 onRemoveField={handleRemoveField}
                 onDuplicateField={handleDuplicateField}
+                onAddField={(type) => handleAddField(type)}
                 onAddColumnField={handleAddColumnField}
                 onUpdateField={handleUpdateField}
                 canEdit={canEdit}
@@ -693,6 +762,22 @@ export function BuilderClient({
               </div>
             )}
           </div>
+
+          {canEdit ? (
+            <div className="builder-mobile-add">
+              {activePage && activePage.fields.length === 0 ? (
+                <span className="builder-mobile-add-hint">Tap to add a field</span>
+              ) : null}
+              <button
+                type="button"
+                className="builder-mobile-add-fab"
+                onClick={() => setShowMobilePalette(true)}
+                aria-label="Add a field"
+              >
+                <PlusIcon />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <DragOverlay>
@@ -737,6 +822,45 @@ export function BuilderClient({
               onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
               onSetConditionalRule={handleSetConditionalRule}
               onClearConditionalRule={handleClearConditionalRule}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {showMobilePalette ? (
+        // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
+        <div className="modal-overlay" onMouseDown={() => setShowMobilePalette(false)}>
+          <div
+            className="modal-card builder-mobile-palette-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-palette-modal-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h2 className="modal-title" id="mobile-palette-modal-title">
+                Add a field
+              </h2>
+              <div className="modal-header-actions">
+                <button
+                  type="button"
+                  className="modal-close"
+                  onClick={() => setShowMobilePalette(false)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <FieldPalette
+              onAddField={(type) => {
+                handleAddField(type);
+                setShowMobilePalette(false);
+              }}
+              onAddColumnLayout={(columns) => {
+                handleAddColumnLayout(columns);
+                setShowMobilePalette(false);
+              }}
             />
           </div>
         </div>

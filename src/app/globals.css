@@ -926,6 +926,7 @@ a {
 }
 
 .form-top-nav-tab-label {
+  font-family: var(--font-poppins), var(--font-body);
   white-space: nowrap;
 }
 
@@ -1801,7 +1802,9 @@ a {
 
 .modal-title {
   margin: 0;
+  font-family: var(--font-poppins), var(--font-body);
   font-size: 1.25rem;
+  letter-spacing: -0.01em;
 }
 
 .modal-header-actions {
@@ -2667,13 +2670,14 @@ a {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--shadow-card);
   height: fit-content;
 }
 
 .field-palette-title {
   margin: 0 0 0.6rem;
   padding: 0 0.25rem;
+  font-family: var(--font-poppins), var(--font-body);
   font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -2690,8 +2694,9 @@ a {
 .palette-group-label {
   margin: 0 0 0.25rem;
   padding: 0 0.25rem;
+  font-family: var(--font-poppins), var(--font-body);
   font-size: 0.625rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-text-subtle);
@@ -2728,13 +2733,15 @@ a {
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
 .palette-item:hover {
   border-color: var(--color-primary);
-  background-color: var(--color-surface-sunken);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  background-color: var(--color-surface);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
 }
 
 .palette-item--dragging {
@@ -2745,10 +2752,20 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.125rem;
-  height: 1.125rem;
-  color: var(--color-primary);
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 0.5rem;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
   flex-shrink: 0;
+}
+
+/* Alternate icon-badge tint per field group — same rhythm-through-repetition trick as
+   the dashboard's recent-forms initials (green / lavender / neutral), so the palette
+   reads a little livelier without any group being semantically "the purple one". */
+.palette-group:nth-of-type(2n) .palette-item-icon {
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
 }
 
 .palette-item-label {
@@ -2786,6 +2803,7 @@ a {
 
 .canvas-page-title {
   margin: 0 0 1rem;
+  font-family: var(--font-poppins), var(--font-body);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -3674,13 +3692,14 @@ a {
 }
 
 .page-tab--active {
-  background-color: var(--color-surface-sunken);
-  border-color: var(--color-border);
+  background-color: var(--color-lavender-soft);
+  border-color: transparent;
 }
 
 .page-tab-label {
   background: none;
   border: none;
+  font-family: var(--font-poppins), var(--font-body);
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--color-text-muted);
@@ -3691,8 +3710,8 @@ a {
 }
 
 .page-tab--active .page-tab-label {
-  color: var(--color-text);
-  font-weight: 600;
+  color: var(--color-lavender-strong);
+  font-weight: 700;
 }
 
 .page-tab-label:hover {
@@ -3782,6 +3801,7 @@ a {
 
 .settings-panel-title {
   margin: 0;
+  font-family: var(--font-poppins), var(--font-body);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -3834,6 +3854,7 @@ a {
 
 .settings-section-title {
   margin: 0;
+  font-family: var(--font-poppins), var(--font-body);
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--color-text);

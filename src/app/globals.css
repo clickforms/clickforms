@@ -2918,7 +2918,7 @@ a {
   border: none;
   border-radius: var(--radius-md);
   padding: 0.35rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-text);
   cursor: grab;

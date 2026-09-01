@@ -2586,6 +2586,19 @@ a {
   padding: 0.5rem 1.1rem;
 }
 
+/* Primary CTA (Publish/Approve) — solid black rather than brand green, matching the
+   reference's "Get this offer" pill: bold white label, arrow trailing the text. Scoped
+   to just this one button per the user's call — Share link/Form settings/etc. keep
+   their existing treatment. */
+.builder-header-cta {
+  background-color: #111;
+  color: #fff;
+}
+
+.builder-header-cta:hover {
+  background-color: #000;
+}
+
 .builder-header-actions {
   display: flex;
   align-items: center;

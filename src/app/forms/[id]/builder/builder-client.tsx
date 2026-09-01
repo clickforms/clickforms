@@ -108,11 +108,11 @@ interface DragPayload {
   columnLayoutColumns?: ColumnCount;
 }
 
-function CheckIcon() {
+function ArrowRightIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
-        d="M3.5 8.3 6.5 11.3 12.5 4.7"
+        d="M3 8h10M9 4l4 4-4 4"
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinecap="round"
@@ -709,7 +709,11 @@ export function BuilderClient({
                 {workflowStep ? (
                   <button
                     type="button"
-                    className={canRunWorkflow ? 'button' : 'button button--ghost button--small'}
+                    className={
+                      canRunWorkflow
+                        ? 'button builder-header-cta'
+                        : 'button button--ghost button--small'
+                    }
                     onClick={() => void handleWorkflowAction()}
                     disabled={isWorkflowBusy || !canRunWorkflow}
                     title={
@@ -718,8 +722,8 @@ export function BuilderClient({
                         : undefined
                     }
                   >
-                    {!isWorkflowBusy && canRunWorkflow ? <CheckIcon /> : null}
                     {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
+                    {!isWorkflowBusy && canRunWorkflow ? <ArrowRightIcon /> : null}
                   </button>
                 ) : null}
               </div>

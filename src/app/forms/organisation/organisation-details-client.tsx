@@ -68,15 +68,62 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
 
   return (
     <div className="settings-page">
-      <h1 className="settings-page-title">Organisation Settings</h1>
+      <h1 className="settings-page-title">Organisation settings</h1>
 
       <div className="card contact-details-card">
         <div className="contact-details-header">
-          <h2 className="contact-details-title">Organisation Details</h2>
-          <p className="contact-details-intro">
-            These details identify your organisation and give us someone to contact about your
-            account. ABN is optional. Only organisation admins can view or edit this page.
-          </p>
+          <span className="contact-details-header-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <title>Organisation</title>
+              <rect
+                x="4"
+                y="6.5"
+                width="12"
+                height="9.5"
+                rx="1.2"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M7.5 6.5V5.3c0-.66.54-1.2 1.2-1.2h2.6c.66 0 1.2.54 1.2 1.2v1.2"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path d="M4 10.5h12" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </span>
+          <div>
+            <div className="contact-details-title-row">
+              <h2 className="contact-details-title">Organisation details</h2>
+              <span className="contact-details-scope-badge">
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <title>Admins only</title>
+                  <rect
+                    x="4"
+                    y="7"
+                    width="8"
+                    height="6"
+                    rx="1"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                  />
+                  <path
+                    d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Admins only
+              </span>
+            </div>
+            <p className="contact-details-intro">
+              These details identify your organisation and give us someone to contact about your
+              account. ABN is optional.
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit}>

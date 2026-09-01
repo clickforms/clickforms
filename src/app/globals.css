@@ -10453,6 +10453,38 @@ textarea.form-field-input {
   font-weight: 700;
 }
 
+/* Only present on pages that pair the title with a scope badge (see
+   .contact-details-scope-badge below) — moves the title's own bottom margin onto the row
+   so the badge sits on the same line instead of the title's margin creating uneven space
+   inside the flex row. */
+.contact-details-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.contact-details-title-row .contact-details-title {
+  margin-bottom: 0;
+}
+
+/* "Admins only" / similar scope indicators next to a section title — lavender, matching
+   .badge--approved's tones, but its own class since this isn't a form-status badge. */
+.contact-details-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  background-color: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  border: 1px solid var(--color-lavender);
+  border-radius: var(--radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .contact-details-intro {
   margin: 0;
   color: var(--color-text-muted);

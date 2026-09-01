@@ -2460,6 +2460,49 @@ a {
   max-width: 320px;
 }
 
+/* Search box with a leading icon — same shape as .submissions-search, kept as its own
+   class per this file's existing convention of near-duplicate per-page styles rather than
+   sharing one class across pages that evolve independently. */
+.forms-search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  width: 100%;
+  max-width: 320px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.forms-search:focus-within {
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
+}
+
+.forms-search-icon {
+  display: inline-flex;
+  color: var(--color-text-subtle);
+  flex-shrink: 0;
+}
+
+.forms-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.forms-search input::placeholder {
+  color: var(--color-text-subtle);
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -2531,6 +2574,94 @@ a {
 
 .admin-table-private-badge {
   margin-left: 8px;
+}
+
+/* "Created by" avatar — small initials circle ahead of the name, lavender to match the
+   app's secondary accent used elsewhere (search fields, Approved badge). */
+.admin-table-creator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-table-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background-color: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+/* Static (non-sortable) header cells — "Created by"/"Actions" have no sort button to
+   inherit .table-sort-button's uppercase small-caps styling from, so this reproduces it
+   directly on the <th> to keep every header in the row visually consistent. */
+.forms-table-static-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* The whole row navigates to the builder on click (see forms-list-client.tsx) — cursor +
+   a visible focus ring since the row is keyboard operable too (role="button", tabIndex=0). */
+.forms-row--clickable {
+  cursor: pointer;
+}
+
+.forms-row--clickable:focus-visible {
+  outline: 2px solid var(--color-lavender-strong);
+  outline-offset: -2px;
+}
+
+.forms-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.forms-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.forms-pagination-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.forms-pagination-button:hover:not(:disabled) {
+  background-color: var(--color-surface-sunken);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.forms-pagination-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Dropdown actions menu (forms list, etc.) */

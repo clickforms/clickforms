@@ -2,7 +2,8 @@
 
 import type { FormStatus } from '@prisma/client';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { CreateFormModal } from '@/app/forms/create-form-modal';
 import { DeleteFormModal } from '@/app/forms/delete-form-modal';
 import { FormActionsMenu } from '@/app/forms/form-actions-menu';
@@ -53,6 +54,54 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: 'status', label: 'Status' },
 ];
 
+const PAGE_SIZE = 10;
+
+function SearchIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M13 13l-2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M8.5 3 4 7l4.5 4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M5.5 3 10 7l-4.5 4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// "Moses Buta" -> "MB", single-word names fall back to their first two letters.
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : (parts[0]?.[1] ?? '');
+  return `${first}${last}`.toUpperCase();
+}
+
 export function FormsListClient({
   initialForms,
   canEdit,
@@ -72,12 +121,14 @@ export function FormsListClient({
   const [renameValue, setRenameValue] = useState('');
   const [search, setSearch] = useState('');
   const toast = useToast();
+  const router = useRouter();
   const [sortColumn, setSortColumn] = useState<SortColumn>('updatedAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [deletingForm, setDeletingForm] = useState<FormSummary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [transferringForm, setTransferringForm] = useState<FormSummary | null>(null);
   const [isTransferring, setIsTransferring] = useState(false);
+  const [page, setPage] = useState(1);
 
   async function handleCopyLink(url: string) {
     try {
@@ -309,6 +360,17 @@ export function FormsListClient({
     });
   }, [forms, search, sortColumn, sortDirection]);
 
+  // Jump back to page 1 whenever the search/sort narrows or reorders the list — otherwise
+  // a page number that used to be valid could land past the end of a smaller result set.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps intentionally trigger a reset even though the effect body doesn't read them
+  useEffect(() => {
+    setPage(1);
+  }, [search, sortColumn, sortDirection]);
+
+  const totalPages = Math.max(1, Math.ceil(visibleForms.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageForms = visibleForms.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div>
       <div className="forms-list-header">
@@ -352,16 +414,21 @@ export function FormsListClient({
       ) : (
         <div className="card admin-table-card">
           <div className="table-search-row">
-            <input
-              className="text-input"
-              placeholder="Search forms by name…"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              aria-label="Search forms"
-            />
+            <label className="forms-search">
+              <span className="forms-search-icon">
+                <SearchIcon />
+              </span>
+              <input
+                type="text"
+                placeholder="Search forms by name…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                aria-label="Search forms"
+              />
+            </label>
           </div>
           <div className="admin-table-scroll">
-            <table className="admin-table">
+            <table className="admin-table forms-table">
               <thead>
                 <tr>
                   {COLUMNS.map((column) => (
@@ -380,18 +447,36 @@ export function FormsListClient({
                       </button>
                     </th>
                   ))}
-                  <th>Created by</th>
-                  <th>Actions</th>
+                  <th className="forms-table-static-header">Created by</th>
+                  <th className="forms-table-static-header">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {visibleForms.map((form) => {
+                {pageForms.map((form) => {
                   const isLive = form.currentVersionId !== null && form.status !== 'archived';
                   const hasPendingChanges =
                     isLive && form.latestVersionId !== form.currentVersionId;
+                  const builderHref = `/forms/${form.id}/builder`;
                   return (
-                    <tr key={form.id}>
-                      <td data-label="Form name">
+                    // biome-ignore lint/a11y/useSemanticElements: must stay a <tr> for correct table semantics — role="button" + tabIndex + onKeyDown supply the missing button affordance instead of nesting a real <button> around table cells
+                    <tr
+                      key={form.id}
+                      className="forms-row--clickable"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => router.push(builderHref)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          router.push(builderHref);
+                        }
+                      }}
+                    >
+                      <td
+                        data-label="Form name"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
                         {renamingId === form.id ? (
                           <input
                             className="text-input"
@@ -406,10 +491,7 @@ export function FormsListClient({
                             }}
                           />
                         ) : (
-                          <Link
-                            href={`/forms/${form.id}/builder`}
-                            className="admin-table-name-link"
-                          >
+                          <Link href={builderHref} className="admin-table-name-link">
                             {form.name}
                           </Link>
                         )}
@@ -429,14 +511,23 @@ export function FormsListClient({
                         />
                       </td>
                       <td data-label="Created by">
-                        {form.createdByName}
+                        <span className="admin-table-creator">
+                          <span className="admin-table-avatar" aria-hidden="true">
+                            {getInitials(form.createdByName)}
+                          </span>
+                          {form.createdByName}
+                        </span>
                         {form.isPrivate ? (
                           <span className="badge badge--neutral admin-table-private-badge">
                             Private
                           </span>
                         ) : null}
                       </td>
-                      <td data-label="Actions">
+                      <td
+                        data-label="Actions"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
                         <FormActionsMenu
                           formId={form.id}
                           formUrl={form.publicUrl}
@@ -470,6 +561,33 @@ export function FormsListClient({
                 ) : null}
               </tbody>
             </table>
+          </div>
+
+          <div className="forms-pagination">
+            <span>
+              {visibleForms.length} {visibleForms.length === 1 ? 'form' : 'forms'} · Page{' '}
+              {currentPage} of {totalPages}
+            </span>
+            <div className="forms-pagination-controls">
+              <button
+                type="button"
+                className="forms-pagination-button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={currentPage <= 1}
+                aria-label="Previous page"
+              >
+                <ChevronLeftIcon />
+              </button>
+              <button
+                type="button"
+                className="forms-pagination-button"
+                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                disabled={currentPage >= totalPages}
+                aria-label="Next page"
+              >
+                <ChevronRightIcon />
+              </button>
+            </div>
           </div>
         </div>
       )}

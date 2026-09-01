@@ -1497,6 +1497,22 @@ a {
     gap: 0.125rem;
   }
 
+  .form-top-nav-end {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 0.3rem;
+  }
+
+  .form-top-nav-end .live-status {
+    padding: 0.2rem 0.55rem 0.2rem 0.45rem;
+    font-size: 0.6875rem;
+  }
+
+  .form-top-nav-end .live-status-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+  }
+
   .form-top-nav-tab {
     padding: 0.3rem 0.55rem;
     font-size: 0.75rem;
@@ -2644,7 +2660,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  width: 17.5rem;
+  width: min(17.5rem, calc(100vw - 2rem));
   padding: 0.75rem;
 }
 
@@ -2764,6 +2780,7 @@ a {
 .builder-header-stage {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.3rem;
 }
 

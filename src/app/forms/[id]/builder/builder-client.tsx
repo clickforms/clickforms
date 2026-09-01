@@ -254,7 +254,18 @@ export function BuilderClient({
     async (schemaToSave: FormSchema, schemaJson: string): Promise<boolean> => {
       const parsed = formSchemaSchema.safeParse(schemaToSave);
       if (!parsed.success) {
-        throw new Error('Form has validation errors — fix them before continuing');
+        // Surfaced the same way a failed save request is (toast + error badge, no
+        // throw) — this used to throw synchronously, which escaped as an unhandled
+        // rejection from the setTimeout-scheduled autosave below and crashed the whole
+        // page to the dev error overlay instead of just flagging the bad schema.
+        const message = 'Form has validation errors — fix them before continuing';
+        setSaveStatus('error');
+        setSaveError(message);
+        if (lastSaveErrorToastRef.current !== message) {
+          toast.error(message);
+          lastSaveErrorToastRef.current = message;
+        }
+        return false;
       }
 
       setSaveStatus('saving');

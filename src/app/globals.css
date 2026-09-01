@@ -10628,6 +10628,49 @@ textarea.form-field-input {
   box-shadow: 0 0 0 3px var(--color-lavender-soft);
 }
 
+/* Show/hide toggle for password fields (Change password) — an eye icon button sitting
+   inside the input's right edge, matching the app's existing icon-button pattern. Extra
+   right padding on the input keeps typed text from running under the button. */
+.password-field {
+  position: relative;
+  width: 100%;
+}
+
+.password-field-input {
+  width: 100%;
+  padding-right: 2.5rem;
+}
+
+.password-field-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.password-field-toggle:hover:not(:disabled) {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.password-field-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .contact-details-actions {
   display: flex;
   align-items: center;

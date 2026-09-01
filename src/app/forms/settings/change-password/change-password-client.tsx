@@ -4,6 +4,81 @@ import { type FormEvent, useState } from 'react';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
 
+function EyeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M1.5 8s2.2-4.5 6.5-4.5S14.5 8 14.5 8s-2.2 4.5-6.5 4.5S1.5 8 1.5 8Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.75" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M1.5 8s2.2-4.5 6.5-4.5S14.5 8 14.5 8s-2.2 4.5-6.5 4.5S1.5 8 1.5 8Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.75" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M2.5 13.5l11-11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Wraps a password <input> with a show/hide toggle — each instance gets its own
+// visibility state, so revealing "New password" doesn't also reveal "Confirm new
+// password". Toggling swaps the input's type between "password" and "text" rather than
+// unmasking via CSS, since that's what actually controls whether the browser/password
+// manager treats it as a credential field.
+function PasswordInput({
+  value,
+  onChange,
+  autoComplete,
+  minLength,
+  disabled,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+  minLength?: number;
+  disabled: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="password-field">
+      <input
+        className="text-input contact-details-input password-field-input"
+        type={visible ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        minLength={minLength}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required
+        disabled={disabled}
+      />
+      <button
+        type="button"
+        className="password-field-toggle"
+        onClick={() => setVisible((current) => !current)}
+        disabled={disabled}
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-pressed={visible}
+      >
+        {visible ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  );
+}
+
 export function ChangePasswordClient() {
   const toast = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
@@ -91,13 +166,10 @@ export function ChangePasswordClient() {
             <div className="contact-details-row">
               <dt>Current password</dt>
               <dd>
-                <input
-                  className="text-input contact-details-input"
-                  type="password"
-                  autoComplete="current-password"
+                <PasswordInput
                   value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
-                  required
+                  onChange={setCurrentPassword}
+                  autoComplete="current-password"
                   disabled={isSubmitting}
                 />
               </dd>
@@ -105,14 +177,11 @@ export function ChangePasswordClient() {
             <div className="contact-details-row">
               <dt>New password</dt>
               <dd>
-                <input
-                  className="text-input contact-details-input"
-                  type="password"
+                <PasswordInput
+                  value={newPassword}
+                  onChange={setNewPassword}
                   autoComplete="new-password"
                   minLength={8}
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  required
                   disabled={isSubmitting}
                 />
               </dd>
@@ -120,14 +189,11 @@ export function ChangePasswordClient() {
             <div className="contact-details-row">
               <dt>Confirm new password</dt>
               <dd>
-                <input
-                  className="text-input contact-details-input"
-                  type="password"
+                <PasswordInput
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
                   autoComplete="new-password"
                   minLength={8}
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  required
                   disabled={isSubmitting}
                 />
               </dd>

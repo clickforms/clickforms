@@ -133,9 +133,9 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
             </p>
           ) : null}
 
-          <dl className="contact-details-list">
+          <dl className="contact-details-list contact-details-list--stacked">
             <div className="contact-details-row">
-              <dt>Organisation name</dt>
+              <dt>Organisation name:</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -147,7 +147,7 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>ABN</dt>
+              <dt>ABN:</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -160,7 +160,7 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>Contact person</dt>
+              <dt>Contact person:</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -172,7 +172,7 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>Contact email</dt>
+              <dt>Contact email:</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -185,7 +185,7 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>Contact phone</dt>
+              <dt>Contact phone:</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"

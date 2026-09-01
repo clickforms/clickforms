@@ -79,6 +79,15 @@ export function FormsListClient({
   const [transferringForm, setTransferringForm] = useState<FormSummary | null>(null);
   const [isTransferring, setIsTransferring] = useState(false);
 
+  async function handleCopyLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Live link copied to clipboard');
+    } catch {
+      toast.error('Could not copy link — select and copy manually');
+    }
+  }
+
   async function handleRename(id: string) {
     const name = renameValue.trim();
     setRenamingId(null);
@@ -446,6 +455,7 @@ export function FormsListClient({
                           isOwnForm={form.isOwnForm}
                           onTogglePrivate={() => handleTogglePrivate(form)}
                           onTransfer={() => setTransferringForm(form)}
+                          onCopyLink={() => void handleCopyLink(form.publicUrl)}
                         />
                       </td>
                     </tr>

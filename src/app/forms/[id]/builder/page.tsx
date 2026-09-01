@@ -4,6 +4,7 @@ import { BuilderClient } from '@/app/forms/[id]/builder/builder-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
+import { buildOrgFormUrl } from '@/lib/tenant';
 import { canUseBuilder } from '@/lib/user-roles';
 
 interface PageProps {
@@ -22,23 +23,33 @@ export default async function FormBuilderPage({ params }: PageProps) {
     return null;
   }
 
-  const { form, version } = await withOrgContext(session.user.organizationId, async (tx) => {
-    const form = await tx.form.findFirst({
-      where: { id, organizationId: session.user.organizationId },
-    });
-    if (!form) {
-      return { form: null, version: null };
-    }
+  const { form, version, organization } = await withOrgContext(
+    session.user.organizationId,
+    async (tx) => {
+      const form = await tx.form.findFirst({
+        where: { id, organizationId: session.user.organizationId },
+      });
+      if (!form) {
+        return { form: null, version: null, organization: null };
+      }
 
-    const version = await tx.formVersion.findFirst({
-      where: { formId: form.id },
-      orderBy: { versionNumber: 'desc' },
-    });
+      const version = await tx.formVersion.findFirst({
+        where: { formId: form.id },
+        orderBy: { versionNumber: 'desc' },
+      });
 
-    return { form, version };
-  });
+      // Needed to build the absolute /f/[slug] link on the org's subdomain — see
+      // src/app/forms/list/page.tsx for the same pattern.
+      const organization = await tx.organization.findUniqueOrThrow({
+        where: { id: session.user.organizationId },
+        select: { subdomain: true },
+      });
 
-  if (!form) {
+      return { form, version, organization };
+    },
+  );
+
+  if (!form || !organization) {
     notFound();
   }
 
@@ -65,6 +76,7 @@ export default async function FormBuilderPage({ params }: PageProps) {
   }
 
   const canEdit = canUseBuilder(session.user.role, form.createdBy, session.user.id);
+  const publicUrl = buildOrgFormUrl(organization.subdomain, `/f/${form.slug}`);
 
   return (
     <BuilderClient
@@ -82,6 +94,7 @@ export default async function FormBuilderPage({ params }: PageProps) {
       }
       initialCurrentVersionId={form.currentVersionId}
       canEdit={canEdit}
+      publicUrl={publicUrl}
     />
   );
 }

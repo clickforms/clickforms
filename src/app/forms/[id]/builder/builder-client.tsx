@@ -94,6 +94,9 @@ interface BuilderClientProps {
    *  (see src/lib/forms/live-status.ts). */
   initialCurrentVersionId: string | null;
   canEdit: boolean;
+  /** Absolute public URL on the org's subdomain (e.g. https://acme.clickforms.com.au/f/slug)
+   *  — see src/app/forms/list/page.tsx for the same buildOrgFormUrl pattern. */
+  publicUrl: string;
 }
 
 type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
@@ -102,6 +105,20 @@ interface DragPayload {
   source?: 'palette';
   fieldType?: FieldType;
   columnLayoutColumns?: ColumnCount;
+}
+
+function CopyLinkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="6" y="6" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M3.5 10V3.5A1.5 1.5 0 0 1 5 2h6.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
 function SaveStatusBadge({ status, error }: { status: SaveStatus; error: string | null }) {
@@ -129,6 +146,7 @@ export function BuilderClient({
   initialVersion,
   initialCurrentVersionId,
   canEdit,
+  publicUrl,
 }: BuilderClientProps) {
   const toast = useToast();
   const { status: formStatus, setStatus: setFormStatus } = useFormWorkspaceStatus();
@@ -307,6 +325,15 @@ export function BuilderClient({
 
   async function handleTakeOffline() {
     await runWorkflowAction('unpublish');
+  }
+
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      toast.success('Live link copied to clipboard');
+    } catch {
+      toast.error('Could not copy link — select and copy manually');
+    }
   }
 
   function handleSelectField(fieldId: string) {
@@ -570,6 +597,16 @@ export function BuilderClient({
                   isLive={isLive}
                   hasPendingChanges={hasPendingChanges}
                 />
+                {isLive ? (
+                  <button
+                    type="button"
+                    className="button button--ghost button--small"
+                    onClick={() => void handleCopyLink()}
+                    title={publicUrl}
+                  >
+                    <CopyLinkIcon /> Copy link
+                  </button>
+                ) : null}
                 {showTakeOffline ? (
                   <button
                     type="button"

@@ -38,6 +38,7 @@ interface FormActionsMenuProps {
   isOwnForm: boolean;
   onTogglePrivate: () => void;
   onTransfer: () => void;
+  onCopyLink: () => void;
 }
 
 type MenuItem =
@@ -165,6 +166,20 @@ function ViewFormIcon() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.4" />
       <path d="M11.5 11.5L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CopyLinkIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="6" y="6" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M3.5 10V3.5A1.5 1.5 0 0 1 5 2h6.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -394,6 +409,7 @@ export function FormActionsMenu({
   isOwnForm,
   onTogglePrivate,
   onTransfer,
+  onCopyLink,
 }: FormActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [panelStyle, setPanelStyle] = useState<CSSProperties | null>(null);
@@ -520,13 +536,21 @@ export function FormActionsMenu({
   }
 
   if (isLive) {
-    items.push({
-      kind: 'link',
-      label: 'View form',
-      href: formUrl,
-      icon: <ViewFormIcon />,
-      external: true,
-    });
+    items.push(
+      {
+        kind: 'link',
+        label: 'View form',
+        href: formUrl,
+        icon: <ViewFormIcon />,
+        external: true,
+      },
+      {
+        kind: 'button',
+        label: 'Copy link',
+        icon: <CopyLinkIcon />,
+        onClick: onCopyLink,
+      },
+    );
   }
 
   items.push(

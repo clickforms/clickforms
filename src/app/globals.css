@@ -2260,6 +2260,18 @@ a {
   text-align: right;
 }
 
+/* The whole row navigates to the response detail page (see submissions-list-client.tsx),
+   not just the View icon — cursor + a visible focus ring since the row is now keyboard
+   operable (role="button", tabIndex=0) too. */
+.submissions-row--clickable {
+  cursor: pointer;
+}
+
+.submissions-row--clickable:focus-visible {
+  outline: 2px solid var(--color-lavender-strong);
+  outline-offset: -2px;
+}
+
 /* Shorter rows than the .admin-table default (0.9rem vertical) — Responses rows only
    hold a timestamp/badge/IP/two icon buttons, so the extra height just added dead space.
    Doubled-up class selector so this reliably beats .admin-table td's own padding rule

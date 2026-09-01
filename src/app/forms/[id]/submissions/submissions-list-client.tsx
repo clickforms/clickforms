@@ -2,6 +2,7 @@
 
 import type { SubmissionStatus } from '@prisma/client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { DeleteSubmissionModal } from '@/app/forms/[id]/submissions/delete-submission-modal';
 import {
@@ -193,6 +194,7 @@ export function SubmissionsListClient({
   const [dateRange, setDateRange] = useState<SubmissionsDateRangeValue>({ from: null, to: null });
   const [page, setPage] = useState(1);
   const toast = useToast();
+  const router = useRouter();
 
   // Jump back to page 1 whenever a filter changes — otherwise narrowing the results could
   // strand the view on a now out-of-range page.
@@ -314,8 +316,22 @@ export function SubmissionsListClient({
               {pageSubmissions.map((submission) => {
                 const badge = SUBMISSION_STATUS_BADGE[submission.status];
                 const StatusIcon = badge.icon;
+                const detailHref = `/forms/${formId}/submissions/${submission.id}`;
                 return (
-                  <tr key={submission.id} className={badge.accentClassName}>
+                  // biome-ignore lint/a11y/useSemanticElements: must stay a <tr> for correct table semantics — role="button" + tabIndex + onKeyDown supply the missing button affordance instead of nesting a real <button> around table cells
+                  <tr
+                    key={submission.id}
+                    className={`${badge.accentClassName} submissions-row--clickable`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(detailHref)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        router.push(detailHref);
+                      }
+                    }}
+                  >
                     <td data-label="Submitted at">
                       <span className="submissions-timestamp">
                         <ClockIcon />
@@ -334,10 +350,21 @@ export function SubmissionsListClient({
                       {submission.ipAddress ?? '—'}
                     </td>
                     <td data-label="Actions">
-                      <div className="submissions-row-actions">
+                      {/* Row itself already navigates on click/Enter — stop these
+                          row-level handlers from also firing when the click/keypress
+                          originated on one of the actions below (e.g. Delete shouldn't
+                          also navigate away before its confirm modal opens). Not itself
+                          interactive — just a bubbling firewall around the real
+                          Link/button controls it wraps. */}
+                      {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick/onKeyDown here only stopPropagation to shield the row's own handlers — the actual interactive elements are the Link and button inside */}
+                      <div
+                        className="submissions-row-actions"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
                         <Link
                           className="submissions-icon-button"
-                          href={`/forms/${formId}/submissions/${submission.id}`}
+                          href={detailHref}
                           aria-label="View response"
                           title="View response"
                         >

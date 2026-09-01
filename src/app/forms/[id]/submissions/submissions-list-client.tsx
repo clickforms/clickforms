@@ -29,11 +29,67 @@ function ResponsesEmptyIcon() {
   );
 }
 
-const SUBMISSION_STATUS_BADGE: Record<SubmissionStatus, { label: string; className: string }> = {
-  in_progress: { label: 'In progress', className: 'badge--neutral' },
-  submitted: { label: 'Submitted', className: 'badge--success' },
-  approved: { label: 'Approved', className: 'badge--success' },
-  rejected: { label: 'Rejected', className: 'badge--error' },
+function ClockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M8 5v3.2l2.2 1.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M1.5 8s2.2-4.5 6.5-4.5S14.5 8 14.5 8s-2.2 4.5-6.5 4.5S1.5 8 1.5 8Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.75" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3 4.5h10M6 4.5V3.2c0-.5.4-.9.9-.9h2.2c.5 0 .9.4.9.9v1.3M5.5 7v4.8M10.5 7v4.8M3.8 4.5l.5 8.2c.05.6.55 1 1.1 1h5.2c.55 0 1.05-.4 1.1-1l.5-8.2"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+const SUBMISSION_STATUS_BADGE: Record<
+  SubmissionStatus,
+  { label: string; className: string; accentClassName: string }
+> = {
+  in_progress: {
+    label: 'In progress',
+    className: 'badge--neutral',
+    accentClassName: 'submissions-row--neutral',
+  },
+  submitted: {
+    label: 'Submitted',
+    className: 'badge--success',
+    accentClassName: 'submissions-row--success',
+  },
+  approved: {
+    label: 'Approved',
+    className: 'badge--approved',
+    accentClassName: 'submissions-row--approved',
+  },
+  rejected: {
+    label: 'Rejected',
+    className: 'badge--error',
+    accentClassName: 'submissions-row--danger',
+  },
 };
 
 // Client wrapper around the responses table so a `canDelete` org member can remove a
@@ -109,11 +165,14 @@ export function SubmissionsListClient({
               {submissions.map((submission) => {
                 const badge = SUBMISSION_STATUS_BADGE[submission.status];
                 return (
-                  <tr key={submission.id}>
+                  <tr key={submission.id} className={badge.accentClassName}>
                     <td data-label="Submitted at">
-                      {submission.submittedAt
-                        ? new Date(submission.submittedAt).toLocaleString('en-AU')
-                        : 'In progress'}
+                      <span className="submissions-timestamp">
+                        <ClockIcon />
+                        {submission.submittedAt
+                          ? new Date(submission.submittedAt).toLocaleString('en-AU')
+                          : 'In progress'}
+                      </span>
                     </td>
                     <td data-label="Status">
                       <span className={`badge ${badge.className}`}>{badge.label}</span>
@@ -122,10 +181,10 @@ export function SubmissionsListClient({
                     <td data-label="Actions">
                       <div className="submissions-row-actions">
                         <Link
-                          className="button button--ghost button--small"
+                          className="button button--small submissions-view-button"
                           href={`/forms/${formId}/submissions/${submission.id}`}
                         >
-                          View
+                          <EyeIcon /> View
                         </Link>
                         {canDelete ? (
                           <button
@@ -133,7 +192,7 @@ export function SubmissionsListClient({
                             className="button button--ghost button--small button--ghost-danger"
                             onClick={() => setDeletingId(submission.id)}
                           >
-                            Delete
+                            <TrashIcon /> Delete
                           </button>
                         ) : null}
                       </div>

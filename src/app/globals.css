@@ -145,12 +145,6 @@
   border-color: rgba(139, 124, 246, 0.35);
 }
 
-.admin-shell[data-theme="dark"] .badge--approved {
-  background-color: rgba(56, 189, 248, 0.14);
-  color: #7dd3fc;
-  border-color: rgba(56, 189, 248, 0.35);
-}
-
 .admin-shell[data-theme="dark"] .badge--error {
   background-color: rgba(248, 113, 113, 0.14);
   color: var(--color-danger);
@@ -307,16 +301,21 @@ a {
   border-color: #d7e2b6;
 }
 
+/* Text color fixed from a stale var(--color-secondary-hover) (green, on a lavender
+   background) to match — the dark-theme override just below was already all-lavender,
+   this light-mode rule was the one out of sync. */
 .badge--draft {
   background-color: #ece9fb;
-  color: var(--color-secondary-hover);
+  color: var(--color-lavender-strong);
   border-color: #d7d2f5;
 }
 
+/* Lavender, not blue — same fix as .live-status--approved: blue was a one-off hue with
+   no other use in the app, lavender is the established secondary accent. */
 .badge--approved {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border-color: #bae6fd;
+  background-color: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  border-color: var(--color-lavender);
 }
 
 /* Live-status indicator — whether a form is actually reachable by respondents right
@@ -2059,6 +2058,10 @@ a {
    classes rather than reused directly, matching how .admin-table/.users-table already
    coexist as separate near-identical implementations elsewhere in this file. */
 .submissions-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1.25rem;
 }
 
@@ -2075,11 +2078,68 @@ a {
   line-height: 1.45;
 }
 
+/* Lavender — the app's secondary accent — rather than primary green, so it doesn't
+   compete with the Live badge/CTA elsewhere in the toolbar above this page. */
+.submissions-count-badge {
+  flex-shrink: 0;
+  padding: 0.4rem 0.9rem;
+  background-color: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .submissions-row-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.submissions-timestamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-text-muted);
+}
+
+.submissions-timestamp svg {
+  flex-shrink: 0;
+  color: var(--color-text-subtle);
+}
+
+/* Solid lavender rather than the base .button's primary green — View is a routine,
+   frequent action here (not the page's one "big" CTA), so it gets the secondary accent
+   colour instead of competing with primary green used for Live/Submitted elsewhere. */
+.submissions-view-button {
+  background-color: var(--color-lavender-strong);
+}
+
+.submissions-view-button:hover {
+  background-color: color-mix(in srgb, var(--color-lavender-strong) 85%, black);
+}
+
+/* A soft coloured edge on each row, echoing its status badge — submitted/approved lean
+   into the app's primary/secondary accents, rejected reads danger-red, in-progress stays
+   neutral. Applied as an inset box-shadow on the first cell rather than a real border so
+   it doesn't disturb the table's border-collapse layout. */
+.admin-table tbody tr.submissions-row--success td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--color-primary);
+}
+
+.admin-table tbody tr.submissions-row--approved td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--color-lavender-strong);
+}
+
+.admin-table tbody tr.submissions-row--danger td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--color-danger);
+}
+
+.admin-table tbody tr.submissions-row--neutral td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--color-border-strong);
 }
 
 .submissions-empty-state {
@@ -2160,6 +2220,10 @@ a {
 
 .admin-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+.admin-table tbody tr {
+  transition: background-color 0.12s ease;
 }
 
 .admin-table tbody tr:hover {

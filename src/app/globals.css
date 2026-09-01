@@ -2680,10 +2680,10 @@ a {
   flex-direction: row;
   justify-content: space-between;
   align-items: stretch;
-  gap: 3rem;
+  gap: 0;
   flex: 1;
   min-height: 0;
-  padding: 1.25rem 2rem 0;
+  padding: 0;
   background-color: var(--color-surface-sunken);
   width: 100%;
   box-sizing: border-box;
@@ -2701,8 +2701,9 @@ a {
   max-width: 40%;
   min-height: 0;
   min-width: 0;
-  padding-left: 1rem;
-  background-color: var(--color-surface-sunken);
+  padding: 0;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
   overflow-y: auto;
 }
 
@@ -2829,17 +2830,17 @@ a {
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
-/* Field palette — a white card floating on the sidebar's sunken background (rather than
-   a sunken card in a sunken sidebar). Rows are a flat searchable list rather than
-   bordered chips — dragability is still there (cursor: grab + useDraggable) but no
-   longer needs its own grip glyph to announce itself once every row is a full-width
-   list item rather than a small grid tile. */
+/* Field palette — flush white panel (touching the sidebar's left/top edges, divided
+   from the canvas by .builder-palette's border-right) rather than a floating card, so
+   it reads as part of the same toolbar chrome above it instead of a card sitting on a
+   sunken backdrop. Dragability is still there (cursor: grab + useDraggable) even
+   without its own grip glyph, since a 2-up grid of icon+label tiles already reads as
+   individually pickable items. */
 .field-palette {
-  padding: 0.85rem 0.6rem;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  padding: 1.25rem 1.25rem 1.5rem;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
   height: fit-content;
 }
 
@@ -2903,15 +2904,15 @@ a {
 }
 
 .palette-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.6rem;
 }
 
 .palette-item {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.6rem;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -2919,9 +2920,9 @@ a {
   background-color: transparent;
   border: none;
   border-radius: var(--radius-md);
-  padding: 0.4rem 0.4rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  padding: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--color-text);
   cursor: grab;
   text-align: left;
@@ -2940,20 +2941,12 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.55rem;
-  background: var(--color-primary-soft);
-  color: var(--color-primary-hover);
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 0.6rem;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
   flex-shrink: 0;
-}
-
-/* Alternate icon-badge tint per field group — same rhythm-through-repetition trick as
-   the dashboard's recent-forms initials (green / lavender / neutral), so the palette
-   reads a little livelier without any group being semantically "the purple one". */
-.palette-group:nth-of-type(2n) .palette-item-icon {
-  background: var(--color-lavender-soft);
-  color: var(--color-lavender-strong);
 }
 
 .palette-item-label {

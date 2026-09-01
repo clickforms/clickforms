@@ -133,7 +133,7 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
             </p>
           ) : null}
 
-          <dl className="contact-details-list contact-details-list--wide-inputs">
+          <dl className="contact-details-list contact-details-list--table contact-details-list--wide-inputs">
             <div className="contact-details-row">
               <dt>Organisation name:</dt>
               <dd>

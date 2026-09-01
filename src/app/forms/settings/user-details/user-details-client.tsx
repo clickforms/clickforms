@@ -108,6 +108,22 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
             </div>
             <div className="contact-details-row">
               <dt>
+                <span>Phone</span>
+                <small>Optional contact number</small>
+              </dt>
+              <dd>
+                <input
+                  className="text-input contact-details-input"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  placeholder="0400 000 000"
+                  disabled={isSaving}
+                />
+              </dd>
+            </div>
+            <div className="contact-details-row">
+              <dt>
                 <span>Email address</span>
                 <small>Managed by your organisation</small>
               </dt>
@@ -135,22 +151,6 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
                   {initialProfile.email}
                 </span>
                 <span className="contact-details-readonly-note">Contact an admin to update</span>
-              </dd>
-            </div>
-            <div className="contact-details-row">
-              <dt>
-                <span>Phone</span>
-                <small>Optional contact number</small>
-              </dt>
-              <dd>
-                <input
-                  className="text-input contact-details-input"
-                  type="tel"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="0400 000 000"
-                  disabled={isSaving}
-                />
               </dd>
             </div>
           </dl>

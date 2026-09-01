@@ -826,6 +826,54 @@ a {
   border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
+/* Bold lavender toolbar (builder only — submissions/settings keep the plain white
+   nav bar) instead of the usual white chrome, echoing the reference's solid-lavender
+   hero + white "sticker" pills + green CTA. The canvas and field palette stay white/
+   neutral below this so the actual editing surface keeps full contrast. */
+.form-workspace:has(.builder) .form-top-nav,
+.form-workspace:has(.builder) .builder-header {
+  background: var(--color-lavender);
+  /* var(--color-text-muted)'s usual grey drops under 3.5:1 against this lavender —
+     darken it locally (every existing var(--color-text-muted)/--color-text-subtle
+     reference inside these two rows picks this up automatically) rather than
+     re-deriving contrast-safe colors selector by selector. */
+  --color-text-muted: #4b5563;
+  --color-text-subtle: #5b6472;
+}
+
+.form-workspace:has(.builder) .form-top-nav {
+  border-color: transparent;
+}
+
+.form-workspace:has(.builder) .builder-header {
+  border-bottom-color: color-mix(in srgb, var(--color-lavender-strong) 30%, transparent);
+}
+
+.form-workspace:has(.builder) .builder-header-divider {
+  background-color: color-mix(in srgb, var(--color-lavender-strong) 40%, transparent);
+}
+
+/* Ghost/outlined buttons on the lavender bar get a white "sticker" pill instead of
+   transparent-on-white, so they stay legible and pop the way the reference's white
+   Sign-up pill does against its lavender hero. */
+.form-workspace:has(.builder) .form-top-nav-preview {
+  background-color: rgba(255, 255, 255, 0.55);
+}
+
+.form-workspace:has(.builder) .form-top-nav-preview:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.form-workspace:has(.builder) .builder-header .button--ghost {
+  background-color: rgba(255, 255, 255, 0.75);
+  border-color: rgba(17, 17, 17, 0.12);
+}
+
+.form-workspace:has(.builder) .builder-header .button--ghost:hover {
+  background-color: #fff;
+  border-color: rgba(17, 17, 17, 0.18);
+}
+
 .form-workspace-content {
   flex: 1;
   min-width: 0;

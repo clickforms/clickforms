@@ -10531,20 +10531,12 @@ textarea.form-field-input {
   font-size: 0.9375rem;
 }
 
-/* Stacked variant (Organisation settings) — label above a full-width input, instead of
-   the label-left/input-right grid the Account settings page uses. Scoped to
-   .contact-details-list--stacked rather than changing .contact-details-row itself, so
-   the Account settings page's side-by-side layout is unaffected. */
-.contact-details-list--stacked .contact-details-row {
-  display: block;
-  padding: 1.1rem 1.5rem;
-}
-
-.contact-details-list--stacked .contact-details-row dt {
-  margin-bottom: 0.5rem;
-}
-
-.contact-details-list--stacked .contact-details-input {
+/* Wide-input variant (Organisation settings) — keeps the label-left/input-right grid,
+   but lets the input fill the rest of the row instead of capping at .contact-details-input's
+   default 320px. Scoped to .contact-details-list--wide-inputs rather than changing
+   .contact-details-input itself, so the Account settings page's narrower inputs are
+   unaffected. */
+.contact-details-list--wide-inputs .contact-details-input {
   width: 100%;
   max-width: none;
 }

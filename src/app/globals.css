@@ -524,6 +524,10 @@ a {
   cursor: pointer;
 }
 
+/* Lavender rather than the primary-green gradient every other avatar-ish badge in the
+   app already leans on (form-list "Created by" initials, header icon badges) — the
+   account menu is the one piece of chrome present on every page, so giving it the
+   secondary accent instead keeps it visually distinct from the primary CTAs. */
 .account-avatar {
   display: inline-flex;
   align-items: center;
@@ -531,7 +535,7 @@ a {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 50%;
-  background: linear-gradient(155deg, var(--color-primary), #3dd975);
+  background: linear-gradient(155deg, var(--color-lavender-strong), var(--color-lavender));
   color: #fff;
   font-family: var(--font-display), var(--font-body);
   font-size: 0.8125rem;
@@ -546,7 +550,7 @@ a {
 .account-menu-trigger:hover .account-avatar {
   box-shadow:
     0 0 0 2px var(--color-surface),
-    0 0 0 3px var(--color-primary);
+    0 0 0 3px var(--color-lavender-strong);
 }
 
 .account-avatar--lg {

@@ -24,9 +24,11 @@ interface PageProps {
  * (sidebar/topbar/org-join-banner) — fine for a normal page, but this route is meant to be
  * embedded bare in an iframe inside a modal, so it'd otherwise render the whole app shell
  * nested inside itself. Living as its own top-level segment (mirroring src/app/f, which
- * /f/[slug]/preview relies on the same way) keeps it chrome-free. Published-only, same gate
- * as the gallery itself (src/app/forms/templates/page.tsx) and the org-side list API — a
- * draft template isn't previewable from here (that's the admin template builder's job).
+ * /f/[slug]/preview relies on the same way) keeps it chrome-free. Published-only for
+ * regular org users — same gate as the gallery itself (src/app/forms/templates/page.tsx)
+ * and the org-side list API. Platform admins can preview any status (draft/archived
+ * included), since this doubles as the Preview action from /admin/templates and the admin
+ * template builder — those need to see a template before it's published.
  */
 export default async function TemplatePreviewPage({ params, searchParams }: PageProps) {
   const { id } = await params;
@@ -38,7 +40,7 @@ export default async function TemplatePreviewPage({ params, searchParams }: Page
   }
 
   const template = await prisma.formTemplate.findFirst({
-    where: { id, status: 'published' },
+    where: session.user.isPlatformAdmin ? { id } : { id, status: 'published' },
     select: { id: true, name: true, schema: true },
   });
   if (!template) {

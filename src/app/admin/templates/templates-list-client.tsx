@@ -99,12 +99,14 @@ function TemplateRowMenu({
   template,
   busy,
   onEdit,
+  onPreview,
   onSetStatus,
   onDelete,
 }: {
   template: TemplateRow;
   busy: boolean;
   onEdit: () => void;
+  onPreview: () => void;
   onSetStatus: (status: TemplateStatus) => void;
   onDelete: () => void;
 }) {
@@ -142,6 +144,19 @@ function TemplateRowMenu({
               }}
             >
               Edit
+            </button>
+          </li>
+          <li role="none">
+            <button
+              type="button"
+              role="menuitem"
+              className="actions-menu-item"
+              onClick={() => {
+                setOpen(false);
+                onPreview();
+              }}
+            >
+              Preview
             </button>
           </li>
           {template.status !== 'published' ? (
@@ -461,6 +476,13 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                           template={template}
                           busy={busyId === template.id}
                           onEdit={() => router.push(`/admin/templates/${template.id}/builder`)}
+                          onPreview={() =>
+                            window.open(
+                              `/template-preview/${template.id}`,
+                              '_blank',
+                              'noopener,noreferrer',
+                            )
+                          }
                           onSetStatus={(status) => void handleSetStatus(template, status)}
                           onDelete={() => setDeletingTemplate(template)}
                         />

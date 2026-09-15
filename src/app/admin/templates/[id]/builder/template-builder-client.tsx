@@ -13,6 +13,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
+import Link from 'next/link';
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CANVAS_DROPPABLE_ID, Canvas } from '@/app/forms/[id]/builder/canvas';
 import { ConditionalPreviewBar } from '@/app/forms/[id]/builder/conditional-preview-bar';
@@ -133,6 +134,20 @@ function EditFormIcon() {
         strokeWidth="1.4"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function PreviewIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M1.5 8s2.5-4 6.5-4 6.5 4 6.5 4-2.5 4-6.5 4-6.5-4-6.5-4Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.75" stroke="currentColor" strokeWidth="1.4" />
     </svg>
   );
 }
@@ -497,6 +512,18 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
           onMovePage={handleMovePage}
         />
         <div className="builder-header-utility">
+          {/* Opens the last-saved schema (same route the org-side gallery uses, via the
+              isPlatformAdmin bypass in template-preview/[id]/page.tsx), not whatever's
+              currently unsaved in the canvas — matches how the org form builder's own
+              Preview link works (form-top-nav.tsx), which is also last-saved, not live. */}
+          <Link
+            href={`/template-preview/${templateId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="button button--ghost button--small"
+          >
+            <PreviewIcon /> Preview
+          </Link>
           <button
             type="button"
             className="button button--ghost button--small"

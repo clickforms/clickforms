@@ -53,7 +53,9 @@ anything that already exists).
      installs Docker + Compose via user-data, allocates an Elastic IP, writes
      `/opt/clickforms/.env` on the box (`ENVIRONMENT`, `CADDYFILE`, `AWS_REGION`, `S3_BUCKET`,
      `DOMAIN`), and creates a scoped instance IAM role (S3 access to that bucket only, SSM
-     read under that env's path only, ECR pull, SES send). It also **reconciles RDS
+     read under that env's path only, ECR pull — email goes through Resend's HTTPS API, not
+     an AWS service, so there's no SES permission to grant here; see "Email (Resend) setup"
+     under §4). It also **reconciles RDS
      networking**: swaps the "your IP" rule for "this EC2 instance's security group only"
      and flips RDS to `--no-publicly-accessible`. From this point on, the database is
      reachable only from inside that EC2 instance.
@@ -119,12 +121,41 @@ Three separate places, don't confuse them:
   `SSM_PARAM_PREFIX`, and which Caddyfile to mount.
 
 - **AWS SSM Parameter Store**, `SecureString`, under `/clickforms/<environment>/` — currently
-  `database-url` and `session-secret` (lowercase, hyphenated — `entrypoint.sh` reads these
-  exact names via `ssm-deps/resolve-secrets.cjs`, using the EC2 instance role, no AWS keys).
-  Resolved into the container's environment at container start, never baked into the image.
+  `database-url`, `session-secret`, and `resend-api-key` (lowercase, hyphenated —
+  `entrypoint.sh` reads these exact names via `ssm-deps/resolve-secrets.cjs`, using the EC2
+  instance role, no AWS keys). Resolved into the container's environment at container start,
+  never baked into the image. `RESEND_FROM` and `CONTACT_EMAIL` aren't secrets — set them as
+  plain (non-Secure) values in `/opt/clickforms/.env` alongside `S3_BUCKET`/`DOMAIN` instead
+  of adding them to SSM.
 
 - **`.env.local`** — local dev only, copy from `.env.example`. Never used in staging or
   production; production secrets never touch a `.env.local`-shaped file.
+
+### Email (Resend) setup
+
+One-time, per environment (staging and production can share a domain if you want the same
+"from" address in both, or use a subdomain per environment — e.g. `staging.clickforms.com.au`
+— to keep staging traffic out of production's sender reputation):
+
+1. Create a Resend account and add the sending domain (e.g. `clickforms.com.au`) under
+   **Domains**.
+2. Resend gives you DNS records to add at your domain registrar/DNS provider (Cloudflare,
+   per §3 of this doc) — an SPF `TXT` record, one or more DKIM `CNAME`/`TXT` records, and a
+   `DMARC` `TXT` record if you don't already have one. Add all of them, then click "Verify"
+   in Resend. Propagation is usually fast but can take a few hours.
+3. Create an API key (**API Keys** → new key, scoped to "Sending access" and, if offered,
+   restricted to the verified domain) and store it in SSM:
+   ```
+   aws ssm put-parameter --name /clickforms/<env>/resend-api-key --type SecureString --value <key>
+   ```
+4. Add `RESEND_FROM="Clickforms <no-reply@clickforms.com.au>"` (matching the verified
+   domain) to `/opt/clickforms/.env` on the box.
+
+Until this is done, `sendEmail()` (`src/lib/email.ts`) just logs every email to the
+container's stdout instead of sending — the app keeps working (signup/invite/reset links
+still resolve, submission notifications still "send"), there's just no real delivery. Check
+the `email_log` table (`EmailLog` model) for a `dev_logged`/`failed`/`sent` history per
+attempt if delivery ever looks wrong after this is configured.
 
 ## 5. Day-to-day deploys
 
@@ -243,9 +274,14 @@ never deleted except via the 7-day untagged-image lifecycle rule).
   both `https://<root-domain>` and `https://*.<root-domain>` per environment, and
   `put-bucket-cors` (via `scripts/setup-s3.sh`, or run by hand) has to be re-applied to the
   live bucket any time that file changes — editing the repo file alone does nothing to a
-  bucket that was already provisioned. If uploads fail only in staging/production and never
-  on localhost, check this first with
-  `aws s3api get-bucket-cors --bucket <bucket> --region ap-southeast-2`.
+  bucket that was already provisioned. This isn't staging/production-only: local dev hits it
+  too, since a public form still resolves to `<org-subdomain>.localhost:3000`
+  (`resolveSubdomain` in `src/middleware.ts`), not bare `localhost:3000` — so
+  `http://*.localhost:3000` needs to be in `AllowedOrigins` as well (added 2026-09-15). If
+  uploads fail, check the actual applied policy first with
+  `aws s3api get-bucket-cors --bucket <bucket> --region ap-southeast-2` — whichever bucket
+  `S3_BUCKET` in the relevant `.env` points at (local dev commonly points at
+  `clickforms-staging` rather than running a separate dev-only bucket).
 
 - **`./certs` must exist and be populated on the production box before first deploy.**
   `Caddyfile.production` references `/etc/caddy/certs/cloudflare-origin-cert.pem` and

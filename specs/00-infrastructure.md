@@ -14,7 +14,7 @@ A single AWS account, one VPC in `ap-southeast-2`, running an empty "hello world
 - **Security groups**: EC2 SG allows 22 (your IP only), 80/443 (0.0.0.0/0). RDS SG allows 5432 from the EC2 SG only — never public.
 - **RDS**: Postgres 16, `db.t4g.micro` to start, 20GB storage, automated backups enabled (7-day retention minimum), encryption at rest on.
 - **S3**: one private bucket, versioning off (not needed — we're not doing object-level recovery), default encryption on, bucket policy denies public access entirely.
-- **IAM**: one instance role attached to the EC2 instance, with a policy scoped to: `s3:GetObject/PutObject/DeleteObject` on the one bucket, `ses:SendEmail`, nothing else. No IAM users with long-lived access keys anywhere.
+- **IAM**: one instance role attached to the EC2 instance, with a policy scoped to: `s3:GetObject/PutObject/DeleteObject` on the one bucket, nothing else. No IAM users with long-lived access keys anywhere. (Superseded 2026-09-15: email moved to Resend, not SES — see ARCHITECTURE.md §3 and DEPLOYMENT.md's "Email (Resend) setup". No `ses:SendEmail` grant needed; Resend is reached via its HTTPS API with an API key in SSM instead.)
 - **SSM Parameter Store**: `DATABASE_URL`, `SESSION_SECRET`, and any other runtime secret as SecureString params, pulled by an entrypoint script at container start (not baked into the image).
 - **Route53 + Caddy**: domain pointed at the Elastic IP; Caddy container handles automatic Let's Encrypt TLS.
 - **ECR**: one repository for the app image.
@@ -29,7 +29,7 @@ Production uses RDS; local dev does **not** connect to it. Instead:
 - **Package manager**: Yarn 4 (Berry) via Corepack — `corepack enable` once per machine, then `yarn install --immutable` for a lockfile-exact install (used both locally and in CI).
 - **App**: runs natively (`yarn dev`), not containerized locally — hot reload is materially faster than rebuilding a container on every change. Docker is only used locally for the stateful service (Postgres), not the app itself.
 - **Env**: `.env.local` (gitignored) holds `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/forms_dev` and a dev-only `SESSION_SECRET`. Never points at real SSM/AWS values.
-- **S3/SES**: not needed to build/test the DB and auth layers. When file-upload or email work starts (specs 04/05), either point at a real but separate "dev" S3 bucket + SES sandbox, or stub those calls locally — decide when that spec starts, not now.
+- **S3/Email**: not needed to build/test the DB and auth layers. When file-upload or email work starts (specs 04/05), either point at a real but separate "dev" S3 bucket + Resend account, or stub those calls locally — decide when that spec starts, not now. (As built: local dev leaves `RESEND_API_KEY` unset entirely — `sendEmail()` logs to the console instead of sending, no sandbox/test account needed.)
 - **Migrations**: `yarn prisma migrate dev` against the local container during development; `yarn prisma migrate deploy` is what CI runs against RDS. Same migration files, two different targets — this is what guarantees local and prod schemas never drift.
 - **Pre-commit**: Husky + lint-staged run Biome and `tsc --noEmit` on staged files — set this up as part of this spec, not left until later, so the habit is there from the first commit.
 

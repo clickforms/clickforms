@@ -14,7 +14,7 @@ An unauthenticated respondent can open a form's public URL, fill it out on mobil
 - **Conditional logic evaluation**: client-side, re-evaluated on every answer change, matching the rules defined in spec 02's schema shape.
 - **Validation**: required fields, basic type validation (email format, date range) enforced client-side before page-advance, re-validated server-side on submit (never trust the client alone).
 - **Multi-page navigation**: next/back, with in-progress answers held in local component state until save.
-- **Save & resume**: "save and continue later" creates a `submissions` row with `status = in_progress` and a `resume_token` (random, unguessable), emails a resume link (`/f/:slug/resume/:token`) via SES if the respondent provided an email field. Token expires after a configurable window (default 30 days).
+- **Save & resume**: "save and continue later" creates a `submissions` row with `status = in_progress` and a `resume_token` (random, unguessable), emails a resume link (`/f/:slug/resume/:token`) via Resend (superseded 2026-09-15, was originally planned as SES) if the respondent provided an email field. Token expires after a configurable window (default 30 days). **Not yet built** — no resume-token model or flow exists as of this note; only signup/invite/password-reset/notification/contact-form emails are implemented.
 - **Mobile responsiveness**: single-column layout, touch-friendly signature/file inputs, tested on a real phone viewport, not just browser devtools.
 
 ## Out of scope

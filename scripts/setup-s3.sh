@@ -62,8 +62,9 @@ Make sure S3_ENDPOINT is unset — the app defaults to real AWS S3 when it's emp
 scripts/s3-cors.json's AllowedOrigins must cover every origin a respondent's browser can send a
 presigned PUT from — that means the wildcard org-subdomain form (e.g. https://*.clickforms.com.au),
 not just the bare root domain, since every org's public form lives at <org-subdomain>.<root-domain>
-(see src/middleware.ts). If you add a new root domain, add both the bare and wildcard entries,
-then re-run:
+(see src/middleware.ts). This applies to local dev too — testing a public form locally hits
+<org-subdomain>.localhost:3000, not bare localhost:3000, so http://*.localhost:3000 is in the
+list as well. If you add a new root domain, add both the bare and wildcard entries, then re-run:
   aws s3api put-bucket-cors --bucket ${BUCKET} --cors-configuration file://scripts/s3-cors.json
 
 scripts/s3-iam-policy.json has the least-privilege policy to attach to the EC2 instance role

@@ -28,14 +28,22 @@ Admin Browser ────────┘             │        │            
                                     │  RDS Postgres (Multi-AZ optional, automated    │
                                     │  backups + PITR, encrypted at rest)            │
                                     └───────────────────────────────────────────────┘
-                                             │              │              │
-                                             ▼              ▼              ▼
-                                        S3 bucket        SES            SNS (optional)
-                                    uploads, signature  email          SMS — flagged:
-                                    images, PDFs        notifications  not AU data-resident
+                                             │                              │
+                                             ▼                              ▼
+                                        S3 bucket                      SNS (optional)
+                                    uploads, signature                 SMS — flagged:
+                                    images, PDFs                       not AU data-resident
 
-IAM: EC2 instance role scoped to this S3 bucket + SES/SNS send — no long-lived credentials on the box.
-Secrets: SSM Parameter Store (SecureString) for DB creds, session secret, etc. — pulled at container start.
+                                             │
+                                             ▼ HTTPS (RESEND_API_KEY, not IAM)
+                                        Resend — email
+                                        (signup/invite/reset links, submission
+                                        notifications, the public contact form)
+
+IAM: EC2 instance role scoped to this S3 bucket + SNS send — no long-lived credentials on
+the box. Resend is reached over its HTTPS API with an API key (SSM-stored, see below), not
+an AWS IAM permission — there's nothing to scope on the instance role for it.
+Secrets: SSM Parameter Store (SecureString) for DB creds, session secret, RESEND_API_KEY, etc. — pulled at container start.
 ```
 
 One deployable app container behind Caddy on a single EC2 instance. No separate backend service — Next.js API routes serve both the admin UI and the public form-fill API; a separate service would be operational overhead with no benefit at this scale.
@@ -55,7 +63,7 @@ Everything — compute, database, storage, email — now sits in one AWS account
 | ORM | Prisma | Type-safe schema, migrations, and the place to enforce org-scoping consistently. |
 | Auth (admin) | NextAuth v4 (stable line, not the v5/`beta` tag), JWT sessions, credentials provider querying Prisma directly | Self-rolled, admin-only, org-scoped — no external auth provider. No Auth.js Prisma *adapter* (that's built for OAuth account/session persistence); with a single credentials provider and JWT sessions there's nothing for it to store, so `authorize()` queries `users` directly. Revisit if magic-link or OAuth is added later. |
 | File storage | AWS S3, ap-southeast-2 | Private bucket, presigned URLs, org-scoped key prefix, IAM-restricted to the EC2 role. |
-| Email | AWS SES, ap-southeast-2 | AWS-native, no separate vendor account. |
+| Email | Resend | Chosen over AWS SES for a simpler API, better local-dev ergonomics, and no need to request production access out of a sending sandbox — trades "no separate vendor account" for materially less setup friction. Domain verification (SPF/DKIM/DMARC) still required regardless of provider. See DEPLOYMENT.md's "Email (Resend)" section. |
 | SMS | AWS SNS (optional, opt-in per form) | AWS-native; flagged as not AU-guaranteed data-resident like everything else — use sparingly. |
 | PDF generation | `@react-pdf/renderer` or Puppeteer | Render submission + signature certificate as PDF server-side. |
 | Secrets | AWS SSM Parameter Store (SecureString) | Free tier covers this at our scale; no credentials baked into images or `.env` files on disk. |
@@ -182,7 +190,7 @@ Using RDS instead of self-hosted Postgres removes the biggest risk (backups/PITR
 - **OS hardening** — security group locked to 22/80/443, SSH key-only auth (no passwords), `fail2ban`, unattended security upgrades on the instance.
 - **TLS renewal** — Caddy handles this automatically; alert on renewal failures rather than discovering an expired cert from a user report.
 - **Patching cadence** — Docker base images and host OS packages need a regular update rhythm. This was previously a platform SLA; now it's a recurring task on your calendar.
-- **IAM hygiene** — the EC2 instance role should hold only S3/SES/SNS permissions it actually needs, nothing account-wide. Rotate/review periodically.
+- **IAM hygiene** — the EC2 instance role should hold only S3/SNS permissions it actually needs, nothing account-wide. Rotate/review periodically. (Email/Resend isn't IAM-scoped — see §2 — but its API key in SSM should be rotated on the same cadence.)
 - **Single point of failure (compute)** — one EC2 instance means the app goes down if that box does, though RDS can be Multi-AZ independently if that risk matters before the app does. Acceptable at internal-only scale; revisit (ECS Fargate with 2+ tasks behind a load balancer) if this becomes customer-facing SaaS.
 
 ## 11. Path to ECS Fargate (later, if traffic/reliability demands it)

@@ -9,15 +9,32 @@
 # CLI picks up whatever credentials are already active in your shell.
 #
 # Usage:
-#   ./scripts/setup-s3.sh                                    # dev bucket: forms-dev-<account>
-#   AWS_REGION=us-east-1 ./scripts/setup-s3.sh                # override the default region
-#   BUCKET=forms-prod-myco ./scripts/setup-s3.sh              # explicit prod bucket name
+#   ENVIRONMENT=staging ./scripts/setup-s3.sh                 # bucket: clickforms-staging
+#   ENVIRONMENT=production ./scripts/setup-s3.sh              # bucket: clickforms-prod (see note below)
+#   AWS_REGION=us-east-1 ENVIRONMENT=staging ./scripts/setup-s3.sh   # override the default region
+#   BUCKET=my-custom-name ./scripts/setup-s3.sh               # explicit override, skips ENVIRONMENT naming
+#   ./scripts/setup-s3.sh                                     # neither set: dev bucket forms-dev-<account>
 
 set -euo pipefail
 
 REGION="${AWS_REGION:-ap-southeast-2}"
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
-BUCKET="${BUCKET:-forms-dev-${ACCOUNT_ID}}"
+
+# Matches setup-ec2.sh's S3_BUCKET_NAME derivation exactly — the production bucket is
+# "clickforms-prod", not "clickforms-production" (kept short from when it was first
+# created; changing it now would mean migrating existing objects). BUCKET= still wins
+# outright when set, for anyone who needs a one-off custom name.
+if [[ -z "${BUCKET:-}" ]]; then
+  if [[ -n "${ENVIRONMENT:-}" ]]; then
+    if [[ "${ENVIRONMENT}" == "production" ]]; then
+      BUCKET="clickforms-prod"
+    else
+      BUCKET="clickforms-${ENVIRONMENT}"
+    fi
+  else
+    BUCKET="forms-dev-${ACCOUNT_ID}"
+  fi
+fi
 
 echo "Account:  ${ACCOUNT_ID}"
 echo "Region:   ${REGION}"

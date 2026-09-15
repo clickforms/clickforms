@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
 import { UploadIcon } from '@/components/landing/landing-icons';
 
 const CONTACT_EMAIL = 'admin@clickforms.com.au';
@@ -13,12 +13,11 @@ const CONCERN_TYPES = [
   'Other',
 ] as const;
 
-/**
- * No contact/support API endpoint exists yet, so this composes a mailto: link from the
- * fields and hands off to the visitor's own email client rather than silently failing
- * against a backend that was never built. A file can be picked in the browser, but mailto
- * can't carry an attachment — the filename is included as a reminder to attach it by hand.
- */
+type SubmitState = 'idle' | 'submitting' | 'submitted' | 'error';
+
+/** Posts to POST /api/contact (sendEmail() → the internal support inbox, with the
+ * visitor's own address set as replyTo) — previously this built a mailto: link and
+ * handed off to the visitor's own mail client instead of hitting any backend. */
 export function LandingContactForm() {
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
@@ -28,25 +27,49 @@ export function LandingContactForm() {
   const [concern, setConcern] = useState('');
   const [description, setDescription] = useState('');
   const [fileName, setFileName] = useState('');
+  const [state, setState] = useState<SubmitState>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const formRef = useRef<HTMLFormElement>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
-    const subject = `${concern || 'Message'} from ${fullName || 'the Clickforms website'}`;
-    const bodyLines = [
-      description,
-      '',
-      `— ${fullName}`,
-      email ? `Email: ${email}` : null,
-      phone ? `Phone: +61 ${phone}` : null,
-      fileName ? `Please remember to attach: ${fileName}` : null,
-    ].filter((line): line is string => line !== null);
-    const mailtoUrl = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
-    window.location.href = mailtoUrl;
+    setState('submitting');
+    setErrorMessage('');
+    try {
+      const formData = new FormData(event.currentTarget);
+      const res = await fetch('/api/contact', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const data: { error?: string } = await res.json().catch(() => ({}));
+        setErrorMessage(data.error ?? 'Something went wrong. Please try again.');
+        setState('error');
+        return;
+      }
+      setState('submitted');
+      formRef.current?.reset();
+      setFirstName('');
+      setMiddleName('');
+      setLastName('');
+      setEmail('');
+      setPhone('');
+      setConcern('');
+      setDescription('');
+      setFileName('');
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.');
+      setState('error');
+    }
+  }
+
+  if (state === 'submitted') {
+    return (
+      <div className="landing-contact-form landing-contact-form--submitted">
+        <p>Thanks — your message has been sent. We'll get back to you soon.</p>
+      </div>
+    );
   }
 
   return (
-    <form className="landing-contact-form" onSubmit={handleSubmit}>
+    <form className="landing-contact-form" onSubmit={handleSubmit} ref={formRef}>
       <div className="landing-form-field">
         <label className="landing-sr-only" htmlFor="contact-first-name">
           First name
@@ -178,12 +201,18 @@ export function LandingContactForm() {
         />
       </label>
 
-      <button type="submit" className="landing-btn landing-btn--cta landing-btn--block">
-        Send
+      <button
+        type="submit"
+        className="landing-btn landing-btn--cta landing-btn--block"
+        disabled={state === 'submitting'}
+      >
+        {state === 'submitting' ? 'Sending…' : 'Send'}
       </button>
-      <p className="landing-contact-form-note">
-        Opens your email client with this addressed to {CONTACT_EMAIL}.
-      </p>
+      {state === 'error' ? (
+        <p className="landing-contact-form-note landing-contact-form-note--error">{errorMessage}</p>
+      ) : (
+        <p className="landing-contact-form-note">Sent directly to {CONTACT_EMAIL}.</p>
+      )}
     </form>
   );
 }

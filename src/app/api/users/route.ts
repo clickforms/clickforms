@@ -175,6 +175,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
+      kind: 'invite',
+      organizationId: session.user.organizationId,
     });
 
     return NextResponse.json(

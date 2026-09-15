@@ -6,7 +6,10 @@
 // --color-primary/--color-text/--color-border rather than referencing the variables
 // themselves, for the same reason.
 
-const BRAND_GREEN = '#00a960';
+const BRAND_GREEN = '#55ea8c';
+const BRAND_GREEN_DARK = '#3dd975';
+const LAVENDER = '#7c5cfa';
+const LAVENDER_SOFT = '#efecff';
 const TEXT_DARK = '#111827';
 const TEXT_MUTED = '#6b7280';
 const BORDER = '#e2e8f0';
@@ -39,8 +42,8 @@ export function renderEmailLayout({
     ? `
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
         <tr>
-          <td style="border-radius: 8px; background-color: ${BRAND_GREEN};">
-            <a href="${cta.url}" style="display: inline-block; padding: 12px 24px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">
+          <td style="border-radius: 8px; background-color: ${BRAND_GREEN_DARK};">
+            <a href="${cta.url}" style="display: inline-block; padding: 12px 26px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">
               ${cta.label}
             </a>
           </td>
@@ -48,12 +51,21 @@ export function renderEmailLayout({
       </table>
       <p style="${P_STYLE} font-size: 13px; color: ${TEXT_MUTED};">
         Or paste this link into your browser:<br />
-        <a href="${cta.url}" style="color: ${BRAND_GREEN}; word-break: break-all;">${cta.url}</a>
+        <a href="${cta.url}" style="color: ${BRAND_GREEN_DARK}; word-break: break-all;">${cta.url}</a>
       </p>`
     : '';
 
+  // A tinted callout rather than plain muted text — the lavender brand accent gives
+  // security/expiry notices ("this link expires in...") a bit more visual weight than
+  // the rest of the body copy without competing with the green CTA button above it.
   const footnoteHtml = footnote
-    ? `<p style="${P_STYLE} font-size: 13px; color: ${TEXT_MUTED};">${footnote}</p>`
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 4px 0 0;">
+        <tr>
+          <td style="background-color: ${LAVENDER_SOFT}; border-radius: 8px; padding: 12px 16px; font-size: 13px; line-height: 1.5; color: ${LAVENDER};">
+            ${footnote}
+          </td>
+        </tr>
+      </table>`
     : '';
 
   const html = `<!DOCTYPE html>
@@ -70,11 +82,21 @@ export function renderEmailLayout({
         <td align="center">
           <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width: 480px; width: 100%; background-color: #ffffff; border: 1px solid ${BORDER}; border-radius: 12px; overflow: hidden;">
             <tr>
-              <td style="padding: 28px 32px 8px; border-bottom: 1px solid ${BORDER};">
+              <td style="line-height: 0; font-size: 0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td width="50%" height="4" style="background-color: ${BRAND_GREEN};">&nbsp;</td>
+                    <td width="50%" height="4" style="background-color: ${LAVENDER};">&nbsp;</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 24px 32px 8px; border-bottom: 1px solid ${BORDER};">
                 <table role="presentation" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="padding-right: 8px; vertical-align: middle;">
-                      <table role="presentation" width="28" height="28" cellpadding="0" cellspacing="0" style="background-color: ${BRAND_GREEN}; border-radius: 7px;">
+                      <table role="presentation" width="28" height="28" cellpadding="0" cellspacing="0" style="background-color: ${BRAND_GREEN_DARK}; border-radius: 7px;">
                         <tr>
                           <td align="center" style="padding: 6px 5px;">
                             <div style="height: 2px; background: #fff; border-radius: 1px; margin: 0 0 3px;"></div>
@@ -99,7 +121,14 @@ export function renderEmailLayout({
               </td>
             </tr>
           </table>
-          <p style="margin: 20px 0 0; font-size: 12px; color: ${TEXT_MUTED};">Clickforms &middot; Internal forms platform</p>
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width: 480px; width: 100%; margin-top: 20px;">
+            <tr>
+              <td align="center" style="font-size: 12px; line-height: 1.6; color: ${TEXT_MUTED};">
+                <strong style="color: ${TEXT_DARK};">Clickforms</strong> &middot; Forms, built for your team<br />
+                This is an automated message from Clickforms.
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>

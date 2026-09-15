@@ -1,4 +1,4 @@
-import type { UserRole } from '@prisma/client';
+import type { PlatformAdminRole, UserRole } from '@prisma/client';
 import { renderEmailLayout } from '@/lib/emails/layout';
 
 export interface RenderedEmail {
@@ -55,14 +55,27 @@ export function inviteEmail(params: {
   };
 }
 
-/** "Forgot password" flow (POST /api/auth/forgot-password) — reset link for an existing user. */
-export function passwordResetEmail(params: { name: string; resetUrl: string }): RenderedEmail {
+/**
+ * "Forgot password" flow (POST /api/auth/forgot-password) — reset link for an existing
+ * user. `organizationName` is passed whenever the requesting email matches more than one
+ * account (the same email can be a separate User row in several organisations — see
+ * User's @@unique([organizationId, email])) so each email names which org's account its
+ * link resets, rather than sending several identical-looking emails with no way to tell
+ * them apart.
+ */
+export function passwordResetEmail(params: {
+  name: string;
+  resetUrl: string;
+  organizationName?: string | null;
+}): RenderedEmail {
   const { html, text } = renderEmailLayout({
     preheader: 'Reset your Clickforms password.',
     heading: 'Reset your password',
     paragraphs: [
       `Hi ${params.name},`,
-      'We got a request to reset your Clickforms password. Click the button below to choose a new one.',
+      params.organizationName
+        ? `We got a request to reset your Clickforms password for <strong>${params.organizationName}</strong>. Click the button below to choose a new one for that organisation.`
+        : 'We got a request to reset your Clickforms password. Click the button below to choose a new one.',
     ],
     cta: { label: 'Reset password', url: params.resetUrl },
     footnote:
@@ -70,6 +83,63 @@ export function passwordResetEmail(params: { name: string; resetUrl: string }): 
   });
 
   return { subject: 'Reset your Clickforms password', html, text };
+}
+
+/** New-response alert, fired from PATCH /api/f/[slug]/submissions/[submissionId] once a
+ * respondent finishes submitting — see src/lib/forms/submission-notification.ts for who
+ * it's sent to (org default vs. per-form override vs. off) and the PDF it's attached
+ * with. `respondentHint` is a best-effort label (e.g. a "Name" field's answer) rather
+ * than anything guaranteed present — plenty of forms have no such field, or the
+ * respondent left it blank. */
+export function submissionNotificationEmail(params: {
+  formName: string;
+  submittedAt: Date;
+  viewUrl: string;
+  respondentHint?: string | null;
+}): RenderedEmail {
+  const submittedLabel = params.submittedAt.toLocaleString('en-AU', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  const { html, text } = renderEmailLayout({
+    preheader: `A new response was submitted to ${params.formName}.`,
+    heading: 'New form response',
+    paragraphs: [
+      `<strong>${params.formName}</strong> just received a new response${
+        params.respondentHint ? ` from <strong>${params.respondentHint}</strong>` : ''
+      }, submitted ${submittedLabel}.`,
+      'A PDF copy of the response is attached to this email.',
+    ],
+    cta: { label: 'View response', url: params.viewUrl },
+  });
+
+  return { subject: `New response: ${params.formName}`, html, text };
+}
+
+/** Marketing site's public contact form (POST /api/contact) — sent to the internal
+ * support inbox, not to the visitor. sendEmail() is called with replyTo set to the
+ * visitor's own address so a reply goes straight to them. */
+export function contactFormEmail(params: {
+  fullName: string;
+  email: string;
+  phone?: string;
+  concern: string;
+  description: string;
+  attachmentFilename?: string | null;
+}): RenderedEmail {
+  const { html, text } = renderEmailLayout({
+    preheader: `New ${params.concern.toLowerCase()} message from ${params.fullName} via the Clickforms contact form.`,
+    heading: 'New contact form submission',
+    paragraphs: [
+      `<strong>${params.fullName}</strong> (${params.email}${params.phone ? `, ${params.phone}` : ''}) sent a <strong>${params.concern}</strong> message through the website:`,
+      params.description.replace(/\n/g, '<br />'),
+      params.attachmentFilename ? `Attached: <strong>${params.attachmentFilename}</strong>` : '',
+    ].filter(Boolean),
+    footnote: `Reply to this email to respond directly to ${params.email}.`,
+  });
+
+  return { subject: `Contact form: ${params.concern} from ${params.fullName}`, html, text };
 }
 
 function roleLabel(role: UserRole): string {
@@ -83,4 +153,28 @@ function roleLabel(role: UserRole): string {
     default:
       return 'a member';
   }
+}
+
+/** A new /admin "Team" invite (POST /api/admin/team/invite) — joining Clickforms staff,
+ * not a customer organisation, so this deliberately doesn't mention any org name. */
+export function platformAdminInviteEmail(params: {
+  name: string;
+  role: PlatformAdminRole;
+  invitedByName: string;
+  inviteUrl: string;
+}): RenderedEmail {
+  const roleText = params.role === 'super_admin' ? 'a super admin' : 'support (read-only)';
+  const { html, text } = renderEmailLayout({
+    preheader: `${params.invitedByName} invited you to join the Clickforms Admin team.`,
+    heading: "You've been invited to Clickforms Admin",
+    paragraphs: [
+      `Hi ${params.name},`,
+      `<strong>${params.invitedByName}</strong> invited you to join the Clickforms platform staff team as ${roleText}.`,
+    ],
+    cta: { label: 'Accept invite & set password', url: params.inviteUrl },
+    footnote:
+      "This link expires in 7 days. If you weren't expecting this, you can ignore this email.",
+  });
+
+  return { subject: "You've been invited to Clickforms Admin", html, text };
 }

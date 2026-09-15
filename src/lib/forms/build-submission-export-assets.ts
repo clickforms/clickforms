@@ -11,11 +11,25 @@ export interface SubmissionExportAssets {
 async function fetchDataUrl(url: string, mimeType?: string): Promise<string | null> {
   try {
     const response = await fetch(url);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // Was a silent `return null` before — that made a broken embed indistinguishable
+      // from "nothing to embed" (both just fall back to showing the filename). Logging
+      // here is what surfaces a bad presigned URL, expired bucket creds, etc. in the
+      // server terminal instead of failing invisibly. S3 error responses are XML with the
+      // actual reason (e.g. AuthorizationQueryParametersError, InvalidArgument) in the
+      // body — the status/statusText alone ("400 Bad Request") doesn't say why, so log
+      // the body too.
+      const body = await response.text().catch(() => '<unreadable body>');
+      console.error(
+        `[forms] fetchDataUrl: presigned GET failed with ${response.status} ${response.statusText}\n${body}`,
+      );
+      return null;
+    }
     const buffer = Buffer.from(await response.arrayBuffer());
     const type = mimeType || response.headers.get('content-type') || 'application/octet-stream';
     return `data:${type};base64,${buffer.toString('base64')}`;
-  } catch {
+  } catch (error) {
+    console.error('[forms] fetchDataUrl: failed to fetch/encode file for embedding', error);
     return null;
   }
 }

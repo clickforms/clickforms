@@ -1,11 +1,23 @@
 import { BRAND_PRIMARY } from '@/components/brand-colors';
 
 /**
- * Clickforms brand mark — solid green rounded square with a white "C" monogram.
+ * Clickforms brand mark — solid green rounded square with a dark "C" monogram.
+ * `onColor` inverts that (dark square, white C) so the mark stays readable on the
+ * green signup panel.
  * `id` is accepted (unused) for backward compatibility with existing call sites that
  * pass a unique id per instance — no longer needed now the fill is solid, not a gradient.
  */
-export function BrandMark({ size = 28 }: { size?: number; id?: string }) {
+export function BrandMark({
+  size = 28,
+  variant = 'default',
+}: {
+  size?: number;
+  id?: string;
+  variant?: 'default' | 'onColor';
+}) {
+  const fill = variant === 'onColor' ? '#111111' : BRAND_PRIMARY;
+  const letter = variant === 'onColor' ? '#ffffff' : '#111111';
+
   return (
     <svg
       width={size}
@@ -15,14 +27,14 @@ export function BrandMark({ size = 28 }: { size?: number; id?: string }) {
       aria-hidden="true"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <rect x="0" y="0" width="32" height="32" rx="8" fill={BRAND_PRIMARY} />
+      <rect x="0" y="0" width="32" height="32" rx="8" fill={fill} />
       <text
         x="16"
         y="23"
         fontFamily="Poppins, Arial, sans-serif"
         fontWeight="800"
         fontSize="19"
-        fill="#111111"
+        fill={letter}
         textAnchor="middle"
       >
         C

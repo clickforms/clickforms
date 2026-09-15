@@ -1,8 +1,16 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { ImageCropEditor } from '@/app/forms/[id]/builder/image-crop-editor';
 import { useToast } from '@/components/toast';
-import { readApiError } from '@/lib/error-message';
+import { getErrorMessage, readApiError } from '@/lib/error-message';
+import { isCroppableImage } from '@/lib/forms/crop-image';
+
+/** Keep in sync with MAX_LOGO_SIZE_BYTES / the logo MIME allowlist in src/lib/s3.ts —
+ * not imported from there because that module is `server-only` (mirrors the same
+ * duplication already done for MAX_UPLOAD_SIZE_BYTES in src/app/forms/files/files-client.tsx). */
+const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
+const LOGO_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
 
 export interface OrganizationProfile {
   id: string;
@@ -12,21 +20,119 @@ export interface OrganizationProfile {
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  notificationEmail: string | null;
+  /** Presigned GET URL, regenerated on every page load — never stored. Null when no
+   * logo has been uploaded, or S3 isn't configured (soft-fails, see page.tsx). */
+  logoUrl: string | null;
 }
 
 interface OrganisationDetailsClientProps {
   initialOrganization: OrganizationProfile;
 }
 
+function InfoIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8 7.2v3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="8" cy="5.2" r="0.7" fill="currentColor" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="2" y="3.5" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M3 4.5 8 8.5 13 4.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M5.2 2.8h2.1l.7 2.1-1.3 1.1a8.2 8.2 0 0 0 3.3 3.3l1.1-1.3 2.1.7v2.1c0 .6-.5 1.2-1.1 1.3-4.4.7-8.5-3.4-7.8-7.8.1-.6.7-1.1 1.3-1.1Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+  label,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      className="settings-toggle"
+      onClick={() => onChange(!checked)}
+    >
+      <span className="settings-toggle-thumb" />
+    </button>
+  );
+}
+
 export function OrganisationDetailsClient({ initialOrganization }: OrganisationDetailsClientProps) {
   const toast = useToast();
+  const [logoUrl, setLogoUrl] = useState(initialOrganization.logoUrl);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isRemovingLogo, setIsRemovingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(initialOrganization.name);
   const [abn, setAbn] = useState(initialOrganization.abn ?? '');
   const [contactName, setContactName] = useState(initialOrganization.contactName ?? '');
   const [contactEmail, setContactEmail] = useState(initialOrganization.contactEmail ?? '');
   const [contactPhone, setContactPhone] = useState(initialOrganization.contactPhone ?? '');
+  const [notificationEmail, setNotificationEmail] = useState(
+    initialOrganization.notificationEmail ?? '',
+  );
+  // Separate from the address itself so switching off doesn't throw away whatever the
+  // admin typed — turning it back on inside the same visit restores it, and only an
+  // actual save while off clears the stored address (see handleSubmit below).
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    Boolean(initialOrganization.notificationEmail),
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cropSession, setCropSession] = useState<{
+    imageSrc: string;
+    fileName: string;
+  } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (cropSession) URL.revokeObjectURL(cropSession.imageSrc);
+    };
+  }, [cropSession]);
+
+  const closeCropSession = useCallback(() => {
+    setCropSession((prev) => {
+      if (prev) URL.revokeObjectURL(prev.imageSrc);
+      return null;
+    });
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,6 +141,11 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
     const trimmedName = name.trim();
     if (!trimmedName) {
       setError('Organisation name is required');
+      return;
+    }
+
+    if (notificationsEnabled && !notificationEmail.trim()) {
+      setError('Enter a notification email address, or turn notifications off.');
       return;
     }
 
@@ -50,6 +161,7 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
           contactName: contactName.trim(),
           contactEmail: contactEmail.trim(),
           contactPhone: contactPhone.trim(),
+          notificationEmail: notificationsEnabled ? notificationEmail.trim() : '',
         }),
       });
 
@@ -66,9 +178,250 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
     }
   }
 
+  async function uploadLogo(file: File) {
+    if (file.size > MAX_LOGO_SIZE_BYTES) {
+      toast.error(`Logo exceeds the ${MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB limit.`);
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const presignRes = await fetch('/api/organization/logo/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          sizeBytes: file.size,
+        }),
+      });
+      if (!presignRes.ok) {
+        toast.error(await readApiError(presignRes, 'Could not start logo upload'));
+        return;
+      }
+      const { uploadUrl, storageKey } = (await presignRes.json()) as {
+        uploadUrl: string;
+        storageKey: string;
+      };
+
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+      if (!putRes.ok) {
+        toast.error('Upload to storage failed. Check S3 configuration and try again.');
+        return;
+      }
+
+      const confirmRes = await fetch('/api/organization/logo/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storageKey,
+          mimeType: file.type || 'application/octet-stream',
+          sizeBytes: file.size,
+        }),
+      });
+      if (!confirmRes.ok) {
+        toast.error(await readApiError(confirmRes, 'Could not save uploaded logo'));
+        return;
+      }
+
+      const { logoUrl: newLogoUrl } = (await confirmRes.json()) as { logoUrl: string | null };
+      setLogoUrl(newLogoUrl);
+      closeCropSession();
+      toast.success('Logo updated');
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  }
+
+  function handleLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (file.size > MAX_LOGO_SIZE_BYTES) {
+      toast.error(`Logo exceeds the ${MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB limit.`);
+      return;
+    }
+
+    if (!isCroppableImage(file.type)) {
+      void uploadLogo(file);
+      return;
+    }
+
+    setCropSession({
+      imageSrc: URL.createObjectURL(file),
+      fileName: file.name,
+    });
+  }
+
+  async function handleEditExistingLogo() {
+    if (!logoUrl) return;
+    try {
+      const res = await fetch(logoUrl);
+      if (!res.ok) throw new Error('Could not load the logo.');
+      const blob = await res.blob();
+      if (blob.type && !isCroppableImage(blob.type)) {
+        throw new Error('Cropping isn’t available for this format. Replace with a PNG or JPG.');
+      }
+      setCropSession({
+        imageSrc: URL.createObjectURL(blob),
+        fileName: 'logo.png',
+      });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not load the logo for editing.'));
+    }
+  }
+
+  async function handleRemoveLogo() {
+    setIsRemovingLogo(true);
+    try {
+      const res = await fetch('/api/organization/logo', { method: 'DELETE' });
+      if (!res.ok) {
+        toast.error(await readApiError(res, 'Could not remove logo'));
+        return;
+      }
+      setLogoUrl(null);
+      toast.success('Logo removed');
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsRemovingLogo(false);
+    }
+  }
+
   return (
-    <div className="settings-page">
-      <h1 className="settings-page-title">Organisation settings</h1>
+    <div className="settings-page organisation-settings">
+      <div className="settings-page-header">
+        <h1 className="settings-page-title">Organisation settings</h1>
+        <p className="settings-page-lead">
+          Manage the details that identify your organisation across Clickforms.
+        </p>
+      </div>
+
+      <div className="card contact-details-card organisation-logo-card">
+        <div className="contact-details-header">
+          <span className="contact-details-header-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <title>Logo</title>
+              <rect
+                x="3"
+                y="3"
+                width="14"
+                height="14"
+                rx="3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <circle cx="7.3" cy="7.5" r="1.3" stroke="currentColor" strokeWidth="1.4" />
+              <path
+                d="M3.8 14.5 8 10.3l2.6 2.6 2-2 3.6 3.6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <div>
+            <div className="contact-details-title-row">
+              <h2 className="contact-details-title">Logo</h2>
+              <span className="contact-details-scope-badge">
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <title>Admins only</title>
+                  <rect
+                    x="4"
+                    y="7"
+                    width="8"
+                    height="6"
+                    rx="1"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                  />
+                  <path
+                    d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Admins only
+              </span>
+            </div>
+            <p className="contact-details-intro">
+              Shown in the top bar in place of the default Clickforms mark. PNG, JPEG, WebP, or GIF
+              — crop and rotate before upload. SVG uploads as-is. Up to{' '}
+              {MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB.
+            </p>
+          </div>
+        </div>
+
+        <div className="organisation-logo-row">
+          <div className="organisation-logo-preview">
+            {logoUrl ? (
+              // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
+              <img src={logoUrl} alt="Organisation logo" />
+            ) : (
+              <span className="organisation-logo-placeholder">No logo</span>
+            )}
+          </div>
+          <div className="organisation-logo-actions">
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept={LOGO_ACCEPT}
+              className="organisation-logo-file-input"
+              onChange={(event) => void handleLogoFileChange(event)}
+              disabled={isUploadingLogo || isRemovingLogo}
+            />
+            <button
+              type="button"
+              className="button button--secondary"
+              disabled={isUploadingLogo || isRemovingLogo}
+              onClick={() => logoInputRef.current?.click()}
+            >
+              {isUploadingLogo ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
+            </button>
+            {logoUrl ? (
+              <>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  disabled={isUploadingLogo || isRemovingLogo}
+                  onClick={() => void handleEditExistingLogo()}
+                >
+                  Edit & crop
+                </button>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  disabled={isUploadingLogo || isRemovingLogo}
+                  onClick={() => void handleRemoveLogo()}
+                >
+                  {isRemovingLogo ? 'Removing…' : 'Remove'}
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {cropSession ? (
+        <ImageCropEditor
+          key={cropSession.imageSrc}
+          open
+          imageSrc={cropSession.imageSrc}
+          fileName={cropSession.fileName}
+          busy={isUploadingLogo}
+          onCancel={closeCropSession}
+          onApply={uploadLogo}
+        />
+      ) : null}
 
       <div className="card contact-details-card">
         <div className="contact-details-header">
@@ -119,10 +472,6 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
                 Admins only
               </span>
             </div>
-            <p className="contact-details-intro">
-              These details identify your organisation and give us someone to contact about your
-              account. ABN is optional.
-            </p>
           </div>
         </div>
 
@@ -133,9 +482,9 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
             </p>
           ) : null}
 
-          <dl className="contact-details-list contact-details-list--table contact-details-list--wide-inputs">
+          <dl className="contact-details-list organisation-details-list">
             <div className="contact-details-row">
-              <dt>Organisation name:</dt>
+              <dt>Organisation name</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -147,7 +496,7 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>ABN:</dt>
+              <dt>ABN</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
@@ -160,47 +509,116 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>Contact person:</dt>
+              <dt>Contact person</dt>
               <dd>
                 <input
                   className="text-input contact-details-input"
                   value={contactName}
                   onChange={(event) => setContactName(event.target.value)}
-                  placeholder="Full name"
                   disabled={isSaving}
                 />
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>Contact email:</dt>
+              <dt>Contact email</dt>
               <dd>
-                <input
-                  className="text-input contact-details-input"
-                  type="email"
-                  value={contactEmail}
-                  onChange={(event) => setContactEmail(event.target.value)}
-                  placeholder="contact@yourorg.com"
-                  disabled={isSaving}
-                />
+                <div className="organisation-field-control">
+                  <span className="organisation-field-icon" aria-hidden="true">
+                    <MailIcon />
+                  </span>
+                  <input
+                    className="text-input contact-details-input"
+                    type="email"
+                    value={contactEmail}
+                    onChange={(event) => setContactEmail(event.target.value)}
+                    placeholder="contact@yourorg.com"
+                    disabled={isSaving}
+                  />
+                </div>
               </dd>
             </div>
             <div className="contact-details-row">
-              <dt>Contact phone:</dt>
+              <dt>Contact phone</dt>
               <dd>
-                <input
-                  className="text-input contact-details-input"
-                  type="tel"
-                  value={contactPhone}
-                  onChange={(event) => setContactPhone(event.target.value)}
-                  placeholder="0400 000 000"
-                  disabled={isSaving}
-                />
+                <div className="organisation-field-control">
+                  <span className="organisation-field-icon" aria-hidden="true">
+                    <PhoneIcon />
+                  </span>
+                  <input
+                    className="text-input contact-details-input"
+                    type="tel"
+                    value={contactPhone}
+                    onChange={(event) => setContactPhone(event.target.value)}
+                    placeholder="0400 000 000"
+                    disabled={isSaving}
+                  />
+                </div>
+              </dd>
+            </div>
+            <div className="contact-details-row">
+              <dt>
+                <span className="organisation-label-with-help">
+                  Notification email
+                  <span className="organisation-help">
+                    <button
+                      type="button"
+                      className="organisation-help-button"
+                      aria-describedby="notification-email-tooltip"
+                      aria-label="About notification email"
+                    >
+                      <InfoIcon />
+                    </button>
+                    <span
+                      id="notification-email-tooltip"
+                      role="tooltip"
+                      className="organisation-tooltip"
+                    >
+                      Sent to this address — with a PDF copy of the response attached — every time
+                      someone submits a response to any of your forms. This is just the
+                      organisation-wide default: any individual form can still send its own
+                      notifications to a different address, or turn them off entirely, from that
+                      form&apos;s own Settings page.
+                    </span>
+                  </span>
+                </span>
+              </dt>
+              <dd>
+                <div className="notification-toggle-row">
+                  <Toggle
+                    checked={notificationsEnabled}
+                    onChange={setNotificationsEnabled}
+                    disabled={isSaving}
+                    label="Response notification email"
+                  />
+                  <span
+                    className={`notification-toggle-state${notificationsEnabled ? ' notification-toggle-state--on' : ''}`}
+                  >
+                    {notificationsEnabled ? 'On' : 'Off'}
+                  </span>
+                </div>
+
+                {notificationsEnabled ? (
+                  <div className="organisation-field-control">
+                    <span className="organisation-field-icon" aria-hidden="true">
+                      <MailIcon />
+                    </span>
+                    <input
+                      className="text-input contact-details-input"
+                      type="email"
+                      value={notificationEmail}
+                      onChange={(event) => setNotificationEmail(event.target.value)}
+                      placeholder="responses@yourorg.com"
+                      disabled={isSaving}
+                      required
+                    />
+                  </div>
+                ) : null}
               </dd>
             </div>
           </dl>
 
           <div className="contact-details-actions">
-            <button type="submit" className="button" disabled={isSaving}>
+            <button type="submit" className="button button--dark" disabled={isSaving}>
               {isSaving ? 'Saving…' : 'Save changes'}
             </button>
           </div>

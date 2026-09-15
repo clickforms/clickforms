@@ -29,6 +29,13 @@ const patchOrganizationBodySchema = z.object({
     .optional()
     .or(z.literal('')),
   contactPhone: z.string().trim().max(30).optional(),
+  notificationEmail: z
+    .string()
+    .trim()
+    .max(255)
+    .email('Invalid email address')
+    .optional()
+    .or(z.literal('')),
 });
 
 const ORG_SELECT = {
@@ -39,6 +46,7 @@ const ORG_SELECT = {
   contactName: true,
   contactEmail: true,
   contactPhone: true,
+  notificationEmail: true,
 } as const;
 
 /** Returns the signed-in admin's organization profile. Admins only — see requireRole below. */
@@ -82,6 +90,9 @@ export async function PATCH(request: Request): Promise<NextResponse> {
           ...(body.contactPhone !== undefined
             ? { contactPhone: body.contactPhone === '' ? null : body.contactPhone }
             : {}),
+          ...(body.notificationEmail !== undefined
+            ? { notificationEmail: body.notificationEmail === '' ? null : body.notificationEmail }
+            : {}),
         },
         select: ORG_SELECT,
       });
@@ -99,6 +110,9 @@ export async function PATCH(request: Request): Promise<NextResponse> {
             ...(body.contactName !== undefined ? { contactName: body.contactName } : {}),
             ...(body.contactEmail !== undefined ? { contactEmail: body.contactEmail } : {}),
             ...(body.contactPhone !== undefined ? { contactPhone: body.contactPhone } : {}),
+            ...(body.notificationEmail !== undefined
+              ? { notificationEmail: body.notificationEmail }
+              : {}),
           },
         },
         tx,

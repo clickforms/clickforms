@@ -4,12 +4,13 @@ import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import {
+  getFormForExistingSubmission,
   getFormSchemaByVersionId,
-  getPublishedFormBySlug,
   getSubmissionForForm,
 } from '@/lib/forms/public-lookup';
+import { sendSubmissionNotification } from '@/lib/forms/submission-notification';
 import { validateAnswers } from '@/lib/forms/validate-answers';
-import { resolveOrganizationIdOrThrow } from '@/lib/tenant';
+import { getCurrentSubdomain, resolveOrganizationIdOrThrow } from '@/lib/tenant';
 
 interface RouteContext {
   params: Promise<{ slug: string; submissionId: string }>;
@@ -30,7 +31,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
     const body = answersBodySchema.parse(await request.json());
 
     const organizationId = await resolveOrganizationIdOrThrow();
-    const form = await getPublishedFormBySlug(slug, organizationId);
+    const form = await getFormForExistingSubmission(slug, organizationId);
     const submission = await getSubmissionForForm({ formId: form.id, submissionId });
 
     if (submission.status !== 'in_progress') {
@@ -66,26 +67,69 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
       return NextResponse.json({ error: 'Validation failed', fieldErrors }, { status: 400 });
     }
 
-    const updated = await withOrgContext(form.organizationId, async (tx) => {
-      const result = await tx.submission.update({
-        where: { id: submission.id },
-        data: { answers: body.answers, status: 'submitted', submittedAt: new Date() },
-      });
+    const { updated, organizationNotificationEmail } = await withOrgContext(
+      form.organizationId,
+      async (tx) => {
+        const result = await tx.submission.update({
+          where: { id: submission.id },
+          data: { answers: body.answers, status: 'submitted', submittedAt: new Date() },
+        });
 
-      await logAudit(
-        {
+        await logAudit(
+          {
+            organizationId: form.organizationId,
+            actorUserId: null,
+            action: 'submission.submit',
+            entityType: 'submission',
+            entityId: result.id,
+            metadata: { formId: form.id, formVersionId: submission.formVersionId },
+          },
+          tx,
+        );
+
+        const organization = await tx.organization.findUnique({
+          where: { id: form.organizationId },
+          select: { notificationEmail: true },
+        });
+
+        return {
+          updated: result,
+          organizationNotificationEmail: organization?.notificationEmail ?? null,
+        };
+      },
+    );
+
+    // Fire-and-forget: rendering the PDF attachment takes a few seconds and a slow/broken
+    // SMTP server must never delay or fail the respondent's own submit request — see
+    // sendSubmissionNotification's own docs for why every error inside it is caught.
+    const subdomain = await getCurrentSubdomain();
+    if (subdomain) {
+      void sendSubmissionNotification({
+        organizationSubdomain: subdomain,
+        form: {
+          id: form.id,
+          name: form.name,
+          slug: form.slug,
           organizationId: form.organizationId,
-          actorUserId: null,
-          action: 'submission.submit',
-          entityType: 'submission',
-          entityId: result.id,
-          metadata: { formId: form.id, formVersionId: submission.formVersionId },
+          notificationMode: form.notificationMode,
+          notificationEmail: form.notificationEmail,
+          pdfFilenameTemplate: form.pdfFilenameTemplate,
+          filenamePrefixFieldId: form.filenamePrefixFieldId,
         },
-        tx,
-      );
-
-      return result;
-    });
+        submission: {
+          id: updated.id,
+          formVersionId: updated.formVersionId,
+          submittedAt: updated.submittedAt,
+          answers: updated.answers as Record<string, unknown>,
+        },
+        organizationNotificationEmail,
+      }).catch((error) => {
+        console.error(
+          `[notifications] submission notification failed for submission ${updated.id}`,
+          error,
+        );
+      });
+    }
 
     return NextResponse.json({ submissionId: updated.id, status: updated.status });
   } catch (error) {

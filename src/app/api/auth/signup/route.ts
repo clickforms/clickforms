@@ -83,12 +83,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
+      kind: 'signup_verification',
     });
 
-    // Dev-mode convenience: when SMTP isn't configured, sendEmail() only logs the
+    // Dev-mode convenience: when Resend isn't configured, sendEmail() only logs the
     // message server-side — surface the link in the response too so local testing
-    // doesn't require reading server logs. Never included once SMTP is configured.
-    if (!process.env.SMTP_HOST) {
+    // doesn't require reading server logs. Never included once RESEND_API_KEY is set.
+    if (!process.env.RESEND_API_KEY) {
       return NextResponse.json({ ok: true, devVerifyUrl: verifyUrl }, { status: 200 });
     }
 

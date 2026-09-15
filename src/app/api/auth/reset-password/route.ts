@@ -4,10 +4,11 @@ import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
+import { passwordSchema } from '@/lib/users/password';
 
 const resetPasswordBodySchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: passwordSchema,
 });
 
 /** Consumes a password-reset token and sets the user's new password. */
@@ -27,29 +28,40 @@ export async function POST(request: Request): Promise<NextResponse> {
     const passwordHash = await bcrypt.hash(password, 12);
     const { user } = resetToken;
 
-    await withOrgContext(user.organizationId, async (tx) => {
-      await tx.user.update({
+    if (!user.organizationId) {
+      await prisma.user.update({
         where: { id: user.id },
         data: { passwordHash },
       });
-
-      await tx.passwordResetToken.update({
+      await prisma.passwordResetToken.update({
         where: { id: resetToken.id },
         data: { usedAt: new Date() },
       });
+    } else {
+      await withOrgContext(user.organizationId, async (tx) => {
+        await tx.user.update({
+          where: { id: user.id },
+          data: { passwordHash },
+        });
 
-      await logAudit(
-        {
-          organizationId: user.organizationId,
-          actorUserId: user.id,
-          action: 'user.password_reset',
-          entityType: 'user',
-          entityId: user.id,
-          metadata: {},
-        },
-        tx,
-      );
-    });
+        await tx.passwordResetToken.update({
+          where: { id: resetToken.id },
+          data: { usedAt: new Date() },
+        });
+
+        await logAudit(
+          {
+            organizationId: user.organizationId,
+            actorUserId: user.id,
+            action: 'user.password_reset',
+            entityType: 'user',
+            entityId: user.id,
+            metadata: {},
+          },
+          tx,
+        );
+      });
+    }
 
     // Any other still-unused reset tokens for this user are now stale — drop them so an
     // older emailed link can't also be used to change the password again.

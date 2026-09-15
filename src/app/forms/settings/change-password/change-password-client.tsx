@@ -3,6 +3,12 @@
 import { type FormEvent, useState } from 'react';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
+import {
+  isStrongPassword,
+  PASSWORD_HINT,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from '@/lib/users/password';
 
 function EyeIcon() {
   return (
@@ -90,6 +96,11 @@ export function ChangePasswordClient() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    if (!isStrongPassword(newPassword)) {
+      setError(PASSWORD_REQUIREMENTS_MESSAGE);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -119,15 +130,16 @@ export function ChangePasswordClient() {
     <div className="settings-page">
       <header className="settings-page-header">
         <p className="settings-page-kicker">Personal profile</p>
-        <h1 className="settings-page-title">Account settings</h1>
-        <p className="settings-page-lead">
-          Keep your account secure with a strong, unique password.
-        </p>
+        <h1 className="settings-page-title">Change password</h1>
+        <p className="settings-page-lead">Update your password to keep your account secure.</p>
       </header>
 
       <div className="card contact-details-card">
         <div className="contact-details-header">
-          <span className="contact-details-header-icon" aria-hidden="true">
+          <span
+            className="contact-details-header-icon contact-details-header-icon--lavender"
+            aria-hidden="true"
+          >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <title>Password</title>
               <rect
@@ -150,7 +162,7 @@ export function ChangePasswordClient() {
           <div>
             <h2 className="contact-details-title">Change password</h2>
             <p className="contact-details-intro">
-              Choose a strong password with at least 8 characters.
+              Choose a strong password you don&apos;t use anywhere else.
             </p>
           </div>
         </div>
@@ -162,7 +174,7 @@ export function ChangePasswordClient() {
             </p>
           ) : null}
 
-          <dl className="contact-details-list contact-details-list--table contact-details-list--wide-inputs">
+          <dl className="contact-details-list">
             <div className="contact-details-row">
               <dt>Current password</dt>
               <dd>
@@ -181,9 +193,10 @@ export function ChangePasswordClient() {
                   value={newPassword}
                   onChange={setNewPassword}
                   autoComplete="new-password"
-                  minLength={8}
+                  minLength={PASSWORD_MIN_LENGTH}
                   disabled={isSubmitting}
                 />
+                <span className="login-field-hint">{PASSWORD_HINT}</span>
               </dd>
             </div>
             <div className="contact-details-row">
@@ -193,7 +206,7 @@ export function ChangePasswordClient() {
                   value={confirmPassword}
                   onChange={setConfirmPassword}
                   autoComplete="new-password"
-                  minLength={8}
+                  minLength={PASSWORD_MIN_LENGTH}
                   disabled={isSubmitting}
                 />
               </dd>
@@ -201,7 +214,8 @@ export function ChangePasswordClient() {
           </dl>
 
           <div className="contact-details-actions">
-            <button type="submit" className="button" disabled={isSubmitting}>
+            <p>You&apos;ll stay signed in on this device.</p>
+            <button type="submit" className="button button--dark" disabled={isSubmitting}>
               {isSubmitting ? 'Updating…' : 'Update password'}
             </button>
           </div>

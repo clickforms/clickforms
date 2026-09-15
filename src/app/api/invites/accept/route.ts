@@ -4,11 +4,12 @@ import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
+import { passwordSchema } from '@/lib/users/password';
 
 const acceptInviteBodySchema = z.object({
   token: z.string().min(1),
   name: z.string().trim().min(1, 'Name is required').max(200),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: passwordSchema,
 });
 
 /** Accepts a pending invite and creates the user account. */

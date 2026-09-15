@@ -71,6 +71,16 @@ export function SignupForm() {
     }
   }
 
+  const canSubmit =
+    organizationName.trim().length > 0 &&
+    firstName.trim().length > 0 &&
+    lastName.trim().length > 0 &&
+    email.trim().length > 0 &&
+    phone.trim().length > 0 &&
+    formSituation !== null &&
+    termsAccepted &&
+    !isSubmitting;
+
   if (submittedEmail) {
     return (
       <div className="signup-form landing-anim landing-anim--1">
@@ -224,7 +234,7 @@ export function SignupForm() {
         <span>I agree to the Clickforms Terms of Use and Privacy Policy.</span>
       </label>
 
-      <button className="button signup-submit" type="submit" disabled={isSubmitting}>
+      <button className="button signup-submit" type="submit" disabled={!canSubmit}>
         {isSubmitting ? 'Creating workspace…' : 'Create organisation'}
       </button>
 

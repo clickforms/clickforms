@@ -5,11 +5,12 @@ import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
 import { requireSession } from '@/lib/session';
+import { passwordSchema } from '@/lib/users/password';
 
 const changePasswordBodySchema = z
   .object({
     currentPassword: z.string().min(1, 'Enter your current password'),
-    newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+    newPassword: passwordSchema,
     confirmPassword: z.string().min(1, 'Confirm your new password'),
   })
   .refine((body) => body.newPassword === body.confirmPassword, {
@@ -39,6 +40,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const passwordHash = await bcrypt.hash(body.newPassword, 12);
+
+    if (!session.user.organizationId) {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { passwordHash },
+      });
+      return NextResponse.json({ ok: true });
+    }
 
     await withOrgContext(session.user.organizationId, async (tx) => {
       await tx.user.update({

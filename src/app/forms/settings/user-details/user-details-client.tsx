@@ -90,7 +90,7 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
             </p>
           ) : null}
 
-          <dl className="contact-details-list contact-details-list--table contact-details-list--wide-inputs">
+          <dl className="contact-details-list">
             <div className="contact-details-row">
               <dt>Full name</dt>
               <dd>
@@ -148,7 +148,7 @@ export function UserDetailsClient({ initialProfile }: UserDetailsClientProps) {
 
           <div className="contact-details-actions">
             <p>Changes are saved to your profile immediately.</p>
-            <button type="submit" className="button" disabled={isSaving}>
+            <button type="submit" className="button button--dark" disabled={isSaving}>
               {isSaving ? 'Saving…' : 'Save changes'}
             </button>
           </div>

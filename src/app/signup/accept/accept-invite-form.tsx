@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { type FormEvent, useEffect, useState } from 'react';
+import { PasswordField } from '@/components/password-field';
 
 interface InviteDetails {
   email: string;
@@ -134,18 +135,15 @@ export function AcceptInviteForm({ token }: { token: string }) {
         />
       </label>
 
-      <label className="login-field">
+      <label className="login-field" htmlFor="accept-invite-password">
         <span className="login-field-label">Choose a password</span>
-        <input
-          className="text-input login-field-input"
-          type="password"
+        <PasswordField
+          id="accept-invite-password"
           autoComplete="new-password"
           required
-          minLength={8}
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={setPassword}
           disabled={isSubmitting}
-          placeholder="At least 8 characters"
         />
       </label>
 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { type FormEvent, useEffect, useState } from 'react';
+import { PasswordField } from '@/components/password-field';
 
 interface PendingSignupDetails {
   organizationName: string;
@@ -107,18 +108,15 @@ export function SignupVerifyForm({ token }: { token: string }) {
         </p>
       ) : null}
 
-      <label className="login-field">
+      <label className="login-field" htmlFor="signup-verify-password">
         <span className="login-field-label">Choose a password</span>
-        <input
-          className="text-input login-field-input"
-          type="password"
+        <PasswordField
+          id="signup-verify-password"
           autoComplete="new-password"
           required
-          minLength={8}
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={setPassword}
           disabled={isSubmitting}
-          placeholder="At least 8 characters"
         />
       </label>
 

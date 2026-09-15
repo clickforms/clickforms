@@ -27,7 +27,7 @@ function CheckIcon() {
 const BENEFITS = [
   {
     title: 'Build once, reuse everywhere',
-    body: 'Drag-and-drop fields, conditional logic, and branded layouts.',
+    body: 'Drag and drop fields, conditional logic, and branded layouts.',
   },
   {
     title: 'Signatures that hold up',
@@ -47,10 +47,10 @@ export default async function SignupPage() {
 
   return (
     <div className="signup-page">
-      <div className="signup-layout">
-        <aside className="signup-aside landing-anim landing-anim--1">
+      <div className="signup-card landing-anim landing-anim--1">
+        <aside className="signup-aside">
           <Link href="/" className="signup-aside-brand">
-            <BrandMark id="signup-aside" size={36} />
+            <BrandMark id="signup-aside" size={32} variant="onColor" />
             <span>Clickforms</span>
           </Link>
 
@@ -83,10 +83,7 @@ export default async function SignupPage() {
           </p>
         </aside>
 
-        <section
-          className="signup-panel landing-anim landing-anim--2"
-          aria-labelledby="signup-panel-title"
-        >
+        <section className="signup-panel" aria-labelledby="signup-panel-title">
           <div className="signup-panel-header">
             <p className="signup-panel-kicker">Get started</p>
             <h2 id="signup-panel-title">Create your organisation</h2>

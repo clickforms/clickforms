@@ -4,10 +4,11 @@ import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
 import { uniqueSlug } from '@/lib/forms/slug';
+import { passwordSchema } from '@/lib/users/password';
 
 const verifySignupBodySchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: passwordSchema,
 });
 
 /**

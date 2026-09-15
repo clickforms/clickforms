@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { type FormEvent, useEffect, useState } from 'react';
+import { PasswordField } from '@/components/password-field';
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
@@ -99,18 +100,15 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <input className="text-input login-field-input" type="email" value={email} disabled />
       </label>
 
-      <label className="login-field">
+      <label className="login-field" htmlFor="reset-password-new-password">
         <span className="login-field-label">New password</span>
-        <input
-          className="text-input login-field-input"
-          type="password"
+        <PasswordField
+          id="reset-password-new-password"
           autoComplete="new-password"
           required
-          minLength={8}
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={setPassword}
           disabled={isSubmitting}
-          placeholder="At least 8 characters"
         />
       </label>
 

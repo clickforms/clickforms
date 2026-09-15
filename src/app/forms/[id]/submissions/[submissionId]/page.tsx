@@ -30,6 +30,7 @@ import {
   createSubmissionFileResolver,
   parseSubmissionAnswers,
 } from '@/lib/forms/submission-files';
+import { requireOrganizationId } from '@/lib/session';
 import { canEditForm } from '@/lib/user-roles';
 
 interface PageProps {
@@ -112,25 +113,25 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
 
   const result = await withOrgContext(session.user.organizationId, async (tx) => {
     const form = await tx.form.findFirst({
-      where: { id, organizationId: session.user.organizationId },
+      where: { id, organizationId: requireOrganizationId(session) },
     });
     if (!form) {
       return null;
     }
 
     const submission = await tx.submission.findFirst({
-      where: { id: submissionId, formId: form.id, organizationId: session.user.organizationId },
+      where: { id: submissionId, formId: form.id, organizationId: requireOrganizationId(session) },
     });
     if (!submission) {
       return null;
     }
 
     const version = await tx.formVersion.findFirst({
-      where: { id: submission.formVersionId, organizationId: session.user.organizationId },
+      where: { id: submission.formVersionId, organizationId: requireOrganizationId(session) },
     });
 
     const files = await tx.submissionFile.findMany({
-      where: { submissionId: submission.id, organizationId: session.user.organizationId },
+      where: { submissionId: submission.id, organizationId: requireOrganizationId(session) },
     });
 
     return { form, submission, version, files };

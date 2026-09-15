@@ -3,7 +3,7 @@ import { toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { deleteObject } from '@/lib/s3';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 /** Removes the org's uploaded logo — reverts the workspace sidebar to the default
  * Clickforms wordmark. Admins only. */
@@ -14,24 +14,24 @@ export async function DELETE(): Promise<NextResponse> {
 
     const previousLogoStorageKey = await withOrgContext(session.user.organizationId, async (tx) => {
       const existing = await tx.organization.findUniqueOrThrow({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         select: { logoStorageKey: true },
       });
 
       if (!existing.logoStorageKey) return null;
 
       await tx.organization.update({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         data: { logoStorageKey: null },
       });
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'organization.logo_remove',
           entityType: 'organization',
-          entityId: session.user.organizationId,
+          entityId: requireOrganizationId(session),
           metadata: {},
         },
         tx,

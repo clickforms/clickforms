@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { DashboardClient } from '@/app/forms/dashboard-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { requireOrganizationId } from '@/lib/session';
 import { canCreateForms, formsListWhere } from '@/lib/user-roles';
 
 export default async function DashboardPage() {
@@ -17,13 +18,13 @@ export default async function DashboardPage() {
     session.user.organizationId,
     async (tx) => {
       const forms = await tx.form.findMany({
-        where: formsListWhere(session.user.organizationId, session.user.role, session.user.id),
+        where: formsListWhere(requireOrganizationId(session), session.user.role, session.user.id),
         orderBy: { updatedAt: 'desc' },
       });
       const responseCounts = await tx.submission.groupBy({
         by: ['formId'],
-        where: { organizationId: session.user.organizationId, status: 'submitted' },
-        _count: { _all: true },
+        where: { organizationId: requireOrganizationId(session), status: 'submitted' },
+        _count: true,
       });
       const user = await tx.user.findUnique({
         where: { id: session.user.id },
@@ -33,8 +34,8 @@ export default async function DashboardPage() {
     },
   );
 
-  const responseCountByFormId = new Map(responseCounts.map((row) => [row.formId, row._count._all]));
-  const totalResponses = responseCounts.reduce((sum, row) => sum + row._count._all, 0);
+  const responseCountByFormId = new Map(responseCounts.map((row) => [row.formId, row._count]));
+  const totalResponses = responseCounts.reduce((sum, row) => sum + row._count, 0);
 
   const formRows = forms.map((form) => {
     const isLive = form.currentVersionId != null;

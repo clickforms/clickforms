@@ -4,6 +4,7 @@ import { type OrgLogRow, OrgLogsClient } from '@/app/forms/logs/org-logs-client'
 import { resolveAuditLogTargets } from '@/lib/audit-log-targets';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { requireOrganizationId } from '@/lib/session';
 import { canManageUsers } from '@/lib/user-roles';
 
 const LOGS_PAGE_LIMIT = 200;
@@ -28,7 +29,7 @@ export default async function OrgLogsPage() {
 
   const { entries, targets } = await withOrgContext(session.user.organizationId, async (tx) => {
     const rows = await tx.auditLog.findMany({
-      where: { organizationId: session.user.organizationId },
+      where: { organizationId: requireOrganizationId(session) },
       orderBy: { createdAt: 'desc' },
       take: LOGS_PAGE_LIMIT,
       select: {
@@ -45,11 +46,7 @@ export default async function OrgLogsPage() {
     // Resolves e.g. "form_version" -> the actual form's name, so the table can show
     // *which* form/response/user an entry was about instead of just a bare entity
     // type + opaque id. See resolveAuditLogTargets's doc comment for how.
-    const targetLabels = await resolveAuditLogTargets(
-      tx,
-      session.user.organizationId as string,
-      rows,
-    );
+    const targetLabels = await resolveAuditLogTargets(tx, requireOrganizationId(session), rows);
 
     return { entries: rows, targets: targetLabels };
   });

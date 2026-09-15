@@ -4,6 +4,7 @@ import { OrganisationDetailsClient } from '@/app/forms/organisation/organisation
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createPresignedDownloadUrl } from '@/lib/s3';
+import { requireOrganizationId } from '@/lib/session';
 import { canManageUsers } from '@/lib/user-roles';
 
 export default async function OrganisationSettingsPage() {
@@ -21,7 +22,7 @@ export default async function OrganisationSettingsPage() {
 
   const organization = await withOrgContext(session.user.organizationId, (tx) =>
     tx.organization.findFirstOrThrow({
-      where: { id: session.user.organizationId },
+      where: { id: requireOrganizationId(session) },
       select: {
         id: true,
         name: true,

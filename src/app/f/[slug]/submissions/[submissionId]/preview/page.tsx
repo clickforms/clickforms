@@ -18,6 +18,7 @@ import {
   createSubmissionFileResolver,
   parseSubmissionAnswers,
 } from '@/lib/forms/submission-files';
+import { requireOrganizationId } from '@/lib/session';
 
 interface PageProps {
   params: Promise<{ slug: string; submissionId: string }>;
@@ -55,7 +56,7 @@ export default async function SubmissionPreviewPage({ params, searchParams }: Pa
 
   let organizationId: string;
   if (session?.user) {
-    organizationId = session.user.organizationId;
+    organizationId = requireOrganizationId(session);
   } else {
     // No session to scope by — resolve organizationId from the submission itself, same
     // deliberate pre-auth exception documented in lib/forms/public-lookup.ts.

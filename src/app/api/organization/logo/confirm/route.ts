@@ -9,7 +9,7 @@ import {
   deleteObject,
   isOrganizationLogoKey,
 } from '@/lib/s3';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 const confirmBodySchema = z.object({
   storageKey: z.string().min(1),
@@ -30,7 +30,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (
       !isOrganizationLogoKey({
         storageKey: body.storageKey,
-        organizationId: session.user.organizationId,
+        organizationId: requireOrganizationId(session),
       })
     ) {
       throw new InvalidRequestError('storageKey does not belong to this organisation.');
@@ -38,22 +38,22 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const previousLogoStorageKey = await withOrgContext(session.user.organizationId, async (tx) => {
       const existing = await tx.organization.findUniqueOrThrow({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         select: { logoStorageKey: true },
       });
 
       await tx.organization.update({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         data: { logoStorageKey: body.storageKey },
       });
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'organization.logo_update',
           entityType: 'organization',
-          entityId: session.user.organizationId,
+          entityId: requireOrganizationId(session),
           metadata: {},
         },
         tx,

@@ -4,7 +4,7 @@ import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-e
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
 
@@ -52,7 +52,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'form.transfer',
           entityType: 'form',

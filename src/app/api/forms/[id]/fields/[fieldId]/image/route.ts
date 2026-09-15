@@ -11,7 +11,7 @@ import {
   createPresignedUploadUrl,
   isFormFieldImageKey,
 } from '@/lib/s3';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 interface RouteContext {
   params: Promise<{ id: string; fieldId: string }>;
@@ -45,7 +45,7 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
     const session = await requireSession();
     const { id, fieldId } = await params;
 
-    const result = await getFormField(id, fieldId, session.user.organizationId);
+    const result = await getFormField(id, fieldId, requireOrganizationId(session));
     const storageKey = result?.field.imageStorageKey;
     if (!result || !storageKey) {
       return NextResponse.json({ error: 'This field has no uploaded image.' }, { status: 404 });
@@ -95,7 +95,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
 
     assertLogoUploadAllowed({ mimeType: body.mimeType, sizeBytes: body.sizeBytes });
 
-    const result = await getFormField(id, fieldId, session.user.organizationId);
+    const result = await getFormField(id, fieldId, requireOrganizationId(session));
     if (!result) throw new NotFoundError('Field');
     assertFormEditAccess(result.form, session.user.role, session.user.id);
 
@@ -131,7 +131,7 @@ export async function PUT(request: Request, { params }: RouteContext): Promise<N
     const { id, fieldId } = await params;
     const body = confirmBodySchema.parse(await request.json());
 
-    const result = await getFormField(id, fieldId, session.user.organizationId);
+    const result = await getFormField(id, fieldId, requireOrganizationId(session));
     if (!result) throw new NotFoundError('Field');
     assertFormEditAccess(result.form, session.user.role, session.user.id);
 

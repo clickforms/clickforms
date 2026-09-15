@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { INVITABLE_ROLES } from '@/lib/user-roles';
 import { assertNotLastAdmin, assertNotSelf } from '@/lib/users/management';
 
@@ -37,7 +37,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         assertNotSelf(session.user.id, existing.id);
         await assertNotLastAdmin(
           tx,
-          session.user.organizationId,
+          requireOrganizationId(session),
           existing.id,
           existing.role,
           body.role,
@@ -61,7 +61,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'user.update',
           entityType: 'user',
@@ -112,7 +112,7 @@ export async function DELETE(request: Request, { params }: RouteContext): Promis
       if (!existing) throw new NotFoundError('User');
 
       assertNotSelf(session.user.id, existing.id);
-      await assertNotLastAdmin(tx, session.user.organizationId, existing.id, existing.role);
+      await assertNotLastAdmin(tx, requireOrganizationId(session), existing.id, existing.role);
 
       const formsOwned = await tx.form.count({ where: { createdBy: existing.id } });
       if (formsOwned > 0 && body?.transferFormsTo) {
@@ -126,13 +126,13 @@ export async function DELETE(request: Request, { params }: RouteContext): Promis
         if (!newOwner) throw new NotFoundError('User');
 
         const { count } = await tx.form.updateMany({
-          where: { createdBy: existing.id, organizationId: session.user.organizationId },
+          where: { createdBy: existing.id, organizationId: requireOrganizationId(session) },
           data: { createdBy: newOwner.id },
         });
 
         await logAudit(
           {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             actorUserId: session.user.id,
             action: 'form.transfer',
             entityType: 'user',
@@ -160,7 +160,7 @@ export async function DELETE(request: Request, { params }: RouteContext): Promis
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'user.remove',
           entityType: 'user',

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 // ABN is 11 digits once formatting (spaces) is stripped — not validating the official
 // weighted-checksum algorithm here, just enough to catch obvious typos. Optional field,
@@ -57,7 +57,7 @@ export async function GET(): Promise<NextResponse> {
 
     const organization = await withOrgContext(session.user.organizationId, (tx) =>
       tx.organization.findFirstOrThrow({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         select: ORG_SELECT,
       }),
     );
@@ -77,7 +77,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
     const organization = await withOrgContext(session.user.organizationId, async (tx) => {
       const updated = await tx.organization.update({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         data: {
           ...(body.name !== undefined ? { name: body.name } : {}),
           ...(body.abn !== undefined ? { abn: body.abn === '' ? null : body.abn } : {}),
@@ -99,7 +99,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'organization.details_update',
           entityType: 'organization',

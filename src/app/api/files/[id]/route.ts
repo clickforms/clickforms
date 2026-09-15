@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -16,7 +16,7 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
 
     await withOrgContext(session.user.organizationId, async (tx) => {
       const existing = await tx.organizationFile.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
         select: { id: true },
       });
       if (!existing) throw new NotFoundError('File');

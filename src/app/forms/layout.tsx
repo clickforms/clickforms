@@ -5,6 +5,7 @@ import { AdminShellClient } from '@/app/forms/admin-shell-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createPresignedDownloadUrl } from '@/lib/s3';
+import { requireOrganizationId } from '@/lib/session';
 
 export default async function FormsLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -24,7 +25,7 @@ export default async function FormsLayout({ children }: { children: ReactNode })
     Promise.all([
       tx.user.findUnique({ where: { id: session.user.id }, select: { name: true } }),
       tx.organization.findUnique({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         select: { name: true, logoStorageKey: true },
       }),
     ]),

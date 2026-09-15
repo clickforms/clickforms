@@ -5,7 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { inviteEmail } from '@/lib/emails/templates';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { INVITABLE_ROLES } from '@/lib/user-roles';
 import { inviteAcceptUrl } from '@/lib/users/invite-url';
 
@@ -36,7 +36,7 @@ export async function GET(): Promise<NextResponse> {
         }),
         tx.userInvite.findMany({
           where: {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             acceptedAt: null,
             expiresAt: { gt: new Date() },
           },
@@ -52,12 +52,12 @@ export async function GET(): Promise<NextResponse> {
         }),
         tx.form.groupBy({
           by: ['createdBy'],
-          where: { organizationId: session.user.organizationId },
-          _count: { _all: true },
+          where: { organizationId: requireOrganizationId(session) },
+          _count: true,
         }),
       ]);
 
-      const formsOwnedByUserId = new Map(formCounts.map((row) => [row.createdBy, row._count._all]));
+      const formsOwnedByUserId = new Map(formCounts.map((row) => [row.createdBy, row._count]));
 
       return {
         users: users.map((user) => ({
@@ -105,12 +105,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       const invite = await tx.userInvite.upsert({
         where: {
           organizationId_email: {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             email,
           },
         },
         create: {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           email,
           name: body.name.trim(),
           role: body.role,
@@ -130,7 +130,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'user.invite',
           entityType: 'user_invite',
@@ -145,7 +145,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       // to grab them for the invite email.
       const [organization, invitedBy] = await Promise.all([
         tx.organization.findUnique({
-          where: { id: session.user.organizationId },
+          where: { id: requireOrganizationId(session) },
           select: { name: true },
         }),
         tx.user.findUnique({

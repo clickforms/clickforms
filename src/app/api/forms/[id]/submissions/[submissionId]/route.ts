@@ -6,7 +6,7 @@ import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
 import { loadSubmissionFormSchema, parseSubmissionAnswers } from '@/lib/forms/submission-files';
 import { validateAnswers } from '@/lib/forms/validate-answers';
-import { requireSession } from '@/lib/session';
+import { requireOrganizationId, requireSession } from '@/lib/session';
 
 interface RouteContext {
   params: Promise<{ id: string; submissionId: string }>;
@@ -35,12 +35,16 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
 
     await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
 
       const submission = await tx.submission.findFirst({
-        where: { id: submissionId, formId: form.id, organizationId: session.user.organizationId },
+        where: {
+          id: submissionId,
+          formId: form.id,
+          organizationId: requireOrganizationId(session),
+        },
         select: { id: true, status: true, submittedAt: true },
       });
       if (!submission) {
@@ -51,7 +55,7 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'submission.delete',
           entityType: 'submission',
@@ -90,24 +94,28 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
 
       const submission = await tx.submission.findFirst({
-        where: { id: submissionId, formId: form.id, organizationId: session.user.organizationId },
+        where: {
+          id: submissionId,
+          formId: form.id,
+          organizationId: requireOrganizationId(session),
+        },
       });
       if (!submission) {
         throw new NotFoundError('Submission');
       }
 
-      const schema = await loadSubmissionFormSchema(tx, submission, session.user.organizationId);
+      const schema = await loadSubmissionFormSchema(tx, submission, requireOrganizationId(session));
 
       // Every file_upload/signature answer must reference a submission_files row that
       // actually belongs to *this* submission — otherwise a forged fileId could point at
       // another org's file (same guard as the public respondent PATCH route).
       const uploadedFiles = await tx.submissionFile.findMany({
-        where: { submissionId: submission.id, organizationId: session.user.organizationId },
+        where: { submissionId: submission.id, organizationId: requireOrganizationId(session) },
         select: { id: true },
       });
       const uploadedFileIds = new Set(uploadedFiles.map((file) => file.id));
@@ -144,7 +152,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'submission.edit',
           entityType: 'submission',

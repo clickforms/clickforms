@@ -8,6 +8,7 @@ import {
   formSchemaSchema,
   listFilenamePrefixCandidates,
 } from '@/lib/forms/schema';
+import { requireOrganizationId } from '@/lib/session';
 import { canEditForm, canViewForm } from '@/lib/user-roles';
 
 interface PageProps {
@@ -26,7 +27,7 @@ export default async function FormSettingsPage({ params }: PageProps) {
     session.user.organizationId,
     async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
         select: {
           id: true,
           name: true,
@@ -55,7 +56,7 @@ export default async function FormSettingsPage({ params }: PageProps) {
       // Shown in the "Use organisation default" option so an admin can see exactly which
       // address that resolves to (or that none is configured) without leaving this page.
       const organization = await tx.organization.findUnique({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         select: { notificationEmail: true },
       });
 

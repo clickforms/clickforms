@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
-import { requireSession } from '@/lib/session';
+import { requireOrganizationId, requireSession } from '@/lib/session';
 import { passwordSchema } from '@/lib/users/password';
 
 const changePasswordBodySchema = z
@@ -57,7 +57,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'user.password_change',
           entityType: 'user',

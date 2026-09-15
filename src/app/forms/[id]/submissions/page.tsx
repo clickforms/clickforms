@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { SubmissionsListClient } from '@/app/forms/[id]/submissions/submissions-list-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { requireOrganizationId } from '@/lib/session';
 import { canEditForm } from '@/lib/user-roles';
 
 interface PageProps {
@@ -22,7 +23,7 @@ export default async function SubmissionsListPage({ params }: PageProps) {
 
   const result = await withOrgContext(session.user.organizationId, async (tx) => {
     const form = await tx.form.findFirst({
-      where: { id, organizationId: session.user.organizationId },
+      where: { id, organizationId: requireOrganizationId(session) },
     });
     if (!form) {
       return null;
@@ -39,7 +40,7 @@ export default async function SubmissionsListPage({ params }: PageProps) {
     const submissions = await tx.submission.findMany({
       where: {
         formId: form.id,
-        organizationId: session.user.organizationId,
+        organizationId: requireOrganizationId(session),
         status: { not: 'in_progress' },
       },
       orderBy: { createdAt: 'desc' },

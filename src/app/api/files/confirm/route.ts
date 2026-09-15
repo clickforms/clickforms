@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import { assertUploadAllowed, createPresignedDownloadUrl, isLibraryStorageKey } from '@/lib/s3';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 const confirmBodySchema = z.object({
   storageKey: z.string().min(1),
@@ -24,7 +24,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (
       !isLibraryStorageKey({
         storageKey: body.storageKey,
-        organizationId: session.user.organizationId,
+        organizationId: requireOrganizationId(session),
       })
     ) {
       throw new InvalidRequestError('storageKey does not belong to this organisation library.');
@@ -33,7 +33,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const file = await withOrgContext(session.user.organizationId, (tx) =>
       tx.organizationFile.create({
         data: {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           uploadedById: session.user.id,
           storageKey: body.storageKey,
           filename: body.filename,

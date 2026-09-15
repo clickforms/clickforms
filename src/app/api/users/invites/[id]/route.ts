@@ -4,7 +4,7 @@ import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { inviteEmail } from '@/lib/emails/templates';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { inviteAcceptUrl } from '@/lib/users/invite-url';
 
 interface RouteContext {
@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
       const existing = await tx.userInvite.findFirst({
         where: {
           id,
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           acceptedAt: null,
         },
       });
@@ -35,7 +35,7 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
       const [invite, organization, invitedBy] = await Promise.all([
         tx.userInvite.update({ where: { id: existing.id }, data: { expiresAt } }),
         tx.organization.findUnique({
-          where: { id: session.user.organizationId },
+          where: { id: requireOrganizationId(session) },
           select: { name: true },
         }),
         tx.user.findUnique({
@@ -89,7 +89,7 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
       const existing = await tx.userInvite.findFirst({
         where: {
           id,
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           acceptedAt: null,
         },
       });
@@ -99,7 +99,7 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'user.invite_revoke',
           entityType: 'user_invite',

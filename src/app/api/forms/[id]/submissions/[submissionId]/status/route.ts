@@ -4,7 +4,7 @@ import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
-import { requireSession } from '@/lib/session';
+import { requireOrganizationId, requireSession } from '@/lib/session';
 
 interface RouteContext {
   params: Promise<{ id: string; submissionId: string }>;
@@ -39,12 +39,16 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
 
     const updated = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
 
       const submission = await tx.submission.findFirst({
-        where: { id: submissionId, formId: form.id, organizationId: session.user.organizationId },
+        where: {
+          id: submissionId,
+          formId: form.id,
+          organizationId: requireOrganizationId(session),
+        },
         select: { id: true, status: true },
       });
       if (!submission) {
@@ -59,7 +63,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'submission.status_update',
           entityType: 'submission',

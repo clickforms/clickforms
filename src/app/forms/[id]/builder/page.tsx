@@ -4,6 +4,7 @@ import { BuilderClient } from '@/app/forms/[id]/builder/builder-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
+import { requireOrganizationId } from '@/lib/session';
 import { canUseBuilder } from '@/lib/user-roles';
 
 interface PageProps {
@@ -24,7 +25,7 @@ export default async function FormBuilderPage({ params }: PageProps) {
 
   const { form, version } = await withOrgContext(session.user.organizationId, async (tx) => {
     const form = await tx.form.findFirst({
-      where: { id, organizationId: session.user.organizationId },
+      where: { id, organizationId: requireOrganizationId(session) },
     });
     if (!form) {
       return { form: null, version: null };

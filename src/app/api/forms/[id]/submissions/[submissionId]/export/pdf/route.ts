@@ -10,7 +10,7 @@ import {
   submissionPdfFilename,
 } from '@/lib/forms/generate-submission-pdf';
 import { loadSubmissionFormSchema } from '@/lib/forms/submission-files';
-import { requireSession } from '@/lib/session';
+import { requireOrganizationId, requireSession } from '@/lib/session';
 import { buildOrgFormUrl } from '@/lib/tenant';
 
 interface RouteContext {
@@ -24,7 +24,7 @@ export async function GET(request: Request, { params }: RouteContext): Promise<N
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       // Same gate every sibling route on a submission uses (delete, status change,
       // upload presign/confirm) — this export route was the one missing it, so any
@@ -34,7 +34,11 @@ export async function GET(request: Request, { params }: RouteContext): Promise<N
       assertFormEditAccess(form, session.user.role, session.user.id);
 
       const submission = await tx.submission.findFirst({
-        where: { id: submissionId, formId: form.id, organizationId: session.user.organizationId },
+        where: {
+          id: submissionId,
+          formId: form.id,
+          organizationId: requireOrganizationId(session),
+        },
         select: { id: true, submittedAt: true, formVersionId: true, answers: true },
       });
       if (!submission) {
@@ -42,7 +46,7 @@ export async function GET(request: Request, { params }: RouteContext): Promise<N
       }
 
       const organization = await tx.organization.findUnique({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         select: { subdomain: true },
       });
       if (!organization) {
@@ -53,7 +57,7 @@ export async function GET(request: Request, { params }: RouteContext): Promise<N
       // form's current one — so a filename prefix (or an uploaded-PDF attachment) still
       // resolves correctly for an old response even after the field it points at has
       // since been renamed, retyped, or removed from the live form.
-      const schema = await loadSubmissionFormSchema(tx, submission, session.user.organizationId);
+      const schema = await loadSubmissionFormSchema(tx, submission, requireOrganizationId(session));
       const answers = (submission.answers ?? {}) as Record<string, unknown>;
 
       const pdfAttachments = await findUploadedPdfAttachments(
@@ -61,7 +65,7 @@ export async function GET(request: Request, { params }: RouteContext): Promise<N
         schema,
         answers,
         submission.id,
-        session.user.organizationId,
+        requireOrganizationId(session),
       );
       const prefixValue = resolveFilenamePrefixValue(answers, form.filenamePrefixFieldId);
 

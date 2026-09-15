@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { type PendingInviteRow, type UserRow, UsersClient } from '@/app/forms/users/users-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { requireOrganizationId } from '@/lib/session';
 import { canManageUsers } from '@/lib/user-roles';
 
 export default async function UsersPage() {
@@ -26,7 +27,7 @@ export default async function UsersPage() {
         }),
         tx.userInvite.findMany({
           where: {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             acceptedAt: null,
             expiresAt: { gt: new Date() },
           },
@@ -42,12 +43,12 @@ export default async function UsersPage() {
         }),
         tx.form.groupBy({
           by: ['createdBy'],
-          where: { organizationId: session.user.organizationId },
-          _count: { _all: true },
+          where: { organizationId: requireOrganizationId(session) },
+          _count: true,
         }),
       ]);
 
-      const formsOwnedByUserId = new Map(formCounts.map((row) => [row.createdBy, row._count._all]));
+      const formsOwnedByUserId = new Map(formCounts.map((row) => [row.createdBy, row._count]));
 
       return {
         users: userRows.map(

@@ -5,7 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema } from '@/lib/forms/schema';
 import { slugify, uniqueSlug } from '@/lib/forms/slug';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { formsListWhere } from '@/lib/user-roles';
 
 // specs/02-form-builder.md "Form list/create/rename/archive in the admin UI".
@@ -14,7 +14,7 @@ export async function GET(): Promise<NextResponse> {
     const session = await requireSession();
     const forms = await withOrgContext(session.user.organizationId, (tx) =>
       tx.form.findMany({
-        where: formsListWhere(session.user.organizationId, session.user.role, session.user.id),
+        where: formsListWhere(requireOrganizationId(session), session.user.role, session.user.id),
         orderBy: { updatedAt: 'desc' },
       }),
     );
@@ -59,14 +59,14 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
       const existing = await tx.form.findMany({
-        where: { organizationId: session.user.organizationId },
+        where: { organizationId: requireOrganizationId(session) },
         select: { slug: true },
       });
       const slug = uniqueSlug(slugify(name), new Set(existing.map((f) => f.slug)));
 
       const form = await tx.form.create({
         data: {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           name,
           slug,
           createdBy: session.user.id,
@@ -79,7 +79,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       const version = await tx.formVersion.create({
         data: {
           formId: form.id,
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           schema: initialSchema,
           versionNumber: 1,
         },
@@ -87,7 +87,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'form.create',
           entityType: 'form',

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { FormWorkspaceShell } from '@/app/forms/[id]/form-workspace-shell';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { requireOrganizationId } from '@/lib/session';
 import { buildOrgFormUrl } from '@/lib/tenant';
 import { canViewForm } from '@/lib/user-roles';
 
@@ -27,7 +28,7 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
     session.user.organizationId,
     async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
         select: {
           id: true,
           name: true,
@@ -40,12 +41,12 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
       // Mirrors the "responses" count used on the dashboard — submitted (and later
       // reviewed) submissions only, not abandoned in-progress ones.
       const responseCount = await tx.submission.count({
-        where: { formId: id, organizationId: session.user.organizationId, status: 'submitted' },
+        where: { formId: id, organizationId: requireOrganizationId(session), status: 'submitted' },
       });
       // Needed to build the absolute /f/[slug] link for the top nav's Share button —
       // see src/app/forms/list/page.tsx for the same buildOrgFormUrl pattern.
       const organization = await tx.organization.findUniqueOrThrow({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         select: { subdomain: true },
       });
       return { form, responseCount, organization };

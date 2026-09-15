@@ -38,7 +38,12 @@ export async function POST(request: Request): Promise<NextResponse> {
         data: { usedAt: new Date() },
       });
     } else {
-      await withOrgContext(user.organizationId, async (tx) => {
+      // Captured into a local so the narrowing from the `if (!user.organizationId)`
+      // check above survives into this closure — TS can't carry a narrowed property
+      // access (`user.organizationId`) through an async callback boundary, but a const
+      // assigned from it keeps the non-null type.
+      const organizationId = user.organizationId;
+      await withOrgContext(organizationId, async (tx) => {
         await tx.user.update({
           where: { id: user.id },
           data: { passwordHash },
@@ -51,7 +56,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         await logAudit(
           {
-            organizationId: user.organizationId,
+            organizationId,
             actorUserId: user.id,
             action: 'user.password_reset',
             entityType: 'user',

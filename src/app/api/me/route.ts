@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
-import { requireSession } from '@/lib/session';
+import { requireOrganizationId, requireSession } from '@/lib/session';
 
 const patchProfileBodySchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200).optional(),
@@ -65,7 +65,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'user.profile_update',
           entityType: 'user',

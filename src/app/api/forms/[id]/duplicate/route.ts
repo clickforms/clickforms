@@ -4,7 +4,7 @@ import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
 import { slugify, uniqueSlug } from '@/lib/forms/slug';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { buildOrgFormUrl } from '@/lib/tenant';
 
 interface RouteContext {
@@ -26,7 +26,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
 
@@ -36,7 +36,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
       });
 
       const existing = await tx.form.findMany({
-        where: { organizationId: session.user.organizationId },
+        where: { organizationId: requireOrganizationId(session) },
         select: { slug: true },
       });
       const name = `${form.name} (copy)`;
@@ -44,7 +44,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
 
       const newForm = await tx.form.create({
         data: {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           name,
           slug,
           createdBy: session.user.id,
@@ -54,7 +54,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
       const version = await tx.formVersion.create({
         data: {
           formId: newForm.id,
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           schema: sourceVersion?.schema ?? {},
           versionNumber: 1,
         },
@@ -62,7 +62,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
 
       await logAudit(
         {
-          organizationId: session.user.organizationId,
+          organizationId: requireOrganizationId(session),
           actorUserId: session.user.id,
           action: 'form.duplicate',
           entityType: 'form',
@@ -77,7 +77,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
       // page.tsx computes for the initial load — building it here keeps that logic
       // server-side rather than shipping ROOT_DOMAIN/buildOrgFormUrl to the client.
       const organization = await tx.organization.findUniqueOrThrow({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         select: { subdomain: true },
       });
       const publicUrl = buildOrgFormUrl(organization.subdomain, `/f/${newForm.slug}`);

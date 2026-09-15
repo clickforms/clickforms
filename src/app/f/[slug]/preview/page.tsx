@@ -4,6 +4,7 @@ import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
+import { requireOrganizationId } from '@/lib/session';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -25,7 +26,7 @@ export default async function FormPreviewPage({ params }: PageProps) {
 
   const { form, version } = await withOrgContext(session.user.organizationId, async (tx) => {
     const form = await tx.form.findFirst({
-      where: { slug, organizationId: session.user.organizationId },
+      where: { slug, organizationId: requireOrganizationId(session) },
     });
     if (!form) {
       return { form: null, version: null };

@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { FormsListClient } from '@/app/forms/forms-list-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { requireOrganizationId } from '@/lib/session';
 import { buildOrgFormUrl } from '@/lib/tenant';
 import { canCreateForms, formsListWhere } from '@/lib/user-roles';
 
@@ -18,7 +19,7 @@ export default async function FormsListPage() {
     session.user.organizationId,
     async (tx) => {
       const forms = await tx.form.findMany({
-        where: formsListWhere(session.user.organizationId, session.user.role, session.user.id),
+        where: formsListWhere(requireOrganizationId(session), session.user.role, session.user.id),
         orderBy: { updatedAt: 'desc' },
         include: {
           creator: { select: { name: true, email: true } },
@@ -26,11 +27,11 @@ export default async function FormsListPage() {
       });
       const responseCounts = await tx.submission.groupBy({
         by: ['formId'],
-        where: { organizationId: session.user.organizationId, status: 'submitted' },
-        _count: { _all: true },
+        where: { organizationId: requireOrganizationId(session), status: 'submitted' },
+        _count: true,
       });
       const organization = await tx.organization.findUniqueOrThrow({
-        where: { id: session.user.organizationId },
+        where: { id: requireOrganizationId(session) },
         select: { subdomain: true },
       });
       const orgMembers = await tx.user.findMany({
@@ -42,7 +43,7 @@ export default async function FormsListPage() {
     },
   );
 
-  const responseCountByFormId = new Map(responseCounts.map((row) => [row.formId, row._count._all]));
+  const responseCountByFormId = new Map(responseCounts.map((row) => [row.formId, row._count]));
 
   // Public form pages live on the org's subdomain (not this admin dashboard's domain —
   // see src/middleware.ts), so "View form" needs an absolute URL rather than a

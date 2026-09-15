@@ -61,3 +61,19 @@ export function requirePlatformAdmin(session: Session): void {
 export function isPlatformOnlyAdmin(session: Session): boolean {
   return session.user.isPlatformAdmin && !session.user.organizationId;
 }
+
+/**
+ * Narrows session.user.organizationId (string | null — see src/types/next-auth.d.ts;
+ * null for platform-only admins with no org membership) to a plain string for the many
+ * org-scoped routes/pages under /forms and /api that require org context to do anything
+ * useful. Throws rather than letting `null` silently flow into a Prisma where/data
+ * clause — every caller here is a route a platform-only admin shouldn't be able to
+ * reach anyway (they have no org to scope to), so failing closed with a 403 is the
+ * correct behavior, not just a type-checking workaround.
+ */
+export function requireOrganizationId(session: Session): string {
+  if (!session.user.organizationId) {
+    throw new ForbiddenError('This action requires an organisation-scoped session');
+  }
+  return session.user.organizationId;
+}

@@ -5,7 +5,7 @@ import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
 import { loadSubmissionFormSchema } from '@/lib/forms/submission-files';
 import { assertUploadAllowed } from '@/lib/s3';
-import { requireSession } from '@/lib/session';
+import { requireOrganizationId, requireSession } from '@/lib/session';
 
 interface RouteContext {
   params: Promise<{ id: string; submissionId: string }>;
@@ -33,12 +33,16 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
 
     const fileId = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
 
       const submission = await tx.submission.findFirst({
-        where: { id: submissionId, formId: form.id, organizationId: session.user.organizationId },
+        where: {
+          id: submissionId,
+          formId: form.id,
+          organizationId: requireOrganizationId(session),
+        },
       });
       if (!submission) {
         throw new NotFoundError('Submission');
@@ -51,7 +55,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         throw new InvalidRequestError('storageKey does not belong to this submission.');
       }
 
-      const schema = await loadSubmissionFormSchema(tx, submission, session.user.organizationId);
+      const schema = await loadSubmissionFormSchema(tx, submission, requireOrganizationId(session));
       const field = schema.fields[body.fieldId];
       if (!field || (field.type !== 'file_upload' && field.type !== 'signature')) {
         throw new InvalidRequestError(`Field "${body.fieldId}" does not accept file uploads.`);

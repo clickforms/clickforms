@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { toErrorResponse } from '@/lib/api-errors';
 import { assertUploadAllowed, buildLibraryStorageKey, createPresignedUploadUrl } from '@/lib/s3';
-import { requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 const presignBodySchema = z.object({
   filename: z.string().min(1).max(255),
@@ -20,7 +20,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     assertUploadAllowed({ mimeType: body.mimeType, sizeBytes: body.sizeBytes });
 
     const storageKey = buildLibraryStorageKey({
-      organizationId: session.user.organizationId,
+      organizationId: requireOrganizationId(session),
       filename: body.filename,
     });
     const uploadUrl = await createPresignedUploadUrl({

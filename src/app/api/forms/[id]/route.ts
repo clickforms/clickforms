@@ -12,7 +12,7 @@ import {
 } from '@/lib/forms/form-status';
 import { formSchemaSchema, listFilenamePrefixCandidates } from '@/lib/forms/schema';
 import { getOrCreateDraftVersion } from '@/lib/forms/versions';
-import { ForbiddenError, requireRole, requireSession } from '@/lib/session';
+import { ForbiddenError, requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -29,7 +29,7 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormViewAccess(form, session.user.id);
 
@@ -113,7 +113,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
 
@@ -129,7 +129,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         await tx.form.update({ where: { id: form.id }, data: { name: body.name } });
         await logAudit(
           {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             actorUserId: session.user.id,
             action: 'form.rename',
             entityType: 'form',
@@ -147,7 +147,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         await tx.form.update({ where: { id: form.id }, data: { status: nextStatus } });
         await logAudit(
           {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             actorUserId: session.user.id,
             action: body.archived ? 'form.archive' : 'form.restore',
             entityType: 'form',
@@ -161,7 +161,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         await tx.form.update({ where: { id: form.id }, data: { isPrivate: body.isPrivate } });
         await logAudit(
           {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             actorUserId: session.user.id,
             action: body.isPrivate ? 'form.make_private' : 'form.make_visible',
             entityType: 'form',
@@ -180,7 +180,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         });
         await logAudit(
           {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             actorUserId: session.user.id,
             action: 'form.pdf_filename_template_update',
             entityType: 'form',
@@ -224,7 +224,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         });
         await logAudit(
           {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             actorUserId: session.user.id,
             action: 'form.filename_prefix_field_update',
             entityType: 'form',
@@ -249,7 +249,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         });
         await logAudit(
           {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             actorUserId: session.user.id,
             action: 'form.notification_settings_update',
             entityType: 'form',
@@ -272,7 +272,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         }
         await logAudit(
           {
-            organizationId: session.user.organizationId,
+            organizationId: requireOrganizationId(session),
             actorUserId: session.user.id,
             action: 'form.autosave',
             entityType: 'form_version',
@@ -301,7 +301,7 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
-        where: { id, organizationId: session.user.organizationId },
+        where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
 

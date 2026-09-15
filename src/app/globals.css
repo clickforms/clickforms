@@ -161,6 +161,102 @@
   background: rgba(148, 163, 184, 0.14);
 }
 
+/* .button--dark is a hardcoded near-black pill (#111), the right call on the light
+   workspace but nearly indistinguishable from a dark surface (--color-surface: #1c2027)
+   once the shell itself is dark — it'd read as a flat, undefined block instead of a
+   button. Inverting to a light pill (dark text) keeps the same "strong neutral action,
+   not the green primary" role while actually standing out against a dark page. Used
+   across the app (Save changes, Use this template, org onboarding, etc.), so this one
+   override fixes every one of those call sites at once. */
+.admin-shell[data-theme="dark"] .button--dark {
+  background-color: var(--color-text);
+  color: var(--color-bg);
+}
+
+.admin-shell[data-theme="dark"] .button--dark:hover {
+  background-color: var(--color-text-muted);
+}
+
+/* .dashboard-hero-widget-cta is the same hand-rolled "solid black pill" as .button--dark
+   (predates that variant existing as a reusable class) — same fix, same reasoning: it
+   sits inside .dashboard-hero-widget, which already uses var(--color-surface) and so
+   goes dark with the rest of the shell, and a literal #111 block reads as a dead spot
+   against that dark card instead of a button. */
+.admin-shell[data-theme="dark"] .dashboard-hero-widget-cta {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: transparent;
+}
+
+.admin-shell[data-theme="dark"] .dashboard-hero-widget-cta:hover {
+  background: var(--color-text-muted);
+}
+
+/* The green glow's second gradient layer is a low-opacity dark tint meant to add subtle
+   depth against the light --color-bg — invisible (and pointless) once the page itself is
+   already dark, so give dark mode its own faint highlight instead of silently no-op'ing. */
+.admin-shell[data-theme="dark"] .dashboard-glow {
+  background:
+    radial-gradient(ellipse 70% 90% at 0% 0%, rgba(85, 234, 140, 0.14), transparent 62%),
+    radial-gradient(ellipse 45% 70% at 100% 10%, rgba(255, 255, 255, 0.03), transparent 55%);
+}
+
+/* A flat, full-bleed --color-primary (bright #55ea8c) block reads as a neon slab next to
+   an otherwise dark page — fine as the one deliberately colorful thing on an all-white
+   dashboard, jarring once everything around it has gone dark. Dark mode gets a dark
+   gradient with a green glow worked in instead (accent, not a wall of colour), which also
+   means the hero's own text needs to flip from black-on-green to light-on-dark — every
+   .dashboard-hero-* text/button rule below exists only to make that flip. */
+.admin-shell[data-theme="dark"] .dashboard-hero {
+  background:
+    radial-gradient(
+      ellipse 60% 90% at 100% 0%,
+      color-mix(in srgb, var(--color-primary) 22%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(135deg, #1b2b22 0%, var(--color-surface) 65%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
+}
+
+.admin-shell[data-theme="dark"] .dashboard-hero-kicker {
+  color: var(--color-primary);
+}
+
+.admin-shell[data-theme="dark"] .dashboard-hero-title {
+  color: var(--color-text);
+}
+
+.admin-shell[data-theme="dark"] .dashboard-hero-lead {
+  color: var(--color-text-muted);
+}
+
+.admin-shell[data-theme="dark"] .dashboard-hero-actions .dashboard-primary {
+  background-color: var(--color-primary);
+  color: var(--color-bg);
+}
+
+.admin-shell[data-theme="dark"] .dashboard-hero-actions .dashboard-primary:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.admin-shell[data-theme="dark"] .dashboard-hero-actions .dashboard-secondary {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.admin-shell[data-theme="dark"] .dashboard-hero-actions .dashboard-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* The snapshot widget already themes itself via var(--color-surface) (see
+   .dashboard-hero-widget), but light mode gets its definition from sitting on a solid
+   green field — against the new dark gradient it needs its own border to still read as a
+   distinct card rather than blending into the hero behind it. */
+.admin-shell[data-theme="dark"] .dashboard-hero-widget {
+  border: 1px solid var(--color-border);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -180,6 +276,12 @@ h3 {
   font-family: var(--font-heading);
   font-weight: 700;
   letter-spacing: -0.01em;
+  /* Explicit rather than left to inherit from body — every heading-class rule in this
+     file (.settings-page-title, .contact-details-title, dashboard/panel titles, etc.)
+     only ever sets font-size/weight/spacing and relies on this cascading down. That's
+     fine in the common case, but declaring it directly here means a heading's color can
+     never silently end up wrong regardless of how deep it's nested. */
+  color: var(--color-text);
 }
 
 a {
@@ -257,6 +359,16 @@ a {
   background-color: var(--color-danger-hover);
 }
 
+/* Publish's solid color — matches .builder-header-cta--publish so the same action reads
+   the same way whether it's the builder's toolbar CTA or a row action on the forms list. */
+.button--success {
+  background-color: #16a34a;
+}
+
+.button--success:hover {
+  background-color: #15803d;
+}
+
 /* Solid black — same near-black tone already used for the signature pad and typed-name
    controls, now available as a reusable variant rather than a one-off. */
 .button--dark {
@@ -265,6 +377,18 @@ a {
 
 .button--dark:hover {
   background-color: #000;
+}
+
+/* Lavender outline — transparent fill, --color-lavender (#d3ccff) border, matching
+   --color-lavender-strong text, same pairing used for lavender badges/pills elsewhere. */
+.button--lavender {
+  background-color: transparent;
+  color: var(--color-lavender-strong);
+  border: 1.5px solid var(--color-lavender);
+}
+
+.button--lavender:hover {
+  background-color: var(--color-lavender-soft);
 }
 
 /* Ghost button with danger-red text instead of a solid red fill — for a destructive
@@ -299,6 +423,15 @@ a {
   border: 1px solid transparent;
 }
 
+/* Responses table's Status column reads as a dense list of many rows, so its badges
+   are a notch smaller than the standalone badge (e.g. the submission-detail page's status
+   control) — scoped to this table only, not a global .badge--small modifier, since no
+   other badge use case has asked for the smaller size. */
+.submissions-table .badge {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+}
+
 .badge--neutral {
   background-color: var(--color-surface-sunken);
   color: var(--color-text-muted);
@@ -306,9 +439,9 @@ a {
 }
 
 .badge--success {
-  background-color: #eef3df;
-  color: #56642c;
-  border-color: #d7e2b6;
+  background-color: var(--color-success-soft);
+  color: var(--color-primary-hover);
+  border-color: var(--color-success-border);
 }
 
 /* Text color fixed from a stale var(--color-secondary-hover) (green, on a lavender
@@ -330,95 +463,41 @@ a {
 
 /* Live-status indicator — whether a form is actually reachable by respondents right
    now, decoupled from the draft/approved/published pipeline badge above (see
-   src/lib/forms/live-status.ts). A small solid dot + label, pill-shaped like .badge but
-   with its own tones since "live" needs to read as calmer/more confident than the
-   pipeline badges, and "pending" needs to read as an active nudge, not just a label. */
+   src/lib/forms/live-status.ts). Quiet text + a small colored dot so rows stay
+   scannable without a stack of filled pills competing with the form name. */
 .live-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  border-radius: var(--radius-pill);
-  padding: 0.3rem 0.75rem 0.3rem 0.6rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  border: 1px solid transparent;
+  gap: 0.4rem;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 .live-status-dot {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 0.375rem;
+  height: 0.375rem;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.live-status--live {
-  background-color: var(--color-primary-soft);
-  color: var(--color-primary-hover);
-  border-color: var(--color-success-border);
-}
-
 .live-status--live .live-status-dot {
-  background-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(85, 234, 140, 0.16);
+  background-color: #3dd975;
 }
 
-.live-status--pending {
-  background-color: var(--color-warning-soft);
-  color: var(--color-warning-hover);
-  border-color: var(--color-warning-border);
-}
-
-.live-status--pending .live-status-dot {
-  background-color: var(--color-warning);
-  animation: live-status-pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes live-status-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(180, 83, 9, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(180, 83, 9, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .live-status--pending .live-status-dot {
-    animation: none;
-  }
-}
-
-.live-status--draft {
-  background-color: var(--color-warning-soft);
-  color: var(--color-warning-hover);
-  border-color: var(--color-warning-border);
-}
-
+.live-status--pending .live-status-dot,
 .live-status--draft .live-status-dot {
-  background-color: var(--color-warning);
-}
-
-/* Lavender, not blue — blue was a one-off hue with no other use in the app; lavender is
-   the established secondary accent (Page 1 pill, search field), so "Approved · not
-   live" now reads as on-brand rather than an unrelated fourth color. Token-based, so the
-   dark-theme override this used to need (a second hardcoded blue) is gone — it re-themes
-   the same way the other live-status tones already do. */
-.live-status--approved {
-  background-color: var(--color-lavender-soft);
-  color: var(--color-lavender-strong);
-  border-color: var(--color-lavender);
+  background-color: #d4a574;
 }
 
 .live-status--approved .live-status-dot {
-  background-color: var(--color-lavender-strong);
-}
-
-.live-status--archived {
-  background-color: var(--color-surface-sunken);
-  color: var(--color-text-muted);
-  border-color: var(--color-border);
+  background-color: #9b93d4;
 }
 
 .live-status--archived .live-status-dot {
@@ -441,6 +520,21 @@ a {
   height: 100vh;
   display: flex;
   overflow: hidden;
+  /* Re-declare (not just inherit) text color here. `body` also sets `color:
+     var(--color-text)`, but body sits OUTSIDE .admin-shell in the DOM (root layout
+     renders <body>{children}</body>, with .admin-shell somewhere inside children) — so
+     body's `color` is computed using whatever --color-text means at body's own scope,
+     which is always the :root (light) value, and that already-resolved color is what
+     inheritance then hands down to every element in here that doesn't set its own color.
+     .admin-shell[data-theme="dark"] redefining --color-text further down the tree can't
+     retroactively change a value body already resolved above it. Any element inside the
+     shell that sets color: var(--color-text) itself (or --color-text-muted, etc.)
+     re-resolves correctly, since it's evaluated inside this scope — which is exactly why
+     plain/unstyled text (table cells, anything relying on inheritance rather than
+     declaring its own color) was silently stuck in light-mode color regardless of the
+     toggle. Declaring it again right here gives every descendant a fresh, correctly-
+     scoped value to inherit from instead. */
+  color: var(--color-text);
 }
 
 .admin-content {
@@ -457,10 +551,79 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.85rem 1.5rem;
+  padding: 0.4rem 1.5rem;
   background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+}
+
+.admin-header--staff-view {
+  background: #fff7ed;
+  border-bottom: 2px solid #f59e0b;
+}
+
+.staff-view-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.18rem 0.2rem 0.18rem 0.7rem;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #111827;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: 0 0 0 2px #fde68a;
+}
+
+.staff-view-chip-label {
+  line-height: 1;
+}
+
+.staff-view-chip-exit {
+  padding: 0.32rem 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.staff-view-chip-exit:hover:not(:disabled) {
+  background: #991b1b;
+}
+
+.staff-view-chip-exit:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.admin-shell[data-theme="dark"] .admin-header--staff-view {
+  background: color-mix(in srgb, #f59e0b 18%, var(--color-surface));
+  border-bottom-color: #f59e0b;
+}
+
+.admin-shell[data-theme="dark"] .staff-view-chip {
+  background: #f59e0b;
+  color: #111827;
+}
+
+.admin-shell[data-theme="dark"] .staff-view-chip-exit {
+  background: #ef4444;
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .staff-view-chip-label {
+    display: none;
+  }
+
+  .staff-view-chip {
+    padding: 0.18rem;
+  }
 }
 
 .admin-header-left {
@@ -471,7 +634,7 @@ a {
 }
 
 .admin-header-menu {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   width: 32px;
@@ -488,16 +651,58 @@ a {
   color: var(--color-text);
 }
 
+.admin-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.admin-header-brand-text {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .admin-header-brand-text {
+    display: inline;
+  }
+}
+
+.admin-header-logo {
+  display: flex;
+  align-items: center;
+  height: 52px;
+  max-width: 220px;
+  overflow: hidden;
+}
+
+.admin-header-logo img {
+  max-height: 52px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 .admin-header-title {
   margin: 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding-left: 0.85rem;
+  border-left: 1px solid var(--color-border);
   font-family: var(--font-heading);
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .admin-header-right {
@@ -505,6 +710,620 @@ a {
   align-items: center;
   gap: 0.75rem;
   flex-shrink: 0;
+}
+
+/* Brand lockup for the sidebar-less /admin (Clickforms platform-staff) top bar — see
+   src/app/admin/admin-platform-shell.tsx. Unlike .admin-brand-block (which lives inside
+   the dark .admin-sidebar and is white-on-dark), this sits directly in the light
+   .admin-header, so it just inherits the header's text color instead of hardcoding one. */
+.admin-platform-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.admin-platform-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: 0.75rem;
+}
+
+.admin-platform-nav-link {
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-platform-nav-link:hover {
+  color: var(--color-text);
+  background: var(--color-surface-sunken);
+}
+
+.admin-platform-nav-link--active {
+  background: var(--color-primary-soft);
+  color: #0d9f57;
+}
+
+/* Danger zone card (org deletion) — reuses .card's base styling, just with a danger-tinted
+   border so it reads as higher-stakes than the settings card above it without needing a
+   whole new card variant. */
+/* Form Settings tab — download filename template (src/app/forms/[id]/settings). The
+   {date} token shown inline in the card's description text, styled as a small mono pill
+   so it reads as a literal placeholder rather than prose. */
+.contact-details-intro code {
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.35rem;
+  background: var(--color-surface-muted, #f1f5f9);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
+  font-size: 0.8em;
+  color: var(--color-text);
+}
+
+/* .contact-details-list--table's dd is a row-flex container (for the common case of a
+   single input filling it) — this row has a second stacked line underneath (the "leave
+   blank" note), so both live inside one wrapper that opts back into column layout rather
+   than fighting the parent's row-flex. */
+.filename-template-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.filename-template-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.filename-template-field .contact-details-input {
+  flex: 1;
+  min-width: 160px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.filename-template-field .button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.filename-field-chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.filename-field-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  background: none;
+  color: var(--color-text);
+  border: 1px solid var(--color-text);
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: grab;
+  transition:
+    background-color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.filename-field-chip-label {
+  white-space: nowrap;
+}
+
+.filename-field-chip--in-use {
+  background: var(--color-surface-sunken);
+}
+
+.filename-field-chip:hover:not(:disabled) {
+  background: var(--color-surface-sunken);
+}
+
+.filename-field-chip:active:not(:disabled) {
+  cursor: grabbing;
+  transform: scale(0.97);
+}
+
+.filename-field-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.filename-template-input--drag-over {
+  border-color: var(--color-lavender-strong);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
+}
+
+.filename-template-input {
+  white-space: nowrap;
+  overflow-x: auto;
+  cursor: text;
+}
+
+.filename-template-input[contenteditable="false"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.filename-template-input:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-text-subtle);
+  pointer-events: none;
+}
+
+.filename-token-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0 0.15rem;
+  padding: 0.1rem 0.25rem 0.1rem 0.4rem;
+  background-color: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  border: 1px solid var(--color-lavender);
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+  vertical-align: middle;
+  cursor: grab;
+}
+
+.filename-token-chip-label {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filename-token-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.filename-token-chip-remove:hover {
+  background: color-mix(in srgb, var(--color-lavender) 45%, transparent);
+}
+
+.filename-token-chip--dragging {
+  opacity: 0.4;
+}
+
+.form-settings-page {
+  width: 100%;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-settings-hero {
+  padding: 2.35rem 2.25rem 2.5rem;
+  background: var(--color-primary);
+  border-radius: calc(var(--radius-lg) + 6px);
+}
+
+.form-settings-hero-kicker {
+  margin: 0 0 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(17, 17, 17, 0.62);
+}
+
+.form-settings-hero-title {
+  margin: 0;
+  font-family: var(--font-display), var(--font-body);
+  font-size: clamp(1.85rem, 3.2vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: #111;
+}
+
+.form-settings-hero-lead {
+  margin: 0.7rem 0 0;
+  max-width: 36rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: rgba(17, 17, 17, 0.68);
+}
+
+.form-settings-accordion {
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius-lg) + 4px);
+  box-shadow: var(--shadow-card);
+}
+
+.form-settings-card {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.form-settings-card + .form-settings-card {
+  border-top: 1px solid var(--color-border);
+}
+
+.form-settings-card .contact-details-header-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: #12b76a;
+}
+
+.form-settings-card-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  margin: 0;
+  padding: 1.2rem 1.35rem;
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.form-settings-card-toggle::-webkit-details-marker,
+.form-settings-card-toggle::marker {
+  display: none;
+  content: none;
+}
+
+.form-settings-card-toggle:hover {
+  background: var(--color-surface-sunken);
+}
+
+.form-settings-card[open] > .form-settings-card-toggle {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.form-settings-card-toggle:focus {
+  outline: none;
+}
+
+.form-settings-card-toggle:focus-visible {
+  outline: 2px solid var(--color-lavender-strong);
+  outline-offset: -2px;
+}
+
+.form-settings-card-toggle-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.form-settings-card-toggle .contact-details-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.form-settings-card-toggle .contact-details-intro {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.form-settings-card-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-text-subtle);
+  transition: transform 0.15s ease;
+}
+
+.form-settings-card[open] > .form-settings-card-toggle .form-settings-card-chevron {
+  transform: rotate(180deg);
+}
+
+.form-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem 1rem;
+  background: var(--color-surface);
+}
+
+.form-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.05rem 1.1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+}
+
+.form-settings-panel-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.form-settings-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-settings-choice {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.form-settings-choice:hover {
+  border-color: #d7dbe3;
+}
+
+.form-settings-choice--selected {
+  border-color: #d1d5db;
+  background: var(--color-surface);
+  box-shadow: none;
+}
+
+.form-settings-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.form-settings-choice-radio {
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-top: 0.12rem;
+  flex-shrink: 0;
+  border: 1.5px solid #cfd4dc;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 0 #111;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.form-settings-choice--selected .form-settings-choice-radio {
+  border-color: #111;
+  box-shadow: inset 0 0 0 3.5px #111;
+}
+
+.form-settings-choice-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.form-settings-choice-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.form-settings-choice-desc {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+.form-settings-choice-note {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.5rem;
+  background: var(--color-surface-sunken);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.form-settings-choice-note--warn {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.form-settings-choice-note a {
+  color: inherit;
+  font-weight: 700;
+}
+
+.form-settings-choice-input {
+  width: min(24rem, 100%);
+  margin-top: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-pill);
+}
+
+.form-settings-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.form-settings-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.form-settings-preset {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.form-settings-preset:hover:not(:disabled) {
+  background: var(--color-surface-sunken);
+}
+
+.form-settings-preset:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.form-settings-preset--active {
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  color: #0d9f57;
+}
+
+.filename-file-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 0.95rem;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.filename-file-preview-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.6rem;
+  border-radius: 0.35rem;
+  background: #e11d48;
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.filename-file-preview-copy {
+  min-width: 0;
+}
+
+.filename-file-preview-name {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.filename-file-preview-meta {
+  margin: 0.15rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.form-settings-palette-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-settings-palette-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.form-settings-palette-search {
+  width: 14rem;
+  max-width: 100%;
+  padding: 0.45rem 0.95rem;
+}
+
+.form-settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.1rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.form-settings-footer p {
+  margin: 0;
+}
+
+.form-settings-footer .button:disabled {
+  opacity: 1;
+  background: #e8eaef;
+  color: #9aa3af;
+}
+
+.danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  border-color: var(--color-danger);
+  margin-top: 1.5rem;
 }
 
 /* Account avatar + dropdown — replaces the old plain "email · Sign out" text with a
@@ -517,17 +1336,20 @@ a {
 .account-menu-trigger {
   display: flex;
   align-items: center;
+  gap: 0.35rem;
   padding: 0;
   border: none;
   background: none;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   cursor: pointer;
 }
 
-/* Lavender rather than the primary-green gradient every other avatar-ish badge in the
-   app already leans on (form-list "Created by" initials, header icon badges) — the
-   account menu is the one piece of chrome present on every page, so giving it the
-   secondary accent instead keeps it visually distinct from the primary CTAs. */
+/* Flat lavender fill (--color-lavender, #d3ccff) with --color-lavender-strong text —
+   same pairing used for lavender badges/pills elsewhere — rather than the previous
+   gradient-plus-white-text treatment. Lavender (not the primary-green every other
+   avatar-ish badge in the app leans on, e.g. form-list "Created by" initials) keeps the
+   account menu, the one piece of chrome present on every page, visually distinct from
+   the primary CTAs. */
 .account-avatar {
   display: inline-flex;
   align-items: center;
@@ -535,22 +1357,18 @@ a {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 50%;
-  background: linear-gradient(155deg, var(--color-lavender-strong), var(--color-lavender));
-  color: #fff;
+  background-color: var(--color-lavender);
+  color: var(--color-lavender-strong);
   font-family: var(--font-display), var(--font-body);
   font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.01em;
-  box-shadow:
-    0 0 0 2px var(--color-surface),
-    0 0 0 3px var(--color-border);
-  transition: box-shadow 0.15s ease;
 }
 
-.account-menu-trigger:hover .account-avatar {
-  box-shadow:
-    0 0 0 2px var(--color-surface),
-    0 0 0 3px var(--color-lavender-strong);
+.account-menu-chevron {
+  display: inline-flex;
+  color: var(--color-text);
+  flex-shrink: 0;
 }
 
 .account-avatar--lg {
@@ -609,6 +1427,27 @@ a {
   white-space: nowrap;
 }
 
+.account-menu-org-link {
+  /* Deliberately a literal blue rather than var(--color-primary) (green) — this app's
+   * palette otherwise avoids blue, but the request here was specifically for a
+   * classic "this is a link" blue to make the organisation name stand out. */
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.account-menu-temp-join {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background-color: #f59e0b;
+  color: #111827;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
 .admin-sidebar {
   display: flex;
   flex-direction: column;
@@ -635,12 +1474,54 @@ a {
   flex-shrink: 0;
 }
 
+.admin-sidebar-top {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--sidebar-border);
+  flex-shrink: 0;
+}
+
+.admin-sidebar-menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--sidebar-text);
+  cursor: pointer;
+}
+
+.admin-sidebar-menu:hover {
+  background-color: var(--sidebar-hover);
+  color: #fff;
+}
+
 .admin-brand-mark {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   color: var(--sidebar-brand);
+}
+
+.admin-brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 32px;
+  max-width: 140px;
+  overflow: hidden;
+}
+
+.admin-brand-logo img {
+  max-height: 32px;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 .admin-sidebar-nav {
@@ -814,7 +1695,43 @@ a {
    builder fills exactly via flex: 1; min-height: 0 all the way down. */
 .admin-main:has(.form-workspace) {
   max-width: none;
-  padding: 0.5rem 0.75rem 0.5rem 0.4rem;
+  /* No top or side padding — .form-top-nav and .form-workspace-content both go edge to
+     edge (the former sits flush against .admin-header above it too, joining into one
+     continuous surface rather than leaving the page's gray background showing as a gap
+     around them). Only bottom padding remains, as breathing room before the viewport
+     edge. */
+  padding: 0 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Same "opt out of page-level scrolling, hand .builder a bounded height instead" trick
+   as .form-workspace above, for the /admin/templates/[id]/builder screen (see
+   template-builder-client.tsx) — that page has no form-top-nav-style header row of its
+   own (.builder-header already floats over the canvas), so it keeps .admin-main's
+   normal side/top padding rather than going edge to edge. */
+.admin-main:has(.template-builder-page) {
+  max-width: none;
+  padding: 1.5rem 1.5rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.template-builder-page {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Account settings uses its own white rail + gray canvas, so drop .admin-main's padding
+   and let .settings-shell fill the remaining viewport height under the header. Content
+   scrolls inside .settings-content so the rail stays put, matching the reference. */
+.admin-main:has(.settings-shell) {
+  padding: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -845,17 +1762,24 @@ a {
 
 /* On the builder specifically, the nav-tabs row and the page-switcher row read as one
    continuous card — no gap between them, just the hairline border each already carries
-   — rather than two separate floating pills. (Submissions/settings, which use
-   .form-workspace without .builder, keep the default gap and a fully-rounded nav bar.) */
+   — rather than two separate floating pills. */
 .form-workspace:has(.builder) {
   gap: 0;
 }
 
+/* .form-top-nav already squares its top corners and drops its top border (below) to join
+   with .admin-header above, on every tab. The builder also joins its *bottom* edge to the
+   page-switcher bar directly beneath it, so needs the bottom corners squared too — every
+   corner ends up square here, versus the default's rounded bottom. */
 .form-workspace:has(.builder) .form-top-nav {
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border-radius: 0;
 }
 
+/* position: relative anchors .builder-header's absolute positioning (below) — that
+   element floats over this container's top-right corner instead of reserving its own
+   row, so .builder starts at the very top with nothing pushing it down. */
 .form-workspace-content {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -866,36 +1790,47 @@ a {
   overflow-y: auto;
 }
 
+/* Top edge deliberately bare (no border-top, square top corners) — .admin-header sits
+   directly above with its own border-bottom supplying the one hairline between them, so
+   the two read as one joined surface rather than a header with a separate floating pill
+   below it. */
 .form-top-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   min-height: var(--form-top-nav-height);
-  padding: 0.35rem 0.5rem 0.35rem 0.4rem;
+  padding: 0.35rem 1.5rem;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-top: none;
+  border-left: none;
+  border-right: none;
   flex-shrink: 0;
 }
 
+/* Segmented-control track — a sunken gray pill housing the tabs, so the group reads as
+   its own control (like the "Page 1" switcher) rather than sitting flush on
+   .form-top-nav's plain white background. The active tab's solid green fill (see
+   .form-top-nav-tab--active) then floats inside this track. */
 .form-top-nav-tabs {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 0.125rem;
   margin: 0;
-  padding: 0;
+  padding: 0.2rem;
   list-style: none;
+  background-color: var(--color-surface-sunken);
+  border-radius: var(--radius-pill);
 }
 
 .form-top-nav-item {
   display: flex;
 }
 
-/* Underline tabs rather than filled pills — the active tab is announced by bold text +
-   a brand-colored underline (an inset box-shadow, not a border, so it paints without
-   nudging the tab's height/padding between active and inactive states). */
+/* Filled pill tabs — the active tab is a solid brand-green pill with bold dark text,
+   inactive tabs are plain icon + label on the bar's own background. */
 .form-top-nav-tab {
   position: relative;
   display: flex;
@@ -903,7 +1838,7 @@ a {
   align-items: center;
   gap: 0.375rem;
   padding: 0.4rem 0.7rem;
-  border-radius: 0.4rem;
+  border-radius: var(--radius-pill);
   border: none;
   background: none;
   color: var(--color-text);
@@ -924,19 +1859,19 @@ a {
 }
 
 .form-top-nav-tab--active {
-  background-color: transparent;
+  background-color: var(--color-primary);
   color: var(--color-text);
   font-weight: 700;
-  box-shadow: inset 0 -2px 0 0 var(--color-primary);
+  box-shadow: none;
 }
 
 .form-top-nav-tab--active:hover {
-  background-color: var(--color-surface-sunken);
+  background-color: var(--color-primary);
   color: var(--color-text);
 }
 
 .form-top-nav-tab--active .form-top-nav-tab-icon {
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .form-top-nav-tab-icon {
@@ -971,9 +1906,12 @@ a {
   line-height: 1;
 }
 
+/* Against the active tab's own green fill, the light soft-green badge from the inactive
+   state nearly disappears — use the darker --color-primary-hover tone with white text so
+   the count stays legible sitting on top of the pill. */
 .form-top-nav-tab--active .form-top-nav-tab-badge {
-  background-color: var(--color-primary-soft);
-  color: var(--color-primary-hover);
+  background-color: var(--color-primary-hover);
+  color: #fff;
 }
 
 /* Groups the Live/Draft badge with Preview on the right side of the top row, mirroring
@@ -985,16 +1923,16 @@ a {
   flex-shrink: 0;
 }
 
-/* Deliberately the plainest of the three "do something with this form" actions —
-   Preview (here), Share Link, and Publish escalate in visual weight (text → outline →
-   solid), so the eye lands on Publish as the strongest call to action. */
+/* Black-outline pill, one step below the solid black/green buttons elsewhere — matches
+   the "Preview" control's own weight: present but not competing with Publish. */
 .form-top-nav-preview {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.3rem 0.7rem;
+  padding: 0.3rem 0.85rem;
   border-radius: var(--radius-pill);
-  border: 1px solid transparent;
+  border: 1.5px solid var(--color-text);
+  background-color: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-poppins), var(--font-body);
   font-size: 0.8125rem;
@@ -1008,12 +1946,21 @@ a {
   background-color: var(--color-surface-sunken);
 }
 
+/* Same bold black-outline pill as Preview (via the shared .form-top-nav-preview class on
+   this button too) — per user's call, Share should read with the same weight as Preview
+   rather than sit quieter as an icon-only glyph. This rule only overrides what's actually
+   different about being a <button> instead of an <a>. */
+.form-top-nav-share {
+  cursor: pointer;
+}
+
 /* Dashboard — polished overview: quiet atmosphere, clear hierarchy, brand-only accent. */
 .dashboard {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
+  width: 100%;
   isolation: isolate;
 }
 
@@ -1055,6 +2002,7 @@ a {
 
 .dashboard-hero {
   position: relative;
+  width: 100%;
   padding: 2.5rem 2rem 2.75rem;
   background: var(--color-primary);
   border-radius: calc(var(--radius-lg) + 6px);
@@ -1233,13 +2181,18 @@ a {
 
 @media (min-width: 860px) {
   .dashboard-hero-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
     gap: 3rem;
+  }
+
+  .dashboard-hero-widget {
+    justify-self: end;
   }
 }
 
 .dashboard-panel {
   margin: 0;
+  width: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: calc(var(--radius-lg) + 2px);
@@ -1249,6 +2202,7 @@ a {
 
 .dashboard-recent-panel {
   margin: 0;
+  width: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: calc(var(--radius-lg) + 2px);
@@ -1268,15 +2222,16 @@ a {
 
 .dashboard-recent-panel-title {
   margin: 0;
-  font-family: var(--font-poppins), var(--font-body);
-  font-size: 1.0625rem;
+  font-family: var(--font-body);
+  font-size: 1.125rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--color-text);
 }
 
 .dashboard-recent-panel-subtitle {
-  margin: 0.3rem 0 0;
+  margin: 0.25rem 0 0;
   font-family: var(--font-body);
   font-size: 0.8125rem;
   line-height: 1.4;
@@ -1318,6 +2273,29 @@ a {
   text-decoration: none;
   color: inherit;
   transition: background-color 0.12s ease;
+}
+
+.dashboard-recent-card:has(.dashboard-recent-count) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.dashboard-recent-count {
+  justify-self: center;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dashboard-recent-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .dashboard-recent-card:hover {
@@ -1389,9 +2367,9 @@ a {
 }
 
 .dashboard-recent-name {
-  font-family: var(--font-poppins), var(--font-body);
+  font-family: var(--font-body);
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--color-text);
   overflow: hidden;
@@ -1415,6 +2393,1058 @@ a {
 
 .dashboard-recent-sep {
   color: var(--color-border-strong);
+}
+
+/* Recent admin activity feed (Overview page) and the Audit log page's own list share
+   this simpler row layout — no avatar/arrow like .dashboard-recent-card since there's
+   no single detail page an activity row would link to. */
+.admin-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.admin-activity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.admin-activity-row + .admin-activity-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.admin-activity-action {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.admin-activity-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-text-subtle);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.admin-home {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.admin-home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.admin-home-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.55rem 0.95rem;
+  min-width: 0;
+}
+
+.admin-home-title {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  color: var(--color-text);
+}
+
+.admin-home-kicker {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-subtle);
+}
+
+.admin-home-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.admin-home-stat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.25rem 1.4rem;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s ease;
+}
+
+.admin-home-stat + .admin-home-stat {
+  border-left: 1px solid var(--color-border);
+}
+
+.admin-home-stat:hover {
+  background: var(--color-surface-sunken);
+}
+
+.admin-home-stat:focus-visible {
+  outline: 2px solid var(--color-lavender-strong);
+  outline-offset: -2px;
+}
+
+.admin-home-stat-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: #0f766e;
+}
+
+.admin-home-stat-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-home-stat-value {
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-home-stat-label {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-home-stat-hint {
+  color: var(--color-text-subtle);
+}
+
+.admin-home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.admin-home-panel {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.admin-home-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.05rem 1.3rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-home-panel-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.admin-home-panel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.admin-home-panel-link svg {
+  transition: transform 0.15s ease;
+}
+
+.admin-home-panel-link:hover {
+  color: var(--color-text);
+}
+
+.admin-home-panel-link:hover svg {
+  transform: translateX(2px);
+}
+
+.admin-home-panel-empty {
+  margin: 0;
+  padding: 1.15rem 1.3rem 1.3rem;
+  color: var(--color-text-subtle);
+  font-size: 0.95rem;
+}
+
+.admin-home-org-list,
+.admin-home-activity {
+  list-style: none;
+  margin: 0;
+  padding: 0.45rem;
+}
+
+.admin-home-org,
+.admin-home-activity-row {
+  display: grid;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 14px;
+  transition: background-color 0.15s ease;
+}
+
+.admin-home-org {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  text-decoration: none;
+  color: inherit;
+}
+
+.admin-home-activity-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.admin-home-org:hover,
+.admin-home-activity-row:hover {
+  background: var(--color-surface-sunken);
+}
+
+.admin-home-org:focus-visible {
+  outline: 2px solid var(--color-lavender-strong);
+  outline-offset: 0;
+}
+
+.admin-home-org-mark,
+.admin-home-activity-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.admin-home-org-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: #047857;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.admin-home-activity-avatar {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  font-size: 0.75rem;
+}
+
+.admin-home-org-copy,
+.admin-home-activity-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-home-org-name,
+.admin-home-activity-action {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-home-org-meta,
+.admin-home-activity-meta,
+.admin-home-org-time,
+.admin-home-activity-time {
+  color: var(--color-text-subtle);
+  font-size: 0.84rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-home-org-time,
+.admin-home-activity-time {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-home-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.15rem;
+  padding: 1.5rem 1.4rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+
+.admin-home-empty-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: #0f766e;
+}
+
+.admin-home-empty-title {
+  margin: 0 0 0.3rem;
+  font-size: 1.15rem;
+}
+
+.admin-home-empty-copy {
+  margin: 0 0 1rem;
+  max-width: 28rem;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 980px) {
+  .admin-home-stats,
+  .admin-home-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-home-stat:nth-child(3),
+  .admin-home-stat:nth-child(4) {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .admin-home-stat:nth-child(3) {
+    border-left: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-home-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-home-stats,
+  .admin-home-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-home-stat + .admin-home-stat,
+  .admin-home-stat:nth-child(3) {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .admin-home-header .button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.admin-orgs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.admin-orgs-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.admin-orgs-title {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.admin-orgs-lead {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.admin-orgs-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 1.25rem;
+}
+
+.admin-orgs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.15rem 0.85rem;
+}
+
+.admin-orgs-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 15rem;
+  max-width: 18rem;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+}
+
+.admin-orgs-search:focus-within {
+  border-color: var(--color-border-strong);
+}
+
+.admin-orgs-search-icon {
+  display: inline-flex;
+}
+
+.admin-orgs-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.admin-orgs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.admin-orgs-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-orgs-chip:hover {
+  color: var(--color-text);
+  background: var(--color-surface-sunken);
+}
+
+.admin-orgs-chip--active {
+  background: var(--color-primary-soft);
+  border-color: transparent;
+  color: #0d9f57;
+}
+
+.admin-orgs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-orgs-table th {
+  padding: 0.7rem 1.15rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-subtle);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.admin-orgs-table td {
+  padding: 0.95rem 1.15rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  vertical-align: middle;
+}
+
+.admin-orgs-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-orgs-table tbody tr:hover {
+  background: var(--color-surface-sunken);
+}
+
+.admin-orgs-name {
+  color: var(--color-text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.admin-orgs-plan {
+  display: inline-flex;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.admin-orgs-plan--free {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.admin-orgs-plan--pro {
+  background: var(--color-primary-soft);
+  color: #047857;
+}
+
+.admin-orgs-plan--enterprise {
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+}
+
+.admin-orgs-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 650;
+}
+
+.admin-orgs-status-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.admin-orgs-status--active {
+  color: #059669;
+}
+
+.admin-orgs-status--trial {
+  color: var(--color-lavender-strong);
+}
+
+.admin-orgs-status--suspended {
+  color: var(--color-danger);
+}
+
+.admin-orgs-status--off {
+  color: var(--color-text-subtle);
+}
+
+.admin-users-org-link {
+  color: var(--color-text);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.admin-users-org-link:hover {
+  text-decoration: underline;
+}
+
+.admin-users-reset-link {
+  padding: 0.85rem 1.15rem 0;
+}
+
+.admin-users-reset-link-title {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.admin-orgs-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.admin-orgs-table th:last-child,
+.admin-orgs-table td:last-child {
+  width: 1%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.admin-orgs-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.admin-orgs-status-action,
+.admin-orgs-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.admin-orgs-status-action {
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.admin-orgs-status-action--resume {
+  color: var(--color-danger);
+  border-color: color-mix(in srgb, var(--color-danger) 22%, var(--color-border));
+}
+
+.admin-orgs-status-action:hover:not(:disabled),
+.admin-orgs-more:hover,
+.admin-orgs-more[aria-expanded="true"] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.admin-orgs-more {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+}
+
+.admin-orgs-footer {
+  padding: 0.8rem 1.15rem 0.95rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-subtle);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 720px) {
+  .admin-orgs-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-orgs-search {
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.admin-org-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.admin-org-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  width: fit-content;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-org-back:hover {
+  color: var(--color-text);
+}
+
+.admin-org-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.admin-org-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.95rem;
+  min-width: 0;
+}
+
+.admin-org-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 14px;
+  background: var(--color-primary-soft);
+  color: #047857;
+  font-size: 0.82rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.admin-org-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.7rem;
+}
+
+.admin-org-title {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.admin-org-meta {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+
+.admin-org-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.admin-org-status--active {
+  background: var(--color-primary-soft);
+  color: #047857;
+}
+
+.admin-org-status--trial {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.admin-org-status--suspended {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.admin-org-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-org-banner {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: #065f46;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.admin-org-banner--muted {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.admin-org-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.admin-org-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1.1rem 1.25rem;
+}
+
+.admin-org-stat + .admin-org-stat {
+  border-left: 1px solid var(--color-border);
+}
+
+.admin-org-stat-value {
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-org-stat-label {
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+.admin-org-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.admin-org-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-org-panel-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.admin-org-panel-copy {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-subtle);
+  font-size: 0.86rem;
+}
+
+.admin-org-invite-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-sunken);
+}
+
+.admin-org-invite-link-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.admin-org-invite-link-copy {
+  margin: 0.2rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.admin-org-invite-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-org-invite-link-row .text-input {
+  flex: 1 1 16rem;
+}
+
+.admin-org-empty {
+  margin: 0;
+  padding: 1.4rem 1.25rem;
+  color: var(--color-text-subtle);
+}
+
+.admin-org-people {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+}
+
+.admin-org-person {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.4fr) minmax(0, 0.8fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.8rem 0.85rem;
+  border-radius: 14px;
+}
+
+.admin-org-person--pending {
+  background: color-mix(in srgb, var(--color-warning-soft) 55%, white);
+}
+
+.admin-org-person-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.admin-org-person-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.admin-org-person-name {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-org-person-meta,
+.admin-org-person-time {
+  color: var(--color-text-subtle);
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-org-person-role {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+}
+
+.admin-org-pending-pill {
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.admin-org-form {
+  padding: 1.15rem 1.25rem 1.25rem;
+}
+
+.admin-org-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.15rem;
+}
+
+.admin-org-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--color-text-muted);
+}
+
+.admin-org-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.15rem;
+}
+
+.admin-org-danger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--color-danger-border);
+  border-radius: 18px;
+  background: var(--color-danger-soft);
+}
+
+@media (max-width: 860px) {
+  .admin-org-stats,
+  .admin-org-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-org-stat:nth-child(3),
+  .admin-org-stat:nth-child(4) {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .admin-org-stat:nth-child(3) {
+    border-left: none;
+  }
+
+  .admin-org-person {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .admin-org-person-time {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-org-header {
+    flex-direction: column;
+  }
+
+  .admin-org-stats,
+  .admin-org-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-org-stat + .admin-org-stat,
+  .admin-org-stat:nth-child(3) {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .admin-org-danger {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .dashboard-empty {
@@ -1576,33 +3606,19 @@ a {
     padding: 1.25rem 1rem;
   }
 
+  /* Six-odd controls (save status, page selector, Share, kebab, Publish) don't fit one
+     pill-shaped row at phone widths — wrap rather than overflow, which would otherwise
+     get clipped by .admin-main's overflow-x guard. */
   .builder-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.65rem;
-  }
-
-  /* Six-odd controls (Form settings, save status, divider, Live badge, kebab, Share
-     link, Publish) don't fit one row at phone widths — wrap rather than overflow, which
-     would otherwise get clipped by .admin-main's overflow-x guard. */
-  .builder-header-actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    row-gap: 0.4rem;
-  }
-
-  .builder-header-status-group {
     flex-wrap: wrap;
     row-gap: 0.4rem;
-  }
-
-  .builder-header-divider {
-    display: none;
+    border-radius: var(--radius-md);
   }
 
   /* Prev/next arrows give way to the dropdown alone once space is tight — every page
-     is still reachable from the panel it opens. */
-  .page-switcher-step {
+     is still reachable from the panel it opens. Add page (also a .page-switcher-step)
+     stays visible; it has no other way to reach the same action. */
+  .page-switcher-step:not(.page-switcher-add) {
     display: none;
   }
 
@@ -1698,16 +3714,50 @@ a {
     padding: 0.75rem 1rem;
   }
 
+  .admin-header-menu {
+    display: flex;
+  }
+
   .admin-header-title {
-    font-size: 1rem;
+    font-size: 1.2rem;
   }
 }
 
 @media (min-width: 769px) {
-  /* The backdrop only ever exists for the mobile overlay; keep it fully inert on
-     desktop even if mobileNavOpen happens to be true (see toggleSidebar). */
+  /* The backdrop only ever exists for overlays — mobile, and Account settings, where
+     the dark rail is hidden and the hamburger opens it the same way. Keep it inert on
+     every other desktop page even if mobileNavOpen happens to be true. */
   .admin-mobile-nav-backdrop {
     display: none;
+  }
+
+  .admin-shell--account-settings .admin-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 200;
+    width: 240px;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
+  }
+
+  .admin-shell--account-settings .admin-header-menu {
+    display: flex;
+  }
+
+  .admin-shell--account-settings.admin-shell--mobile-nav-open .admin-sidebar {
+    transform: translateX(0);
+  }
+
+  .admin-shell--account-settings.admin-shell--mobile-nav-open .admin-mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 190;
+    border: none;
+    padding: 0;
+    background-color: rgba(15, 23, 42, 0.45);
+    cursor: pointer;
   }
 }
 
@@ -1722,12 +3772,11 @@ a {
     z-index: 200;
   }
 
-  .admin-sidebar--collapsed .admin-brand-text,
   .admin-sidebar--collapsed .admin-sidebar-section-label {
     display: none;
   }
 
-  .admin-sidebar--collapsed .admin-brand-block {
+  .admin-sidebar--collapsed .admin-sidebar-top {
     justify-content: center;
     padding: 0;
   }
@@ -1803,17 +3852,36 @@ a {
 
 .text-input {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 0.55rem 0.85rem;
-  font-size: 0.9375rem;
+  border-radius: var(--radius-pill);
+  padding: 0.55rem 0.95rem;
+  font-size: 0.875rem;
   font-family: inherit;
   background-color: var(--color-surface);
   color: var(--color-text);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.text-input::placeholder {
+  color: var(--color-text-subtle);
 }
 
 .text-input:focus {
-  outline: 2px solid var(--color-secondary);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
+}
+
+.text-input:disabled {
+  opacity: 0.7;
+  background-color: var(--color-surface);
+  cursor: not-allowed;
+}
+
+textarea.text-input {
+  border-radius: 1.1rem;
+  resize: vertical;
 }
 
 .form-error {
@@ -1827,13 +3895,120 @@ a {
 }
 
 /* Forms list page */
+.forms-list-page {
+  width: 100%;
+}
+
+.forms-list-page .admin-table-card,
+.forms-list-page .empty-state {
+  width: 100%;
+  max-width: none;
+  margin-top: 0;
+  border-radius: 1rem;
+}
+
+.forms-list-page .admin-table {
+  width: 100%;
+}
+
 .forms-list-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 1.5rem;
   flex-wrap: wrap;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
+}
+
+.forms-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.forms-toolbar .forms-search {
+  flex: 1 1 16rem;
+  max-width: 28rem;
+}
+
+.forms-toolbar .button {
+  margin-left: auto;
+}
+
+.forms-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.forms-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.forms-filter-chip:hover {
+  background: var(--color-surface-sunken);
+}
+
+.forms-filter-chip--active {
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  color: #0d9f57;
+}
+
+.forms-filter-chip-count {
+  color: var(--color-text-muted);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.forms-filter-chip--active .forms-filter-chip-count {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.forms-responses-link {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.forms-responses-link:hover {
+  color: var(--color-lavender-strong);
+  text-decoration: underline;
+}
+
+.forms-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.forms-row-actions .button--small {
+  text-decoration: none;
+}
+
+.empty-state-title {
+  margin: 0 0 0.35rem;
+  color: var(--color-text);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.empty-state .button {
+  margin-top: 1rem;
 }
 
 .empty-state {
@@ -1857,6 +4032,10 @@ a {
   z-index: 100;
 }
 
+.modal-overlay--stack {
+  z-index: 110;
+}
+
 .modal-card {
   width: 100%;
   max-width: 560px;
@@ -1872,6 +4051,44 @@ a {
 /* Wider variant for the field-settings modal, which hosts a full settings-panel form. */
 .modal-card--wide {
   max-width: 640px;
+}
+
+/* Response preview modal (Responses table eye icon) — much wider/taller than the other
+   modals since it holds a full print-format page (see submission-preview-modal.tsx)
+   rather than a form. Fixed height + flex column so the iframe can fill the remaining
+   space below the header instead of the modal growing to the iframe's content height. */
+.modal-card--preview {
+  max-width: 1040px;
+  height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-card--preview .modal-header {
+  flex-shrink: 0;
+  margin-bottom: 1rem;
+}
+
+.modal-card--preview .modal-footer {
+  flex-shrink: 0;
+  margin-top: 1rem;
+}
+
+.submission-preview-frame-wrap {
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  background-color: var(--color-surface-sunken);
+}
+
+.submission-preview-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 
 .modal-card--wide .settings-panel {
@@ -2070,22 +4287,47 @@ a {
 /* Responses (submissions) page — header/toolbar/row-actions/empty-state, mirroring the
    users page's .users-page-header/.users-row-actions patterns but kept as its own set of
    classes rather than reused directly, matching how .admin-table/.users-table already
-   coexist as separate near-identical implementations elsewhere in this file. */
+   coexist as separate near-identical implementations elsewhere in this file.
+   The header itself is a full-bleed brand-green hero (not just a plain text block) so
+   the Responses page reads as its own "space" the moment you land on it — kicker names
+   the form, title/subtitle stay dark text directly on the green fill. */
+.submissions-page {
+  width: 100%;
+  padding: 1.5rem;
+}
+
 .submissions-page-header {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  padding: 2rem 2.25rem;
+  background-color: var(--color-primary);
+  border-radius: 1rem;
+}
+
+.submissions-page-kicker {
+  margin: 0 0 0.6rem;
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 
 .submissions-page-title {
-  margin: 0 0 0.35rem;
-  font-size: 1.5rem;
+  margin: 0 0 0.5rem;
+  color: var(--color-text);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .submissions-page-subtitle {
   margin: 0;
   max-width: 42rem;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font-size: 0.9375rem;
   line-height: 1.45;
+  opacity: 0.75;
 }
 
 /* Search + date-range filters on the left, live match count on the right — the row that
@@ -2115,11 +4357,11 @@ a {
   gap: 0.55rem;
   padding: 0.55rem 0.9rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background-color: var(--color-surface);
   flex: 1;
   min-width: 180px;
-  max-width: 280px;
+  max-width: 28rem;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -2172,9 +4414,9 @@ a {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.55rem 0.9rem;
+  padding: 0.55rem 1rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background-color: var(--color-surface);
   color: var(--color-text);
   font-size: 0.875rem;
@@ -2208,10 +4450,7 @@ a {
 }
 
 .submissions-date-range-popover {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  right: 0;
-  z-index: 50;
+  z-index: 200;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -2260,13 +4499,15 @@ a {
 
 /* Small-caps column headers + right-aligned Actions column, so the table reads like a
    dashboard grid rather than the plainer left-aligned .admin-table default used on the
-   forms list. */
+   forms list. Weight/color match .forms-table-static-header's bold-but-muted treatment
+   (forms list headers) — the row content below stays at normal weight, same as that
+   table's own date/created-by cells, rather than either side competing for boldness. */
 .submissions-table th {
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
 }
 
 .submissions-table th:last-child,
@@ -2289,14 +4530,13 @@ a {
 /* Shorter rows than the .admin-table default (0.9rem vertical) — Responses rows only
    hold a timestamp/badge/IP/two icon buttons, so the extra height just added dead space.
    Doubled-up class selector so this reliably beats .admin-table td's own padding rule
-   regardless of source order (see the .builder-header-share specificity lesson). */
+   regardless of source order. */
 .admin-table.submissions-table td {
   padding-top: 0.6rem;
   padding-bottom: 0.6rem;
 }
 
 .submissions-ip {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color: var(--color-text-muted);
 }
 
@@ -2312,7 +4552,8 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--color-text-muted);
+  color: var(--color-text);
+  white-space: nowrap;
 }
 
 .submissions-timestamp svg {
@@ -2331,7 +4572,7 @@ a {
   width: 1.9rem;
   height: 1.9rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background-color: var(--color-surface);
   color: var(--color-text-muted);
   cursor: pointer;
@@ -2376,7 +4617,7 @@ a {
   width: 1.9rem;
   height: 1.9rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background-color: var(--color-surface);
   color: var(--color-text-muted);
   cursor: pointer;
@@ -2417,7 +4658,14 @@ a {
   box-shadow: inset 3px 0 0 0 var(--color-border-strong);
 }
 
+.submissions-page .admin-table-card {
+  margin-top: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
 .submissions-empty-state {
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2469,6 +4717,169 @@ a {
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Status filter chips atop /admin tables (Organisations by status, Audit log by
+   category) — plain toggle buttons rather than a form control, since only one filter
+   is active at a time and clicking should feel instant. */
+.admin-filter-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 1.1rem 1.5rem 0;
+}
+
+.admin-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-filter-chip:hover {
+  color: var(--color-text);
+  background: var(--color-surface-sunken);
+}
+
+.admin-filter-chip--active {
+  background: var(--color-primary-soft);
+  border-color: var(--color-text);
+  color: var(--color-primary);
+}
+
+.admin-filter-chip-count {
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+/* Logs pages (org-scoped /forms/logs and the platform-wide /admin/audit-log) — the
+   "Details" column shows the resolved target (form name, response's form + date, an
+   email; see resolveAuditLogTargets) and, for org Logs, clicking a row with metadata
+   expands a raw-JSON panel beneath it for anything the target label doesn't cover. */
+.admin-log-target {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-log-target--empty {
+  color: var(--color-text-subtle);
+}
+
+.admin-table .admin-log-metadata-row td {
+  background-color: var(--color-surface-sunken);
+  padding: 0;
+}
+
+.admin-log-metadata {
+  padding: 0.85rem 1.5rem 1.1rem;
+}
+
+.admin-log-metadata-id {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.admin-log-metadata pre {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* /admin/billing — a card grid rather than a table since each org needs three usage
+   bars plus a plan picker, which don't fit a table row cleanly. */
+.billing-search-card {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.billing-org-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.billing-org-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.billing-org-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.billing-org-card-plan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.billing-plan-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.billing-org-card-plan select {
+  max-width: 160px;
+}
+
+.billing-usage-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.usage-bar-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.usage-bar-track {
+  height: 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+}
+
+.usage-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+}
+
+.billing-org-card-footer {
+  font-size: 0.8rem;
+  color: var(--color-text-subtle);
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.75rem;
+}
+
 .table-search-row .text-input {
   width: 100%;
   max-width: 320px;
@@ -2483,10 +4894,10 @@ a {
   gap: 0.55rem;
   padding: 0.55rem 0.9rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background-color: var(--color-surface);
   width: 100%;
-  max-width: 320px;
+  max-width: 28rem;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -2578,12 +4989,21 @@ a {
 
 .admin-table-name-link {
   font-weight: 600;
-  color: var(--color-primary);
+  color: #0d9f57;
   text-decoration: none;
 }
 
 .admin-table-name-link:hover {
+  color: #0a7c44;
   text-decoration: underline;
+}
+
+.admin-shell[data-theme="dark"] .admin-table-name-link {
+  color: #3dd975;
+}
+
+.admin-shell[data-theme="dark"] .admin-table-name-link:hover {
+  color: #55ea8c;
 }
 
 .admin-table-private-badge {
@@ -2688,10 +5108,10 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.35rem 0.65rem;
+  padding: 0.35rem 0.8rem;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--color-text);
@@ -2701,7 +5121,24 @@ a {
 
 .actions-menu-trigger:hover {
   background-color: var(--color-surface-sunken);
+}
+
+/* Submission detail page only — its Actions trigger sits alone next to the "Submission"
+   h1 with no other buttons nearby, so it needs to read as clickable on its own rather
+   than relying on being part of a row of obvious controls (unlike the forms list/
+   submissions list, where surrounding buttons already make the pattern legible). Scoped
+   to .submission-detail-header-actions rather than changing .actions-menu-trigger itself,
+   which is shared by FormActionsMenu and SubmissionStatusMenu elsewhere in the app. */
+.submission-detail-header-actions .actions-menu-trigger {
+  background-color: var(--color-surface-sunken);
   border-color: var(--color-border-strong);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.submission-detail-header-actions .actions-menu-trigger:hover {
+  background-color: color-mix(in srgb, var(--color-surface-sunken) 80%, var(--color-text) 8%);
+  border-color: var(--color-text-muted);
 }
 
 .actions-menu-panel {
@@ -2719,6 +5156,12 @@ a {
   box-shadow:
     0 4px 16px rgba(15, 23, 42, 0.1),
     0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.actions-menu-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .actions-menu-panel li {
@@ -2769,12 +5212,42 @@ a {
   color: var(--color-danger);
 }
 
+.actions-menu-item--danger:hover:not(:disabled):not(.actions-menu-item--disabled) {
+  background-color: color-mix(in srgb, var(--color-danger) 8%, transparent);
+}
+
+.actions-menu-item--danger .actions-menu-icon {
+  color: inherit;
+}
+
+/* Publish's counterpart to --danger above — same treatment, green instead of red, for
+   the one menu action that makes the form live. */
+.actions-menu-item--success {
+  color: #16a34a;
+}
+
+.actions-menu-item--success:hover:not(:disabled):not(.actions-menu-item--disabled) {
+  background-color: rgba(22, 163, 74, 0.08);
+}
+
+.actions-menu-item--success .actions-menu-icon {
+  color: inherit;
+}
+
 .actions-menu-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   color: var(--color-text-muted);
+}
+
+/* Fixed width so status-menu items (submission-status-menu.tsx) line up whether or not
+   the current row has a checkmark — .actions-menu-icon alone sizes to its SVG, which
+   would shift unchecked items left when the check is absent. */
+.actions-menu-check {
+  width: 16px;
+  color: var(--color-lavender-strong);
 }
 
 /* Inline loading indicator for menu items whose action takes a moment (currently just
@@ -3115,6 +5588,13 @@ a {
 
 /* Form builder (specs/02-form-builder.md) */
 
+/* Now that .builder-header (below) is a preceding sibling rather than this element's own
+   first child, .builder is a complete bordered card on all four sides again — nothing
+   joins to its top edge anymore. No margin-top here: .builder-header only floats over
+   this card's top-right corner (it's a right-aligned pill, not full width), so pushing
+   the whole card down would shove .builder-palette on the left down too, even though
+   nothing overlaps it — that clearance belongs on .builder-canvas-column alone, see
+   below. */
 .builder {
   display: flex;
   flex-direction: column;
@@ -3124,25 +5604,72 @@ a {
   max-width: none;
   align-self: stretch;
   border: 1px solid var(--color-border);
-  /* No top border — .form-top-nav directly above already supplies that line via its own
-     border-bottom, so the two rows read as one seamless card, not two stacked ones. */
-  border-top: none;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  border-radius: var(--radius-lg);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
+/* Floats over .form-workspace-content's top-right corner instead of occupying its own
+   row — .builder (the sidebar+canvas card) is a normal sibling with no space reserved
+   for this at all, so it starts flush at the top rather than being pushed down by
+   whatever height this box happens to be. One flat pill-shaped row rather than a
+   two-row stack: the page selector, the Share/kebab cluster, and Approve read as one
+   continuous bar, each group told apart by this row's own gap instead of a drawn
+   divider between them — restraint over rules. */
+/* Drawer behavior: max-width (not width) is what animates — width would jump straight
+   to "auto" with no transition, so this caps at a fixed value comfortably larger than
+   the real content; overflow: hidden just clips whatever's past the current max-width.
+   Anchored via right: 0 (not translateX) so shrinking always peels away from the left,
+   leaving .builder-header-handle — the first flex child, at the box's left edge — as
+   the part still visible once collapsed, rather than sliding the whole box, handle
+   included, off-screen. */
 .builder-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--color-border);
+  gap: 0.55rem;
+  position: absolute;
+  top: 0.5rem;
+  right: 0;
+  z-index: 5;
+  max-width: 34rem;
+  overflow: hidden;
+  transition: max-width 0.25s ease;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
   background: linear-gradient(180deg, #fcfcfd 0%, var(--color-surface) 100%);
+  box-shadow: var(--shadow-card);
+  padding: 0.3rem 0.55rem 0.3rem 0.3rem;
+}
+
+.builder-header--closed {
+  max-width: 2.5rem;
+  padding-right: 0.3rem;
+}
+
+/* First flex child, deliberately — .builder-header shrinks from the left (its right: 0
+   keeps the right edge fixed), so whichever child is first stays inside the shrunk area
+   and the rest gets clipped; being first also means the handle keeps staying put once
+   collapsed. No border of its own now that the header is a plain pill rather than a
+   bordered rail plus separately-padded content — the pill's own outline already frames
+   it, and a second border here would just double up. */
+.builder-header-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  min-height: 3.25rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.builder-header-handle:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
 }
 
 /* Governs both Copy link and the Publish/Approve CTA — higher specificity than
@@ -3167,40 +5694,66 @@ a {
   background-color: #000;
 }
 
-.builder-header-actions {
+/* Publish reads as the one "go live" action, so it gets its own green rather than the
+   neutral black every other header CTA (Edit/Save) uses — makes the state change it
+   causes (form becomes publicly reachable) visually distinct from routine editing. */
+.builder-header-cta--publish {
+  background-color: #16a34a;
+}
+
+.builder-header-cta--publish:hover {
+  background-color: #15803d;
+}
+
+/* Tooltip for the Edit button on a live form — anchored so it opens toward the button's
+   bottom-right rather than the browser's native title tooltip (unstyleable, and defaults
+   to following the cursor). */
+.builder-edit-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.builder-edit-tooltip {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: 14rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-surface);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 12px 28px rgba(15, 23, 42, 0.12);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+}
+
+.builder-edit-tooltip-wrap:hover .builder-edit-tooltip,
+.builder-edit-tooltip-wrap:focus-within .builder-edit-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Share + the more-actions kebab — the "inspect/configure the form" cluster, kept
+   apart from the page selector before it and the workflow stage after it purely by
+   .builder-header's own gap. Replaces the old .builder-header-actions/
+   .builder-header-status-group pairing, which existed to separate a save-status badge
+   and a divider from this group — both gone now that the header is one flat row. */
+.builder-header-utility {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
-}
-
-/* Separates "configure the form" (Form settings, save status) from "its publish
-   state" (Live/Draft badge + the workflow action) — two different kinds of controls
-   that used to sit in one undifferentiated row. */
-.builder-header-divider {
-  width: 1px;
-  height: 1.15rem;
-  background-color: var(--color-border);
-  flex-shrink: 0;
-}
-
-.builder-header-status-group {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* Share link sits a notch below the primary Publish/Approve button (full-size .button)
-   but above the small utility buttons (Form settings, Take offline) — the middle rung
-   of the plain-text Preview -> outlined Share link -> solid Publish escalation. Sizing
-   comes from .builder-header .button:not(.button--small) above; this just sets the
-   border colour. */
-.builder-header-share {
-  border-color: var(--color-border-strong);
-}
-
-.builder-header-share svg:last-child {
-  color: var(--color-text-subtle);
 }
 
 /* Share dropdown — holds both "copy the link" and "open the live form", so the one
@@ -3332,20 +5885,7 @@ a {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.3rem;
-}
-
-/* Labeled, not icon-only — an icon-only glyph here read as decorative and got missed
-   entirely; a visible "Set to draft" plus a stronger border makes both its presence and
-   its purpose obvious at a glance, matching Share/Copy link's treatment. */
-.builder-header-stage-back {
-  gap: 0.35rem;
-  color: var(--color-text-muted);
-  border-color: var(--color-border-strong);
-}
-
-.builder-header-stage-back:hover:not(:disabled) {
-  color: var(--color-text);
-  background-color: var(--color-surface-sunken);
+  flex-shrink: 0;
 }
 
 .builder-readonly-badge {
@@ -3404,7 +5944,15 @@ a {
   gap: 0.6rem;
   flex: 1;
   min-width: 0;
-  padding: 2rem 3rem 2.5rem;
+  /* Extra top clearance (vs. the 2rem used on the sides/bottom) so the centered canvas
+     card never sits underneath .builder-header's floating box — that box overlaps this
+     column's top-right corner rather than reserving its own row, so this column has to
+     leave room for it instead. 4.75rem clears the pill itself (top: 1.5rem plus its own
+     height) with a bit of breathing room, so "Page N / Share / Approve" reads as sitting
+     just above the canvas card rather than on top of it. Extra right padding (vs. left)
+     nudges the centered card left, off-center, to sit further from that same floating
+     box. */
+  padding: 4.75rem 10rem 2.5rem 3rem;
   overflow-y: auto;
   min-height: 0;
   background-color: var(--color-surface-sunken);
@@ -3534,26 +6082,23 @@ a {
   color: var(--color-text-muted);
 }
 
-/* Lavender is the palette's one deliberate accent (see .page-switcher-trigger-icon and
-   the "Page 1" pill) — reused here so the search field, the first thing a builder sees
-   in the sidebar, gets a touch of the same colour rather than sitting flat grey. */
+/* Matches .forms-search: white pill, grey border, lavender focus. */
 .palette-search {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin: 0 0.1rem 0.85rem;
   padding: 0.55rem 0.8rem;
-  background-color: var(--color-lavender-soft);
-  border: 1px solid transparent;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   transition:
-    background-color 0.15s ease,
     border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
 .palette-search:hover {
-  background-color: color-mix(in srgb, var(--color-lavender-soft) 65%, var(--color-lavender) 35%);
+  border-color: var(--color-border-strong);
 }
 
 .palette-search:focus-within {
@@ -3564,7 +6109,7 @@ a {
 
 .palette-search-icon {
   display: inline-flex;
-  color: var(--color-lavender-strong);
+  color: var(--color-text-subtle);
   flex-shrink: 0;
 }
 
@@ -3580,8 +6125,8 @@ a {
 }
 
 .palette-search input::placeholder {
-  color: var(--color-lavender-strong);
-  opacity: 0.65;
+  color: var(--color-text-subtle);
+  opacity: 1;
   font-weight: 500;
 }
 
@@ -3648,13 +6193,14 @@ a {
   flex-shrink: 0;
 }
 
+/* Wraps to two lines rather than truncating — at the palette's 2-column width, labels
+   like "Phone number" or "Choice matrix" would otherwise lose their second word behind
+   an ellipsis, which is the one piece of information the icon can't stand in for. */
 .palette-item-label {
   flex: 1 1 0;
   min-width: 0;
   line-height: 1.25;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
 }
 
 .palette-empty {
@@ -3686,21 +6232,33 @@ a {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
-  margin: 0 0 1.25rem;
+  margin: -1.75rem -1.75rem 1.25rem;
+  padding: 1rem 1.75rem;
+  border-bottom: 1px solid var(--color-border);
   font-family: var(--font-poppins), var(--font-body);
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--color-text);
 }
 
+/* A background pill, not just a text-only sibling with a flex gap — "Page 2" followed by
+   "2 OF 2" repeats the same digit right next to itself whenever a page keeps its default
+   name, and gap alone reads as ambiguous at this size. A visibly separate chip removes
+   the ambiguity outright regardless of what the two adjacent numbers happen to be. */
 .canvas-page-title-count {
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--color-text-subtle);
+  background-color: var(--color-surface-sunken);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
 }
 
+/* Dashed lavender border marks this out as a drop zone at rest, not just while a field
+   is being dragged over it (that's .canvas--drop-target's own subtle inset highlight,
+   layered on top of this when active). */
 .canvas-empty {
   display: flex;
   flex-direction: column;
@@ -3708,6 +6266,8 @@ a {
   text-align: center;
   padding: 3rem 1.5rem 3.25rem;
   color: var(--color-text-muted);
+  border: 1.5px dashed var(--color-lavender);
+  border-radius: var(--radius-lg);
 }
 
 .canvas-empty-icon {
@@ -3718,8 +6278,8 @@ a {
   height: 3.5rem;
   margin-bottom: 1rem;
   border-radius: 50%;
-  background-color: var(--color-surface-sunken);
-  color: var(--color-text-subtle);
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary-hover);
 }
 
 .canvas-empty-title {
@@ -3748,6 +6308,9 @@ a {
 }
 
 .canvas-empty-quick-add-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.45rem 0.95rem;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -3759,6 +6322,12 @@ a {
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease;
+}
+
+.canvas-empty-quick-add-icon {
+  display: inline-flex;
+  color: var(--color-text-subtle);
+  flex-shrink: 0;
 }
 
 .canvas-empty-quick-add-item:hover {
@@ -4014,14 +6583,14 @@ a {
 
 .field-card:hover,
 .divider-field-wrap:hover {
-  border-color: var(--color-secondary);
-  box-shadow: 0 4px 14px rgba(85, 234, 140, 0.1);
+  border-color: var(--color-text-muted);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-text-muted) 10%, transparent);
 }
 
 .field-card--selected,
 .divider-field-wrap--selected {
-  border-color: var(--color-secondary);
-  box-shadow: 0 0 0 2px rgba(85, 234, 140, 0.18);
+  border-color: var(--color-text-muted);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-text-muted) 18%, transparent);
 }
 
 .field-card--dragging {
@@ -4223,6 +6792,33 @@ a {
   width: 10px;
   height: 10px;
   margin-right: 0;
+}
+
+/* Scoped to this overlay only — .button--secondary elsewhere in the app is the
+   intentional green duplicate-of-primary accent, but Edit/Duplicate here should read as
+   the lavender secondary accent instead, matching the field card's own hover/selected
+   border (both use --color-lavender-strong) rather than repeating the primary green a
+   third time in the same small area. */
+.field-card-action-buttons .button--secondary {
+  background-color: var(--color-lavender-strong);
+}
+
+.field-card-action-buttons .button--secondary:hover {
+  background-color: color-mix(in srgb, var(--color-lavender-strong) 85%, black);
+}
+
+/* Icon-only — Edit and Duplicate keep their labels since those two are easy to confuse
+   at a glance, but a trash glyph alone is unambiguous, and dropping the label keeps this
+   from being the widest, loudest word ("Delete") in a row of otherwise-quiet actions.
+   Selector matches .field-card-action-buttons .button's own specificity, so source
+   order (this comes after) is what lets the narrower padding win, no !important needed. */
+.field-card-action-buttons .field-card-action-delete {
+  padding: 0.3rem;
+  gap: 0;
+}
+
+.field-card-action-buttons .field-card-action-delete svg {
+  margin: 0;
 }
 
 .field-card-header {
@@ -4619,19 +7215,23 @@ a {
     0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
-/* Page switcher — prev/next arrows flank a "Page N" dropdown trigger (rather than a
-   pill for every page, which stopped scaling once a form had more than a handful of
-   pages). The dropdown panel reuses .actions-menu-panel/.actions-menu-item's visual
-   language via page-switcher-panel/page-switcher-list below. */
+/* Page switcher — prev/next arrows flank a "Page N" dropdown trigger and the Add-page
+   button (rather than a pill for every page, which stopped scaling once a form had more
+   than a handful of pages). All four sit on a shared gray backdrop so the whole cluster
+   reads as one grouped control within the toolbar's single pill-shaped row, the same way
+   a segmented control groups its options — no border needed to say "these belong
+   together" when the backdrop already does. The dropdown panel reuses
+   .actions-menu-panel/.actions-menu-item's visual language via
+   page-switcher-panel/page-switcher-list below. */
 .page-switcher {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.1rem;
   min-width: 0;
-}
-
-.builder-header .page-switcher {
-  flex: 1;
+  flex-shrink: 0;
+  background-color: var(--color-surface-sunken);
+  border-radius: var(--radius-pill);
+  padding: 0.2rem;
 }
 
 .page-switcher-step {
@@ -4651,8 +7251,10 @@ a {
     color 0.12s ease;
 }
 
+/* Hover turns white rather than the usual --color-surface-sunken — that's already this
+   whole cluster's backdrop color, so the normal hover treatment would be invisible here. */
 .page-switcher-step:hover:not(:disabled) {
-  background-color: var(--color-surface-sunken);
+  background-color: var(--color-surface);
   color: var(--color-text);
 }
 
@@ -4661,21 +7263,24 @@ a {
   cursor: not-allowed;
 }
 
+/* White chip floating on the cluster's gray backdrop — the one element in the group
+   that's always "on", the same way a segmented control shows its selected option in
+   white. No border of its own; the contrast against the backdrop is enough. */
 .page-switcher-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.65rem;
-  background-color: var(--color-lavender-soft);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  color: var(--color-text);
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  background-color: var(--color-surface);
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--color-lavender-strong);
   cursor: pointer;
-  transition: background-color 0.12s ease;
+  transition: box-shadow 0.12s ease;
 }
 
 .page-switcher-trigger:hover {
-  background-color: color-mix(in srgb, var(--color-lavender-soft) 65%, var(--color-lavender) 35%);
+  box-shadow: inset 0 0 0 1px var(--color-border);
 }
 
 .page-switcher-trigger > svg:first-child {
@@ -4811,18 +7416,11 @@ a {
   cursor: not-allowed;
 }
 
-.page-tab-add {
-  margin-left: 0.15rem;
-  padding: 0.25rem 0.65rem !important;
-  font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.75rem !important;
-  color: var(--color-text);
-}
-
-.page-tab-add:hover {
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
+/* Add page is now just a fourth icon in the page-switcher cluster — same
+   .page-switcher-step treatment as prev/next, rather than a separately-bordered pill
+   with its own label. A "+" beside page arrows is standard enough (browser tabs,
+   spreadsheet sheets) to not need a text label to be understood, and folding it into
+   the same backdrop keeps the whole page-management group reading as one control. */
 
 /* Field settings panel */
 .settings-panel {
@@ -4858,16 +7456,6 @@ a {
   font-size: 0.75rem;
   margin: 0;
   line-height: 1.5;
-}
-
-.settings-panel-title {
-  margin: 0;
-  font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
 }
 
 .settings-field {
@@ -4950,6 +7538,7 @@ a {
   cursor: pointer;
   list-style: none;
   user-select: none;
+  outline: none;
 }
 
 .settings-group-summary::-webkit-details-marker {
@@ -4963,6 +7552,15 @@ a {
 
 .settings-group-summary:hover {
   background: var(--color-surface-sunken);
+}
+
+/* Native <summary> elements get the browser's default blue focus ring with nothing
+   else set — this swaps it for the same lavender treatment used on focusable rows
+   elsewhere (e.g. .submissions-row--clickable), so keyboard focus stays visible without
+   looking like an unstyled default that slipped through. */
+.settings-group-summary:focus-visible {
+  outline: 2px solid var(--color-lavender-strong);
+  outline-offset: -2px;
 }
 
 .settings-group-summary-left {
@@ -5326,13 +7924,6 @@ a {
   accent-color: var(--color-primary);
 }
 
-.settings-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
 .field-color-settings {
   display: flex;
   flex-direction: column;
@@ -5554,7 +8145,24 @@ a {
   user-select: auto;
 }
 
-/* Submission detail view (admin) */
+/* Submission detail view (admin) — centered column rather than stretching edge-to-edge
+   across .form-workspace-content like the Responses list/table does, since a single
+   response's fields read better at a comfortable line-length than spanning a wide
+   monitor. Sized a bit wider than .settings-content's 52rem (this page is reviewing
+   real form data, often several fields wide, not a narrow settings form). */
+.submission-detail-page {
+  max-width: 68rem;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.75rem 2rem 3rem;
+}
+
+@media (max-width: 640px) {
+  .submission-detail-page {
+    padding: 1.25rem 1rem 2.5rem;
+  }
+}
+
 .submission-detail-header {
   display: flex;
   align-items: center;
@@ -5587,6 +8195,83 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+}
+
+.submission-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.55rem 0.22rem 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.submission-status-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--color-text-subtle);
+}
+
+.submission-status-chip--submitted .submission-status-dot,
+.submission-status-chip--in_progress .submission-status-dot {
+  background: var(--color-text-muted);
+}
+
+.submission-status-chip--approved .submission-status-dot {
+  background: #16a34a;
+}
+
+.submission-status-chip--rejected .submission-status-dot {
+  background: var(--color-danger);
+}
+
+.submission-status-chip--approved {
+  background: #f3faf6;
+  border-color: #d8efe3;
+  color: #157a45;
+}
+
+.submission-status-chip--rejected {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-hover);
+}
+
+.submission-status-trigger {
+  font: inherit;
+  cursor: pointer;
+}
+
+.submission-status-trigger svg {
+  color: currentColor;
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+
+.submission-status-trigger:hover {
+  border-color: color-mix(in srgb, var(--color-border-strong) 70%, currentColor 30%);
+}
+
+.submission-status-trigger:focus-visible {
+  outline: 2px solid var(--color-lavender-strong);
+  outline-offset: 2px;
+}
+
+.submission-status-trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.submission-status-trigger:disabled {
+  opacity: 0.7;
+  cursor: default;
 }
 
 .submission-meta-label {
@@ -5674,12 +8359,22 @@ a {
 }
 
 .submission-section-break {
+  display: flex;
+  align-items: center;
   background-color: var(--color-secondary);
   color: #fff;
-  border-radius: var(--radius-md);
-  padding: 0.65rem 1rem;
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1.15rem;
   font-weight: 700;
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  /* Same "banner" treatment as the live form's .form-section-break-title, brought over
+     to the admin view for consistency — a flat solid block read as plain HTML, the
+     shadow plus a hairline of contrast against the fill gives it real depth as a card. */
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    0 6px 14px color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 
 .submission-divider-wrap {
@@ -5787,6 +8482,26 @@ a {
   color: #fff;
   font-size: 0.8125rem;
   font-weight: 500;
+}
+
+.form-preview-embed {
+  min-height: auto;
+  background: #f4f4f6;
+  padding: 1.5rem 1.25rem 2rem;
+}
+
+.form-preview-embed .form-renderer {
+  max-width: 36rem;
+  padding: 0;
+}
+
+.form-preview-embed .form-save-later {
+  display: none;
+}
+
+html:has(.form-preview-embed) nextjs-portal,
+html:has(.form-preview-embed) [data-next-badge-root] {
+  display: none !important;
 }
 
 .form-renderer-loading {
@@ -6027,17 +8742,21 @@ a {
 }
 
 .form-renderer .text-input {
-  border: 1px solid #c8c8c8;
-  border-radius: 3px;
-  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 0.6rem 0.95rem;
   font-size: 0.9375rem;
   background-color: #fff;
 }
 
 .form-renderer .text-input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(47, 82, 51, 0.12);
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
+}
+
+.form-renderer textarea.text-input {
+  border-radius: 1.1rem;
 }
 
 .date-picker-field {
@@ -6063,8 +8782,8 @@ a {
 .date-picker-trigger[aria-expanded="true"],
 .date-picker-trigger:focus-visible {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(47, 82, 51, 0.12);
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
 }
 
 .date-picker-placeholder {
@@ -8330,8 +11049,8 @@ textarea.form-field-input {
   font-size: 0.9375rem;
   color: var(--landing-ink);
   background: #fff;
-  border: 1px solid var(--landing-border);
-  border-radius: 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
@@ -8348,14 +11067,15 @@ textarea.form-field-input {
 .landing-form-field textarea {
   resize: vertical;
   min-height: 8rem;
+  border-radius: 1.1rem;
 }
 
 .landing-form-field input:focus,
 .landing-form-field select:focus,
 .landing-form-field textarea:focus {
-  border-color: var(--landing-primary-dark);
+  border-color: var(--color-lavender);
   outline: none;
-  box-shadow: 0 0 0 3.5px rgba(85, 234, 140, 0.18);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
 }
 
 .landing-form-row {
@@ -8442,6 +11162,19 @@ textarea.form-field-input {
   margin: 0;
   font-size: 0.8125rem;
   color: var(--landing-muted);
+}
+
+.landing-contact-form-note--error {
+  color: #dc2626;
+}
+
+.landing-contact-form--submitted {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  font-size: 1rem;
+  color: var(--landing-text, inherit);
 }
 
 @media (min-width: 900px) {
@@ -9431,10 +12164,7 @@ textarea.form-field-input {
   align-items: center;
   justify-content: center;
   padding: 2rem 1.5rem;
-  background:
-    radial-gradient(ellipse 60% 50% at 18% -8%, rgba(85, 234, 140, 0.1), transparent 60%),
-    radial-gradient(ellipse 50% 45% at 100% 105%, rgba(85, 234, 140, 0.07), transparent 55%),
-    var(--color-bg);
+  background: #f3f4f6;
 }
 
 .login-shell {
@@ -9473,8 +12203,6 @@ textarea.form-field-input {
   overflow: hidden;
 }
 
-/* A thin brand-colour seam along the top edge instead of a full accent bar — enough to
-   register as intentional without competing with the form itself. */
 .login-card::before {
   content: "";
   position: absolute;
@@ -9509,7 +12237,7 @@ textarea.form-field-input {
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 0.95rem;
 }
 
 .login-form-error {
@@ -9527,13 +12255,13 @@ textarea.form-field-input {
 .login-field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .login-field-label {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: #111111;
 }
 
 .login-field-label-row {
@@ -9543,38 +12271,50 @@ textarea.form-field-input {
   gap: 0.75rem;
 }
 
+.login-field-hint {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
 .login-field-hint-link {
   font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--color-primary, #55ea8c);
+  font-weight: 600;
+  color: #0d9f57;
   text-decoration: none;
   text-underline-offset: 0.2em;
-  transition: text-decoration-color 0.15s ease;
 }
 
 .login-field-hint-link:hover {
   text-decoration: underline;
 }
 
-.login-field-input {
+.text-input.login-field-input {
   width: 100%;
   padding: 0.7rem 0.95rem;
-  font-size: 0.9375rem;
-  border-radius: 0.65rem;
-  border-color: rgba(15, 23, 42, 0.12);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  font-size: 0.875rem;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-pill);
+  border-color: var(--color-border);
+  box-shadow: none;
 }
 
-.login-field-input:hover {
-  border-color: rgba(15, 23, 42, 0.2);
+.text-input.login-field-input::placeholder {
+  color: var(--color-text-subtle);
 }
 
-.login-field-input:focus {
-  border-color: var(--color-primary);
+.text-input.login-field-input:focus {
+  background-color: var(--color-surface);
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
   outline: none;
-  box-shadow: 0 0 0 3.5px rgba(85, 234, 140, 0.15);
+}
+
+.login-password-field-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .login-password-field {
@@ -9621,51 +12361,52 @@ textarea.form-field-input {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  margin: -0.3rem 0 0;
+  margin: 0.05rem 0 0;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--color-text-muted);
+  color: #6b7280;
   cursor: pointer;
   user-select: none;
 }
 
 .login-remember-row input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
-  accent-color: var(--color-primary);
+  width: 0.95rem;
+  height: 0.95rem;
+  accent-color: #111111;
   cursor: pointer;
 }
 
 .login-submit {
   width: 100%;
-  margin-top: 0.4rem;
+  margin-top: 0.35rem;
   padding: 0.85rem 1.25rem;
-  font-size: 1rem;
-  box-shadow: 0 10px 24px -10px rgba(85, 234, 140, 0.55);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
+  font-size: 0.9375rem;
+  color: #111111;
+  border-radius: 999px;
+  box-shadow: none;
 }
 
 .login-submit:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px -10px rgba(85, 234, 140, 0.6);
+  transform: none;
+  box-shadow: none;
 }
 
-.login-submit:active:not(:disabled) {
-  transform: translateY(0);
+.login-submit:disabled {
+  opacity: 1;
+  background: #d8dbe3;
+  color: #fff;
+  box-shadow: none;
 }
 
 .login-form-footer {
-  margin: 0.35rem 0 0;
+  margin: 0.2rem 0 0;
   text-align: center;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  color: #9ca3af;
 }
 
 .login-form-footer a {
-  color: var(--color-primary);
+  color: #0d9f57;
   font-weight: 600;
   text-decoration: none;
   text-underline-offset: 0.2em;
@@ -9682,28 +12423,31 @@ textarea.form-field-input {
   text-align: center;
 }
 
-/* Signup page — split brand + form composition */
+/* Signup page — single split card: green pitch + organisation form */
 .signup-page {
   position: relative;
   min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
   color: var(--color-text);
-  background:
-    radial-gradient(ellipse 55% 50% at 12% -10%, rgba(85, 234, 140, 0.09), transparent 60%),
-    radial-gradient(ellipse 45% 40% at 100% 100%, rgba(85, 234, 140, 0.06), transparent 55%),
-    var(--color-bg);
+  background: #f3f4f6;
 }
 
-.signup-layout {
+.signup-card {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(27rem, 1fr);
-  min-height: 100vh;
-  max-width: 78rem;
-  margin: 0 auto;
-  gap: 2.25rem;
-  padding: 2.5rem 2rem;
-  align-items: center;
+  grid-template-columns: minmax(0, 1.05fr) minmax(22rem, 1fr);
+  width: min(68rem, 100%);
+  min-height: 42rem;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 1.75rem;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 28px 64px -28px rgba(15, 23, 42, 0.28);
 }
 
 .signup-aside {
@@ -9711,77 +12455,61 @@ textarea.form-field-input {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 2.25rem;
-  padding: 2.75rem 2.5rem;
-  background: var(--color-primary-soft);
-  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--color-border));
-  border-radius: 1.25rem;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.03),
-    0 20px 44px -26px rgba(10, 22, 18, 0.22);
-}
-
-/* Soft decorative wash in the corner — echoes the page background's green tint without
-   introducing a dark panel. */
-.signup-aside::before {
-  content: "";
-  position: absolute;
-  top: -30%;
-  right: -20%;
-  width: 60%;
-  height: 60%;
-  background: radial-gradient(circle, rgba(85, 234, 140, 0.16), transparent 70%);
-  pointer-events: none;
+  gap: 1.75rem;
+  padding: 2.35rem 2.4rem 1.75rem;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.72), transparent 55%),
+    linear-gradient(160deg, #baf7c8 0%, #6ef09a 42%, #55ea8c 100%);
 }
 
 .signup-aside-brand {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
   width: fit-content;
-  color: var(--color-text);
+  color: #111111;
   font-family: var(--font-poppins), var(--font-body);
   font-weight: 700;
-  font-size: 1.1875rem;
+  font-size: 1.0625rem;
   letter-spacing: -0.03em;
   text-decoration: none;
 }
 
 .signup-aside-title {
   position: relative;
-  margin: 0;
-  max-width: 18ch;
+  margin: 0.35rem 0 0;
+  max-width: 16ch;
   font-family: var(--font-poppins), var(--font-body);
-  font-size: clamp(2rem, 3.4vw, 2.85rem);
+  font-size: clamp(2rem, 3.2vw, 2.65rem);
   font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.035em;
-  color: var(--color-text);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  color: #111111;
 }
 
 .signup-aside-lead {
   position: relative;
-  margin: 1rem 0 0;
-  max-width: 34rem;
-  font-size: 1.0625rem;
-  line-height: 1.6;
-  color: var(--color-text-muted);
+  margin: 0.9rem 0 0;
+  max-width: 28rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: rgba(17, 17, 17, 0.62);
 }
 
 .signup-aside-benefits {
   position: relative;
   list-style: none;
-  margin: 0;
+  margin: 0.35rem 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1.05rem;
 }
 
 .signup-aside-benefit {
   display: flex;
-  gap: 0.85rem;
+  gap: 0.75rem;
   align-items: flex-start;
 }
 
@@ -9789,108 +12517,92 @@ textarea.form-field-input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.4rem;
-  height: 1.4rem;
-  margin-top: 0.05rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-top: 0.1rem;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: #111111;
   color: #fff;
-  box-shadow: 0 0 0 4px rgba(85, 234, 140, 0.12);
 }
 
 .signup-aside-benefit strong {
   display: block;
-  margin-bottom: 0.2rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--color-text);
+  margin-bottom: 0.12rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111111;
 }
 
 .signup-aside-benefit span {
   display: block;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: rgba(17, 17, 17, 0.58);
 }
 
 .signup-aside-footnote {
   position: relative;
   margin: auto 0 0;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .signup-aside-footnote a {
-  color: var(--color-primary);
-  font-weight: 600;
+  color: rgba(17, 17, 17, 0.72);
+  font-weight: 500;
   text-decoration: none;
-  text-underline-offset: 0.2em;
-  transition: text-decoration-color 0.15s ease;
 }
 
 .signup-aside-footnote a:hover {
+  color: #111111;
   text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .signup-panel {
   position: relative;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   width: 100%;
-  max-width: 34rem;
-  justify-self: end;
-  padding: 2.5rem 2.75rem 2.25rem;
-  background: var(--color-surface);
+  padding: 2.35rem 2.6rem 2rem;
+  background: #fff;
   color: var(--color-text);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 1.25rem;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 24px 48px -22px rgba(10, 22, 18, 0.18);
-}
-
-.signup-panel::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-primary), #6fd6a3);
 }
 
 .signup-panel-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.35rem;
 }
 
 .signup-panel-kicker {
-  margin: 0 0 0.45rem;
-  font-size: 0.75rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.6875rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-primary);
+  color: #9ca3af;
 }
 
 .signup-panel-header h2 {
   margin: 0;
   font-family: var(--font-poppins), var(--font-body);
-  font-size: 1.5rem;
+  font-size: 1.55rem;
   font-weight: 800;
-  letter-spacing: -0.025em;
-  color: var(--color-text);
+  letter-spacing: -0.03em;
+  color: #111111;
 }
 
 .signup-panel-header p {
-  margin: 0.45rem 0 0;
-  font-size: 0.9rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.875rem;
   line-height: 1.5;
-  color: var(--color-text-muted);
+  color: #6b7280;
 }
 
 .signup-form {
   display: flex;
   flex-direction: column;
-  gap: 1.05rem;
+  gap: 0.85rem;
 }
 
 .signup-form-error {
@@ -9908,7 +12620,7 @@ textarea.form-field-input {
 .signup-field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
   min-width: 0;
 }
 
@@ -9921,41 +12633,41 @@ textarea.form-field-input {
 .signup-field-label {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: #111111;
 }
 
 .signup-field-label span {
   color: var(--color-danger);
 }
 
-.signup-field-input {
+.text-input.signup-field-input {
   width: 100%;
-  padding: 0.7rem 0.85rem;
-  font-size: 0.9375rem;
-  border-radius: 0.65rem;
-  border-color: rgba(15, 23, 42, 0.12);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  padding: 0.7rem 0.95rem;
+  font-size: 0.875rem;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-pill);
+  border-color: var(--color-border);
+  box-shadow: none;
 }
 
-.signup-field-input:hover {
-  border-color: rgba(15, 23, 42, 0.2);
+.text-input.signup-field-input::placeholder {
+  color: var(--color-text-subtle);
 }
 
-.signup-field-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3.5px rgba(85, 234, 140, 0.15);
+.text-input.signup-field-input:focus {
+  background-color: var(--color-surface);
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
   outline: none;
 }
 
 .signup-choice-group {
-  margin: 0.15rem 0 0;
+  margin: 0.1rem 0 0;
   padding: 0;
   border: none;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.5rem;
 }
 
 .signup-choice-list {
@@ -9966,28 +12678,26 @@ textarea.form-field-input {
 
 .signup-choice {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.7rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  border-radius: 0.65rem;
-  background: var(--color-surface);
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #eceef2;
+  border-radius: 0.7rem;
+  background: #fff;
   cursor: pointer;
   transition:
     border-color 0.15s ease,
-    background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    background-color 0.15s ease;
 }
 
 .signup-choice:hover {
-  border-color: rgba(15, 23, 42, 0.18);
-  background: var(--color-surface-sunken);
+  border-color: #e2e5eb;
+  background: #fafbfc;
 }
 
 .signup-choice--selected {
-  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
-  background: var(--color-primary-soft);
-  box-shadow: 0 0 0 3px rgba(85, 234, 140, 0.1);
+  border-color: #d7dbe3;
+  background: #fff;
 }
 
 .signup-choice input {
@@ -9999,78 +12709,78 @@ textarea.form-field-input {
 .signup-choice-indicator {
   width: 1.05rem;
   height: 1.05rem;
-  margin-top: 0.1rem;
   flex-shrink: 0;
-  border: 1.5px solid var(--color-border-strong);
+  border: 1.5px solid #cfd4dc;
   border-radius: 50%;
   background: #fff;
-  box-shadow: inset 0 0 0 0 var(--color-primary);
+  box-shadow: inset 0 0 0 0 #111111;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
 .signup-choice--selected .signup-choice-indicator {
-  border-color: var(--color-primary);
-  box-shadow: inset 0 0 0 3.5px var(--color-primary);
+  border-color: #111111;
+  box-shadow: inset 0 0 0 4px #111111;
 }
 
 .signup-choice-label {
   font-size: 0.875rem;
-  line-height: 1.4;
-  color: var(--color-text);
+  line-height: 1.35;
+  color: #111111;
 }
 
 .signup-terms {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
+  gap: 0.55rem;
+  margin-top: 0.15rem;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: var(--color-text-muted);
+  color: #6b7280;
   cursor: pointer;
 }
 
 .signup-terms input {
   margin-top: 0.12rem;
-  width: 1.05rem;
-  height: 1.05rem;
-  accent-color: var(--color-primary);
+  width: 0.95rem;
+  height: 0.95rem;
+  accent-color: #111111;
   flex-shrink: 0;
   cursor: pointer;
 }
 
 .signup-submit {
   width: 100%;
-  margin-top: 0.4rem;
+  margin-top: 0.35rem;
   padding: 0.85rem 1.25rem;
-  font-size: 0.975rem;
-  border-radius: 0.65rem;
-  box-shadow: 0 10px 24px -10px rgba(85, 234, 140, 0.55);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
+  font-size: 0.9375rem;
+  color: #111111;
+  border-radius: 999px;
+  box-shadow: none;
 }
 
 .signup-submit:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px -10px rgba(85, 234, 140, 0.6);
+  transform: none;
+  box-shadow: none;
 }
 
-.signup-submit:active:not(:disabled) {
-  transform: translateY(0);
+.signup-submit:disabled {
+  opacity: 1;
+  background: #d8dbe3;
+  color: #fff;
+  box-shadow: none;
 }
 
 .signup-form-footer {
-  margin: 0.15rem 0 0;
+  margin: 0.2rem 0 0;
   text-align: center;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  color: #9ca3af;
 }
 
 .signup-form-footer a {
-  color: var(--color-primary);
+  color: #0d9f57;
   font-weight: 600;
   text-decoration: none;
   text-underline-offset: 0.2em;
@@ -10120,21 +12830,25 @@ textarea.form-field-input {
 }
 
 @media (max-width: 900px) {
-  .signup-layout {
+  .signup-page {
+    padding: 1.15rem;
+    align-items: flex-start;
+  }
+
+  .signup-card {
     grid-template-columns: 1fr;
-    padding: 1.5rem 1.15rem 2rem;
-    gap: 1.5rem;
-    align-items: stretch;
+    min-height: 0;
+    border-radius: 1.35rem;
   }
 
   .signup-aside {
-    padding: 1.75rem 1.5rem;
-    gap: 1.35rem;
+    padding: 1.6rem 1.45rem 1.25rem;
+    gap: 1.15rem;
   }
 
   .signup-aside-title {
     max-width: none;
-    font-size: 1.85rem;
+    font-size: 1.75rem;
   }
 
   .signup-aside-benefits {
@@ -10142,13 +12856,11 @@ textarea.form-field-input {
   }
 
   .signup-aside-footnote {
-    display: none;
+    margin-top: 0.25rem;
   }
 
   .signup-panel {
-    justify-self: stretch;
-    max-width: none;
-    padding: 1.75rem 1.35rem 1.5rem;
+    padding: 1.5rem 1.35rem 1.4rem;
   }
 }
 
@@ -10176,6 +12888,11 @@ textarea.form-field-input {
   color: var(--color-text-muted);
 }
 
+.users-page {
+  width: 100%;
+  max-width: none;
+}
+
 .users-page-header {
   display: flex;
   align-items: flex-start;
@@ -10186,7 +12903,9 @@ textarea.form-field-input {
 
 .users-page-title {
   margin: 0 0 0.35rem;
-  font-size: 1.5rem;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .users-page-subtitle {
@@ -10199,7 +12918,8 @@ textarea.form-field-input {
 
 .users-table-card {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
+  border-radius: 1.1rem;
 }
 
 .users-table {
@@ -10213,12 +12933,672 @@ textarea.form-field-input {
   padding: 0.85rem 1rem;
   text-align: left;
   border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
 }
 
 .users-table th {
-  font-weight: 600;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+  background: var(--color-surface);
+}
+
+.users-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.users-table td:last-child {
+  text-align: right;
+  width: 3rem;
+}
+
+.users-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.users-name-text {
+  font-weight: 650;
+}
+
+.users-table .admin-table-avatar {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.6875rem;
+}
+
+/* Org-side template gallery (/forms/templates) — reuses .admin-orgs-card/-toolbar/
+   -search/-chips for the search+filter row (same base theme the org workspace already
+   shares with /admin, see admin-shell-client.tsx), but its own card grid below since a
+   template gallery reads as image tiles, not a data table. */
+.templates-studio {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.templates-studio-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.65rem;
+}
+
+.templates-studio-title {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.templates-studio-lead {
+  margin: 0;
   color: var(--color-text-muted);
-  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-border));
+  font-size: 0.95rem;
+}
+
+.templates-studio-search {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: min(36rem, 100%);
+  margin-top: 0.35rem;
+  padding: 0.75rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.templates-studio-search:focus-within {
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 4px var(--color-lavender-soft);
+}
+
+.templates-studio-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.templates-studio-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
+
+.templates-studio-chip {
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.templates-studio-chip:hover {
+  color: var(--color-text);
+}
+
+.templates-studio-chip--active {
+  background: var(--color-lavender-soft);
+  border-color: transparent;
+  color: var(--color-lavender-strong);
+}
+
+.templates-studio-empty {
+  margin: 1rem 0 0;
+  text-align: center;
+  color: var(--color-text-subtle);
+}
+
+.templates-studio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.25rem, 1fr));
+  gap: 1.15rem 0.9rem;
+}
+
+.template-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.template-tile:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.template-tile-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.template-tile:hover .template-tile-art,
+.template-tile:focus-visible .template-tile-art {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+}
+
+.template-tile-art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.template-tile-name {
+  padding: 0 0.15rem;
+  color: var(--color-text);
+  font-size: 0.84rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-tile--blank .template-tile-art {
+  flex-direction: column;
+  gap: 0.45rem;
+  border-style: dashed;
+  background: color-mix(in srgb, var(--color-surface) 70%, white);
+  color: var(--color-text-muted);
+  font-weight: 650;
+  box-shadow: none;
+}
+
+.template-tile-blank-mark {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--color-text-subtle);
+}
+
+.template-tile-fallback {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.template-tile--compact {
+  width: 8.5rem;
+  flex-shrink: 0;
+}
+
+.canva-preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  width: min(64rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 1.15rem 1.15rem 1.1rem;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: var(--color-surface);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+}
+
+.canva-preview-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 2;
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.canva-preview-close:hover {
+  color: var(--color-text);
+}
+
+.canva-preview-main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1.35fr) minmax(15rem, 18rem);
+  gap: 1.35rem;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.canva-preview-stage {
+  height: min(68vh, 38rem);
+  min-height: 22rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: #f4f4f6;
+}
+
+.canva-preview-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #f4f4f6;
+}
+
+.canva-preview-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0.5rem 2.25rem 0.5rem 0;
+}
+
+.canva-preview-kicker {
+  margin: 0 0 0.4rem;
+  color: var(--color-text-subtle);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.canva-preview-title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.canva-preview-copy {
+  margin: 0.65rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.canva-preview-cta {
+  width: 100%;
+  justify-content: center;
+  margin-top: 1.15rem;
+}
+
+.canva-preview-more {
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.canva-preview-more-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.canva-preview-more-row {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+@media (max-width: 860px) {
+  .canva-preview {
+    overflow: auto;
+  }
+
+  .canva-preview-main {
+    grid-template-columns: 1fr;
+  }
+
+  .canva-preview-frame {
+    min-height: 20rem;
+    height: 22rem;
+  }
+
+  .canva-preview-meta {
+    padding-right: 0;
+  }
+}
+
+.templates-gallery-page.admin-orgs {
+  gap: 1.25rem;
+}
+
+.templates-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16.5rem, 17.5rem));
+  justify-content: start;
+  gap: 1.1rem;
+  padding: 0.35rem 1.15rem 1.25rem;
+}
+
+.template-gallery-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1.05rem;
+  background-color: var(--color-surface);
+}
+
+.template-gallery-card-thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  border-radius: 0.85rem;
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text-subtle);
+  overflow: hidden;
+}
+
+.template-gallery-card-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.template-gallery-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.template-gallery-card-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.98rem;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.template-gallery-card-category {
+  display: inline-flex;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.template-gallery-card-desc {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+.template-gallery-card-actions {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.template-gallery-card-actions .button {
+  flex: 1;
+  justify-content: center;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.84rem;
+}
+
+/* Template preview modal's iframe frame — mirrors .submission-preview-frame-wrap/
+   .submission-preview-frame (Responses table's response-preview modal) but kept as its
+   own class since that pair is named for submissions specifically. */
+.template-preview-frame-wrap {
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  background-color: var(--color-surface-sunken);
+}
+
+.template-preview-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.admin-template {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.admin-template-layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.admin-template-preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem 1.25rem;
+}
+
+.admin-template-preview-card {
+  pointer-events: none;
+}
+
+.admin-template-thumb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-template-thumb-hint {
+  flex-basis: 100%;
+  margin: 0.15rem 0 0;
+  color: var(--color-text-subtle);
+  font-size: 0.78rem;
+}
+
+.admin-template-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.15rem;
+}
+
+.admin-template-field-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-template-textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.admin-template-status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.admin-template-status-chip--draft {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.admin-template-status-chip--published {
+  background: var(--color-primary-soft);
+  color: #047857;
+}
+
+.admin-template-status-chip--archived {
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+}
+
+.admin-template-status-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.admin-template-status-option {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.admin-template-status-option:hover:not(:disabled) {
+  color: var(--color-text);
+  background: var(--color-surface-sunken);
+}
+
+.admin-template-status-option--active {
+  background: var(--color-primary-soft);
+  border-color: transparent;
+  color: #0d9f57;
+}
+
+.admin-template fieldset.admin-org-field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.admin-template fieldset.admin-org-field legend {
+  padding: 0;
+  margin-bottom: 0.4rem;
+}
+
+@media (max-width: 860px) {
+  .admin-template-layout,
+  .admin-template-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Plain top-of-page button row on /admin/templates/[id] (Back to templates / Open
+   builder) — deliberately not .contact-details-actions, which is styled as a card
+   footer (border-top, sunken background) and would look wrong floating above the
+   first card. */
+.template-detail-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+/* /admin/templates list — a square-ish rounded preview slot rather than
+   .admin-table-avatar's circle, since cropping a form preview into a circle reads
+   oddly. Falls back to a plain icon when the template has no uploaded thumbnail. */
+.template-row-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  overflow: hidden;
+}
+
+.template-row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.users-role-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.users-2fa-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.users-row-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.users-row-menu-trigger:hover,
+.users-row-menu-trigger[aria-expanded="true"] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
 }
 
 .users-table-empty {
@@ -10331,12 +13711,32 @@ textarea.form-field-input {
   vertical-align: middle;
 }
 
-/* Account settings */
+/* Account settings — white personal-settings rail + gray canvas, matching the
+   reference chrome (header stays in .admin-header above this). */
 .settings-shell {
+  --settings-accent: #12b76a;
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 1.75rem;
-  align-items: start;
+  grid-template-columns: 15.75rem minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.settings-nav {
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  padding: 1.5rem 1rem 2rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.settings-content {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.85rem 2rem 3rem;
 }
 
 .settings-nav-group + .settings-nav-group {
@@ -10344,8 +13744,9 @@ textarea.form-field-input {
 }
 
 .settings-nav-heading {
-  margin: 0 0 0.75rem;
-  font-size: 0.9375rem;
+  margin: 0 0 0.65rem;
+  padding: 0 0.35rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--color-text);
 }
@@ -10356,19 +13757,20 @@ textarea.form-field-input {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .settings-nav-item {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.6rem;
   padding: 0.55rem 0.75rem;
-  border-radius: var(--radius-md);
+  border-radius: 0.85rem;
   color: var(--color-text);
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
+  line-height: 1.3;
 }
 
 .settings-nav-item:hover {
@@ -10376,12 +13778,13 @@ textarea.form-field-input {
 }
 
 .settings-nav-item--active {
-  background: color-mix(in srgb, var(--color-border) 55%, var(--color-surface));
-  color: var(--color-text);
+  background: var(--color-primary-soft);
+  color: var(--settings-accent);
+  font-weight: 600;
 }
 
 .settings-nav-item--active .settings-nav-icon {
-  color: var(--color-secondary);
+  color: var(--settings-accent);
 }
 
 .settings-nav-icon {
@@ -10422,6 +13825,129 @@ textarea.form-field-input {
   line-height: 1.5;
 }
 
+.join-org-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.join-org-note {
+  max-width: 20rem;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.join-org-note-strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.settings-content .settings-page {
+  max-width: 52rem;
+}
+
+.settings-content .settings-page-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.settings-content .settings-page-kicker {
+  color: var(--settings-accent, #12b76a);
+  font-size: 0.6875rem;
+}
+
+.settings-content .settings-page-header {
+  margin-bottom: 1.35rem;
+}
+
+.settings-content .contact-details-card {
+  margin-top: 0;
+  border-radius: 1.1rem;
+  border-color: var(--color-border);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.settings-content .contact-details-header {
+  gap: 0.75rem;
+  padding: 1.35rem 1.5rem 1.2rem;
+}
+
+.settings-content .contact-details-header-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  color: var(--settings-accent, #12b76a);
+}
+
+.settings-content .contact-details-title {
+  font-size: 1rem;
+}
+
+.settings-content .contact-details-intro {
+  font-size: 0.8125rem;
+}
+
+.settings-content .contact-details-list {
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-content .contact-details-row {
+  grid-template-columns: 8.75rem minmax(0, 1fr);
+  gap: 1.25rem;
+  border-top: none;
+  padding: 0.75rem 1.5rem;
+}
+
+.settings-content .contact-details-row:first-child {
+  padding-top: 1.15rem;
+}
+
+.settings-content .contact-details-row:last-child {
+  padding-bottom: 1.15rem;
+}
+
+.settings-content .contact-details-row dt {
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.settings-content .contact-details-row:has(.contact-details-readonly) {
+  align-items: start;
+}
+
+.settings-content .contact-details-input {
+  width: 100%;
+  max-width: 22rem;
+  border-radius: var(--radius-pill);
+}
+
+.settings-content .password-field {
+  max-width: 22rem;
+}
+
+.settings-content .contact-details-input:focus {
+  outline: none;
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
+}
+
+.settings-content .contact-details-actions {
+  background: var(--color-surface);
+  padding: 1rem 1.5rem 1.15rem;
+}
+
+.settings-content .contact-details-actions .button {
+  padding: 0.5rem 1.15rem;
+  font-size: 0.8125rem;
+}
+
 .contact-details-card {
   padding: 0;
   overflow: hidden;
@@ -10436,7 +13962,7 @@ textarea.form-field-input {
   align-items: flex-start;
   gap: 0.85rem;
   padding: 1.5rem 1.5rem 1.35rem;
-  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-primary-soft));
+  background: var(--color-surface);
 }
 
 .contact-details-header-icon {
@@ -10449,6 +13975,14 @@ textarea.form-field-input {
   border-radius: 0.7rem;
   background: var(--color-primary-soft);
   color: var(--color-primary);
+}
+
+/* Password/2FA-style pages use lavender for the header badge instead of the default
+   green — green stays reserved for the profile/contact-details page (see
+   .contact-details-header-icon above), matching the source mockups' per-page tinting. */
+.contact-details-header-icon--lavender {
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
 }
 
 .contact-details-title {
@@ -10501,6 +14035,53 @@ textarea.form-field-input {
   margin: 1rem 1.5rem 0;
 }
 
+.organisation-logo-card {
+  margin-bottom: 1.5rem;
+}
+
+.organisation-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0 1.5rem 1.5rem;
+}
+
+.organisation-logo-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background-color: var(--color-surface);
+  overflow: hidden;
+}
+
+.organisation-logo-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.organisation-logo-placeholder {
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.organisation-logo-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.organisation-logo-file-input {
+  display: none;
+}
+
 .contact-details-list {
   margin: 0;
   padding: 0;
@@ -10522,6 +14103,7 @@ textarea.form-field-input {
   gap: 0.18rem;
   font-weight: 650;
   font-size: 0.875rem;
+  color: var(--color-text);
 }
 
 .contact-details-row dt small {
@@ -10533,6 +14115,11 @@ textarea.form-field-input {
 .contact-details-row dd {
   margin: 0;
   font-size: 0.9375rem;
+}
+
+.contact-details-row dd .login-field-hint {
+  display: block;
+  margin-top: 0.4rem;
 }
 
 /* Table variant (Organisation settings, Account settings) — a real table: one shared
@@ -10586,9 +14173,8 @@ textarea.form-field-input {
 }
 
 /* Separate opt-in from --table: Organisation settings wants its input filling the rest
-   of the row, but Account settings' table (added later, same divider/no-row-lines
-   treatment) keeps .contact-details-input's normal 320px cap — so this only applies
-   where a page adds both classes. */
+   of the row. Pages that don't add --wide-inputs keep .contact-details-input's 320px
+   cap. */
 .contact-details-list--wide-inputs .contact-details-input {
   width: 100%;
   max-width: none;
@@ -10615,12 +14201,14 @@ textarea.form-field-input {
 }
 
 .contact-details-readonly-note {
+  margin: 0;
   color: var(--color-text-muted);
   font-size: 0.75rem;
 }
 
 .contact-details-input {
   max-width: 320px;
+  border-radius: var(--radius-pill);
 }
 
 /* Lavender focus ring instead of .text-input's default green outline — matches the
@@ -10705,21 +14293,298 @@ textarea.form-field-input {
   border-top: none;
 }
 
-.settings-coming-soon {
+.two-factor-body {
   padding: 1.25rem 1.5rem 1.5rem;
   border-top: 1px solid var(--color-border);
 }
 
-.settings-coming-soon-title {
-  margin: 0 0 0.35rem;
-  font-weight: 600;
+.two-factor-method-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-lg);
 }
 
-.settings-coming-soon-text {
+.two-factor-method-title {
   margin: 0;
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.two-factor-method-status {
+  margin: 0.15rem 0 0;
   color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+/* Light-surface toggle switch — the app's only other toggle (.theme-toggle) is styled
+   for the dark sidebar and reads wrong (too much contrast) on a white settings card. */
+.settings-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.settings-toggle[aria-checked="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.settings-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.settings-toggle-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0.15rem;
+  transform: translateY(-50%);
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: left 0.15s ease;
+}
+
+.settings-toggle[aria-checked="true"] .settings-toggle-thumb {
+  left: calc(100% - 1.3rem);
+}
+
+/* Organisation settings' "Notification email" row (organisation-details-client.tsx) —
+   the toggle plus its On/Off state, sitting above the conditionally-shown address input
+   rather than inline with it (unlike two-factor's row, there's no separate title/status
+   text here since the row's own <dt> already labels it). */
+.notification-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.notification-toggle-state--on {
+  color: var(--color-text);
+}
+
+.organisation-settings {
+  width: 100%;
+  max-width: none;
+}
+
+.organisation-settings .settings-page-header {
+  margin-bottom: 1.15rem;
+}
+
+.organisation-settings .settings-page-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.organisation-settings .settings-page-lead {
+  max-width: none;
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.organisation-settings .contact-details-card {
+  margin-top: 0;
+  overflow: visible;
+  border-radius: 1.1rem;
+  border-color: var(--color-border);
+}
+
+.organisation-settings .contact-details-header {
+  gap: 0.75rem;
+  padding: 1.15rem 1.5rem 1rem;
+}
+
+.organisation-settings .contact-details-header-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 50%;
+  color: #12b76a;
+}
+
+.organisation-settings .contact-details-title {
+  font-size: 1rem;
+}
+
+.organisation-settings .contact-details-intro {
+  max-width: none;
+  font-size: 0.8125rem;
+}
+
+.organisation-details-list {
+  border-top: none;
+}
+
+.organisation-settings .contact-details-row {
+  grid-template-columns: 10.5rem minmax(0, 1fr);
+  gap: 1.15rem;
+  align-items: center;
+  padding: 0.7rem 1.5rem;
+  border-top: none;
+}
+
+.organisation-settings .contact-details-row:has(.notification-toggle-row) {
+  align-items: start;
+}
+
+.organisation-settings .contact-details-row dt {
+  padding-top: 0;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.organisation-settings .contact-details-row:has(.notification-toggle-row) dt {
+  padding-top: 0.35rem;
+}
+
+.organisation-settings .contact-details-row dd {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.organisation-settings .contact-details-input {
+  width: 100%;
+  max-width: none;
+  padding: 0.55rem 0.95rem;
   font-size: 0.875rem;
-  line-height: 1.45;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.organisation-settings .contact-details-input:focus {
+  background-color: var(--color-surface);
+  border-color: var(--color-lavender);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
+}
+
+.organisation-field-control {
+  position: relative;
+}
+
+.organisation-field-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  display: inline-flex;
+  color: var(--color-text-subtle);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.organisation-field-control .contact-details-input {
+  padding-left: 2.35rem;
+}
+
+.organisation-field-hint {
+  margin: 0;
+  max-width: 42rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-subtle);
+}
+
+.organisation-label-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.organisation-help {
+  position: relative;
+  display: inline-flex;
+}
+
+.organisation-help-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-subtle);
+  cursor: help;
+}
+
+.organisation-help-button:hover,
+.organisation-help-button:focus-visible {
+  color: var(--color-text);
+}
+
+.organisation-tooltip {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 50%;
+  z-index: 20;
+  width: 22rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-surface);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 12px 28px rgba(15, 23, 42, 0.12);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+  transform: translateX(-1.1rem);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+}
+
+.organisation-help:hover .organisation-tooltip,
+.organisation-help:focus-within .organisation-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.organisation-settings .contact-details-actions {
+  justify-content: flex-end;
+  padding: 0.85rem 1.5rem 1rem;
+  background: var(--color-surface);
+  border-top: none;
+}
+
+.organisation-settings .contact-details-actions .button {
+  padding: 0.5rem 1.15rem;
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 900px) {
+  .organisation-settings .contact-details-row {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  .organisation-settings .contact-details-row dt {
+    padding-top: 0;
+  }
 }
 
 @media (max-width: 900px) {
@@ -10727,7 +14592,18 @@ textarea.form-field-input {
     grid-template-columns: 1fr;
   }
 
-  .contact-details-row {
+  .settings-nav {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    padding: 1.15rem 1rem 0.85rem;
+  }
+
+  .settings-content {
+    padding: 1.35rem 1.15rem 2.5rem;
+  }
+
+  .contact-details-row,
+  .settings-content .contact-details-row {
     grid-template-columns: 1fr;
     gap: 0.35rem;
   }
@@ -10772,9 +14648,8 @@ textarea.form-field-input {
   border-bottom: 1px solid var(--color-border);
 }
 
-.files-toolbar-search {
-  width: 100%;
-  max-width: 280px;
+.files-toolbar .forms-search {
+  max-width: 28rem;
 }
 
 .files-toolbar-right {
@@ -10952,7 +14827,7 @@ textarea.form-field-input {
     align-items: stretch;
   }
 
-  .files-toolbar-search {
+  .files-toolbar .forms-search {
     max-width: none;
   }
 

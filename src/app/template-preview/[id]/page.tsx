@@ -50,22 +50,28 @@ export default async function TemplatePreviewPage({ params, searchParams }: Page
   const parsed = formSchemaSchema.safeParse(template.schema);
   const schema: FormSchema = parsed.success ? parsed.data : createEmptyFormSchema();
 
+  const renderer = (
+    <FormRendererClient
+      slug=""
+      formName={template.name}
+      formVersionId=""
+      schema={schema}
+      previewMode
+    />
+  );
+
   return (
     <div className={embed ? 'public-form-layout form-preview-embed' : 'public-form-layout'}>
-      {embed ? null : (
+      {embed ? (
+        renderer
+      ) : (
         <div className="form-preview-shell">
           <div className="form-preview-banner">
             Template preview — this is how it'll look. Nothing here is saved.
           </div>
+          {renderer}
         </div>
       )}
-      <FormRendererClient
-        slug=""
-        formName={template.name}
-        formVersionId=""
-        schema={schema}
-        previewMode
-      />
     </div>
   );
 }

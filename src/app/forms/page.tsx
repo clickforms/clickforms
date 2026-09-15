@@ -19,9 +19,6 @@ export default async function DashboardPage() {
       const forms = await tx.form.findMany({
         where: formsListWhere(session.user.organizationId, session.user.role, session.user.id),
         orderBy: { updatedAt: 'desc' },
-        include: {
-          versions: { orderBy: { versionNumber: 'desc' }, take: 1, select: { id: true } },
-        },
       });
       const responseCounts = await tx.submission.groupBy({
         by: ['formId'],
@@ -40,10 +37,7 @@ export default async function DashboardPage() {
   const totalResponses = responseCounts.reduce((sum, row) => sum + row._count._all, 0);
 
   const formRows = forms.map((form) => {
-    const latestVersionId = form.versions[0]?.id ?? null;
     const isLive = form.currentVersionId != null;
-    const hasPendingChanges =
-      isLive && latestVersionId != null && latestVersionId !== form.currentVersionId;
     return {
       id: form.id,
       name: form.name,
@@ -51,7 +45,6 @@ export default async function DashboardPage() {
       updatedAt: form.updatedAt.toISOString(),
       responseCount: responseCountByFormId.get(form.id) ?? 0,
       isLive,
-      hasPendingChanges,
     };
   });
 

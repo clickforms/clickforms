@@ -31,7 +31,7 @@ export function FieldColorPicker({
   function commitHexInput() {
     const normalized = normalizeHexColor(hexInput);
     if (!normalized) {
-      setHexError('Enter a hex color like #00a960');
+      setHexError('Enter a hex color like #55ea8c');
       setHexInput(activeColor);
       return;
     }
@@ -79,7 +79,7 @@ export function FieldColorPicker({
             type="text"
             className="text-input field-color-hex-input"
             value={hexInput}
-            placeholder="#00a960"
+            placeholder="#55ea8c"
             spellCheck={false}
             disabled={!canEdit}
             onChange={(event) => {

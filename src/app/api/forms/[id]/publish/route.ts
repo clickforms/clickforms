@@ -10,7 +10,7 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-/** Publishes an approved form (approved → published). */
+/** Publishes a draft form, making it reachable by respondents (draft → published). */
 export async function POST(_request: Request, { params }: RouteContext): Promise<NextResponse> {
   try {
     const session = await requireSession();

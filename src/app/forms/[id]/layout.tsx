@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { FormWorkspaceShell } from '@/app/forms/[id]/form-workspace-shell';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { buildOrgFormUrl } from '@/lib/tenant';
 import { canViewForm } from '@/lib/user-roles';
 
 interface LayoutProps {
@@ -19,28 +20,37 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
     return null;
   }
 
-  // Sequential, not Promise.all — both queries share one connection via withOrgContext's
+  // Sequential, not Promise.all — all queries share one connection via withOrgContext's
   // transaction, and concurrent queries on a single `pg` client are deprecated (and will
   // error in pg@9.0).
-  const { form, responseCount } = await withOrgContext(session.user.organizationId, async (tx) => {
-    const form = await tx.form.findFirst({
-      where: { id, organizationId: session.user.organizationId },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        status: true,
-        createdBy: true,
-        isPrivate: true,
-      },
-    });
-    // Mirrors the "responses" count used on the dashboard — submitted (and later
-    // reviewed) submissions only, not abandoned in-progress ones.
-    const responseCount = await tx.submission.count({
-      where: { formId: id, organizationId: session.user.organizationId, status: 'submitted' },
-    });
-    return { form, responseCount };
-  });
+  const { form, responseCount, organization } = await withOrgContext(
+    session.user.organizationId,
+    async (tx) => {
+      const form = await tx.form.findFirst({
+        where: { id, organizationId: session.user.organizationId },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          createdBy: true,
+          isPrivate: true,
+        },
+      });
+      // Mirrors the "responses" count used on the dashboard — submitted (and later
+      // reviewed) submissions only, not abandoned in-progress ones.
+      const responseCount = await tx.submission.count({
+        where: { formId: id, organizationId: session.user.organizationId, status: 'submitted' },
+      });
+      // Needed to build the absolute /f/[slug] link for the top nav's Share button —
+      // see src/app/forms/list/page.tsx for the same buildOrgFormUrl pattern.
+      const organization = await tx.organization.findUniqueOrThrow({
+        where: { id: session.user.organizationId },
+        select: { subdomain: true },
+      });
+      return { form, responseCount, organization };
+    },
+  );
 
   // A private form 404s for everyone but its creator — see canViewForm. This gates the
   // whole form workspace tree (builder, submissions, etc.), which all render as children
@@ -49,6 +59,8 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
     notFound();
   }
 
+  const publicUrl = buildOrgFormUrl(organization.subdomain, `/f/${form.slug}`);
+
   return (
     <FormWorkspaceShell
       formId={form.id}
@@ -56,6 +68,7 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
       slug={form.slug}
       initialStatus={form.status}
       responseCount={responseCount}
+      publicUrl={publicUrl}
     >
       {children}
     </FormWorkspaceShell>

@@ -187,11 +187,23 @@ export function FormRendererClient({
         throw new Error(presignData.error ?? 'Could not start the upload. Please try again.');
       }
 
-      const putRes = await fetch(presignData.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
-        body: file,
-      });
+      let putRes: Response;
+      try {
+        putRes = await fetch(presignData.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type || 'application/octet-stream' },
+          body: file,
+        });
+      } catch {
+        // fetch() throws a generic "Failed to fetch" TypeError for this request — it's a
+        // direct browser-to-storage PUT (never touches our server, see uploadFile's own
+        // docs above), so a thrown error here almost always means the storage provider
+        // rejected the cross-origin request (CORS) rather than anything the respondent
+        // did wrong. Surface something actionable instead of the raw browser message.
+        throw new Error(
+          'Could not upload the file — a connection problem on our end. Please try again in a moment.',
+        );
+      }
       if (!putRes.ok) {
         throw new Error('Uploading the file failed. Please try again.');
       }

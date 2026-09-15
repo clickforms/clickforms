@@ -1,54 +1,55 @@
-import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { type FileRow, FilesClient } from '@/app/forms/files/files-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createDownloadUrlMap } from '@/lib/forms/submission-files';
 import { createPresignedDownloadUrl } from '@/lib/s3';
-import { canManageUsers } from '@/lib/user-roles';
+import { canManageUsers, formsListWhere } from '@/lib/user-roles';
 
-/** Org-wide Files page — library uploads admins add here, plus every file respondents
- * uploaded on finalized submissions. Gated to admins (crosses form-ownership boundaries). */
+/** Org Files page — library uploads plus files from submissions the user can see.
+ * Admins/editors see every non-private form; members see the same forms they can
+ * open on the Forms list. Library upload/delete stays admin-only. */
 export default async function FilesPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return null;
   }
 
-  if (!canManageUsers(session.user.role)) {
-    redirect('/forms');
+  const canManageLibrary = canManageUsers(session.user.role);
+  const organizationId = session.user.organizationId;
+  if (!organizationId) {
+    return null;
   }
 
-  const { libraryFiles, submissionFiles } = await withOrgContext(
-    session.user.organizationId,
-    async (tx) => {
-      const [libraryFiles, submissionFiles] = await Promise.all([
-        tx.organizationFile.findMany({
-          where: { organizationId: session.user.organizationId },
-          orderBy: { uploadedAt: 'desc' },
-        }),
-        tx.submissionFile.findMany({
-          where: {
-            organizationId: session.user.organizationId,
-            // Mirrors the submissions list: exclude abandoned in-progress uploads.
-            submission: { status: { not: 'in_progress' } },
+  const { libraryFiles, submissionFiles } = await withOrgContext(organizationId, async (tx) => {
+    const [libraryFiles, submissionFiles] = await Promise.all([
+      tx.organizationFile.findMany({
+        where: { organizationId },
+        orderBy: { uploadedAt: 'desc' },
+      }),
+      tx.submissionFile.findMany({
+        where: {
+          organizationId,
+          submission: {
+            status: { not: 'in_progress' },
+            form: formsListWhere(organizationId, session.user.role, session.user.id),
           },
-          orderBy: { uploadedAt: 'desc' },
-          include: {
-            submission: {
-              select: {
-                id: true,
-                status: true,
-                submittedAt: true,
-                form: { select: { id: true, name: true } },
-              },
+        },
+        orderBy: { uploadedAt: 'desc' },
+        include: {
+          submission: {
+            select: {
+              id: true,
+              status: true,
+              submittedAt: true,
+              form: { select: { id: true, name: true } },
             },
           },
-        }),
-      ]);
-      return { libraryFiles, submissionFiles };
-    },
-  );
+        },
+      }),
+    ]);
+    return { libraryFiles, submissionFiles };
+  });
 
   let downloadsUnavailableReason: string | null = null;
   const downloadUrlById = new Map<string, string>();
@@ -122,6 +123,10 @@ export default async function FilesPage() {
   );
 
   return (
-    <FilesClient initialFiles={rows} downloadsUnavailableReason={downloadsUnavailableReason} />
+    <FilesClient
+      initialFiles={rows}
+      downloadsUnavailableReason={downloadsUnavailableReason}
+      canManageLibrary={canManageLibrary}
+    />
   );
 }

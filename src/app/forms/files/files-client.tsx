@@ -83,6 +83,15 @@ function visiblePageNumbers(currentPage: number, totalPages: number): number[] {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
 
+function SearchIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M13 13l-2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function ChevronIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -188,7 +197,15 @@ type MenuItem =
   | { kind: 'button'; label: string; icon: ReactNode; onClick: () => void; danger?: boolean }
   | { kind: 'disabled'; label: string; icon: ReactNode; title?: string };
 
-function FileActionsMenu({ file, onDelete }: { file: FileRow; onDelete: (file: FileRow) => void }) {
+function FileActionsMenu({
+  file,
+  canDeleteLibrary,
+  onDelete,
+}: {
+  file: FileRow;
+  canDeleteLibrary: boolean;
+  onDelete: (file: FileRow) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [panelStyle, setPanelStyle] = useState<CSSProperties | null>(null);
   const menuId = useId();
@@ -254,7 +271,7 @@ function FileActionsMenu({ file, onDelete }: { file: FileRow; onDelete: (file: F
     });
   }
 
-  if (file.source === 'library') {
+  if (file.source === 'library' && canDeleteLibrary) {
     items.push({
       kind: 'button',
       label: 'Delete',
@@ -553,9 +570,14 @@ async function uploadLibraryFile(file: File): Promise<FileRow> {
 interface FilesClientProps {
   initialFiles: FileRow[];
   downloadsUnavailableReason: string | null;
+  canManageLibrary: boolean;
 }
 
-export function FilesClient({ initialFiles, downloadsUnavailableReason }: FilesClientProps) {
+export function FilesClient({
+  initialFiles,
+  downloadsUnavailableReason,
+  canManageLibrary,
+}: FilesClientProps) {
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState(initialFiles);
@@ -589,6 +611,7 @@ export function FilesClient({ initialFiles, downloadsUnavailableReason }: FilesC
   }
 
   async function handleFilesSelected(fileList: FileList | File[]) {
+    if (!canManageLibrary) return;
     const selected = Array.from(fileList);
     if (selected.length === 0) return;
 
@@ -751,15 +774,17 @@ export function FilesClient({ initialFiles, downloadsUnavailableReason }: FilesC
 
   return (
     <div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="files-hidden-input"
-        multiple
-        onChange={(event) => {
-          if (event.target.files) void handleFilesSelected(event.target.files);
-        }}
-      />
+      {canManageLibrary ? (
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="files-hidden-input"
+          multiple
+          onChange={(event) => {
+            if (event.target.files) void handleFilesSelected(event.target.files);
+          }}
+        />
+      ) : null}
 
       {downloadsUnavailableReason ? (
         <div className="card files-page-s3-warning">
@@ -772,26 +797,33 @@ export function FilesClient({ initialFiles, downloadsUnavailableReason }: FilesC
 
       <div className="card admin-table-card">
         <div className="files-toolbar">
-          <input
-            className="text-input files-toolbar-search"
-            placeholder="Search Files..."
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            aria-label="Search files"
-          />
+          <label className="forms-search">
+            <span className="forms-search-icon">
+              <SearchIcon />
+            </span>
+            <input
+              type="text"
+              placeholder="Search files…"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              aria-label="Search files"
+            />
+          </label>
           <div className="files-toolbar-right">
-            <button
-              type="button"
-              className="button"
-              disabled={isUploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <UploadCloudIcon />
-              {isUploading ? 'Uploading…' : 'Upload File'}
-            </button>
+            {canManageLibrary ? (
+              <button
+                type="button"
+                className="button"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <UploadCloudIcon />
+                {isUploading ? 'Uploading…' : 'Upload File'}
+              </button>
+            ) : null}
             <BulkActionsMenu
               selectedCount={selectedIds.size}
               onDownloadSelected={downloadSelected}
@@ -829,20 +861,25 @@ export function FilesClient({ initialFiles, downloadsUnavailableReason }: FilesC
             <div className="files-empty-icon" aria-hidden="true">
               <UploadCloudIcon />
             </div>
-            <h2 className="files-empty-title">Upload your first file</h2>
+            <h2 className="files-empty-title">
+              {canManageLibrary ? 'Upload your first file' : 'No files yet'}
+            </h2>
             <p className="files-empty-copy">
-              Drop files here, or choose files to add to your organisation library. Files uploaded
-              on form submissions will also appear here.
+              {canManageLibrary
+                ? 'Drop files here, or choose files to add to your organisation library. Files uploaded on form submissions will also appear here.'
+                : 'Files uploaded on your form submissions will appear here.'}
             </p>
-            <button
-              type="button"
-              className="button"
-              disabled={isUploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <UploadCloudIcon />
-              {isUploading ? 'Uploading…' : 'Upload File'}
-            </button>
+            {canManageLibrary ? (
+              <button
+                type="button"
+                className="button"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <UploadCloudIcon />
+                {isUploading ? 'Uploading…' : 'Upload File'}
+              </button>
+            ) : null}
           </div>
         ) : (
           <>
@@ -972,7 +1009,11 @@ export function FilesClient({ initialFiles, downloadsUnavailableReason }: FilesC
                         <span className={`badge ${file.statusClassName}`}>{file.statusLabel}</span>
                       </td>
                       <td data-label="Actions">
-                        <FileActionsMenu file={file} onDelete={handleDelete} />
+                        <FileActionsMenu
+                          file={file}
+                          canDeleteLibrary={canManageLibrary}
+                          onDelete={handleDelete}
+                        />
                       </td>
                     </tr>
                   ))}

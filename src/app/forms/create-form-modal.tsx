@@ -4,9 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/toast';
 import { getErrorMessage, readApiError } from '@/lib/error-message';
-import { FORM_TEMPLATES, type FormTemplateId } from '@/lib/forms/templates';
-
-type CreateMethod = 'blank' | FormTemplateId;
 
 function BlankFormIcon() {
   return (
@@ -100,13 +97,11 @@ export function CreateFormModal({ open, onClose }: CreateFormModalProps) {
   const router = useRouter();
   const toast = useToast();
   const [newFormName, setNewFormName] = useState('');
-  const [method, setMethod] = useState<CreateMethod>('blank');
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setNewFormName('');
-    setMethod('blank');
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape' && !isCreating) onClose();
     }
@@ -115,6 +110,11 @@ export function CreateFormModal({ open, onClose }: CreateFormModalProps) {
   }, [open, isCreating, onClose]);
 
   if (!open) return null;
+
+  function goToTemplateGallery() {
+    onClose();
+    router.push('/forms/templates');
+  }
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
@@ -125,10 +125,7 @@ export function CreateFormModal({ open, onClose }: CreateFormModalProps) {
       const response = await fetch('/api/forms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newFormName.trim(),
-          ...(method !== 'blank' ? { templateId: method } : {}),
-        }),
+        body: JSON.stringify({ name: newFormName.trim() }),
       });
       if (!response.ok) {
         throw new Error(await readApiError(response, 'Failed to create form'));
@@ -171,8 +168,7 @@ export function CreateFormModal({ open, onClose }: CreateFormModalProps) {
           <div className="method-cards">
             <button
               type="button"
-              className={`method-card ${method === 'blank' ? 'method-card--selected' : ''}`}
-              onClick={() => setMethod('blank')}
+              className="method-card method-card--selected"
               disabled={isCreating}
             >
               <span className="method-card-icon">
@@ -183,26 +179,20 @@ export function CreateFormModal({ open, onClose }: CreateFormModalProps) {
                 Start from an empty form and add your own fields.
               </span>
             </button>
-            {Object.values(FORM_TEMPLATES).map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                className={`method-card ${method === template.id ? 'method-card--selected' : ''}`}
-                onClick={() => {
-                  setMethod(template.id);
-                  if (!newFormName.trim()) {
-                    setNewFormName('A2A - Incident Report Form');
-                  }
-                }}
-                disabled={isCreating}
-              >
-                <span className="method-card-icon">
-                  <TemplateIcon />
-                </span>
-                <span className="method-card-title">{template.name}</span>
-                <span className="method-card-desc">{template.description}</span>
-              </button>
-            ))}
+            <button
+              type="button"
+              className="method-card"
+              onClick={goToTemplateGallery}
+              disabled={isCreating}
+            >
+              <span className="method-card-icon">
+                <TemplateIcon />
+              </span>
+              <span className="method-card-title">Browse templates</span>
+              <span className="method-card-desc">
+                Start from a ready-made template and make it your own.
+              </span>
+            </button>
             <div className="method-card method-card--disabled" aria-disabled="true">
               <span className="method-card-badge">Coming soon</span>
               <span className="method-card-icon">

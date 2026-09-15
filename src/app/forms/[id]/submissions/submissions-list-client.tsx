@@ -1,10 +1,11 @@
 'use client';
 
 import type { SubmissionStatus } from '@prisma/client';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { DeleteSubmissionModal } from '@/app/forms/[id]/submissions/delete-submission-modal';
+import { SubmissionPreviewModal } from '@/app/forms/[id]/submissions/submission-preview-modal';
+import { SubmissionStatusMenu } from '@/app/forms/[id]/submissions/submission-status-menu';
 import {
   SubmissionsDateRangePicker,
   type SubmissionsDateRangeValue,
@@ -19,6 +20,23 @@ interface SubmissionSummary {
   submittedAt: string | null;
   ipAddress: string | null;
   createdAt: string;
+}
+
+function formatResponseTimestamp(iso: string): string {
+  const date = new Date(iso);
+  const day = date.toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  const time = date
+    .toLocaleTimeString('en-AU', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+    .toUpperCase();
+  return `${day} · ${time}`;
 }
 
 const PAGE_SIZE = 10;
@@ -60,23 +78,9 @@ function EyeIcon() {
   );
 }
 
-function TrashIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M3 4.5h10M6 4.5V3.2c0-.5.4-.9.9-.9h2.2c.5 0 .9.4.9.9v1.3M5.5 7v4.8M10.5 7v4.8M3.8 4.5l.5 8.2c.05.6.55 1 1.1 1h5.2c.55 0 1.05-.4 1.1-1l.5-8.2"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function SearchIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
       <path d="M13 13l-2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
@@ -108,6 +112,17 @@ function CrossIcon() {
       />
     </svg>
   );
+}
+
+// Mirrors parseFilenameFromContentDisposition in
+// submissions/[submissionId]/submission-answers-editor.tsx — not exported from there, and
+// small/pure enough that duplicating it here beats wiring up a shared module for one
+// regex. See that file's comment for why the Content-Disposition header (not the response
+// body's mime type) is what names the downloaded file.
+function parseFilenameFromContentDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const match = /filename="?([^";]+)"?/i.exec(header);
+  return match?.[1]?.trim() || null;
 }
 
 function ChevronLeftIcon() {
@@ -155,12 +170,20 @@ const SUBMISSION_STATUS_BADGE: Record<
   },
   submitted: {
     label: 'Submitted',
-    className: 'badge--success',
-    accentClassName: 'submissions-row--success',
-    icon: CheckIcon,
+    // Matches the "Submitted" badge on the org-wide Files page (forms/files/page.tsx) —
+    // neutral gray rather than green, since "submitted" just means "awaiting review",
+    // not a positive/finalised outcome (that's 'approved', which keeps badge--success).
+    className: 'badge--neutral',
+    accentClassName: 'submissions-row--neutral',
+    // No checkmark here — a check reads as "done"/"approved", which is misleading for a
+    // status that just means "awaiting review". 'approved' (Finalised) keeps the check.
+    icon: null,
   },
+  // 'approved'/'rejected' were reserved in the enum but never set anywhere until the
+  // Responses table's status dropdown (submission-status-menu.tsx) — reused here under
+  // the "Finalised"/"Rejected" review-state labels rather than adding new enum values.
   approved: {
-    label: 'Approved',
+    label: 'Finalised',
     className: 'badge--approved',
     accentClassName: 'submissions-row--approved',
     icon: CheckIcon,
@@ -180,16 +203,20 @@ const SUBMISSION_STATUS_BADGE: Record<
 // response list is small enough not to warrant server-side paging.
 export function SubmissionsListClient({
   formId,
+  formSlug,
   initialSubmissions,
   canDelete,
 }: {
   formId: string;
+  formSlug: string;
   initialSubmissions: SubmissionSummary[];
   canDelete: boolean;
 }) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState<SubmissionsDateRangeValue>({ from: null, to: null });
   const [page, setPage] = useState(1);
@@ -228,6 +255,63 @@ export function SubmissionsListClient({
     }
   }
 
+  // Applied instantly, no confirmation step — matches how archive/publish toggle
+  // elsewhere in the app (FormsListClient), and freely reversible between all three
+  // states so there's no destructive edge here the way there is with delete.
+  async function handleStatusChange(id: string, status: SubmissionStatus) {
+    const previous = submissions;
+    setSubmissions((current) =>
+      current.map((entry) => (entry.id === id ? { ...entry, status } : entry)),
+    );
+
+    try {
+      const response = await fetch(`/api/forms/${formId}/submissions/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response, 'Failed to update status'));
+      }
+      toast.success(`Marked as ${SUBMISSION_STATUS_BADGE[status].label}`);
+    } catch (err) {
+      setSubmissions(previous);
+      toast.error(err instanceof Error ? err.message : 'Failed to update status');
+    }
+  }
+
+  // Same fetch-as-blob approach as the submission detail page's export button (see its
+  // comment on handleExportPdf) — checks res.ok before ever touching the browser's
+  // download UI, so a failed export shows a toast instead of downloading a JSON error
+  // body disguised as a PDF.
+  async function handleExportPdf(id: string) {
+    setExportingId(id);
+    try {
+      const res = await fetch(`/api/forms/${formId}/submissions/${id}/export/pdf`);
+      if (!res.ok) {
+        throw new Error(await readApiError(res, 'Failed to export PDF'));
+      }
+
+      const blob = await res.blob();
+      const filename =
+        parseFilenameFromContentDisposition(res.headers.get('Content-Disposition')) ??
+        'submission.pdf';
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export PDF');
+    } finally {
+      setExportingId(null);
+    }
+  }
+
   const filteredSubmissions = useMemo(() => {
     const term = search.trim().toLowerCase();
     const fromDate = parseIsoDate(dateRange.from ?? undefined);
@@ -244,9 +328,7 @@ export function SubmissionsListClient({
       if (!term) return true;
       const badge = SUBMISSION_STATUS_BADGE[submission.status];
       const haystack = [
-        submission.submittedAt
-          ? new Date(submission.submittedAt).toLocaleString('en-AU')
-          : 'in progress',
+        submission.submittedAt ? formatResponseTimestamp(submission.submittedAt) : 'in progress',
         badge.label,
         submission.ipAddress ?? '',
       ]
@@ -336,7 +418,7 @@ export function SubmissionsListClient({
                       <span className="submissions-timestamp">
                         <ClockIcon />
                         {submission.submittedAt
-                          ? new Date(submission.submittedAt).toLocaleString('en-AU')
+                          ? formatResponseTimestamp(submission.submittedAt)
                           : 'In progress'}
                       </span>
                     </td>
@@ -352,34 +434,34 @@ export function SubmissionsListClient({
                     <td data-label="Actions">
                       {/* Row itself already navigates on click/Enter — stop these
                           row-level handlers from also firing when the click/keypress
-                          originated on one of the actions below (e.g. Delete shouldn't
-                          also navigate away before its confirm modal opens). Not itself
-                          interactive — just a bubbling firewall around the real
-                          Link/button controls it wraps. */}
-                      {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick/onKeyDown here only stopPropagation to shield the row's own handlers — the actual interactive elements are the Link and button inside */}
+                          originated on one of the actions below (e.g. the preview eye
+                          button should open the modal, not also navigate away; Delete
+                          shouldn't also navigate before its confirm modal opens). Not
+                          itself interactive — just a bubbling firewall around the real
+                          button controls it wraps. */}
+                      {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick/onKeyDown here only stopPropagation to shield the row's own handlers — the actual interactive elements are the buttons inside */}
                       <div
                         className="submissions-row-actions"
                         onClick={(event) => event.stopPropagation()}
                         onKeyDown={(event) => event.stopPropagation()}
                       >
-                        <Link
+                        <button
+                          type="button"
                           className="submissions-icon-button"
-                          href={detailHref}
-                          aria-label="View response"
-                          title="View response"
+                          onClick={() => setPreviewId(submission.id)}
+                          aria-label="Preview response"
+                          title="Preview response"
                         >
                           <EyeIcon />
-                        </Link>
+                        </button>
                         {canDelete ? (
-                          <button
-                            type="button"
-                            className="submissions-icon-button submissions-icon-button--danger"
-                            onClick={() => setDeletingId(submission.id)}
-                            aria-label="Delete response"
-                            title="Delete response"
-                          >
-                            <TrashIcon />
-                          </button>
+                          <SubmissionStatusMenu
+                            status={submission.status}
+                            onStatusChange={(status) => handleStatusChange(submission.id, status)}
+                            onDelete={() => setDeletingId(submission.id)}
+                            onExportPdf={() => handleExportPdf(submission.id)}
+                            isExporting={exportingId === submission.id}
+                          />
                         ) : null}
                       </div>
                     </td>
@@ -432,6 +514,13 @@ export function SubmissionsListClient({
           onConfirm={() => void handleDeleteConfirm()}
         />
       ) : null}
+
+      <SubmissionPreviewModal
+        open={previewId !== null}
+        formSlug={formSlug}
+        submissionId={previewId}
+        onClose={() => setPreviewId(null)}
+      />
     </>
   );
 }

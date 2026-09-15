@@ -4,6 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { FieldCard } from '@/app/forms/[id]/builder/field-card';
 import { FIELD_TYPE_LABELS } from '@/app/forms/[id]/builder/field-meta';
+import { PaletteIcon } from '@/app/forms/[id]/builder/field-palette';
 import type { FieldPatch } from '@/app/forms/[id]/builder/schema-mutations';
 import type { FieldType, FormField, FormPage } from '@/lib/forms/schema';
 
@@ -96,6 +97,9 @@ export function Canvas({
                   className="canvas-empty-quick-add-item"
                   onClick={() => onAddField(type)}
                 >
+                  <span className="canvas-empty-quick-add-icon" aria-hidden="true">
+                    <PaletteIcon type={type} />
+                  </span>
                   {FIELD_TYPE_LABELS[type]}
                 </button>
               ))}

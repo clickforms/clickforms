@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { type DateRange, DayPicker } from 'react-day-picker';
+import { createPortal } from 'react-dom';
 import 'react-day-picker/style.css';
 import { parseIsoDate, toIsoDate } from '@/lib/forms/date-value';
 
@@ -46,6 +47,27 @@ export interface SubmissionsDateRangeValue {
   to: string | null;
 }
 
+function computePopoverStyle(trigger: HTMLElement, panel: HTMLElement): CSSProperties {
+  const triggerRect = trigger.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  const gap = 8;
+  const viewportPadding = 8;
+
+  let top = triggerRect.bottom + gap;
+  if (top + panelRect.height > window.innerHeight - viewportPadding) {
+    const aboveTop = triggerRect.top - panelRect.height - gap;
+    top = aboveTop >= viewportPadding ? aboveTop : viewportPadding;
+  }
+
+  let left = triggerRect.left;
+  left = Math.max(
+    viewportPadding,
+    Math.min(left, window.innerWidth - panelRect.width - viewportPadding),
+  );
+
+  return { position: 'fixed', top, left };
+}
+
 // "Jul 1 – Jul 31, 2026" — the year is only shown once, on the end date, matching how a
 // respondent would naturally read a range rather than repeating it on both ends.
 function formatRangeLabel(value: SubmissionsDateRangeValue): string {
@@ -75,28 +97,51 @@ export function SubmissionsDateRangePicker({
   onChange: (value: SubmissionsDateRangeValue) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties | null>(null);
   const popoverId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current || !panelRef.current) return;
+    setPanelStyle(computePopoverStyle(triggerRef.current, panelRef.current));
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
 
+    function reposition() {
+      if (!triggerRef.current || !panelRef.current) return;
+      setPanelStyle(computePopoverStyle(triggerRef.current, panelRef.current));
+    }
+
     function handlePointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) {
+        return;
       }
+      setOpen(false);
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') setOpen(false);
     }
 
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
     document.addEventListener('mousedown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) setPanelStyle(null);
   }, [open]);
 
   const selected: DateRange | undefined =
@@ -116,6 +161,7 @@ export function SubmissionsDateRangePicker({
   return (
     <div className="submissions-date-range" ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="submissions-date-range-trigger"
         aria-haspopup="dialog"
@@ -132,34 +178,43 @@ export function SubmissionsDateRangePicker({
         </span>
       </button>
 
-      {open ? (
-        <div
-          className="submissions-date-range-popover"
-          id={popoverId}
-          role="dialog"
-          aria-label="Filter by date"
-        >
-          <DayPicker
-            mode="range"
-            selected={selected}
-            onSelect={handleSelect}
-            defaultMonth={selected?.from ?? new Date()}
-          />
-          <div className="submissions-date-range-actions">
-            <button
-              type="button"
-              className="submissions-date-range-clear"
-              onClick={() => onChange({ from: null, to: null })}
-              disabled={!hasValue}
+      {open && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={panelRef}
+              className="submissions-date-range-popover"
+              id={popoverId}
+              role="dialog"
+              aria-label="Filter by date"
+              style={{ ...panelStyle, visibility: panelStyle ? 'visible' : 'hidden' }}
             >
-              Clear
-            </button>
-            <button type="button" className="button button--small" onClick={() => setOpen(false)}>
-              Done
-            </button>
-          </div>
-        </div>
-      ) : null}
+              <DayPicker
+                mode="range"
+                selected={selected}
+                onSelect={handleSelect}
+                defaultMonth={selected?.from ?? new Date()}
+              />
+              <div className="submissions-date-range-actions">
+                <button
+                  type="button"
+                  className="submissions-date-range-clear"
+                  onClick={() => onChange({ from: null, to: null })}
+                  disabled={!hasValue}
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  className="button button--small"
+                  onClick={() => setOpen(false)}
+                >
+                  Done
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

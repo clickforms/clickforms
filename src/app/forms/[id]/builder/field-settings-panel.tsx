@@ -1200,6 +1200,19 @@ function ValidationExtras({ field, canEdit, onUpdateField }: TypeSpecificSetting
               }}
             />
           </label>
+          <label className="settings-toggle-row">
+            <span className="settings-label">Don't embed uploads in the PDF export</span>
+            <input
+              type="checkbox"
+              checked={field.embedInExport === false}
+              disabled={!canEdit}
+              onChange={(event) =>
+                onUpdateField(field.id, {
+                  embedInExport: event.target.checked ? false : undefined,
+                })
+              }
+            />
+          </label>
         </>
       );
 
@@ -1449,7 +1462,6 @@ interface FieldSettingsPanelProps {
   field: FormField | null;
   canEdit: boolean;
   onUpdateField: (fieldId: string, patch: FieldPatch) => void;
-  onDuplicateField: (fieldId: string) => void;
   onReplaceFieldType: (fieldId: string, type: FieldType) => void;
   onSetColumnLayoutColumns: (layoutId: string, columns: ColumnCount) => void;
   onSetConditionalRule: (rule: ConditionalRule) => void;
@@ -1462,7 +1474,6 @@ export function FieldSettingsPanel({
   field,
   canEdit,
   onUpdateField,
-  onDuplicateField,
   onReplaceFieldType,
   onSetColumnLayoutColumns,
   onSetConditionalRule,
@@ -1519,33 +1530,6 @@ export function FieldSettingsPanel({
 
   return (
     <div className="settings-panel" key={field.id}>
-      <div className="settings-panel-header">
-        <p className="settings-panel-title">
-          {isSectionBreak
-            ? 'Header settings'
-            : isDivider
-              ? 'Divider settings'
-              : isColumnLayout
-                ? 'Column section settings'
-                : isImage
-                  ? 'Image settings'
-                  : isStaticText
-                    ? 'Formatted text settings'
-                    : isHidden
-                      ? 'Hidden field settings'
-                      : 'Field settings'}
-        </p>
-        {canEdit && !isColumnChild ? (
-          <button
-            type="button"
-            className="button button--ghost button--small"
-            onClick={() => onDuplicateField(field.id)}
-          >
-            Duplicate
-          </button>
-        ) : null}
-      </div>
-
       {isColumnChild ? (
         <label className="settings-field">
           <span className="settings-label">Field type</span>

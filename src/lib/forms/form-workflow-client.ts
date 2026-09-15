@@ -1,7 +1,7 @@
 import type { FormStatus } from '@prisma/client';
 import { extractApiError } from '@/lib/error-message';
 
-export type FormWorkflowAction = 'approve' | 'publish' | 'unpublish' | 'revert-to-draft';
+export type FormWorkflowAction = 'publish' | 'unpublish';
 
 export interface FormWorkflowResult {
   form: { id: string; status: string; currentVersionId: string | null };
@@ -14,47 +14,34 @@ export interface WorkflowStep {
   busyLabel: string;
 }
 
-/** Primary list/builder action for each form status in the draft → approved → published flow. */
+/** The only forward workflow action left: a draft form can be published. Live forms have
+ *  no ladder button — "Take offline" (and "Edit form", which performs the same
+ *  transition) are the only ways to change a published form's state now. */
 export function getWorkflowStepForStatus(status: FormStatus): WorkflowStep | null {
-  switch (status) {
-    case 'draft':
-      return { action: 'approve', label: 'Approve', busyLabel: 'Approving…' };
-    case 'approved':
-      return { action: 'publish', label: 'Publish', busyLabel: 'Publishing…' };
-    case 'published':
-      return { action: 'unpublish', label: 'Unpublish', busyLabel: 'Unpublishing…' };
-    default:
-      return null;
+  if (status === 'draft') {
+    return { action: 'publish', label: 'Publish', busyLabel: 'Publishing…' };
   }
-}
-
-/** Whether a secondary "Take offline" control should show alongside the primary
- *  approve/publish/unpublish ladder button. Needed once a form is live but `status` has
- *  moved off 'published' — e.g. someone edited a live form, which resets `status` to
- *  'draft' for the *new* draft's own approval pipeline without touching what's still
- *  being served (see public-lookup.ts). In that case the ladder's next step is
- *  "Approve"/"Publish" for the new draft, so taking the *old* live version offline needs
- *  its own control. When `status === 'published'`, the ladder button already is
- *  "Unpublish" — no second control needed. */
-export function shouldShowTakeOfflineAction(status: FormStatus, isLive: boolean): boolean {
-  return isLive && status !== 'published' && status !== 'archived';
+  return null;
 }
 
 const ACTION_PATH: Record<FormWorkflowAction, string> = {
-  approve: 'approve',
   publish: 'publish',
   unpublish: 'unpublish',
-  'revert-to-draft': 'revert-to-draft',
 };
 
 export async function runFormWorkflow(
   formId: string,
   action: FormWorkflowAction,
+  body?: Record<string, unknown>,
 ): Promise<FormWorkflowResult> {
-  const response = await fetch(`/api/forms/${formId}/${ACTION_PATH[action]}`, { method: 'POST' });
-  const body = await response.json().catch(() => null);
+  const response = await fetch(`/api/forms/${formId}/${ACTION_PATH[action]}`, {
+    method: 'POST',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const responseBody = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(extractApiError(body, `Failed to ${action.replace('-', ' ')} form`));
+    throw new Error(extractApiError(responseBody, `Failed to ${action} form`));
   }
-  return body as FormWorkflowResult;
+  return responseBody as FormWorkflowResult;
 }

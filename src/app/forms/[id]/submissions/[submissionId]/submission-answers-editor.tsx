@@ -31,6 +31,7 @@ interface SubmissionAnswersEditorProps {
   canEditAnswers: boolean;
   canDelete: boolean;
   meta: ReactNode;
+  statusControl: ReactNode;
   children: ReactNode;
 }
 
@@ -59,6 +60,56 @@ function ChevronIcon() {
         d="M3 4.5l3 3 3-3"
         stroke="currentColor"
         strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Same icon as submission-status-menu.tsx's DownloadIcon — kept as its own copy since
+// the two menus don't share a component yet (see that file's own note on this).
+function DownloadIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M8 2.5v7M4.8 7l3.2 3.2L11.2 7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 12v.8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V12"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M11.1 2.4a1.4 1.4 0 0 1 2 2L5.5 12l-3 .9.9-3 7.7-7.5Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3 4.5h10M6 4.5V3.2c0-.5.4-.9.9-.9h2.2c.5 0 .9.4.9.9v1.3M5.5 7v4.8M10.5 7v4.8M3.8 4.5l.5 8.2c.05.6.55 1 1.1 1h5.2c.55 0 1.05-.4 1.1-1l.5-8.2"
+        stroke="currentColor"
+        strokeWidth="1.3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -191,19 +242,19 @@ function SubmissionActionsMenu({
               // Deliberately not closing the menu immediately (unlike every other item) —
               // the export can take a few seconds (server-side PDF rendering via
               // Puppeteer), and closing right away would throw away the only place the
-              // "Exporting…" label is visible, leaving no feedback that anything is
+              // "Downloading…" label is visible, leaving no feedback that anything is
               // happening at all. Closes itself once the request settles either way.
               void onExport().then(() => setOpen(false));
             }}
           >
-            {isExporting ? (
-              <>
+            <span className="actions-menu-icon">
+              {isExporting ? (
                 <span className="actions-menu-spinner" aria-hidden="true" />
-                Exporting…
-              </>
-            ) : (
-              'Export PDF'
-            )}
+              ) : (
+                <DownloadIcon />
+              )}
+            </span>
+            {isExporting ? 'Downloading…' : 'Download PDF'}
           </button>
         </li>
         {canEditAnswers ? (
@@ -217,6 +268,9 @@ function SubmissionActionsMenu({
                 setOpen(false);
               }}
             >
+              <span className="actions-menu-icon">
+                <EditIcon />
+              </span>
               Edit response
             </button>
           </li>
@@ -236,6 +290,9 @@ function SubmissionActionsMenu({
                   setOpen(false);
                 }}
               >
+                <span className="actions-menu-icon">
+                  <TrashIcon />
+                </span>
                 Delete
               </button>
             </li>
@@ -287,6 +344,7 @@ export function SubmissionAnswersEditor({
   canEditAnswers,
   canDelete,
   meta,
+  statusControl,
   children,
 }: SubmissionAnswersEditorProps) {
   const [editing, setEditing] = useState(false);
@@ -467,6 +525,7 @@ export function SubmissionAnswersEditor({
       <div className="submission-detail-header">
         <h1>Submission</h1>
         <div className="submission-detail-header-actions">
+          {statusControl}
           <SubmissionActionsMenu
             isExporting={isExporting}
             onExport={handleExportPdf}

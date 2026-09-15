@@ -44,6 +44,27 @@ export function SubmissionFormExportDocument({
     : [];
   const { headerLogoIds } = partitionHeaderLogos(firstPageFieldIds, schema.fields);
 
+  // Uploaded images embed by default (embedInExport !== false — see the schema comment on
+  // fileUploadFieldSchema.embedInExport) but always land in a trailing "Attachments"
+  // section rather than inline at the field's position, so a large photo/scan never
+  // disrupts the form's own visual flow. The section is forced onto its own page via CSS
+  // (break-before: page below) so it's always the last thing in the export.
+  const attachments: {
+    fieldId: string;
+    fieldLabel: string;
+    file: ResolvedSubmissionFile;
+    dataUrl: string;
+  }[] = [];
+  for (const field of Object.values(schema.fields)) {
+    if (field.type !== 'file_upload') continue;
+    if (!visibleFieldIds.has(field.id)) continue;
+    if (field.embedInExport === false) continue;
+    for (const file of resolveFiles(field.id)) {
+      const dataUrl = assets.submissionFiles[file.id];
+      if (dataUrl) attachments.push({ fieldId: field.id, fieldLabel: field.label, file, dataUrl });
+    }
+  }
+
   return (
     <div
       className="export-form"
@@ -160,6 +181,21 @@ export function SubmissionFormExportDocument({
             </section>
           );
         })}
+
+        {attachments.length > 0 ? (
+          <section className="export-attachments-section">
+            <h2 className="export-form-page-title">Attachments</h2>
+            {attachments.map(({ fieldId, fieldLabel, file, dataUrl }) => (
+              <div key={`${fieldId}-${file.id}`} className="export-attachment-item">
+                <p className="export-attachment-caption">
+                  {fieldLabel} — {file.filename}
+                </p>
+                {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
+                <img className="export-attachment-image" src={dataUrl} alt={file.filename} />
+              </div>
+            ))}
+          </section>
+        ) : null}
       </div>
     </div>
   );

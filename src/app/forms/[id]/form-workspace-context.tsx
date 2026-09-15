@@ -11,8 +11,11 @@ interface FormWorkspaceContextValue {
    *  in the top row without the builder page being the one to render it. The builder
    *  is still the sole writer, via syncLiveState below; every other consumer just reads. */
   isLive: boolean;
-  hasPendingChanges: boolean;
-  syncLiveState: (next: { isLive: boolean; hasPendingChanges: boolean }) => void;
+  /** True while the builder's canvas has local schema edits that haven't been saved yet
+   *  (see builder-client.tsx's Edit/Save/Cancel flow — there's no autosave). FormTopNav
+   *  reads this to warn before switching to Responses/Settings mid-edit. */
+  hasUnsavedChanges: boolean;
+  syncLiveState: (next: { isLive: boolean; hasUnsavedChanges: boolean }) => void;
 }
 
 const FormWorkspaceContext = createContext<FormWorkspaceContextValue | null>(null);
@@ -25,15 +28,15 @@ export function FormWorkspaceProvider({
   children: ReactNode;
 }) {
   const [status, setStatusState] = useState(initialStatus);
-  const [liveState, setLiveState] = useState({ isLive: false, hasPendingChanges: false });
+  const [liveState, setLiveState] = useState({ isLive: false, hasUnsavedChanges: false });
 
   const setStatus = useCallback((next: FormStatus) => {
     setStatusState(next);
   }, []);
 
-  const syncLiveState = useCallback((next: { isLive: boolean; hasPendingChanges: boolean }) => {
+  const syncLiveState = useCallback((next: { isLive: boolean; hasUnsavedChanges: boolean }) => {
     setLiveState((prev) =>
-      prev.isLive === next.isLive && prev.hasPendingChanges === next.hasPendingChanges
+      prev.isLive === next.isLive && prev.hasUnsavedChanges === next.hasUnsavedChanges
         ? prev
         : next,
     );

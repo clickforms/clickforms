@@ -19,7 +19,8 @@ export function restoreStatusAfterUnarchive(currentVersionId: string | null): Fo
   return currentVersionId ? 'published' : 'draft';
 }
 
-/** Schema edits invalidate approval — the form must be re-approved before publishing again. */
+/** Editing a published form's schema takes it back to draft — it must be explicitly
+ *  published again before the edit reaches respondents (see form-workflow.ts). */
 export function shouldResetToDraftOnSchemaEdit(status: FormStatus): boolean {
-  return status === 'approved' || status === 'published';
+  return status === 'published';
 }

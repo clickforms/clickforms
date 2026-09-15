@@ -63,8 +63,9 @@ export default async function SubmissionsListPage({ params }: PageProps) {
   const canDelete = canEditForm(session.user.role, form.createdBy, session.user.id);
 
   return (
-    <div>
+    <div className="submissions-page">
       <div className="submissions-page-header">
+        <p className="submissions-page-kicker">{form.name}</p>
         <h1 className="submissions-page-title">Responses</h1>
         <p className="submissions-page-subtitle">
           Every response submitted through this form, newest first.
@@ -73,6 +74,7 @@ export default async function SubmissionsListPage({ params }: PageProps) {
 
       <SubmissionsListClient
         formId={form.id}
+        formSlug={form.slug}
         canDelete={canDelete}
         initialSubmissions={submissions.map((submission) => ({
           id: submission.id,

@@ -1,6 +1,7 @@
+import type { FormNotificationMode } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { toErrorResponse } from '@/lib/api-errors';
+import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess, assertFormViewAccess } from '@/lib/form-access';
@@ -9,7 +10,7 @@ import {
   restoreStatusAfterUnarchive,
   shouldResetToDraftOnSchemaEdit,
 } from '@/lib/forms/form-status';
-import { formSchemaSchema } from '@/lib/forms/schema';
+import { formSchemaSchema, listFilenamePrefixCandidates } from '@/lib/forms/schema';
 import { getOrCreateDraftVersion } from '@/lib/forms/versions';
 import { ForbiddenError, requireRole, requireSession } from '@/lib/session';
 
@@ -52,15 +53,50 @@ const patchFormBodySchema = z
     archived: z.boolean().optional(),
     schema: formSchemaSchema.optional(),
     isPrivate: z.boolean().optional(),
+    // Empty string clears a custom template back to the default naming — see
+    // resolveFilenameTemplate in src/lib/forms/generate-submission-pdf.ts.
+    pdfFilenameTemplate: z.string().trim().max(150).optional(),
+    // The field backing the `{prefix}` token in pdfFilenameTemplate above. Explicit null
+    // clears it back to "no prefix configured" (mirrors pdfFilenameTemplate's empty-string
+    // convention, but null rather than '' since a field id is never a meaningful empty
+    // string). Checked against the form's own current schema below, not trusted as-is.
+    filenamePrefixFieldId: z.string().min(1).nullable().optional(),
+    // Who gets emailed on a new response — see src/lib/forms/submission-notification.ts.
+    // Always sent together with notificationEmail by the Settings page's single "Response
+    // notifications" save action, so the handler below can treat this as the one signal
+    // that either field changed.
+    notificationMode: z
+      .enum(['org_default', 'custom', 'off'] satisfies readonly FormNotificationMode[])
+      .optional(),
+    notificationEmail: z
+      .string()
+      .trim()
+      .max(255)
+      .email('Invalid email address')
+      .optional()
+      .or(z.literal('')),
   })
+  .refine(
+    (body) =>
+      body.notificationMode !== 'custom' ||
+      (body.notificationEmail !== undefined && body.notificationEmail !== ''),
+    {
+      message: 'notificationEmail is required when notificationMode is "custom"',
+      path: ['notificationEmail'],
+    },
+  )
   .refine(
     (body) =>
       body.name !== undefined ||
       body.archived !== undefined ||
       body.schema !== undefined ||
-      body.isPrivate !== undefined,
+      body.isPrivate !== undefined ||
+      body.pdfFilenameTemplate !== undefined ||
+      body.filenamePrefixFieldId !== undefined ||
+      body.notificationMode !== undefined,
     {
-      message: 'Provide at least one of: name, archived, schema, isPrivate',
+      message:
+        'Provide at least one of: name, archived, schema, isPrivate, pdfFilenameTemplate, filenamePrefixFieldId, notificationMode',
     },
   );
 
@@ -130,6 +166,95 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
             action: body.isPrivate ? 'form.make_private' : 'form.make_visible',
             entityType: 'form',
             entityId: form.id,
+          },
+          tx,
+        );
+      }
+
+      if (body.pdfFilenameTemplate !== undefined) {
+        await tx.form.update({
+          where: { id: form.id },
+          data: {
+            pdfFilenameTemplate: body.pdfFilenameTemplate === '' ? null : body.pdfFilenameTemplate,
+          },
+        });
+        await logAudit(
+          {
+            organizationId: session.user.organizationId,
+            actorUserId: session.user.id,
+            action: 'form.pdf_filename_template_update',
+            entityType: 'form',
+            entityId: form.id,
+            metadata: { pdfFilenameTemplate: body.pdfFilenameTemplate },
+          },
+          tx,
+        );
+      }
+
+      if (body.filenamePrefixFieldId !== undefined) {
+        if (body.filenamePrefixFieldId !== null) {
+          // Validate against the form's current (latest) schema — the same one the
+          // Settings page's picker was built from — rather than trusting a client-sent
+          // id outright. A submission's *own* historical schema is checked separately at
+          // export time (see the export route), so a field removed after this save still
+          // resolves correctly for old responses; this check only guards what a new save
+          // is allowed to point at going forward.
+          const latestVersion = await tx.formVersion.findFirst({
+            where: { formId: form.id },
+            orderBy: { versionNumber: 'desc' },
+          });
+          const parsedSchema = latestVersion
+            ? formSchemaSchema.safeParse(latestVersion.schema)
+            : null;
+          const isEligible =
+            parsedSchema?.success &&
+            listFilenamePrefixCandidates(parsedSchema.data).some(
+              (candidate) => candidate.id === body.filenamePrefixFieldId,
+            );
+          if (!isEligible) {
+            throw new InvalidRequestError(
+              'filenamePrefixFieldId must reference a text-like field on this form',
+            );
+          }
+        }
+
+        await tx.form.update({
+          where: { id: form.id },
+          data: { filenamePrefixFieldId: body.filenamePrefixFieldId },
+        });
+        await logAudit(
+          {
+            organizationId: session.user.organizationId,
+            actorUserId: session.user.id,
+            action: 'form.filename_prefix_field_update',
+            entityType: 'form',
+            entityId: form.id,
+            metadata: { filenamePrefixFieldId: body.filenamePrefixFieldId },
+          },
+          tx,
+        );
+      }
+
+      if (body.notificationMode !== undefined) {
+        // A stale custom address must never linger unseen once mode is switched away
+        // from 'custom' — cleared here rather than left in the column, so the Settings
+        // page's "Use organisation default" / "Off" choices can't silently resurrect an
+        // old override just by flipping the mode back to 'custom' later.
+        const notificationEmail =
+          body.notificationMode === 'custom' ? body.notificationEmail || null : null;
+
+        await tx.form.update({
+          where: { id: form.id },
+          data: { notificationMode: body.notificationMode, notificationEmail },
+        });
+        await logAudit(
+          {
+            organizationId: session.user.organizationId,
+            actorUserId: session.user.id,
+            action: 'form.notification_settings_update',
+            entityType: 'form',
+            entityId: form.id,
+            metadata: { notificationMode: body.notificationMode, notificationEmail },
           },
           tx,
         );

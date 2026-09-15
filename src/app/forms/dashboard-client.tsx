@@ -2,8 +2,6 @@
 
 import type { FormStatus } from '@prisma/client';
 import Link from 'next/link';
-import { useState } from 'react';
-import { CreateFormModal } from '@/app/forms/create-form-modal';
 import { LiveStatusBadge } from '@/components/live-status-badge';
 
 interface DashboardStats {
@@ -20,7 +18,6 @@ interface RecentForm {
   updatedAt: string;
   responseCount: number;
   isLive: boolean;
-  hasPendingChanges: boolean;
 }
 
 function greetingForHour(hour: number): string {
@@ -45,22 +42,6 @@ function formatRelativeTime(iso: string): string {
   const days = Math.round(hours / 24);
   if (days < 7) return `${days}d ago`;
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-const RECENT_MARK_TINTS = [
-  '',
-  'dashboard-recent-mark--tint-b',
-  'dashboard-recent-mark--tint-c',
-] as const;
-
-function formInitial(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return 'F';
-  const words = trimmed.split(/\s+/).filter(Boolean);
-  if (words.length >= 2) {
-    return `${words[0]![0]!}${words[1]![0]!}`.toUpperCase();
-  }
-  return trimmed.slice(0, 2).toUpperCase();
 }
 
 function LiveIcon() {
@@ -141,7 +122,6 @@ export function DashboardClient({
   recentForms: RecentForm[];
   canEdit: boolean;
 }) {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const firstName = displayName.split(/\s+/)[0] ?? displayName;
   const now = new Date();
   const greeting = greetingForHour(now.getHours());
@@ -168,13 +148,9 @@ export function DashboardClient({
                 All forms
               </Link>
               {canEdit ? (
-                <button
-                  type="button"
-                  className="button dashboard-primary"
-                  onClick={() => setIsCreateModalOpen(true)}
-                >
+                <Link href="/forms/templates" className="button dashboard-primary">
                   <PlusIcon /> New form
-                </button>
+                </Link>
               ) : null}
             </div>
           </div>
@@ -229,9 +205,9 @@ export function DashboardClient({
               ready for respondents.
             </p>
             {canEdit ? (
-              <button type="button" className="button" onClick={() => setIsCreateModalOpen(true)}>
+              <Link href="/forms/templates" className="button">
                 <PlusIcon /> Create form
-              </button>
+              </Link>
             ) : (
               <p className="dashboard-empty-hint">Ask an editor to create one for you.</p>
             )}
@@ -245,9 +221,8 @@ export function DashboardClient({
           <div className="dashboard-recent-panel-header">
             <div>
               <h3 id="dashboard-recent-heading" className="dashboard-recent-panel-title">
-                Recent forms
+                Recent Forms
               </h3>
-              <p className="dashboard-recent-panel-subtitle">Jump back into what you last edited</p>
             </div>
             <Link href="/forms/list" className="dashboard-recent-panel-link">
               View all <ArrowIcon />
@@ -255,43 +230,30 @@ export function DashboardClient({
           </div>
 
           <ul className="dashboard-recent-cards">
-            {recentForms.map((form, index) => (
+            {recentForms.map((form) => (
               <li key={form.id}>
                 <Link href={`/forms/${form.id}/builder`} className="dashboard-recent-card">
-                  <span
-                    className={`dashboard-recent-mark ${RECENT_MARK_TINTS[index % RECENT_MARK_TINTS.length]}`}
-                    aria-hidden="true"
-                  >
-                    {formInitial(form.name)}
-                  </span>
                   <div className="dashboard-recent-copy">
                     <span className="dashboard-recent-name">{form.name}</span>
                     <span className="dashboard-recent-meta">
-                      {form.responseCount} response{form.responseCount === 1 ? '' : 's'}
-                      <span className="dashboard-recent-sep" aria-hidden="true">
-                        ·
-                      </span>
                       <time dateTime={form.updatedAt}>{formatRelativeTime(form.updatedAt)}</time>
                     </span>
                   </div>
-                  <LiveStatusBadge
-                    status={form.status}
-                    isLive={form.isLive}
-                    hasPendingChanges={form.hasPendingChanges}
-                  />
-                  <span className="dashboard-recent-arrow" aria-hidden="true">
-                    <ArrowIcon />
+                  <span className="dashboard-recent-count">
+                    {form.responseCount} response{form.responseCount === 1 ? '' : 's'}
                   </span>
+                  <div className="dashboard-recent-end">
+                    <LiveStatusBadge status={form.status} isLive={form.isLive} />
+                    <span className="dashboard-recent-arrow" aria-hidden="true">
+                      <ArrowIcon />
+                    </span>
+                  </div>
                 </Link>
               </li>
             ))}
           </ul>
         </section>
       )}
-
-      {canEdit ? (
-        <CreateFormModal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
-      ) : null}
     </div>
   );
 }

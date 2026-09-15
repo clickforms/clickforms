@@ -71,6 +71,14 @@ function PageIcon() {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function PencilIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -165,10 +173,12 @@ export function PageTabs({
       {canEdit ? (
         <button
           type="button"
-          className="button button--ghost button--small page-tab-add"
+          className="page-switcher-step page-switcher-add"
           onClick={onAddPage}
+          aria-label="Add page"
+          title="Add page"
         >
-          + Add page
+          <PlusIcon />
         </button>
       ) : null}
 

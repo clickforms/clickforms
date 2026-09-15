@@ -4,7 +4,6 @@ import type { FormStatus } from '@prisma/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { CreateFormModal } from '@/app/forms/create-form-modal';
 import { DeleteFormModal } from '@/app/forms/delete-form-modal';
 import { FormActionsMenu } from '@/app/forms/form-actions-menu';
 import { TransferFormModal } from '@/app/forms/transfer-form-modal';
@@ -33,9 +32,6 @@ interface FormSummary {
   isPrivate: boolean;
   /** The version currently served to respondents, if any — see src/lib/forms/live-status.ts. */
   currentVersionId: string | null;
-  /** The version being edited (most recent by versionNumber). Diverging from
-   *  currentVersionId means there are unpublished changes waiting. */
-  latestVersionId: string | null;
 }
 
 interface OrgMember {
@@ -45,6 +41,7 @@ interface OrgMember {
 
 type SortColumn = 'name' | 'createdAt' | 'updatedAt' | 'responseCount' | 'status';
 type SortDirection = 'asc' | 'desc';
+type StatusFilter = 'all' | 'live' | 'draft';
 
 const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: 'name', label: 'Form name' },
@@ -52,6 +49,12 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: 'updatedAt', label: 'Last updated' },
   { key: 'responseCount', label: 'Responses' },
   { key: 'status', label: 'Status' },
+];
+
+const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'live', label: 'Live' },
+  { key: 'draft', label: 'Draft' },
 ];
 
 const PAGE_SIZE = 10;
@@ -102,6 +105,38 @@ function getInitials(name: string): string {
   return `${first}${last}`.toUpperCase();
 }
 
+function isFormLive(form: FormSummary): boolean {
+  return form.currentVersionId !== null && form.status !== 'archived';
+}
+
+function matchesStatusFilter(form: FormSummary, filter: StatusFilter): boolean {
+  if (filter === 'all') return true;
+  if (form.status === 'archived') return false;
+  if (filter === 'live') return isFormLive(form);
+  return !isFormLive(form);
+}
+
+function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function formatRelativeTime(iso: string): string {
+  const date = new Date(iso);
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.round(diffMs / 60_000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return formatShortDate(iso);
+}
+
 export function FormsListClient({
   initialForms,
   canEdit,
@@ -116,10 +151,10 @@ export function FormsListClient({
   orgMembers: OrgMember[];
 }) {
   const [forms, setForms] = useState(initialForms);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const toast = useToast();
   const router = useRouter();
   const [sortColumn, setSortColumn] = useState<SortColumn>('updatedAt');
@@ -164,7 +199,7 @@ export function FormsListClient({
       if (!response.ok) {
         throw new Error(await readApiError(response, 'Failed to duplicate form'));
       }
-      const { form: newForm, version: newVersion } = await response.json();
+      const { form: newForm } = await response.json();
       setForms((current) => [
         {
           id: newForm.id,
@@ -184,7 +219,6 @@ export function FormsListClient({
           isPrivate: false,
           // A duplicate always starts as an unpublished draft — never live.
           currentVersionId: null,
-          latestVersionId: newVersion?.id ?? null,
         },
         ...current,
       ]);
@@ -255,10 +289,8 @@ export function FormsListClient({
       );
 
       const messages: Record<FormWorkflowAction, string> = {
-        approve: 'Form approved — ready to publish',
         publish: 'Form published',
         unpublish: 'Form taken offline',
-        'revert-to-draft': 'Form reverted to draft',
       };
       toast.success(messages[action]);
     } catch (err) {
@@ -335,7 +367,11 @@ export function FormsListClient({
 
   const visibleForms = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const filtered = term ? forms.filter((form) => form.name.toLowerCase().includes(term)) : forms;
+    const filtered = forms.filter((form) => {
+      if (!matchesStatusFilter(form, statusFilter)) return false;
+      if (!term) return true;
+      return form.name.toLowerCase().includes(term) || form.slug.toLowerCase().includes(term);
+    });
 
     return [...filtered].sort((a, b) => {
       let result = 0;
@@ -358,36 +394,38 @@ export function FormsListClient({
       }
       return sortDirection === 'asc' ? result : -result;
     });
-  }, [forms, search, sortColumn, sortDirection]);
+  }, [forms, search, statusFilter, sortColumn, sortDirection]);
 
   // Jump back to page 1 whenever the search/sort narrows or reorders the list — otherwise
   // a page number that used to be valid could land past the end of a smaller result set.
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps intentionally trigger a reset even though the effect body doesn't read them
   useEffect(() => {
     setPage(1);
-  }, [search, sortColumn, sortDirection]);
+  }, [search, statusFilter, sortColumn, sortDirection]);
 
   const totalPages = Math.max(1, Math.ceil(visibleForms.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pageForms = visibleForms.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const filterCounts = useMemo(() => {
+    const counts: Record<StatusFilter, number> = { all: 0, live: 0, draft: 0 };
+    for (const form of forms) {
+      counts.all += 1;
+      if (matchesStatusFilter(form, 'live')) counts.live += 1;
+      if (matchesStatusFilter(form, 'draft')) counts.draft += 1;
+    }
+    return counts;
+  }, [forms]);
 
   return (
-    <div>
-      <div className="forms-list-header">
-        {canEdit ? (
-          <button
-            type="button"
-            className="button button--dark"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            + New form
-          </button>
-        ) : null}
-      </div>
-
-      {canEdit ? (
-        <CreateFormModal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
-      ) : null}
+    <div className="forms-list-page">
+      <header className="forms-list-header">
+        <div>
+          <h1 className="settings-page-title">Forms</h1>
+          <p className="settings-page-lead">
+            Create, publish, and manage the forms in this organisation.
+          </p>
+        </div>
+      </header>
 
       {deletingForm ? (
         <DeleteFormModal
@@ -413,23 +451,48 @@ export function FormsListClient({
 
       {forms.length === 0 ? (
         <div className="card empty-state">
-          <p>No forms yet. Create one to get started.</p>
+          <p className="empty-state-title">No forms yet</p>
+          <p>Create a form to start collecting responses.</p>
+          {canEdit ? (
+            <Link href="/forms/templates" className="button button--dark">
+              + New form
+            </Link>
+          ) : null}
         </div>
       ) : (
         <div className="card admin-table-card">
-          <div className="table-search-row">
+          <div className="forms-toolbar">
             <label className="forms-search">
               <span className="forms-search-icon">
                 <SearchIcon />
               </span>
               <input
                 type="text"
-                placeholder="Search forms by name…"
+                placeholder="Search forms…"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 aria-label="Search forms"
               />
             </label>
+            <div className="forms-filter-chips">
+              {STATUS_FILTERS.map((filter) => (
+                <button
+                  key={filter.key}
+                  type="button"
+                  aria-pressed={statusFilter === filter.key}
+                  className={`forms-filter-chip${statusFilter === filter.key ? ' forms-filter-chip--active' : ''}`}
+                  onClick={() => setStatusFilter(filter.key)}
+                >
+                  {filter.label}
+                  <span className="forms-filter-chip-count">{filterCounts[filter.key]}</span>
+                </button>
+              ))}
+            </div>
+            {canEdit ? (
+              <Link href="/forms/templates" className="button button--dark">
+                + New form
+              </Link>
+            ) : null}
           </div>
           <div className="admin-table-scroll">
             <table className="admin-table forms-table">
@@ -457,10 +520,10 @@ export function FormsListClient({
               </thead>
               <tbody>
                 {pageForms.map((form) => {
-                  const isLive = form.currentVersionId !== null && form.status !== 'archived';
-                  const hasPendingChanges =
-                    isLive && form.latestVersionId !== form.currentVersionId;
+                  const isLive = isFormLive(form);
                   const builderHref = `/forms/${form.id}/builder`;
+                  const responsesHref = `/forms/${form.id}/submissions`;
+                  const updatedLabel = formatRelativeTime(form.updatedAt);
                   return (
                     // biome-ignore lint/a11y/useSemanticElements: must stay a <tr> for correct table semantics — role="button" + tabIndex + onKeyDown supply the missing button affordance instead of nesting a real <button> around table cells
                     <tr
@@ -500,19 +563,29 @@ export function FormsListClient({
                           </Link>
                         )}
                       </td>
-                      <td data-label="Created">
-                        {new Date(form.createdAt).toLocaleDateString('en-AU')}
+                      <td
+                        data-label="Created"
+                        title={new Date(form.createdAt).toLocaleString('en-AU')}
+                      >
+                        {formatShortDate(form.createdAt)}
                       </td>
-                      <td data-label="Last updated">
-                        {new Date(form.updatedAt).toLocaleDateString('en-AU')}
+                      <td
+                        data-label="Last updated"
+                        title={new Date(form.updatedAt).toLocaleString('en-AU')}
+                      >
+                        {updatedLabel}
                       </td>
-                      <td data-label="Responses">{form.responseCount}</td>
+                      <td
+                        data-label="Responses"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        <Link href={responsesHref} className="forms-responses-link">
+                          {form.responseCount}
+                        </Link>
+                      </td>
                       <td data-label="Status">
-                        <LiveStatusBadge
-                          status={form.status}
-                          isLive={isLive}
-                          hasPendingChanges={hasPendingChanges}
-                        />
+                        <LiveStatusBadge status={form.status} isLive={isLive} />
                       </td>
                       <td data-label="Created by">
                         <span className="admin-table-creator">
@@ -532,26 +605,57 @@ export function FormsListClient({
                         onClick={(event) => event.stopPropagation()}
                         onKeyDown={(event) => event.stopPropagation()}
                       >
-                        <FormActionsMenu
-                          formId={form.id}
-                          formUrl={form.publicUrl}
-                          status={form.status}
-                          isLive={isLive}
-                          canEdit={canEdit}
-                          onRename={() => {
-                            setRenamingId(form.id);
-                            setRenameValue(form.name);
-                          }}
-                          onDuplicate={() => handleDuplicate(form)}
-                          onToggleArchive={() => handleToggleArchive(form)}
-                          onWorkflow={(action) => handleWorkflow(form, action)}
-                          onDelete={() => setDeletingForm(form)}
-                          isPrivate={form.isPrivate}
-                          isOwnForm={form.isOwnForm}
-                          onTogglePrivate={() => handleTogglePrivate(form)}
-                          onTransfer={() => setTransferringForm(form)}
-                          onCopyLink={() => void handleCopyLink(form.publicUrl)}
-                        />
+                        <div className="forms-row-actions">
+                          {canEdit && form.status === 'archived' ? (
+                            <button
+                              type="button"
+                              className="button button--small button--ghost"
+                              onClick={() => void handleToggleArchive(form)}
+                            >
+                              Restore
+                            </button>
+                          ) : canEdit && !isLive && form.status !== 'archived' ? (
+                            <button
+                              type="button"
+                              className="button button--small button--success"
+                              onClick={() => void handleWorkflow(form, 'publish')}
+                            >
+                              Publish
+                            </button>
+                          ) : isLive ? (
+                            <button
+                              type="button"
+                              className="button button--small button--ghost"
+                              onClick={() => void handleCopyLink(form.publicUrl)}
+                            >
+                              Share
+                            </button>
+                          ) : (
+                            <Link href={builderHref} className="button button--small button--ghost">
+                              {canEdit ? 'Edit' : 'View'}
+                            </Link>
+                          )}
+                          <FormActionsMenu
+                            formId={form.id}
+                            formUrl={form.publicUrl}
+                            status={form.status}
+                            isLive={isLive}
+                            canEdit={canEdit}
+                            onRename={() => {
+                              setRenamingId(form.id);
+                              setRenameValue(form.name);
+                            }}
+                            onDuplicate={() => handleDuplicate(form)}
+                            onToggleArchive={() => handleToggleArchive(form)}
+                            onWorkflow={(action) => handleWorkflow(form, action)}
+                            onDelete={() => setDeletingForm(form)}
+                            isPrivate={form.isPrivate}
+                            isOwnForm={form.isOwnForm}
+                            onTogglePrivate={() => handleTogglePrivate(form)}
+                            onTransfer={() => setTransferringForm(form)}
+                            onCopyLink={() => void handleCopyLink(form.publicUrl)}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );
@@ -559,7 +663,9 @@ export function FormsListClient({
                 {visibleForms.length === 0 ? (
                   <tr>
                     <td colSpan={COLUMNS.length + 2} className="admin-table-empty">
-                      No forms match &ldquo;{search}&rdquo;.
+                      {search.trim()
+                        ? `No forms match “${search.trim()}”.`
+                        : 'No forms in this filter.'}
                     </td>
                   </tr>
                 ) : null}

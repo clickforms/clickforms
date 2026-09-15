@@ -1,8 +1,8 @@
-import type { SubmissionStatus } from '@prisma/client';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { SubmissionAnswersEditor } from '@/app/forms/[id]/submissions/[submissionId]/submission-answers-editor';
+import { SubmissionStatusControl } from '@/app/forms/[id]/submissions/[submissionId]/submission-status-control';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
@@ -35,13 +35,6 @@ import { canEditForm } from '@/lib/user-roles';
 interface PageProps {
   params: Promise<{ id: string; submissionId: string }>;
 }
-
-const SUBMISSION_STATUS_BADGE: Record<SubmissionStatus, { label: string; className: string }> = {
-  in_progress: { label: 'In progress', className: 'badge--neutral' },
-  submitted: { label: 'Submitted', className: 'badge--success' },
-  approved: { label: 'Approved', className: 'badge--success' },
-  rejected: { label: 'Rejected', className: 'badge--error' },
-};
 
 function renderFormattedAnswer(formatted: ReturnType<typeof formatSubmissionAnswer>) {
   if (formatted.kind === 'skip') {
@@ -178,7 +171,6 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     downloadUrlById,
   );
 
-  const badge = SUBMISSION_STATUS_BADGE[submission.status];
   const canDelete = canEditForm(session.user.role, form.createdBy, session.user.id);
   // Editing an in-progress submission would race with the respondent's own session
   // (they could still be filling it out), so editing is only offered once it has
@@ -187,10 +179,6 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
 
   const meta = (
     <div key="submission-meta" className="card submission-meta">
-      <div className="submission-meta-row">
-        <span className="submission-meta-label">Status</span>
-        <span className={`badge ${badge.className}`}>{badge.label}</span>
-      </div>
       <div className="submission-meta-row">
         <span className="submission-meta-label">Submitted</span>
         <span>
@@ -206,8 +194,17 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     </div>
   );
 
+  const statusControl = (
+    <SubmissionStatusControl
+      formId={form.id}
+      submissionId={submission.id}
+      initialStatus={submission.status}
+      canChange={canDelete}
+    />
+  );
+
   return (
-    <div>
+    <div className="submission-detail-page">
       <SubmissionAnswersEditor
         formId={form.id}
         submissionId={submission.id}
@@ -216,6 +213,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         canEditAnswers={canEditAnswers}
         canDelete={canDelete}
         meta={meta}
+        statusControl={statusControl}
       >
         {schema.pages.map((page) => (
           <div key={page.id} className="card submission-page">

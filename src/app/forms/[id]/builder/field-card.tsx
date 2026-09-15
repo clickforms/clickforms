@@ -252,14 +252,16 @@ function FieldActionOverlay({
         ) : null}
         <button
           type="button"
-          className="button button--danger button--small"
+          className="button button--danger button--small field-card-action-delete"
           onMouseDown={stopSelectPropagation}
           onClick={(event) => {
             event.stopPropagation();
             onRemove();
           }}
+          aria-label={showDuplicate ? 'Delete field' : 'Clear column field'}
+          title={showDuplicate ? 'Delete field' : 'Clear column field'}
         >
-          <TrashIcon /> {showDuplicate ? 'Delete' : 'Clear column'}
+          <TrashIcon />
         </button>
       </div>
     </div>

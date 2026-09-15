@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
@@ -10,12 +11,20 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-/** Takes a published form offline (published → approved). */
-export async function POST(_request: Request, { params }: RouteContext): Promise<NextResponse> {
+// `intent` doesn't change the underlying transition (see unpublishForm) — it's purely
+// for a clearer audit log entry, distinguishing "clicked Edit on a live form" from an
+// explicit "Take offline" so the org Logs page reads accurately.
+const unpublishBodySchema = z.object({
+  intent: z.enum(['edit', 'pause']).optional(),
+});
+
+/** Takes a live form offline and resets it to draft (currentVersionId cleared). */
+export async function POST(request: Request, { params }: RouteContext): Promise<NextResponse> {
   try {
     const session = await requireSession();
     requireRole(session, ['admin', 'editor', 'member']);
     const { id } = await params;
+    const body = unpublishBodySchema.parse(await request.json().catch(() => ({})));
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
@@ -32,7 +41,10 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
           action: 'form.unpublish',
           entityType: 'form',
           entityId: form.id,
-          metadata: version ? { versionNumber: version.versionNumber } : {},
+          metadata: {
+            intent: body.intent ?? 'pause',
+            ...(version ? { versionNumber: version.versionNumber } : {}),
+          },
         },
         tx,
       );

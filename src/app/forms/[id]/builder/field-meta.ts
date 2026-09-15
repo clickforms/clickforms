@@ -98,7 +98,18 @@ export function createDefaultField(type: FieldType): FormField {
     case 'email':
       return { id, type, label, required: false };
     case 'file_upload':
-      return { id, type, label, required: false };
+      // Defaults to the three types the PDF export can actually do something useful
+      // with — images get embedded inline, PDFs get their pages merged onto the end of
+      // the exported submission PDF (see build-submission-export-assets.ts and the
+      // export route). Still just a starting point in the "Accepted types" field below,
+      // not enforced beyond it — an admin can widen or narrow it per field.
+      return {
+        id,
+        type,
+        label,
+        required: false,
+        validation: { acceptedTypes: ['image/png', 'image/jpeg', 'application/pdf'] },
+      };
     case 'signature':
       return { id, type, label, required: false };
     case 'section_break':

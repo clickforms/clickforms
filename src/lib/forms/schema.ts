@@ -69,6 +69,66 @@ export function isLayoutOnlyField(type: FieldType): boolean {
   return (LAYOUT_ONLY_FIELD_TYPES as readonly string[]).includes(type);
 }
 
+// Field types whose answer is always a single plain string (or coerces cleanly to one) —
+// the only types eligible to be picked as a form's PDF filename "prefix" (Settings tab,
+// see FormSettingsClient / resolveFilenamePrefixValue in generate-submission-pdf.ts).
+// Deliberately excludes: paragraph (multi-line, messy in a filename), checkbox (array
+// answer), file_upload/signature/image (not text), address/choice_matrix (structured
+// objects, not a single string), rating/opinion_scale/legal (numbers/booleans, not
+// identifying text), and every layout-only type (never has an answer at all).
+export const FILENAME_PREFIX_ELIGIBLE_FIELD_TYPES = [
+  'short_text',
+  'multi_choice',
+  'dropdown',
+  'date',
+  'time',
+  'email',
+  'number',
+  'phone',
+  'website',
+  'hidden',
+] as const satisfies readonly FieldType[];
+
+export function isFilenamePrefixEligibleField(type: FieldType): boolean {
+  return (FILENAME_PREFIX_ELIGIBLE_FIELD_TYPES as readonly string[]).includes(type);
+}
+
+export interface FilenamePrefixCandidate {
+  id: string;
+  label: string;
+  /** 1-based position among *other eligible fields only* — matches how an admin would
+   *  count "field 2" while scanning the form top to bottom, not its raw index among every
+   *  field/divider/header on the page. */
+  position: number;
+}
+
+/** Every field on `schema`, in on-page order (including column-layout children), that's
+ *  eligible to back the PDF filename "prefix" token — see
+ *  FILENAME_PREFIX_ELIGIBLE_FIELD_TYPES. Used by the form Settings page to populate the
+ *  "Prefix field" picker. */
+export function listFilenamePrefixCandidates(schema: FormSchema): FilenamePrefixCandidate[] {
+  const candidates: FilenamePrefixCandidate[] = [];
+  for (const page of schema.pages) {
+    for (const fieldId of expandPageFieldIds(page, schema.fields)) {
+      const field = schema.fields[fieldId];
+      // Every eligible type (FILENAME_PREFIX_ELIGIBLE_FIELD_TYPES) always has a real
+      // label — only divider/static_text make it optional, and both are excluded from
+      // eligibility — but `field.label`'s type is widened to `string | undefined` across
+      // the whole FormField union regardless, since TS can't narrow a union by a runtime
+      // array-inclusion check. The `?? ''` is just satisfying that type, never a real
+      // fallback in practice.
+      if (field && isFilenamePrefixEligibleField(field.type)) {
+        candidates.push({
+          id: field.id,
+          label: field.label ?? '',
+          position: candidates.length + 1,
+        });
+      }
+    }
+  }
+  return candidates;
+}
+
 const fieldOptionSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
@@ -103,7 +163,7 @@ const fileValidationSchema = z
 
 const hexColorSchema = z
   .string()
-  .regex(/^#[0-9a-fA-F]{6}$/, 'Color must be a 6-digit hex value, e.g. #00a960')
+  .regex(/^#[0-9a-fA-F]{6}$/, 'Color must be a 6-digit hex value, e.g. #55ea8c')
   .optional();
 
 // Shared by the static_text field's heading/body "Alignment" controls and the form-level
@@ -332,6 +392,12 @@ const fileUploadFieldSchema = baseFieldSchema.extend({
   // data-model change. maxFiles undefined + multiple:true means "no fixed cap".
   multiple: z.boolean().optional(),
   maxFiles: z.number().int().min(2).max(20).optional(),
+  // Uploaded files embed into the submission PDF export by default (images in a trailing
+  // "Attachments" section, PDFs appended as extra pages — see
+  // buildSubmissionExportAssets/appendUploadedPdfPages) so reviewers never have to
+  // separately download them. Explicitly false opts a field out of that embedding;
+  // undefined (the common case) means "embed".
+  embedInExport: z.boolean().optional(),
 });
 
 const signatureFieldSchema = baseFieldSchema.extend({
@@ -716,7 +782,7 @@ const brandingSchema = z
   .object({
     primaryColor: z
       .string()
-      .regex(/^#[0-9a-fA-F]{6}$/, 'primaryColor must be a 6-digit hex color, e.g. #00a960')
+      .regex(/^#[0-9a-fA-F]{6}$/, 'primaryColor must be a 6-digit hex color, e.g. #55ea8c')
       .optional(),
     secondaryColor: z
       .string()
@@ -739,13 +805,13 @@ const brandingSchema = z
 
 export type FormBranding = z.infer<typeof brandingSchema>;
 
-export const DEFAULT_FORM_PRIMARY_COLOR = '#00a960';
+export const DEFAULT_FORM_PRIMARY_COLOR = '#55ea8c';
 export const DEFAULT_FORM_SECONDARY_COLOR = '#4a90d9';
 export const DEFAULT_SUBMIT_BUTTON_TEXT = 'Submit';
 
 /** Preset swatches shown in the builder color picker. */
 export const FIELD_COLOR_PRESETS = [
-  '#00a960',
+  '#55ea8c',
   '#059669',
   '#0ea5e9',
   '#4f46e5',

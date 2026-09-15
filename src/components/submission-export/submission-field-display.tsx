@@ -377,7 +377,6 @@ function LegalExportDisplay({
 
 function FileExportDisplay({
   fieldId,
-  assets,
   resolveFiles,
 }: {
   fieldId: string;
@@ -387,23 +386,20 @@ function FileExportDisplay({
   // Lists every resolved file for this field, not just the first — a `multiple`-enabled
   // file_upload field can have several SubmissionFile rows sharing this fieldId (see the
   // schema comment on fileUploadFieldSchema.multiple for why that required no DB change).
+  // Images are no longer rendered inline here: when embedInExport !== false they're
+  // rendered instead in a trailing "Attachments" section (see
+  // SubmissionFormExportDocument) so they always land on the last page rather than
+  // disrupting the form's layout at this field's position. Whether or not a field embeds,
+  // the filename is still listed here so the export makes clear something was uploaded.
   const files = resolveFiles(fieldId);
   if (files.length === 0) return <div className="export-file-status">No file uploaded</div>;
   return (
     <div className="export-file-list">
-      {files.map((file) => {
-        const dataUrl = assets.submissionFiles[file.id];
-        return dataUrl ? (
-          <div key={file.id} className="export-signature">
-            {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
-            <img src={dataUrl} alt={file.filename} />
-          </div>
-        ) : (
-          <div key={file.id} className="export-file-status">
-            {file.filename}
-          </div>
-        );
-      })}
+      {files.map((file) => (
+        <div key={file.id} className="export-file-status">
+          {file.filename}
+        </div>
+      ))}
     </div>
   );
 }

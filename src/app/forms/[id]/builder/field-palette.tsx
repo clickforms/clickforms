@@ -14,7 +14,9 @@ function SearchIcon() {
   );
 }
 
-function PaletteIcon({ type }: { type: FieldType }) {
+/** Exported so the canvas empty-state's quick-add buttons (canvas.tsx) can show the same
+ * icon as the matching palette entry, rather than duplicating this switch there. */
+export function PaletteIcon({ type }: { type: FieldType }) {
   const common = {
     width: 18,
     height: 18,
@@ -640,7 +642,6 @@ export function FieldPalette({
 
   return (
     <div className="field-palette">
-      <p className="field-palette-title">Fields</p>
       <label className="palette-search">
         <span className="palette-search-icon">
           <SearchIcon />

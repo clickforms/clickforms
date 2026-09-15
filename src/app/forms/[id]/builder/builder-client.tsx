@@ -58,7 +58,6 @@ import {
   type FormWorkflowResult,
   getWorkflowStepForStatus,
   runFormWorkflow,
-  shouldShowTakeOfflineAction,
 } from '@/lib/forms/form-workflow-client';
 import type {
   ColumnCount,
@@ -94,12 +93,9 @@ interface BuilderClientProps {
    *  (see src/lib/forms/live-status.ts). */
   initialCurrentVersionId: string | null;
   canEdit: boolean;
-  /** Absolute public URL on the org's subdomain (e.g. https://acme.clickforms.com.au/f/slug)
-   *  — see src/app/forms/list/page.tsx for the same buildOrgFormUrl pattern. */
-  publicUrl: string;
 }
 
-type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+type SaveStatus = 'idle' | 'saving' | 'error';
 
 interface DragPayload {
   source?: 'palette';
@@ -154,53 +150,27 @@ function TakeOfflineIcon() {
   );
 }
 
-/* Same overlapping-squares glyph as field-card.tsx's CopyIcon, kept as a separate
-   component here since that one lives in a different file. */
-function ShareLinkIcon() {
-  return (
-    <svg width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="6" y="6" width="8" height="8" rx="1.4" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M4 10.2V4.8A1.8 1.8 0 0 1 5.8 3h5.4"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M3.5 6 8 10.5 12.5 6"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ExternalLinkIcon() {
+/** Deliberately not a chevron — this handle sits directly beside PageTabs' own prev/next
+ * arrows, and a rotated chevron here reads as a third, conflicting direction cue in the
+ * same small area. A panel glyph that fills in on its own left third when closed (echoing
+ * the handle's real position at the box's left edge) signals "collapsed vs. expanded" by
+ * shape alone, with nothing to point the wrong way. */
+function PanelToggleIcon({ open }: { open: boolean }) {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M6.5 4H4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V9.5"
+      <rect
+        x="2.5"
+        y="3"
+        width="11"
+        height="10"
+        rx="1.75"
         stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeWidth="1.3"
       />
-      <path
-        d="M9.5 2.5H13.5V6.5M13 3 8 8"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M6.25 3v10" stroke="currentColor" strokeWidth="1.3" />
+      {open ? null : (
+        <rect x="3.15" y="3.65" width="2.5" height="8.7" rx="0.6" fill="currentColor" />
+      )}
     </svg>
   );
 }
@@ -219,43 +189,48 @@ function SettingsIcon() {
   );
 }
 
-function RevertToDraftIcon() {
+function EditFormIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
-        d="M4 4.5A5.5 5.5 0 1 1 3 8"
+        d="M10.5 2.5l3 3L5.5 13.5H2.5v-3L10.5 2.5z"
         stroke="currentColor"
         strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-      <path
-        d="M4 2v3H1"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
   );
 }
 
-function SaveStatusBadge({ status, error }: { status: SaveStatus; error: string | null }) {
-  switch (status) {
-    case 'pending':
-      return <span className="builder-save-status builder-save-status--pending">Unsaved</span>;
-    case 'saving':
-      return <span className="builder-save-status">Saving…</span>;
-    case 'saved':
-      return <span className="builder-save-status builder-save-status--saved">Saved</span>;
-    case 'error':
-      return (
-        <span className="builder-save-status builder-save-status--error" title={error ?? undefined}>
-          Save failed
-        </span>
-      );
-    default:
-      return null;
+/** Only shown while editing — reflects the network state of the current manual Save
+ *  action plus whether there are edits sitting unsaved in the canvas. There's no
+ *  autosave anymore (see the "Save"/"Cancel" buttons in the toolbar), so this never
+ *  needs to represent a debounce-pending state. */
+function SaveStatusBadge({
+  status,
+  hasUnsavedChanges,
+  error,
+}: {
+  status: SaveStatus;
+  hasUnsavedChanges: boolean;
+  error: string | null;
+}) {
+  if (status === 'saving') {
+    return <span className="builder-save-status">Saving…</span>;
   }
+  if (status === 'error') {
+    return (
+      <span className="builder-save-status builder-save-status--error" title={error ?? undefined}>
+        Save failed
+      </span>
+    );
+  }
+  if (hasUnsavedChanges) {
+    return (
+      <span className="builder-save-status builder-save-status--pending">Unsaved changes</span>
+    );
+  }
+  return null;
 }
 
 export function BuilderClient({
@@ -264,14 +239,16 @@ export function BuilderClient({
   initialVersion,
   initialCurrentVersionId,
   canEdit,
-  publicUrl,
 }: BuilderClientProps) {
   const toast = useToast();
   const { status: formStatus, setStatus: setFormStatus, syncLiveState } = useFormWorkspaceStatus();
   const [schema, setSchema] = useState<FormSchema>(
     initialVersion?.schema ?? createEmptyFormSchema(),
   );
-  const [version, setVersion] = useState<VersionMeta | null>(
+  // Kept in sync with the server after every save/workflow transition even though
+  // nothing currently reads it — retained as the natural place to hang a future "viewing
+  // version N" indicator rather than re-deriving it from scratch later.
+  const [_version, setVersion] = useState<VersionMeta | null>(
     initialVersion
       ? {
           id: initialVersion.id,
@@ -280,21 +257,33 @@ export function BuilderClient({
         }
       : null,
   );
-  // Drives the Live/Live·pending indicator and the "Take offline" action — only changes
+  // Drives the Live indicator and the "Take offline"/"Edit form" actions — only changes
   // via an explicit publish/unpublish, never as a side effect of editing (see
-  // applyWorkflowResult and public-lookup.ts's getPublishedFormBySlug).
+  // applyWorkflowResult and public-lookup.ts's getFormForExistingSubmission).
   const [currentVersionId, setCurrentVersionId] = useState<string | null>(initialCurrentVersionId);
+  // Truth of "is this reachable by respondents right now" — see live-status.ts.
+  const isLive = currentVersionId !== null && formStatus !== 'archived';
+  // The canvas is locked by default — draft or live, published or not — until the user
+  // explicitly clicks "Edit". This is on top of, not instead of, the permission-based
+  // `canEdit` gate. Editing a live form additionally requires confirming the take-offline
+  // warning first (see the confirmation modal below and handleEditClick).
+  const [isEditing, setIsEditing] = useState(false);
+  const canEditCanvas = canEdit && isEditing;
   const [activePageId, setActivePageId] = useState<string>(() => schema.pages[0]?.id ?? '');
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   // Which field's settings modal is open, if any — separate from selection so selecting a
   // field (to show its overlay on the canvas) doesn't itself pop the modal open.
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [showFormSettings, setShowFormSettings] = useState(false);
+  const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
+  // Drawer state for the floating page-selector/actions box (.builder-header) — slides
+  // off to the right when collapsed, leaving just its handle tab visible so it can be
+  // reopened without permanently losing access to Approve/page navigation (Share now
+  // lives in FormTopNav instead, so it isn't part of what this drawer hides).
+  const [toolbarOpen, setToolbarOpen] = useState(true);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreMenuTriggerRef = useRef<HTMLButtonElement>(null);
-  const [shareOpen, setShareOpen] = useState(false);
-  const shareTriggerRef = useRef<HTMLButtonElement>(null);
   const [mockAnswers, setMockAnswers] = useState<FormAnswers>({});
   const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
 
@@ -302,9 +291,9 @@ export function BuilderClient({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isWorkflowBusy, setIsWorkflowBusy] = useState(false);
 
+  // The last schema known to be persisted on the server — compared against the live
+  // `schema` state to derive hasUnsavedChanges, and what Cancel reverts back to.
   const lastSavedSchemaJsonRef = useRef<string>(JSON.stringify(schema));
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSaveErrorToastRef = useRef<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -321,94 +310,52 @@ export function BuilderClient({
     return centerFields.length > 0 ? centerFields : centerHits;
   }, []);
 
-  const saveSchema = useCallback(
-    async (schemaToSave: FormSchema, schemaJson: string): Promise<boolean> => {
-      const parsed = formSchemaSchema.safeParse(schemaToSave);
-      if (!parsed.success) {
-        // Surfaced the same way a failed save request is (toast + error badge, no
-        // throw) — this used to throw synchronously, which escaped as an unhandled
-        // rejection from the setTimeout-scheduled autosave below and crashed the whole
-        // page to the dev error overlay instead of just flagging the bad schema.
-        const message = 'Form has validation errors — fix them before continuing';
-        setSaveStatus('error');
-        setSaveError(message);
-        if (lastSaveErrorToastRef.current !== message) {
-          toast.error(message);
-          lastSaveErrorToastRef.current = message;
-        }
-        return false;
-      }
+  // No autosave: schema edits only leave the browser when the user explicitly clicks
+  // Save (see handleSaveAndClose below) — deliberate, so an accidental change to a live
+  // form's schema can never slip onto the server unnoticed.
+  const saveSchema = useCallback(async (): Promise<boolean> => {
+    const parsed = formSchemaSchema.safeParse(schema);
+    if (!parsed.success) {
+      const message = 'Form has validation errors — fix them before saving';
+      setSaveStatus('error');
+      setSaveError(message);
+      toast.error(message);
+      return false;
+    }
 
-      setSaveStatus('saving');
-      setSaveError(null);
-      try {
-        const response = await fetch(`/api/forms/${formId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ schema: parsed.data }),
+    setSaveStatus('saving');
+    setSaveError(null);
+    try {
+      const response = await fetch(`/api/forms/${formId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schema: parsed.data }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(extractApiError(body, 'Failed to save changes'));
+      }
+      lastSavedSchemaJsonRef.current = JSON.stringify(schema);
+      if (body?.version) {
+        setVersion({
+          id: body.version.id,
+          versionNumber: body.version.versionNumber,
+          publishedAt: body.version.publishedAt,
         });
-        const body = await response.json().catch(() => null);
-        if (!response.ok) {
-          throw new Error(extractApiError(body, 'Failed to save changes'));
-        }
-        lastSavedSchemaJsonRef.current = schemaJson;
-        if (body?.version) {
-          setVersion({
-            id: body.version.id,
-            versionNumber: body.version.versionNumber,
-            publishedAt: body.version.publishedAt,
-          });
-        }
-        if (body?.form?.status) {
-          setFormStatus(body.form.status);
-        }
-        setSaveStatus('saved');
-        lastSaveErrorToastRef.current = null;
-        return true;
-      } catch (err) {
-        const message = getErrorMessage(err, 'Failed to save changes');
-        setSaveStatus('error');
-        setSaveError(message);
-        if (lastSaveErrorToastRef.current !== message) {
-          toast.error(message);
-          lastSaveErrorToastRef.current = message;
-        }
-        return false;
       }
-    },
-    [formId, setFormStatus, toast],
-  );
-
-  useEffect(() => {
-    if (!canEdit) return;
-    const schemaJson = JSON.stringify(schema);
-    if (schemaJson === lastSavedSchemaJsonRef.current) return;
-
-    setSaveStatus('pending');
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      void saveSchema(schema, schemaJson);
-    }, 800);
-
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [schema, canEdit, saveSchema]);
-
-  async function ensureSaved() {
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
+      if (body?.form?.status) {
+        setFormStatus(body.form.status);
+      }
+      setSaveStatus('idle');
+      return true;
+    } catch (err) {
+      const message = getErrorMessage(err, 'Failed to save changes');
+      setSaveStatus('error');
+      setSaveError(message);
+      toast.error(message);
+      return false;
     }
-    const schemaJson = JSON.stringify(schema);
-    if (schemaJson === lastSavedSchemaJsonRef.current) {
-      return;
-    }
-    const saved = await saveSchema(schema, schemaJson);
-    if (!saved) {
-      throw new Error('Could not save changes');
-    }
-  }
+  }, [schema, formId, setFormStatus, toast]);
 
   function applyWorkflowResult(body: FormWorkflowResult) {
     const nextStatus = body?.form?.status as FormStatus | undefined;
@@ -428,24 +375,32 @@ export function BuilderClient({
     }
   }
 
-  async function runWorkflowAction(action: FormWorkflowAction) {
-    if (!canEdit || isWorkflowBusy) return;
+  // Workflow actions (publish/unpublish) only ever run while the canvas is locked
+  // (!isEditing) — the toolbar only renders their buttons in that state — so there's
+  // never unsaved schema state to flush first; schema === last-saved by construction.
+  async function runWorkflowAction(
+    action: FormWorkflowAction,
+    body?: Record<string, unknown>,
+  ): Promise<boolean> {
+    if (!canEdit || isWorkflowBusy) return false;
 
     setIsWorkflowBusy(true);
     try {
-      await ensureSaved();
-      const body = await runFormWorkflow(formId, action);
-      applyWorkflowResult(body);
+      const result = await runFormWorkflow(formId, action, body);
+      applyWorkflowResult(result);
 
       const messages: Record<FormWorkflowAction, string> = {
-        approve: 'Form approved — ready to publish',
-        publish: `Published as v${body.version?.versionNumber ?? ''}`.trim(),
-        unpublish: 'Form taken offline',
-        'revert-to-draft': 'Form reverted to draft',
+        publish: `Published as v${result.version?.versionNumber ?? ''}`.trim(),
+        unpublish:
+          body?.intent === 'edit'
+            ? 'Form taken offline — you can edit it now'
+            : 'Form taken offline',
       };
       toast.success(messages[action] ?? 'Status updated');
+      return true;
     } catch (err) {
       toast.error(getErrorMessage(err, 'Something went wrong'));
+      return false;
     } finally {
       setIsWorkflowBusy(false);
     }
@@ -461,17 +416,53 @@ export function BuilderClient({
     await runWorkflowAction('unpublish');
   }
 
-  async function handleRevertToDraft() {
-    await runWorkflowAction('revert-to-draft');
+  /** Clicking "Edit": a live form must be taken offline first (confirmed via the modal
+   *  below), a form that's already offline just unlocks the canvas immediately — there's
+   *  no live version at risk, so no confirmation is needed. */
+  function handleEditClick() {
+    if (!canEdit) return;
+    if (isLive) {
+      setShowEditConfirm(true);
+      return;
+    }
+    setIsEditing(true);
   }
 
-  async function handleCopyLink() {
-    try {
-      await navigator.clipboard.writeText(publicUrl);
-      toast.success('Live link copied to clipboard');
-    } catch {
-      toast.error('Could not copy link — select and copy manually');
+  async function handleConfirmEditForm() {
+    setShowEditConfirm(false);
+    const tookOffline = await runWorkflowAction('unpublish', { intent: 'edit' });
+    if (tookOffline) setIsEditing(true);
+  }
+
+  /** Save persists the current schema and immediately re-locks the canvas — every editing
+   *  session ends in the same, unambiguous locked state, whether or not anything actually
+   *  changed. */
+  async function handleSaveAndClose() {
+    if (hasUnsavedChanges) {
+      const saved = await saveSchema();
+      if (!saved) return;
+      toast.success('Form saved');
     }
+    setIsEditing(false);
+  }
+
+  /** Discards any unsaved edits (after confirming, since this can throw away real work)
+   *  and re-locks the canvas on the last-saved schema. */
+  function handleCancelEditing() {
+    if (hasUnsavedChanges) {
+      const confirmed = window.confirm(
+        'Discard your unsaved changes to this form? This cannot be undone.',
+      );
+      if (!confirmed) return;
+    }
+    const restored = JSON.parse(lastSavedSchemaJsonRef.current) as FormSchema;
+    setSchema(restored);
+    setActivePageId(restored.pages[0]?.id ?? '');
+    setSelectedFieldId(null);
+    setEditingFieldId(null);
+    setSaveStatus('idle');
+    setSaveError(null);
+    setIsEditing(false);
   }
 
   function handleSelectField(fieldId: string) {
@@ -494,27 +485,27 @@ export function BuilderClient({
   }
 
   function handleAddField(type: FieldType, index?: number) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     const field: FormField = createDefaultField(type);
     setSchema((prev) => addFieldToPage(prev, activePageId, field, index));
     setSelectedFieldId(field.id);
   }
 
   function handleAddColumnLayout(columns: ColumnCount, index?: number) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     const { schema: next, layoutId } = addColumnLayoutToPage(schema, activePageId, columns, index);
     setSchema(next);
     setSelectedFieldId(layoutId);
   }
 
   function handleSetColumnLayoutColumns(layoutId: string, columns: ColumnCount) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     setSchema((prev) => setColumnLayoutColumns(prev, layoutId, columns));
   }
 
   /** Fills an empty column slot with a freshly-created field of `type`, then selects it. */
   function handleAddColumnField(layoutId: string, slotIndex: number, type: FieldType) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     const result = setColumnSlotField(schema, layoutId, slotIndex, type);
     if (!result) return;
     setSchema(result.schema);
@@ -522,19 +513,19 @@ export function BuilderClient({
   }
 
   function handleRemoveField(fieldId: string) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     setSchema((prev) => removeField(prev, fieldId));
     setSelectedFieldId((current) => (current === fieldId ? null : current));
     setEditingFieldId((current) => (current === fieldId ? null : current));
   }
 
   function handleReplaceFieldType(fieldId: string, type: FieldType) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     setSchema((prev) => replaceFieldType(prev, fieldId, type));
   }
 
   function handleDuplicateField(fieldId: string) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     const page = schema.pages.find((entry) => entry.id === activePageId);
     const index = page?.fields.indexOf(fieldId) ?? -1;
     const next = duplicateField(schema, activePageId, fieldId);
@@ -545,27 +536,27 @@ export function BuilderClient({
   }
 
   function handleUpdateField(fieldId: string, patch: FieldPatch) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     setSchema((prev) => updateField(prev, fieldId, patch));
   }
 
   function handleUpdateBranding(patch: Partial<FormBranding>) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     setSchema((prev) => ({ ...prev, branding: { ...prev.branding, ...patch } }));
   }
 
   function handleSetConditionalRule(rule: ConditionalRule) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     setSchema((prev) => setConditionalRule(prev, rule));
   }
 
   function handleClearConditionalRule(fieldId: string) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     setSchema((prev) => clearConditionalRule(prev, fieldId));
   }
 
   function handleAddPage() {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     const id = crypto.randomUUID();
     const page: FormPage = { id, title: `Page ${schema.pages.length + 1}`, fields: [] };
     setSchema((prev) => addPage(prev, page));
@@ -574,7 +565,7 @@ export function BuilderClient({
   }
 
   function handleRemovePage(pageId: string) {
-    if (!canEdit || schema.pages.length <= 1) return;
+    if (!canEditCanvas || schema.pages.length <= 1) return;
     setSchema((prev) => removePage(prev, pageId));
     if (activePageId === pageId) {
       const remaining = schema.pages.filter((page) => page.id !== pageId);
@@ -585,12 +576,12 @@ export function BuilderClient({
   }
 
   function handleRenamePage(pageId: string, title: string) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     setSchema((prev) => renamePage(prev, pageId, title));
   }
 
   function handleMovePage(pageId: string, direction: 'left' | 'right') {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     const index = schema.pages.findIndex((page) => page.id === pageId);
     if (index === -1) return;
     const targetIndex = direction === 'left' ? index - 1 : index + 1;
@@ -611,7 +602,7 @@ export function BuilderClient({
   }
 
   function handleDragStart(event: DragStartEvent) {
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     const data = event.active.data.current as DragPayload | undefined;
     if (data?.source === 'palette' && data.columnLayoutColumns) {
       setActiveDragLabel(COLUMN_LAYOUT_LABELS[data.columnLayoutColumns]);
@@ -627,7 +618,7 @@ export function BuilderClient({
 
   function handleDragEnd(event: DragEndEvent) {
     setActiveDragLabel(null);
-    if (!canEdit) return;
+    if (!canEditCanvas) return;
     const { active, over } = event;
     if (!over) return;
 
@@ -675,6 +666,12 @@ export function BuilderClient({
   const activePage = schema.pages.find((page) => page.id === activePageId);
   const activePageIndex = schema.pages.findIndex((page) => page.id === activePageId);
   const editingField = editingFieldId ? (schema.fields[editingFieldId] ?? null) : null;
+  // Duplicate lives in the modal's own header now (see the "Edit field" modal below)
+  // rather than inside FieldSettingsPanel — that panel is only ever rendered in this one
+  // modal, so its own second header row was just restating "Edit field" a second time.
+  const isEditingColumnChild = editingField
+    ? Boolean(findParentColumnLayout(schema, editingField.id))
+    : false;
 
   const visibleFieldIds = useMemo(
     () => getVisibleFieldIds(schema, mockAnswers),
@@ -685,479 +682,541 @@ export function BuilderClient({
     [schema.conditionalLogic],
   );
 
-  const isSaveBusy = saveStatus === 'pending' || saveStatus === 'saving';
-  const hasDraftVersion = version?.publishedAt === null;
+  const isSaveBusy = saveStatus === 'saving';
+  // Deliberately NOT memoized on `schema` alone: the other half of this comparison,
+  // lastSavedSchemaJsonRef, is a ref that changes after every successful save without
+  // `schema` itself changing — a useMemo keyed on just [schema] would keep returning its
+  // stale cached `true` from before the save, leaving "Unsaved changes" (and a disabled
+  // Publish button) stuck on-screen even though the save succeeded. Plain recomputation
+  // on every render is cheap enough for a form schema and always correct.
+  const hasUnsavedChanges = JSON.stringify(schema) !== lastSavedSchemaJsonRef.current;
   const workflowStep = getWorkflowStepForStatus(formStatus);
-  const canRunWorkflow =
-    workflowStep !== null &&
-    !isSaveBusy &&
-    (formStatus === 'draft'
-      ? hasDraftVersion
-      : formStatus === 'approved'
-        ? version?.publishedAt !== null || hasDraftVersion
-        : formStatus === 'published');
-  // Truth of "is this reachable by respondents right now" — see live-status.ts. Not
-  // gated on !isSaveBusy: autosaving a schema edit never changes currentVersionId, so
-  // there's nothing to debounce here (unlike the old formStatus-based check, which used
-  // to flicker because status itself is what autosave changes).
-  const isLive = currentVersionId !== null && formStatus !== 'archived';
-  const hasPendingChanges = isLive && version?.id !== currentVersionId;
-  const showTakeOffline = shouldShowTakeOfflineAction(formStatus, isLive);
+  // Belt-and-suspenders: the Publish button is only ever rendered while !isEditing, at
+  // which point hasUnsavedChanges is always false by construction — but disabling on it
+  // too means Publish can never fire against a stale/dirty schema even if that invariant
+  // is ever broken.
+  const canRunWorkflow = workflowStep !== null && formStatus === 'draft' && !hasUnsavedChanges;
 
   // FormTopNav renders the Live/Draft badge (it lives in the shared top row, outside
-  // this component's tree), so push the values it needs up into context whenever they
-  // change rather than duplicating the badge here too.
+  // this component's tree), so push the value it needs up into context whenever it
+  // changes rather than duplicating the badge here too. It also needs hasUnsavedChanges,
+  // to warn before navigating to another tab (Responses/Settings) mid-edit.
   useEffect(() => {
-    syncLiveState({ isLive, hasPendingChanges });
-  }, [isLive, hasPendingChanges, syncLiveState]);
+    syncLiveState({ isLive, hasUnsavedChanges });
+  }, [isLive, hasUnsavedChanges, syncLiveState]);
+
+  // Covers closing the tab, refreshing, or typing a new URL — the browser's own
+  // confirmation dialog, which can't be replaced with custom copy. In-app navigation
+  // (clicking Responses/Settings while mid-edit) is guarded separately in FormTopNav,
+  // since beforeunload never fires for a client-side route change.
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   return (
-    <div className="builder">
-      <header className="builder-header">
-        <PageTabs
-          pages={schema.pages}
-          activePageId={activePage?.id ?? ''}
-          canEdit={canEdit}
-          onSelectPage={handleSelectPage}
-          onAddPage={handleAddPage}
-          onRemovePage={handleRemovePage}
-          onRenamePage={handleRenamePage}
-          onMovePage={handleMovePage}
-        />
-        <div className="builder-header-actions">
-          {!canEdit ? <span className="builder-readonly-badge">Read-only</span> : null}
-          {canEdit ? (
-            <>
-              <SaveStatusBadge status={saveStatus} error={saveError} />
-              <span className="builder-header-divider" aria-hidden="true" />
-              <div className="builder-header-status-group">
-                {isLive ? (
-                  <>
-                    {/* Replaces the old plain "Copy link" button — this is also where
-                        "view the live form from here" lives, so copying the link and
-                        opening it sit together instead of needing a second control. */}
+    <>
+      {/* Sibling of .builder (below), not its child — sits directly on the page's own
+          gray background rather than inside the white bordered card, so the space to its
+          left reads as background, not part of the card, and the card itself starts
+          right at the top instead of being pushed down by this row. */}
+      <header className={`builder-header ${toolbarOpen ? '' : 'builder-header--closed'}`}>
+        <button
+          type="button"
+          className="builder-header-handle"
+          onClick={() => setToolbarOpen((value) => !value)}
+          aria-label={toolbarOpen ? 'Collapse toolbar' : 'Expand toolbar'}
+          aria-expanded={toolbarOpen}
+        >
+          <PanelToggleIcon open={toolbarOpen} />
+        </button>
+        {!canEdit ? <span className="builder-readonly-badge">Read-only</span> : null}
+        {canEdit ? (
+          <>
+            <SaveStatusBadge
+              status={saveStatus}
+              hasUnsavedChanges={hasUnsavedChanges}
+              error={saveError}
+            />
+            <PageTabs
+              pages={schema.pages}
+              activePageId={activePage?.id ?? ''}
+              canEdit={canEditCanvas}
+              onSelectPage={handleSelectPage}
+              onAddPage={handleAddPage}
+              onRemovePage={handleRemovePage}
+              onRenamePage={handleRenamePage}
+              onMovePage={handleMovePage}
+            />
+            {/* Just the kebab now — Share moved up to FormTopNav, next to Preview, since
+                the live link is the same regardless of which tab is active rather than
+                being a builder-specific concern. */}
+            <div className="builder-header-utility">
+              <button
+                ref={moreMenuTriggerRef}
+                type="button"
+                className="button button--ghost button--small builder-header-kebab"
+                onClick={() => setMoreMenuOpen((value) => !value)}
+                aria-haspopup="true"
+                aria-label="More actions"
+              >
+                <KebabIcon />
+              </button>
+              <DropdownMenu
+                open={moreMenuOpen}
+                onOpenChange={setMoreMenuOpen}
+                triggerRef={moreMenuTriggerRef}
+                align="end"
+              >
+                <ul className="builder-more-menu-list">
+                  <li>
                     <button
-                      ref={shareTriggerRef}
                       type="button"
-                      className="button button--ghost builder-header-share"
-                      onClick={() => setShareOpen((value) => !value)}
-                      aria-haspopup="true"
+                      className="actions-menu-item"
+                      onClick={() => {
+                        setMoreMenuOpen(false);
+                        setShowFormSettings(true);
+                      }}
                     >
-                      <ShareLinkIcon /> Share
-                      <ChevronDownIcon />
+                      <span className="actions-menu-icon">
+                        <SettingsIcon />
+                      </span>
+                      Form settings
                     </button>
-                    <DropdownMenu
-                      open={shareOpen}
-                      onOpenChange={setShareOpen}
-                      triggerRef={shareTriggerRef}
-                      panelClassName="actions-menu-panel share-panel"
-                      align="end"
-                    >
-                      <p className="share-panel-label">Live link</p>
-                      <div className="share-panel-url-row">
-                        <span className="share-panel-url" title={publicUrl}>
-                          {publicUrl}
-                        </span>
-                        <button
-                          type="button"
-                          className="share-panel-copy"
-                          onClick={() => {
-                            setShareOpen(false);
-                            void handleCopyLink();
-                          }}
-                          aria-label="Copy live link"
-                          title="Copy link"
-                        >
-                          <ShareLinkIcon />
-                        </button>
-                      </div>
-                      <a
-                        href={publicUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="share-panel-view-live"
-                        onClick={() => setShareOpen(false)}
-                      >
-                        View live form
-                        <ExternalLinkIcon />
-                      </a>
-                    </DropdownMenu>
-                  </>
-                ) : null}
-                <button
-                  ref={moreMenuTriggerRef}
-                  type="button"
-                  className="button button--ghost button--small builder-header-kebab"
-                  onClick={() => setMoreMenuOpen((value) => !value)}
-                  aria-haspopup="true"
-                  aria-label="More actions"
-                >
-                  <KebabIcon />
-                </button>
-                <DropdownMenu
-                  open={moreMenuOpen}
-                  onOpenChange={setMoreMenuOpen}
-                  triggerRef={moreMenuTriggerRef}
-                  align="end"
-                >
-                  <ul className="builder-more-menu-list">
+                  </li>
+                  {isLive ? (
                     <li>
                       <button
                         type="button"
-                        className="actions-menu-item"
+                        className="actions-menu-item actions-menu-item--danger"
                         onClick={() => {
                           setMoreMenuOpen(false);
-                          setShowFormSettings(true);
+                          void handleTakeOffline();
                         }}
+                        disabled={isWorkflowBusy}
                       >
                         <span className="actions-menu-icon">
-                          <SettingsIcon />
+                          <TakeOfflineIcon />
                         </span>
-                        Form settings
+                        <span className="actions-menu-item-text">
+                          {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
+                          <span className="actions-menu-item-hint">
+                            Stops the public link from working
+                          </span>
+                        </span>
                       </button>
                     </li>
-                    {showTakeOffline ? (
-                      <li>
-                        <button
-                          type="button"
-                          className="actions-menu-item"
-                          onClick={() => {
-                            setMoreMenuOpen(false);
-                            void handleTakeOffline();
-                          }}
-                          disabled={isWorkflowBusy}
-                        >
-                          <span className="actions-menu-icon">
-                            <TakeOfflineIcon />
-                          </span>
-                          <span className="actions-menu-item-text">
-                            {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
-                            <span className="actions-menu-item-hint">
-                              Stops the public link from working
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    ) : null}
-                  </ul>
-                </DropdownMenu>
-                {/* Paired as one control: the back-step button and the ladder button are
-                    the two directions of the same approval stage, kept visually together
-                    and away from Take offline (in the kebab above) so "go back to draft"
-                    can't be mistaken for "go offline" — see revertFormToDraft's docs for
-                    why those are different things. */}
-                <div className="builder-header-stage">
-                  {formStatus === 'approved' || formStatus === 'published' ? (
-                    <button
-                      type="button"
-                      className="button button--ghost button--small builder-header-stage-back"
-                      onClick={() => void handleRevertToDraft()}
-                      disabled={isWorkflowBusy}
-                      title={
-                        isLive
-                          ? 'Stays live until you take it offline — this only resets the approval status'
-                          : undefined
-                      }
-                    >
-                      <RevertToDraftIcon /> Set to draft
-                    </button>
                   ) : null}
-                  {workflowStep ? (
-                    <button
-                      type="button"
-                      className={
-                        canRunWorkflow
-                          ? 'button builder-header-cta'
-                          : 'button button--ghost button--small'
-                      }
-                      onClick={() => void handleWorkflowAction()}
-                      disabled={isWorkflowBusy || !canRunWorkflow}
-                      title={
-                        hasPendingChanges
-                          ? 'Your published form still shows the old version until you publish these changes'
-                          : undefined
-                      }
-                    >
-                      {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
-                      {!isWorkflowBusy && canRunWorkflow ? <ArrowRightIcon /> : null}
-                    </button>
-                  ) : null}
-                </div>
+                </ul>
+              </DropdownMenu>
+            </div>
+            {/* Two distinct modes, never blended: locked (view) shows Edit + Publish side
+                by side — the canvas is read-only either way, so both are always safe to
+                offer together; editing shows Save + Cancel instead, and nothing else,
+                since that's the only thing to do until the session ends one way or the
+                other. */}
+            {isEditing ? (
+              <div className="builder-header-stage">
+                <button
+                  type="button"
+                  className="button button--ghost button--small"
+                  onClick={handleCancelEditing}
+                  disabled={isSaveBusy}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="button builder-header-cta"
+                  onClick={() => void handleSaveAndClose()}
+                  disabled={isSaveBusy}
+                >
+                  {isSaveBusy ? 'Saving…' : hasUnsavedChanges ? 'Save' : 'Done'}
+                </button>
               </div>
-            </>
-          ) : null}
-        </div>
-      </header>
-
-      <DndContext
-        id="form-builder-dnd"
-        sensors={sensors}
-        collisionDetection={collisionDetection}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className={`builder-workspace ${canEdit ? '' : 'builder-workspace--readonly'}`}>
-          {canEdit ? (
-            <aside className="builder-palette" aria-label="Field types">
-              <FieldPalette
-                onAddField={(type) => handleAddField(type)}
-                onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
-              />
-            </aside>
-          ) : null}
-
-          <div className="builder-canvas-column">
-            <ConditionalPreviewBar
-              schema={schema}
-              mockAnswers={mockAnswers}
-              onChangeAnswer={handleChangeMockAnswer}
-            />
-
-            {activePage ? (
-              <Canvas
-                formId={formId}
-                page={activePage}
-                pageIndex={activePageIndex}
-                pageCount={schema.pages.length}
-                fields={schema.fields}
-                selectedFieldId={selectedFieldId}
-                onSelectField={handleSelectField}
-                onEditFieldDetails={handleEditFieldDetails}
-                onRemoveField={handleRemoveField}
-                onDuplicateField={handleDuplicateField}
-                onAddField={(type) => handleAddField(type)}
-                onAddColumnField={handleAddColumnField}
-                onUpdateField={handleUpdateField}
-                canEdit={canEdit}
-                visibleFieldIds={visibleFieldIds}
-                fieldIdsWithRules={fieldIdsWithRules}
-              />
             ) : (
-              <div className="builder-canvas-empty">
-                <p>No page selected.</p>
+              <div className="builder-header-stage">
+                <span className="builder-edit-tooltip-wrap">
+                  <button
+                    type="button"
+                    className="button builder-header-cta"
+                    onClick={handleEditClick}
+                    disabled={isWorkflowBusy}
+                  >
+                    <EditFormIcon />
+                    Edit
+                  </button>
+                  {isLive ? (
+                    <span className="builder-edit-tooltip" role="tooltip">
+                      Takes the form offline so you can edit it
+                    </span>
+                  ) : null}
+                </span>
+                {workflowStep ? (
+                  <button
+                    type="button"
+                    className={
+                      canRunWorkflow
+                        ? 'button builder-header-cta builder-header-cta--publish'
+                        : 'button button--ghost button--small'
+                    }
+                    onClick={() => void handleWorkflowAction()}
+                    disabled={isWorkflowBusy || !canRunWorkflow}
+                  >
+                    {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
+                    {!isWorkflowBusy && canRunWorkflow ? <ArrowRightIcon /> : null}
+                  </button>
+                ) : null}
               </div>
             )}
-          </div>
+          </>
+        ) : null}
+      </header>
 
-          {canEdit ? (
-            <div className="builder-mobile-add">
-              {activePage && activePage.fields.length === 0 ? (
-                <span className="builder-mobile-add-hint">Tap to add a field</span>
-              ) : null}
-              <button
-                type="button"
-                className="builder-mobile-add-fab"
-                onClick={() => setShowMobilePalette(true)}
-                aria-label="Add a field"
-              >
-                <PlusIcon />
-              </button>
-            </div>
-          ) : null}
-        </div>
-
-        <DragOverlay>
-          {activeDragLabel ? <div className="drag-overlay-chip">{activeDragLabel}</div> : null}
-        </DragOverlay>
-      </DndContext>
-
-      {editingField ? (
-        // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
-        <div className="modal-overlay" onMouseDown={handleCloseFieldModal}>
+      <div className="builder">
+        <DndContext
+          id="form-builder-dnd"
+          sensors={sensors}
+          collisionDetection={collisionDetection}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
           <div
-            className="modal-card modal-card--wide"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="field-settings-modal-title"
-            onMouseDown={(event) => event.stopPropagation()}
+            className={`builder-workspace ${canEditCanvas ? '' : 'builder-workspace--readonly'}`}
           >
-            <div className="modal-header">
-              <h2 className="modal-title" id="field-settings-modal-title">
-                Edit field
-              </h2>
-              <div className="modal-header-actions">
-                <span className="modal-header-badge">{FIELD_TYPE_LABELS[editingField.type]}</span>
-                <button
-                  type="button"
-                  className="modal-close"
-                  onClick={handleCloseFieldModal}
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-            <FieldSettingsPanel
-              formId={formId}
-              schema={schema}
-              field={editingField}
-              canEdit={canEdit}
-              onUpdateField={handleUpdateField}
-              onDuplicateField={handleDuplicateField}
-              onReplaceFieldType={handleReplaceFieldType}
-              onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
-              onSetConditionalRule={handleSetConditionalRule}
-              onClearConditionalRule={handleClearConditionalRule}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {showMobilePalette ? (
-        // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
-        <div className="modal-overlay" onMouseDown={() => setShowMobilePalette(false)}>
-          <div
-            className="modal-card builder-mobile-palette-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="mobile-palette-modal-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div className="modal-header">
-              <h2 className="modal-title" id="mobile-palette-modal-title">
-                Add a field
-              </h2>
-              <div className="modal-header-actions">
-                <button
-                  type="button"
-                  className="modal-close"
-                  onClick={() => setShowMobilePalette(false)}
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-            <FieldPalette
-              onAddField={(type) => {
-                handleAddField(type);
-                setShowMobilePalette(false);
-              }}
-              onAddColumnLayout={(columns) => {
-                handleAddColumnLayout(columns);
-                setShowMobilePalette(false);
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {showFormSettings ? (
-        // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
-        <div className="modal-overlay" onMouseDown={() => setShowFormSettings(false)}>
-          <div
-            className="modal-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="form-settings-modal-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div className="modal-header">
-              <h2 className="modal-title" id="form-settings-modal-title">
-                Form settings
-              </h2>
-              <div className="modal-header-actions">
-                <button
-                  type="button"
-                  className="modal-close"
-                  onClick={() => setShowFormSettings(false)}
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-            <div className="settings-section">
-              <p className="settings-section-title">Form title</p>
-              <label className="settings-toggle-row">
-                <span className="settings-label">Show form title</span>
-                <input
-                  type="checkbox"
-                  checked={schema.branding.showTitle === true}
-                  disabled={!canEdit}
-                  onChange={(event) => handleUpdateBranding({ showTitle: event.target.checked })}
+            {canEditCanvas ? (
+              <aside className="builder-palette" aria-label="Field types">
+                <FieldPalette
+                  onAddField={(type) => handleAddField(type)}
+                  onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
                 />
-              </label>
-              {schema.branding.showTitle === true ? (
+              </aside>
+            ) : null}
+
+            <div className="builder-canvas-column">
+              <ConditionalPreviewBar
+                schema={schema}
+                mockAnswers={mockAnswers}
+                onChangeAnswer={handleChangeMockAnswer}
+              />
+
+              {activePage ? (
+                <Canvas
+                  formId={formId}
+                  page={activePage}
+                  pageIndex={activePageIndex}
+                  pageCount={schema.pages.length}
+                  fields={schema.fields}
+                  selectedFieldId={selectedFieldId}
+                  onSelectField={handleSelectField}
+                  onEditFieldDetails={handleEditFieldDetails}
+                  onRemoveField={handleRemoveField}
+                  onDuplicateField={handleDuplicateField}
+                  onAddField={(type) => handleAddField(type)}
+                  onAddColumnField={handleAddColumnField}
+                  onUpdateField={handleUpdateField}
+                  canEdit={canEditCanvas}
+                  visibleFieldIds={visibleFieldIds}
+                  fieldIdsWithRules={fieldIdsWithRules}
+                />
+              ) : (
+                <div className="builder-canvas-empty">
+                  <p>No page selected.</p>
+                </div>
+              )}
+            </div>
+
+            {canEditCanvas ? (
+              <div className="builder-mobile-add">
+                {activePage && activePage.fields.length === 0 ? (
+                  <span className="builder-mobile-add-hint">Tap to add a field</span>
+                ) : null}
+                <button
+                  type="button"
+                  className="builder-mobile-add-fab"
+                  onClick={() => setShowMobilePalette(true)}
+                  aria-label="Add a field"
+                >
+                  <PlusIcon />
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <DragOverlay>
+            {activeDragLabel ? <div className="drag-overlay-chip">{activeDragLabel}</div> : null}
+          </DragOverlay>
+        </DndContext>
+
+        {editingField ? (
+          // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
+          <div className="modal-overlay" onMouseDown={handleCloseFieldModal}>
+            <div
+              className="modal-card modal-card--wide"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="field-settings-modal-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h2 className="modal-title" id="field-settings-modal-title">
+                  Edit field
+                </h2>
+                <div className="modal-header-actions">
+                  <span className="modal-header-badge">{FIELD_TYPE_LABELS[editingField.type]}</span>
+                  {canEditCanvas && !isEditingColumnChild ? (
+                    <button
+                      type="button"
+                      className="button button--ghost button--small"
+                      onClick={() => handleDuplicateField(editingField.id)}
+                    >
+                      Duplicate
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={handleCloseFieldModal}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <FieldSettingsPanel
+                formId={formId}
+                schema={schema}
+                field={editingField}
+                canEdit={canEditCanvas}
+                onUpdateField={handleUpdateField}
+                onReplaceFieldType={handleReplaceFieldType}
+                onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
+                onSetConditionalRule={handleSetConditionalRule}
+                onClearConditionalRule={handleClearConditionalRule}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {showEditConfirm ? (
+          // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; Escape/Cancel/Close buttons are also wired up
+          <div
+            className="modal-overlay"
+            onMouseDown={() => !isWorkflowBusy && setShowEditConfirm(false)}
+          >
+            <div
+              className="modal-card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="edit-form-confirm-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h2 className="modal-title" id="edit-form-confirm-title">
+                  Edit this form?
+                </h2>
+                <button
+                  type="button"
+                  className="modal-close"
+                  onClick={() => setShowEditConfirm(false)}
+                  aria-label="Close"
+                  disabled={isWorkflowBusy}
+                >
+                  ×
+                </button>
+              </div>
+
+              <p className="modal-body-text">
+                This form is live. Editing it will take it offline for new visitors — the public
+                link stops working until you publish again.
+              </p>
+              <p className="modal-body-text">
+                Anyone already filling it out can still finish and submit their response.
+              </p>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => setShowEditConfirm(false)}
+                  disabled={isWorkflowBusy}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="button button--dark"
+                  onClick={() => void handleConfirmEditForm()}
+                  disabled={isWorkflowBusy}
+                >
+                  {isWorkflowBusy ? 'Taking offline…' : 'Take offline & edit'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {showMobilePalette ? (
+          // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
+          <div className="modal-overlay" onMouseDown={() => setShowMobilePalette(false)}>
+            <div
+              className="modal-card builder-mobile-palette-card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="mobile-palette-modal-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h2 className="modal-title" id="mobile-palette-modal-title">
+                  Add a field
+                </h2>
+                <div className="modal-header-actions">
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={() => setShowMobilePalette(false)}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <FieldPalette
+                onAddField={(type) => {
+                  handleAddField(type);
+                  setShowMobilePalette(false);
+                }}
+                onAddColumnLayout={(columns) => {
+                  handleAddColumnLayout(columns);
+                  setShowMobilePalette(false);
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {showFormSettings ? (
+          // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
+          <div className="modal-overlay" onMouseDown={() => setShowFormSettings(false)}>
+            <div
+              className="modal-card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="form-settings-modal-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h2 className="modal-title" id="form-settings-modal-title">
+                  Form settings
+                </h2>
+                <div className="modal-header-actions">
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={() => setShowFormSettings(false)}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <div className="settings-section">
+                <p className="settings-section-title">Form title</p>
+                <label className="settings-toggle-row">
+                  <span className="settings-label">Show form title</span>
+                  <input
+                    type="checkbox"
+                    checked={schema.branding.showTitle === true}
+                    disabled={!canEditCanvas}
+                    onChange={(event) => handleUpdateBranding({ showTitle: event.target.checked })}
+                  />
+                </label>
+                {schema.branding.showTitle === true ? (
+                  <div className="settings-width-options">
+                    {TEXT_ALIGN_OPTIONS.map((align) => (
+                      <label key={align} className="settings-width-option">
+                        <input
+                          type="radio"
+                          name="form-title-align"
+                          checked={(schema.branding.titleAlign ?? 'center') === align}
+                          disabled={!canEditCanvas}
+                          onChange={() => handleUpdateBranding({ titleAlign: align })}
+                        />
+                        {TEXT_ALIGN_LABEL[align]}
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="settings-section">
+                <p className="settings-section-title">Submit button</p>
+                <label className="settings-field">
+                  <span className="settings-label">Button text</span>
+                  <input
+                    type="text"
+                    className="text-input"
+                    value={schema.branding.submitButtonText ?? ''}
+                    placeholder={DEFAULT_SUBMIT_BUTTON_TEXT}
+                    disabled={!canEditCanvas}
+                    onChange={(event) =>
+                      handleUpdateBranding({ submitButtonText: event.target.value || undefined })
+                    }
+                  />
+                </label>
+                <FieldColorPicker
+                  label="Button color"
+                  value={schema.branding.submitButtonColor}
+                  defaultColor={DEFAULT_FORM_PRIMARY_COLOR}
+                  canEdit={canEditCanvas}
+                  onChange={(color) => handleUpdateBranding({ submitButtonColor: color })}
+                />
+                <FieldColorPicker
+                  label="Text color"
+                  value={schema.branding.submitButtonTextColor}
+                  defaultColor="#ffffff"
+                  canEdit={canEditCanvas}
+                  onChange={(color) => handleUpdateBranding({ submitButtonTextColor: color })}
+                />
+                <p className="settings-section-title">Alignment</p>
                 <div className="settings-width-options">
                   {TEXT_ALIGN_OPTIONS.map((align) => (
                     <label key={align} className="settings-width-option">
                       <input
                         type="radio"
-                        name="form-title-align"
-                        checked={(schema.branding.titleAlign ?? 'center') === align}
-                        disabled={!canEdit}
-                        onChange={() => handleUpdateBranding({ titleAlign: align })}
+                        name="submit-button-align"
+                        checked={(schema.branding.submitButtonAlign ?? 'center') === align}
+                        disabled={!canEditCanvas}
+                        onChange={() => handleUpdateBranding({ submitButtonAlign: align })}
                       />
                       {TEXT_ALIGN_LABEL[align]}
                     </label>
                   ))}
                 </div>
-              ) : null}
-            </div>
-            <div className="settings-section">
-              <p className="settings-section-title">Submit button</p>
-              <label className="settings-field">
-                <span className="settings-label">Button text</span>
-                <input
-                  type="text"
-                  className="text-input"
-                  value={schema.branding.submitButtonText ?? ''}
-                  placeholder={DEFAULT_SUBMIT_BUTTON_TEXT}
-                  disabled={!canEdit}
-                  onChange={(event) =>
-                    handleUpdateBranding({ submitButtonText: event.target.value || undefined })
-                  }
-                />
-              </label>
-              <FieldColorPicker
-                label="Button color"
-                value={schema.branding.submitButtonColor}
-                defaultColor={DEFAULT_FORM_PRIMARY_COLOR}
-                canEdit={canEdit}
-                onChange={(color) => handleUpdateBranding({ submitButtonColor: color })}
-              />
-              <FieldColorPicker
-                label="Text color"
-                value={schema.branding.submitButtonTextColor}
-                defaultColor="#ffffff"
-                canEdit={canEdit}
-                onChange={(color) => handleUpdateBranding({ submitButtonTextColor: color })}
-              />
-              <p className="settings-section-title">Alignment</p>
-              <div className="settings-width-options">
-                {TEXT_ALIGN_OPTIONS.map((align) => (
-                  <label key={align} className="settings-width-option">
-                    <input
-                      type="radio"
-                      name="submit-button-align"
-                      checked={(schema.branding.submitButtonAlign ?? 'center') === align}
-                      disabled={!canEdit}
-                      onChange={() => handleUpdateBranding({ submitButtonAlign: align })}
-                    />
-                    {TEXT_ALIGN_LABEL[align]}
-                  </label>
-                ))}
-              </div>
-              <p className="settings-section-title">Size</p>
-              <div className="settings-width-options">
-                {SUBMIT_BUTTON_SIZE_OPTIONS.map((size) => (
-                  <label key={size} className="settings-width-option">
-                    <input
-                      type="radio"
-                      name="submit-button-size"
-                      checked={(schema.branding.submitButtonSize ?? 'medium') === size}
-                      disabled={!canEdit}
-                      onChange={() => handleUpdateBranding({ submitButtonSize: size })}
-                    />
-                    {SUBMIT_BUTTON_SIZE_LABEL[size]}
-                  </label>
-                ))}
+                <p className="settings-section-title">Size</p>
+                <div className="settings-width-options">
+                  {SUBMIT_BUTTON_SIZE_OPTIONS.map((size) => (
+                    <label key={size} className="settings-width-option">
+                      <input
+                        type="radio"
+                        name="submit-button-size"
+                        checked={(schema.branding.submitButtonSize ?? 'medium') === size}
+                        disabled={!canEditCanvas}
+                        onChange={() => handleUpdateBranding({ submitButtonSize: size })}
+                      />
+                      {SUBMIT_BUTTON_SIZE_LABEL[size]}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
-    </div>
+        ) : null}
+      </div>
+    </>
   );
 }

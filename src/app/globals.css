@@ -5760,6 +5760,12 @@ textarea.text-input {
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+  /* .builder-header is one flat flex row with a uniform 0.55rem gap between every
+     child, which reads fine between the page selector and this group but leaves this
+     group's last button (Settings, or Share/kebab on the org builder) sitting right up
+     against the Edit/Cancel-Save cluster after it with no visual separation between two
+     otherwise-unrelated groups. This extra margin only widens that one gap. */
+  margin-right: 0.5rem;
 }
 
 /* Share dropdown — holds both "copy the link" and "open the live form", so the one

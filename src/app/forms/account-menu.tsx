@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
 import { LogoutConfirmModal } from '@/app/forms/logout-confirm-modal';
@@ -10,7 +11,8 @@ function getInitials(name: string | null, email: string): string {
   if (source) {
     const words = source.split(/\s+/).filter(Boolean);
     if (words.length >= 2) {
-      return `${words[0]![0]}${words[1]![0]}`.toUpperCase();
+      const [first, second] = words;
+      return `${first?.[0] ?? ''}${second?.[0] ?? ''}`.toUpperCase();
     }
     return source.slice(0, 2).toUpperCase();
   }
@@ -26,6 +28,40 @@ function SettingsIcon() {
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M8 1.8 13.2 3.8v4c0 3.2-2.2 5.7-5.2 6.4-3-.7-5.2-3.2-5.2-6.4v-4L8 1.8Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5.7 8.1 7.2 9.6l3.1-3.4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path
+        d="M3 4.5l3 3 3-3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -55,15 +91,38 @@ function SignOutIcon() {
 interface AccountMenuProps {
   email: string;
   name: string | null;
+  /** Shows a link into/out of the Clickforms platform-staff area — see prisma/schema.prisma
+   * User.isPlatformAdmin. Omitted entirely for everyone else, not just disabled. */
+  isPlatformAdmin?: boolean;
+  /** False for Clickforms staff who are not a member of any organisation — hides org-workspace links. */
+  belongsToOrganization?: boolean;
+  /** Name of the organisation `belongsToOrganization` refers to, so the "Log in to
+   * <org>" link (shown from /admin) can name it instead of speaking generically.
+   * Omitted/null wherever the caller doesn't have it handy (e.g. inside the org
+   * workspace itself, where this link isn't shown). */
+  organizationName?: string | null;
+  /** True while a platform admin is here via "Join this organisation" rather than as a
+   * genuine employee — see prisma/schema.prisma PlatformAdminOrgAccess. Labels the
+   * identity row; the actual leave action lives in the TemporaryOrgBanner, not here. */
+  isTemporaryOrgJoin?: boolean;
 }
 
-export function AccountMenu({ email, name }: AccountMenuProps) {
+export function AccountMenu({
+  email,
+  name,
+  isPlatformAdmin = false,
+  belongsToOrganization = true,
+  organizationName = null,
+  isTemporaryOrgJoin = false,
+}: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
   const displayName = name?.trim() || email;
   const initials = getInitials(name, email);
+  const inAdminArea = pathname?.startsWith('/admin') ?? false;
 
   useEffect(() => {
     if (!open) return;
@@ -103,6 +162,9 @@ export function AccountMenu({ email, name }: AccountMenuProps) {
         <span className="account-avatar" aria-hidden="true">
           {initials}
         </span>
+        <span className="account-menu-chevron" aria-hidden="true">
+          <ChevronIcon />
+        </span>
       </button>
 
       {open ? (
@@ -115,24 +177,55 @@ export function AccountMenu({ email, name }: AccountMenuProps) {
             <span className="account-menu-identity-copy">
               {name?.trim() ? <strong>{name}</strong> : null}
               <span className="account-menu-email">{email}</span>
+              {isTemporaryOrgJoin ? (
+                <span className="account-menu-temp-join">Testing this organisation</span>
+              ) : null}
             </span>
           </li>
           <li role="none">
             <hr className="actions-menu-divider" />
           </li>
-          <li role="none">
-            <Link
-              href="/forms/settings"
-              className="actions-menu-item"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-            >
-              <span className="actions-menu-icon">
-                <SettingsIcon />
-              </span>
-              Account settings
-            </Link>
-          </li>
+          {belongsToOrganization ? (
+            <li role="none">
+              <Link
+                href="/forms/settings"
+                className="actions-menu-item"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+              >
+                <span className="actions-menu-icon">
+                  <SettingsIcon />
+                </span>
+                Account settings
+              </Link>
+            </li>
+          ) : null}
+          {isPlatformAdmin && !(inAdminArea && !belongsToOrganization) ? (
+            <li role="none">
+              <Link
+                href={inAdminArea ? '/forms' : '/admin'}
+                className="actions-menu-item"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+              >
+                <span className="actions-menu-icon">
+                  <ShieldIcon />
+                </span>
+                {inAdminArea ? (
+                  <>
+                    Log in to{' '}
+                    <span className="account-menu-org-link">
+                      {organizationName ?? 'the organisation'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Return to <span className="account-menu-org-link">Clickforms Admin</span>
+                  </>
+                )}
+              </Link>
+            </li>
+          ) : null}
           <li role="none">
             <button
               type="button"

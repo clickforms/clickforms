@@ -43,3 +43,21 @@ export function requireRole(session: Session, allowed: readonly UserRole[]): voi
     throw new ForbiddenError(`Requires role: ${allowed.join(' or ')}`);
   }
 }
+
+/**
+ * Gate for the /admin (Clickforms platform-staff) area and its API routes. Deliberately
+ * separate from requireRole() — `isPlatformAdmin` is a flag on the user (see
+ * prisma/schema.prisma), not a value of the org-scoped `role` enum, since "admin of my
+ * own org" and "Clickforms staff who can manage every org" are different axes of
+ * authority that shouldn't be conflated.
+ */
+export function requirePlatformAdmin(session: Session): void {
+  if (!session.user.isPlatformAdmin) {
+    throw new ForbiddenError('Requires platform admin access');
+  }
+}
+
+/** True for Clickforms staff who work in /admin and are not a member of any organisation. */
+export function isPlatformOnlyAdmin(session: Session): boolean {
+  return session.user.isPlatformAdmin && !session.user.organizationId;
+}

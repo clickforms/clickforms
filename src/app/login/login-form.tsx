@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { getSession, signIn } from 'next-auth/react';
 import { type FormEvent, useEffect, useState } from 'react';
 
 const REMEMBERED_EMAIL_KEY = 'clickforms.login.rememberedEmail';
@@ -11,6 +11,12 @@ function resolveErrorMessage(error: string | undefined): string | null {
   if (!error) return null;
   if (error === 'CredentialsSignin') {
     return 'Incorrect email or password. Please try again.';
+  }
+  if (error === 'OrganizationSuspended') {
+    return 'This organisation has been suspended. Contact support for help.';
+  }
+  if (error === 'AmbiguousAccount') {
+    return "This email and password match more than one of your organisations, so we can't tell which one to sign you into. Please use a different password for each organisation, or contact support for help.";
   }
   return 'Unable to sign in. Please try again.';
 }
@@ -110,11 +116,24 @@ export function LoginForm({
       window.localStorage.removeItem(REMEMBERED_EMAIL_KEY);
     }
 
+    const session = await getSession();
+    if (session?.user?.isPlatformAdmin && !session.user.organizationId) {
+      const nextPath =
+        callbackUrl.startsWith('/admin') && !callbackUrl.startsWith('/admin/api')
+          ? callbackUrl
+          : '/admin';
+      router.push(nextPath);
+      router.refresh();
+      return;
+    }
+
     if (result?.url) {
       router.push(result.url);
       router.refresh();
     }
   }
+
+  const canSubmit = email.trim().length > 0 && password.length > 0 && !isSubmitting;
 
   return (
     <form className="login-form" onSubmit={handleSubmit}>
@@ -182,14 +201,12 @@ export function LoginForm({
         <span>Remember me on this device</span>
       </label>
 
-      <button className="button login-submit" type="submit" disabled={isSubmitting}>
+      <button className="button login-submit" type="submit" disabled={!canSubmit}>
         {isSubmitting ? 'Signing in…' : 'Sign in'}
       </button>
 
       <p className="login-form-footer">
         Don&apos;t have an account? <Link href="/signup">Create organisation</Link>
-        {' · '}
-        <Link href="/">Back to home</Link>
       </p>
     </form>
   );

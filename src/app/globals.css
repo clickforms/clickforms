@@ -3609,7 +3609,7 @@ a {
   .builder-workspace--readonly .builder-canvas-column {
     width: 100%;
     max-width: none;
-    padding: 1.25rem 1rem;
+    padding: 1.25rem 1rem 5rem;
   }
 
   /* Six-odd controls (save status, page selector, Share, kebab, Publish) don't fit one
@@ -3639,7 +3639,7 @@ a {
   }
 
   .canvas {
-    padding: 1.35rem 1.1rem 1.5rem;
+    padding: 1.35rem 1.1rem 5rem;
   }
 }
 
@@ -3648,7 +3648,7 @@ a {
    screens without horizontal scrolling or clipped content. */
 @media (max-width: 640px) {
   .builder-canvas-column {
-    padding: 1rem 0.75rem;
+    padding: 1rem 0.75rem 5rem;
   }
 
   .builder-mobile-add {
@@ -5958,7 +5958,7 @@ textarea.text-input {
      just above the canvas card rather than on top of it. Extra right padding (vs. left)
      nudges the centered card left, off-center, to sit further from that same floating
      box. */
-  padding: 4.75rem 10rem 2.5rem 3rem;
+  padding: 4.75rem 10rem 6rem 3rem;
   overflow-y: auto;
   min-height: 0;
   background-color: var(--color-surface-sunken);
@@ -5968,6 +5968,10 @@ textarea.text-input {
   width: 100%;
   max-width: 46rem;
   margin: 0;
+  /* The column is a scrolling flex container (`overflow-y: auto` + `min-height: 0`).
+     Flex items then treat `min-height: auto` as 0, so the white card would cap at the
+     visible pane and stop growing with the form. Keep it sized to its fields. */
+  flex: 0 0 auto;
 }
 
 .builder-canvas-empty {
@@ -6222,7 +6226,7 @@ textarea.text-input {
 .canvas {
   min-height: 320px;
   width: 100%;
-  padding: 1.75rem 1.75rem 2rem;
+  padding: 1.75rem 1.75rem 6rem;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: calc(var(--radius-lg) + 2px);

@@ -37,7 +37,10 @@ function createPrismaClient(): PrismaClient {
 /** Fingerprint of the currently-generated Prisma schema — changes after `prisma generate`. */
 function getPrismaSchemaFingerprint(): string {
   return Prisma.dmmf.datamodel.models
-    .flatMap((model) => [model.name, ...model.fields.map((field) => field.name)])
+    .flatMap((model) => [
+      model.name,
+      ...model.fields.map((field) => `${field.name}:${String(field.isRequired)}`),
+    ])
     .join('\0');
 }
 
@@ -76,9 +79,12 @@ export const prisma = getPrismaClient();
  * known yet at that point, so that one query runs directly against `prisma`.
  */
 export async function withOrgContext<T>(
-  organizationId: string,
+  organizationId: string | null | undefined,
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
+  if (!organizationId) {
+    throw new Error('organizationId is required');
+  }
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.current_org_id', ${organizationId}, true)`;
     return fn(tx);

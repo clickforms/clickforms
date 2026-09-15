@@ -14,7 +14,7 @@ export const SUBMISSION_EXPORT_STYLES = `
     max-width: 960px;
     margin: 0 auto;
     padding: 2rem 1.5rem 2.5rem;
-    --color-primary: #00a960;
+    --color-primary: #55ea8c;
     --form-secondary-color: #4a90d9;
     --form-pad-x: 2.5rem;
     --form-pad-y: 2rem;
@@ -329,6 +329,31 @@ export const SUBMISSION_EXPORT_STYLES = `
   .export-section-break-wrap {
     break-after: avoid;
     page-break-after: avoid;
+  }
+
+  /* Trailing attachments section (embedded file_upload images) — always forced onto its
+     own page so it lands at the very end of the export, never disrupting the form's own
+     page flow. See SubmissionFormExportDocument / fileUploadFieldSchema.embedInExport. */
+  .export-attachments-section {
+    break-before: page;
+    page-break-before: always;
+    padding: var(--form-pad-y) var(--form-pad-x);
+    border-top: 1px solid #ececec;
+  }
+  .export-attachment-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 1.5rem;
+  }
+  .export-attachment-caption {
+    font-weight: 700;
+    font-size: 0.9375rem;
+    margin: 0 0 0.5rem;
+  }
+  .export-attachment-image {
+    max-width: 100%;
+    height: auto;
+    display: block;
   }
 `;
 

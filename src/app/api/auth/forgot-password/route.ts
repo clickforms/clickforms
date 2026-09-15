@@ -2,63 +2,63 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { toErrorResponse } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
-import { sendEmail } from '@/lib/email';
-import { passwordResetEmail } from '@/lib/emails/templates';
-import { resetPasswordUrl } from '@/lib/users/reset-password-url';
+import { issuePasswordReset } from '@/lib/users/issue-password-reset';
 
 const forgotPasswordBodySchema = z.object({
   email: z.string().trim().email('Enter a valid email'),
 });
-
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour — much shorter than the 24h signup/invite
-// links, since this one grants a password change on an *existing* account rather than
-// just continuing a signup.
 
 /**
  * Requests a password-reset email. Always returns the same generic success response
  * regardless of whether the address matches an account — same anti-enumeration
  * convention as POST /api/auth/signup. No session required; this is how a locked-out
  * user gets back in.
+ *
+ * The same email can be a separate User row in more than one organisation (see User's
+ * @@unique([organizationId, email])) — e.g. someone who's a genuine member of several
+ * orgs, or who was invited into a second org under the same address they already use
+ * elsewhere. This used to look up a single arbitrary row via findFirst() and only ever
+ * reset *that* account, silently ignoring any others — so a person with two accounts
+ * under one email had no reliable way to reset the account they actually meant, and
+ * whichever one WAS reset was effectively down to query order, not their choice. Issuing
+ * a reset for every matching row instead means every one of a person's accounts gets its
+ * own token and its own clearly-labelled email (see passwordResetEmail's organizationName
+ * param), and clicking any link only ever resets that specific account's password.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const { email } = forgotPasswordBodySchema.parse(await request.json());
     const normalizedEmail = email.toLowerCase();
 
-    // Pre-org-context lookup, same exception as the credentials provider in auth.ts:
-    // we don't know the org until we've found the user by email.
-    const user = await prisma.user.findFirst({ where: { email: normalizedEmail } });
+    const users = await prisma.user.findMany({
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        organizationId: true,
+        organization: { select: { name: true } },
+      },
+    });
 
-    if (!user) {
+    if (users.length === 0) {
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
-    // Drop any earlier unused tokens for this user so only the most recently requested
-    // link works — otherwise an old, still-emailed link would remain valid alongside a
-    // new one.
-    await prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } });
+    // Only worth naming the org in the email once there's more than one account to tell
+    // apart — a lone match keeps the original, simpler copy.
+    const disambiguate = users.length > 1;
+    const resetUrls = await Promise.all(
+      users.map((user) =>
+        issuePasswordReset({
+          ...user,
+          organizationName: disambiguate ? (user.organization?.name ?? null) : null,
+        }),
+      ),
+    );
 
-    const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
-
-    await prisma.passwordResetToken.create({
-      data: { userId: user.id, token, expiresAt },
-    });
-
-    const resetUrl = resetPasswordUrl(token);
-    const rendered = passwordResetEmail({ name: user.name ?? user.email, resetUrl });
-
-    await sendEmail({
-      to: user.email,
-      subject: rendered.subject,
-      html: rendered.html,
-      text: rendered.text,
-    });
-
-    // Dev-mode convenience, same as signup: surface the link in the response when SMTP
-    // isn't configured so local testing doesn't require reading server logs.
-    if (!process.env.SMTP_HOST) {
-      return NextResponse.json({ ok: true, devResetUrl: resetUrl }, { status: 200 });
+    if (!process.env.RESEND_API_KEY) {
+      return NextResponse.json({ ok: true, devResetUrls: resetUrls }, { status: 200 });
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });

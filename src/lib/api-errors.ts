@@ -39,7 +39,10 @@ export function toErrorResponse(error: unknown): NextResponse {
   }
   if (error instanceof ZodError) {
     return NextResponse.json(
-      { error: 'Invalid request body', issues: error.issues },
+      {
+        error: error.issues[0]?.message ?? 'Invalid request body',
+        issues: error.issues,
+      },
       { status: 400 },
     );
   }

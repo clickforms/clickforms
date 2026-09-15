@@ -26,6 +26,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const uploadUrl = await createPresignedUploadUrl({
       storageKey,
       mimeType: body.mimeType,
+      sizeBytes: body.sizeBytes,
     });
 
     return NextResponse.json({ uploadUrl, storageKey });

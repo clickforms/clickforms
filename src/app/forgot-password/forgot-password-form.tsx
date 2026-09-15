@@ -20,16 +20,19 @@ export function ForgotPasswordForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      const data: { error?: string; devResetUrl?: string } = await res.json();
+      const data: { error?: string; devResetUrls?: string[] } = await res.json();
       if (!res.ok) {
         setError(data.error ?? 'Something went wrong. Please try again.');
         return;
       }
 
-      // Dev-mode convenience — see the devResetUrl comment in the API route. Never
-      // present once SMTP is configured, so this is a no-op in production.
-      if (data.devResetUrl) {
-        console.log('[dev] password reset link:', data.devResetUrl);
+      // Dev-mode convenience — see the devResetUrls comment in the API route. Never
+      // present once SMTP is configured, so this is a no-op in production. There can be
+      // more than one link if this email matches an account in more than one organisation.
+      if (data.devResetUrls?.length) {
+        for (const url of data.devResetUrls) {
+          console.log('[dev] password reset link:', url);
+        }
       }
 
       setSubmittedEmail(email.trim());

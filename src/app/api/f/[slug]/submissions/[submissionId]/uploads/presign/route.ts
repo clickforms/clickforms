@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import {
+  getFormForExistingSubmission,
   getFormSchemaByVersionId,
-  getPublishedFormBySlug,
   getSubmissionForForm,
 } from '@/lib/forms/public-lookup';
 import { assertUploadAllowed, buildStorageKey, createPresignedUploadUrl } from '@/lib/s3';
@@ -37,7 +37,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     const body = presignBodySchema.parse(await request.json());
 
     const organizationId = await resolveOrganizationIdOrThrow();
-    const form = await getPublishedFormBySlug(slug, organizationId);
+    const form = await getFormForExistingSubmission(slug, organizationId);
     const submission = await getSubmissionForForm({ formId: form.id, submissionId });
 
     if (submission.status !== 'in_progress') {
@@ -73,7 +73,11 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
       submissionId: submission.id,
       filename: body.filename,
     });
-    const uploadUrl = await createPresignedUploadUrl({ storageKey, mimeType: body.mimeType });
+    const uploadUrl = await createPresignedUploadUrl({
+      storageKey,
+      mimeType: body.mimeType,
+      sizeBytes: body.sizeBytes,
+    });
 
     return NextResponse.json({ uploadUrl, storageKey });
   } catch (error) {

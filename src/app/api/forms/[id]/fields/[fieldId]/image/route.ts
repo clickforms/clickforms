@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
-import { assertFormEditAccess } from '@/lib/form-access';
+import { assertFormEditAccess, assertFormViewAccess } from '@/lib/form-access';
 import { formSchemaSchema } from '@/lib/forms/schema';
 import {
   assertLogoUploadAllowed,
@@ -52,6 +52,12 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
     }
 
     const { form, field } = result;
+    // Every other handler in this file (POST/PUT) gates on assertFormEditAccess before
+    // touching the form — this GET was missing the equivalent view check, so any
+    // authenticated org member (not just the form's creator/an admin) could fetch a
+    // private form's field image just by knowing its formId/fieldId. Same isPrivate rule
+    // GET /api/forms/[id] and every mutating route already enforce.
+    assertFormViewAccess(form, session.user.id);
     if (
       !isFormFieldImageKey({
         storageKey,
@@ -99,7 +105,11 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
       fieldId: result.field.id,
       filename: body.filename,
     });
-    const uploadUrl = await createPresignedUploadUrl({ storageKey, mimeType: body.mimeType });
+    const uploadUrl = await createPresignedUploadUrl({
+      storageKey,
+      mimeType: body.mimeType,
+      sizeBytes: body.sizeBytes,
+    });
 
     return NextResponse.json({ uploadUrl, storageKey });
   } catch (error) {

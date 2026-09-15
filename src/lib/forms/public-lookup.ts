@@ -43,6 +43,26 @@ export async function getPublishedFormBySlug(
   return form as Form & { currentVersionId: string };
 }
 
+/** For routes that continue an *existing* submission (final submit, upload presign/confirm)
+ * rather than starting a new one. Deliberately does NOT require `currentVersionId` — a
+ * respondent partway through a live form must be able to finish and submit even if an
+ * admin takes the form offline (via "Take offline" or by clicking "Edit form") while
+ * they're mid-fill. Only archived forms are excluded, same as getPublishedFormBySlug.
+ * getSubmissionForForm (below) then re-checks the submission actually belongs to this
+ * form, so an old/offline form can't be used to reach an unrelated submission. */
+export async function getFormForExistingSubmission(
+  slug: string,
+  organizationId: string,
+): Promise<Form> {
+  const form = await prisma.form.findFirst({
+    where: { slug, organizationId, status: { not: 'archived' } },
+  });
+  if (!form) {
+    throw new NotFoundError('Form');
+  }
+  return form;
+}
+
 /**
  * Resolves which org's subdomain a bare-root-domain /f/[slug] request should redirect
  * to — legacy/shared-link support for URLs from before subdomains existed. Slugs aren't

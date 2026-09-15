@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import {
+  getFormForExistingSubmission,
   getFormSchemaByVersionId,
-  getPublishedFormBySlug,
   getSubmissionForForm,
 } from '@/lib/forms/public-lookup';
 import { assertUploadAllowed } from '@/lib/s3';
@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     const body = confirmBodySchema.parse(await request.json());
 
     const organizationId = await resolveOrganizationIdOrThrow();
-    const form = await getPublishedFormBySlug(slug, organizationId);
+    const form = await getFormForExistingSubmission(slug, organizationId);
     const submission = await getSubmissionForForm({ formId: form.id, submissionId });
 
     if (submission.status !== 'in_progress') {

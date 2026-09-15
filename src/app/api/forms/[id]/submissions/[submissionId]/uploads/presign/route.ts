@@ -77,7 +77,11 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     });
 
     const storageKey = buildStorageKey({ ...target, filename: body.filename });
-    const uploadUrl = await createPresignedUploadUrl({ storageKey, mimeType: body.mimeType });
+    const uploadUrl = await createPresignedUploadUrl({
+      storageKey,
+      mimeType: body.mimeType,
+      sizeBytes: body.sizeBytes,
+    });
 
     return NextResponse.json({ uploadUrl, storageKey });
   } catch (error) {

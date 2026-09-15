@@ -3356,6 +3356,12 @@ a {
   font-size: 0.86rem;
 }
 
+.admin-org-person-leave {
+  justify-self: end;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+}
+
 .admin-org-pending-pill {
   padding: 0.12rem 0.5rem;
   border-radius: 999px;

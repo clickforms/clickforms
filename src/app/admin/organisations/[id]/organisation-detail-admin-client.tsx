@@ -268,7 +268,10 @@ function OrganisationDetailInner({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
 
-  const { access, isJoining, join } = useJoinOrganisation(organization.id, organization.name);
+  const { access, isJoining, isLeaving, currentUserId, join, leave } = useJoinOrganisation(
+    organization.id,
+    organization.name,
+  );
 
   const isDirty = useMemo(() => {
     return (
@@ -463,19 +466,49 @@ function OrganisationDetailInner({
 
         <div className="admin-org-header-actions">
           {access === 'member' ? (
-            <Link href="/forms" className="button button--dark">
-              Open workspace
-            </Link>
+            <>
+              <Link href="/forms" className="button button--dark">
+                Open workspace
+              </Link>
+              <button
+                type="button"
+                className="button button--ghost"
+                disabled={isLeaving}
+                onClick={() => {
+                  void leave().then((ok) => {
+                    if (ok) void refresh();
+                  });
+                }}
+              >
+                {isLeaving ? 'Leaving…' : 'Leave organisation'}
+              </button>
+            </>
           ) : (
-            <button
-              type="button"
-              className="button button--dark"
-              disabled={access !== 'ready' || isJoining}
-              title={access === 'blocked' ? 'Leave your current organisation first' : undefined}
-              onClick={() => void join()}
-            >
-              {isJoining ? 'Joining…' : 'Join organisation'}
-            </button>
+            <>
+              {access === 'blocked' ? (
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  disabled={isLeaving}
+                  onClick={() => {
+                    void leave().then((ok) => {
+                      if (ok) void refresh();
+                    });
+                  }}
+                >
+                  {isLeaving ? 'Leaving…' : 'Leave current organisation'}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="button button--dark"
+                disabled={access !== 'ready' || isJoining}
+                title={access === 'blocked' ? 'Leave your current organisation first' : undefined}
+                onClick={() => void join()}
+              >
+                {isJoining ? 'Joining…' : 'Join organisation'}
+              </button>
+            </>
           )}
           <OrgOverflowMenu
             status={organization.status}
@@ -488,12 +521,12 @@ function OrganisationDetailInner({
 
       {access === 'member' ? (
         <p className="admin-org-banner">
-          You are currently working inside this organisation. Leave from the account menu when you
-          are done.
+          You are in this organisation as Clickforms staff. Leave when you are finished so you
+          don&apos;t keep editing customer data by accident.
         </p>
       ) : access === 'blocked' ? (
         <p className="admin-org-banner admin-org-banner--muted">
-          Leave your current organisation before joining this one.
+          You are already in another organisation. Leave that one before joining this one.
         </p>
       ) : null}
 
@@ -566,9 +599,24 @@ function OrganisationDetailInner({
                   <span className="admin-org-person-meta">{user.email}</span>
                 </span>
                 <span className="admin-org-person-role">{formatUserRole(user.role)}</span>
-                <time className="admin-org-person-time" dateTime={user.createdAt}>
-                  {formatDate(user.createdAt)}
-                </time>
+                {user.id === currentUserId && access === 'member' ? (
+                  <button
+                    type="button"
+                    className="button button--ghost admin-org-person-leave"
+                    disabled={isLeaving}
+                    onClick={() => {
+                      void leave().then((ok) => {
+                        if (ok) void refresh();
+                      });
+                    }}
+                  >
+                    {isLeaving ? 'Leaving…' : 'Remove me'}
+                  </button>
+                ) : (
+                  <time className="admin-org-person-time" dateTime={user.createdAt}>
+                    {formatDate(user.createdAt)}
+                  </time>
+                )}
               </li>
             ))}
             {pendingInvites.map((invite) => (

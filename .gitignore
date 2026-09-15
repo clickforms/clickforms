@@ -49,3 +49,14 @@ yarn-error.log*
 # TypeScript incremental build info
 *.tsbuildinfo
 AWSCLIV2.pkg
+
+# Scratch/ad-hoc working files that have accumulated in the repo root — not part of the
+# app, not meant to ever be committed (one-off document generation output, a QA
+# screenshot, an unrelated editing script). Untracked, so ignoring them here just
+# prevents a future `git add -A`/`git add .` from sweeping them in by accident.
+/tmp/
+/output/
+.scratch-shot.js
+.srl
+edit_ali_duplicate.py
+qa_page-01.png

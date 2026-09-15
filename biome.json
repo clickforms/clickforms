@@ -18,7 +18,12 @@
       "!**/.yarn",
       "!**/prisma/migrations",
       "!**/next-env.d.ts",
-      "!**/SAFE_TO_DELETE_*"
+      "!**/SAFE_TO_DELETE_*",
+      "!tmp",
+      "!output",
+      "!.scratch-shot.js",
+      "!.srl",
+      "!edit_ali_duplicate.py"
     ]
   },
   "formatter": {

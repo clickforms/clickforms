@@ -72,6 +72,66 @@ enum SignupFormSituation {
   @@map("signup_form_situation")
 }
 
+// Billing tier, shown on /admin/billing and used by src/lib/admin/plan-limits.ts to
+// derive per-org form/user/storage caps. Purely a label + lookup key today — no
+// payment provider is wired up yet, so changing an org's plan (POST
+// /api/admin/organizations/[id]/plan) just updates this column.
+enum OrgPlan {
+  free
+  pro
+  enterprise
+
+  @@map("org_plan")
+}
+
+// Platform-admin-controlled lifecycle state, independent of `plan`. `suspended` blocks
+// sign-in for every user in the org (see the check in src/lib/auth.ts) without deleting
+// any data — the reversible alternative to /admin's "Delete organisation".
+enum OrgStatus {
+  active
+  trial
+  suspended
+
+  @@map("org_status")
+}
+
+// Clickforms staff permission level within /admin itself — orthogonal to `User.role`,
+// which only ever describes standing within a customer Organization. Nullable on User:
+// most platform admins today are `super_admin` since that's all the invite flow grants,
+// but `support` exists so future invites can hand out read-only access.
+enum PlatformAdminRole {
+  super_admin
+  support
+
+  @@map("platform_admin_role")
+}
+
+// Which address a form's "new response" email notification goes to (see
+// Form.notificationMode below): org_default defers to Organization.notificationEmail,
+// custom uses the form's own notificationEmail, off never sends one regardless of what
+// the org has configured.
+enum FormNotificationMode {
+  org_default
+  custom
+  off
+
+  @@map("form_notification_mode")
+}
+
+// Lifecycle of a platform-admin-authored FormTemplate (specs follow-up: template
+// library). draft = still being built in /admin/templates, invisible to organisations.
+// published = shown in the org-side /forms/templates gallery and offered by POST
+// /api/forms's templateId. archived = removed from that gallery for *new* forms, but
+// never affects any Form already copied from it — copying is a one-time schema clone,
+// not a live link (see FormTemplate doc comment below).
+enum TemplateStatus {
+  draft
+  published
+  archived
+
+  @@map("template_status")
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -93,6 +153,31 @@ model Organization {
   contactName  String? @map("contact_name")
   contactEmail String? @map("contact_email")
   contactPhone String? @map("contact_phone")
+  // Where "a new response was submitted" emails go by default — distinct from
+  // contactEmail above (that's a person to contact about the account/billing, not
+  // necessarily who should be pinged on every submission). Null means no default is
+  // configured; a form set to notificationMode: org_default with this null simply never
+  // sends (see src/lib/forms/submission-notification.ts), same as a form set to `off`.
+  // Individual forms can override this via Form.notificationMode/notificationEmail.
+  notificationEmail String? @map("notification_email")
+
+  // Uploaded via /forms/organisation (admins only — see src/app/api/organization/logo)
+  // and shown in place of the default Clickforms wordmark in the org's own workspace
+  // sidebar (src/app/forms/admin-sidebar.tsx). S3 key layout: org_id/logo/<uuid>-<filename>
+  // (buildOrganizationLogoKey in src/lib/s3.ts). Null means no logo has been uploaded —
+  // the default brand mark is shown instead.
+  logoStorageKey String? @map("logo_storage_key")
+
+  // Billing/lifecycle fields for /admin/billing and the Organisations list (specs: platform
+  // admin console). No payment provider integration yet — `plan` and `status` are set
+  // directly by platform admins via /api/admin/organizations/[id]/plan and .../status.
+  plan        OrgPlan   @default(free)
+  status      OrgStatus @default(active)
+  // Only meaningful while status = trial; null otherwise.
+  trialEndsAt DateTime? @map("trial_ends_at")
+  // Next billing-cycle date, shown on the Billing page. Set manually for now (no
+  // subscription webhook), null until a platform admin fills it in.
+  renewsAt    DateTime? @map("renews_at")
 
   users           User[]
   userInvites     UserInvite[]
@@ -104,13 +189,15 @@ model Organization {
   signatures        Signature[]
   workflowSteps     WorkflowStep[]
   auditLogs         AuditLog[]
+  emailLogs         EmailLog[]
+  platformAdminOrgAccess PlatformAdminOrgAccess[]
 
   @@map("organizations")
 }
 
 model User {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId String   @map("organization_id") @db.Uuid
+  organizationId String? @map("organization_id") @db.Uuid
   email          String
   name           String?
   phone          String?
@@ -119,15 +206,29 @@ model User {
   // password hash"). bcryptjs-hashed, never the plaintext password.
   passwordHash   String   @map("password_hash")
   role           UserRole @default(member)
+  // Platform-level flag, orthogonal to `role` (which is scoped to this user's own
+  // organization). Clickforms staff who manage every organisation via /admin are
+  // platform admins and do *not* belong to a customer Organization — `organizationId`
+  // is null for them. `role: admin` only ever means "admin of my own org".
+  isPlatformAdmin Boolean @default(false) @map("is_platform_admin")
+  // Display-only today (see src/app/forms/settings/two-factor/two-factor-client.tsx —
+  // enrollment has no backend yet). Also surfaced as a column on /admin/users.
+  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  // Permission level within /admin. Null for everyone except platform admins; see the
+  // PlatformAdminRole enum doc comment for why this is separate from `role`.
+  platformAdminRole PlatformAdminRole? @map("platform_admin_role")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization       Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   uploadedFiles      OrganizationFile[] @relation("OrganizationFileUploadedBy")
   createdForms       Form[]             @relation("FormCreatedBy")
   approvedWorkflows  WorkflowStep[]  @relation("WorkflowApprover")
   auditLogs          AuditLog[]      @relation("AuditActor")
   sentInvites        UserInvite[]    @relation("InviteSender")
+  sentPlatformAdminInvites PlatformAdminInvite[] @relation("PlatformAdminInviteSender")
   passwordResetTokens PasswordResetToken[]
+  platformAdminOrgAccess PlatformAdminOrgAccess[]
+  createdFormTemplates FormTemplate[] @relation("FormTemplateCreatedBy")
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -147,11 +248,39 @@ model UserInvite {
   createdAt      DateTime  @default(now()) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invitedBy    User         @relation("InviteSender", fields: [invitedById], references: [id])
+  // Explicit Cascade (unlike PlatformAdminInvite.invitedBy below, which relies on the
+  // implicit Restrict default) — deleting the inviting admin also clears their
+  // still-pending invites, matching the original migration
+  // (20260712000300_add_users_and_invites) which set this at the DB level. This
+  // annotation was missing from the schema for a while, which caused `prisma migrate dev`
+  // to think the FK should be Restrict and want to "fix" it back — fixed 2026-09-15.
+  invitedBy    User         @relation("InviteSender", fields: [invitedById], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, email])
   @@index([organizationId])
   @@map("user_invites")
+}
+
+// Invite flow for the /admin "Team" page, mirroring UserInvite's shape (token, expiry,
+// accepted-at) but deliberately a separate model rather than reusing UserInvite: a
+// platform admin belongs to no Organization at all (User.organizationId is null for
+// them), whereas UserInvite.organizationId is required. Accepted via
+// POST /api/admin/team/accept, which mirrors POST /api/invites/accept but creates a
+// User with organizationId: null and platformAdminRole set instead.
+model PlatformAdminInvite {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String             @unique
+  name        String?
+  role        PlatformAdminRole
+  token       String             @unique
+  invitedById String             @map("invited_by_id") @db.Uuid
+  expiresAt   DateTime           @map("expires_at")
+  acceptedAt  DateTime?          @map("accepted_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  invitedBy User @relation("PlatformAdminInviteSender", fields: [invitedById], references: [id])
+
+  @@map("platform_admin_invites")
 }
 
 // Step 1 of self-service signup (POST /api/auth/signup): captures the org/contact
@@ -215,6 +344,32 @@ model Form {
   // override. Enforced in application code (formsListWhere, assertFormViewAccess /
   // assertFormEditAccess), not RLS, since RLS's "forms" policy is org-scoped only.
   isPrivate         Boolean    @default(false) @map("is_private")
+  // Free-text naming pattern for this form's PDF response downloads (Settings tab, see
+  // src/app/forms/[id]/settings). Plain literal text plus the `{date}` token, swapped for
+  // the response's submitted date at export time — see resolveFilenameTemplate in
+  // src/lib/forms/generate-submission-pdf.ts. Null/empty means "use the default naming"
+  // (form-name-2026-09-08.pdf, see submissionPdfFilename).
+  pdfFilenameTemplate String?  @map("pdf_filename_template")
+  // Which field's answer feeds the `{prefix}` token in pdfFilenameTemplate above (e.g. a
+  // "Name" field so exports download as "Jane Doe - IR-2026-09-10.pdf"). Stores the
+  // field's stable id from the *current* FormVersion.schema, not a position number — a
+  // position is just how the Settings picker displays the choice ("2. Full name"), and
+  // would silently point at the wrong field once fields are reordered/added/removed.
+  // Null means no prefix is configured. Not a DB foreign key: the field it points to
+  // lives inside FormVersion.schema's JSONB, not its own table, so referential integrity
+  // is enforced in the PATCH /api/forms/[id] handler instead (checked against the current
+  // schema at save time) rather than by Postgres.
+  filenamePrefixFieldId String? @map("filename_prefix_field_id")
+  // Who gets emailed when this form receives a new response (Settings tab, see
+  // src/app/forms/[id]/settings) — org_default (the default) defers to
+  // Organization.notificationEmail, custom uses notificationEmail below, off never
+  // sends. See src/lib/forms/submission-notification.ts for the resolution logic and
+  // the PATCH /api/f/[slug]/submissions/[submissionId] route for where it fires.
+  notificationMode  FormNotificationMode @default(org_default) @map("notification_mode")
+  // Only meaningful when notificationMode = custom; null/cleared whenever mode is
+  // switched away from custom (enforced in PATCH /api/forms/[id]) so a stale address
+  // never lingers unseen after switching back to org_default or off.
+  notificationEmail String?    @map("notification_email")
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
 
@@ -389,4 +544,127 @@ model AuditLog {
   @@index([organizationId])
   @@index([entityType, entityId])
   @@map("audit_log")
+}
+
+enum EmailStatus {
+  sent
+  failed
+  // RESEND_API_KEY isn't configured (local dev) — nothing was actually sent, the
+  // message was only printed to the server console. Kept as its own status rather than
+  // folding into 'sent' so a Files/audit-style view can't mistake dev traffic for real
+  // delivery.
+  dev_logged
+
+  // Mapped to the snake_case Postgres type name (matching every other enum in this
+  // schema, e.g. form_notification_mode) rather than leaving it as the literal
+  // "EmailStatus" — omitting this caused `prisma migrate dev` to want to rename the type
+  // to match the un-mapped default, undoing the hand-authored migration. Fixed 2026-09-15.
+  @@map("email_status")
+}
+
+// One row per sendEmail() call (src/lib/email.ts) — every transactional email this app
+// sends (signup verification, invites, password reset, submission notifications, the
+// public contact form) writes here, success or failure. This is delivery bookkeeping,
+// not a queue: sendEmail() calls the provider synchronously and logs the outcome
+// afterward, it never reads this table to decide what to send.
+model EmailLog {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // Nullable and, like PasswordResetToken/PendingSignup, carries no RLS policy — plenty
+  // of sends happen before any organization exists (signup verification) or aren't
+  // org-scoped at all (platform-admin invites, the public contact form), and sendEmail()
+  // is called from both inside and outside an org's withOrgContext transaction, so this
+  // is always written through the plain `prisma` client.
+  organizationId String? @map("organization_id") @db.Uuid
+  toEmail        String  @map("to_email")
+  subject        String
+  // Machine-readable tag for which flow sent this — see the EmailKind union in
+  // src/lib/email.ts (kept in sync by convention, not a DB enum, since new kinds are
+  // added often and a migration per kind would be needless friction).
+  kind   String
+  status EmailStatus
+  // Resend's message id on success — null on failure or when only dev-logged.
+  providerMessageId String? @map("provider_message_id")
+  // Best-effort provider error message on failure.
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([kind])
+  @@index([createdAt])
+  @@map("email_log")
+}
+
+// Audit trail for a Clickforms platform admin temporarily attaching themselves to a
+// customer Organization (User.organizationId + role: admin) to do testing, bug fixes or
+// investigation, then detaching again — see /admin/organisations/[id] "Join this
+// organisation" and the "Leave organisation" banner in the org workspace
+// (src/app/forms/temporary-org-banner.tsx). One row per join; `leftAt` null means the
+// admin is still attached. This is what distinguishes a temporary platform-admin join
+// from a genuine org employee who also happens to have isPlatformAdmin = true — see
+// isTemporaryOrgJoin() in src/lib/auth.ts, which only returns true while an active
+// (leftAt: null) row exists for the session's (userId, organizationId) pair.
+//
+// Deliberately carries NO RLS policy: it is only ever read/written via the plain
+// `prisma` client from /admin routes and the NextAuth jwt callback, both of which are
+// platform-admin-only and inherently cross-organization, same reasoning as EmailLog
+// above.
+model PlatformAdminOrgAccess {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  joinedAt       DateTime  @default(now()) @map("joined_at")
+  leftAt         DateTime? @map("left_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@map("platform_admin_org_access")
+}
+
+// A reusable form definition authored by Clickforms staff in /admin/templates and
+// offered to every organisation via the /forms/templates gallery (specs follow-up:
+// template library). Deliberately org-less — no organizationId, no RLS policy — same
+// reasoning as EmailLog/PlatformAdminOrgAccess above: only ever read/written through
+// the plain `prisma` client from platform-admin-only routes (writes) or any
+// authenticated org user (published-only reads via GET /api/form-templates).
+//
+// "Using" a template (POST /api/forms with a templateId) deep-clones `schema` into a
+// brand-new Form + FormVersion for that organisation — a one-time snapshot, not a live
+// link. Editing a template afterwards never touches forms already copied from it, and
+// an organisation editing their copy never touches the template. Field/page ids inside
+// `schema` are cloned verbatim rather than regenerated, since they're only ever
+// referenced from within that one schema blob (see FormVersion.schema doc comment).
+model FormTemplate {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?
+  // Free-text, admin-typed (not an enum) — see the design note in
+  // src/app/admin/templates: keeps adding a new category a content change, not a
+  // migration, while the library is still small enough that a rigid taxonomy would
+  // just get in the way.
+  category    String?
+  status      TemplateStatus @default(draft)
+  // Same shape/validation (formSchemaSchema) as FormVersion.schema — see
+  // src/lib/forms/schema.ts. Edited via src/app/admin/templates/[id]/builder, a
+  // lighter-weight editor composed from the same Canvas/FieldPalette/
+  // FieldSettingsPanel pieces as the org-facing form builder (not BuilderClient
+  // itself, which is tightly coupled to form workflow/versioning/live-edit-gating
+  // that templates don't have).
+  schema      Json
+  // Uploaded via the template settings panel, same presign/confirm/delete S3 pattern
+  // as Organization.logoStorageKey. Null means no thumbnail — the gallery falls back
+  // to a generic template icon.
+  thumbnailStorageKey String? @map("thumbnail_storage_key")
+  createdBy   String         @map("created_by") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  creator User @relation("FormTemplateCreatedBy", fields: [createdBy], references: [id])
+
+  @@index([status])
+  @@map("form_templates")
 }

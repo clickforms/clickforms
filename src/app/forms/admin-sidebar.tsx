@@ -4,7 +4,6 @@ import type { UserRole } from '@prisma/client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { BrandMark } from '@/components/brand-mark';
 import { canManageUsers } from '@/lib/user-roles';
 
 function DashboardIcon() {
@@ -217,29 +216,27 @@ function buildNavSections(canManageUsersFlag: boolean): NavSection[] {
     {
       label: 'Admin',
       items: [
-        // Files (org-wide submission file browser) crosses form-ownership boundaries a
-        // `member` role can't otherwise see (see formsListWhere in lib/user-roles.ts) —
-        // a real link for admins, an inert placeholder for everyone else.
-        canManageUsersFlag
-          ? {
-              kind: 'link',
-              key: 'files',
-              href: '/forms/files',
-              label: 'Files',
-              icon: <FilesIcon />,
-              match: (pathname) => pathname.startsWith('/forms/files'),
-            }
-          : { kind: 'disabled', key: 'files', label: 'Files', icon: <FilesIcon /> },
-        { kind: 'disabled', key: 'logs', label: 'Logs', icon: <LogsIcon /> },
+        {
+          kind: 'link',
+          key: 'files',
+          href: '/forms/files',
+          label: 'Files',
+          icon: <FilesIcon />,
+          match: (pathname) => pathname.startsWith('/forms/files'),
+        },
       ],
     },
   ];
 
   // Org-super-admin-only section — unlike the "Admin" section above (which always shows,
   // with disabled placeholders for lower roles), this one is only relevant to org admins
-  // at all, so it's omitted entirely rather than shown-but-disabled. Consolidates the two
-  // org-wide-authority pages (Users, Organisation Details) that used to live in different
-  // places (top-level "Admin" section / nested inside Account Settings) into one spot.
+  // at all, so it's omitted entirely rather than shown-but-disabled. Consolidates the
+  // org-wide-authority pages (Users, Organisation Details, Logs) that used to live in
+  // different places (top-level "Admin" section / nested inside Account Settings) into
+  // one spot. Logs used to sit in "Admin" above as a disabled "coming soon" placeholder
+  // visible to everyone — now that /forms/logs exists, it's admin-only like Users and
+  // Organisation Details rather than a link a non-admin could stumble onto and 404/bounce
+  // from.
   if (canManageUsersFlag) {
     sections.push({
       label: 'Organisation',
@@ -259,6 +256,14 @@ function buildNavSections(canManageUsersFlag: boolean): NavSection[] {
           label: 'Organisation Details',
           icon: <BuildingIcon />,
           match: (pathname) => pathname.startsWith('/forms/organisation'),
+        },
+        {
+          kind: 'link',
+          key: 'logs',
+          href: '/forms/logs',
+          label: 'Logs',
+          icon: <LogsIcon />,
+          match: (pathname) => pathname.startsWith('/forms/logs'),
         },
       ],
     });
@@ -335,28 +340,68 @@ function ThemeToggle({
   );
 }
 
+function MenuIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <line
+        x1="2"
+        y1="5"
+        x2="16"
+        y2="5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <line
+        x1="2"
+        y1="9"
+        x2="16"
+        y2="9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <line
+        x1="2"
+        y1="13"
+        x2="16"
+        y2="13"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function AdminSidebar({
   collapsed,
   userRole,
   isDarkTheme,
   onToggleTheme,
+  onToggleSidebar,
 }: {
   collapsed: boolean;
   userRole: UserRole;
   isDarkTheme: boolean;
   onToggleTheme: () => void;
+  onToggleSidebar: () => void;
 }) {
   const pathname = usePathname();
   const navSections = buildNavSections(canManageUsers(userRole));
 
   return (
     <aside className={`admin-sidebar ${collapsed ? 'admin-sidebar--collapsed' : ''}`}>
-      <Link href="/forms" className="admin-brand-block">
-        <span className="admin-brand-mark">
-          <BrandMark size={22} id="admin-sidebar" />
-        </span>
-        <span className="admin-brand-text">Clickforms</span>
-      </Link>
+      <div className="admin-sidebar-top">
+        <button
+          type="button"
+          className="admin-sidebar-menu"
+          onClick={onToggleSidebar}
+          aria-label="Toggle navigation menu"
+        >
+          <MenuIcon />
+        </button>
+      </div>
 
       <nav className="admin-sidebar-nav" aria-label="Main navigation">
         {navSections.map((section) => (

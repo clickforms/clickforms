@@ -50,6 +50,13 @@ services:
       # sending the browser to http://<subdomain>.localhost:3000 instead of the real domain.
       # Same value as DOMAIN in both environments today (no separate staging-under-root setup).
       ROOT_DOMAIN: ${DOMAIN:?Set DOMAIN=staging.clickforms.com.au or clickforms.com.au in .env}
+      # Not secrets (the key itself comes from SSM via resolve-secrets.cjs, see above) —
+      # DEPLOYMENT.md §4 has these set as plain values in this box's .env. Both are
+      # optional: src/lib/email.ts and src/app/api/contact/route.ts fall back to a
+      # placeholder sender / admin@clickforms.com.au respectively when unset, so this
+      # doesn't need a `:?` guard like the required vars above.
+      RESEND_FROM: ${RESEND_FROM:-}
+      CONTACT_EMAIL: ${CONTACT_EMAIL:-}
     expose:
       - '3000'
     networks:

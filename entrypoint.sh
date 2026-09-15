@@ -6,7 +6,8 @@ set -eu
 # committed to this repo. Relies on the EC2 instance role for AWS credentials — no
 # long-lived access keys anywhere on the box. Delegates to resolve-secrets.cjs
 # (AWS SDK v3, not the `aws` CLI) — see that file's header and the Dockerfile's
-# ssm-deps stage for why.
+# ssm-deps stage for why. Also resolves the optional resend-api-key parameter
+# (DEPLOYMENT.md §4) into RESEND_API_KEY, when it's been provisioned.
 #
 # Stub for the scaffold stage: local dev never runs this (docker-compose.dev.yml only
 # runs Postgres; the app itself runs natively via `yarn dev` against .env.local, no

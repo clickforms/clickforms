@@ -42,11 +42,12 @@ COPY . .
 RUN node .yarn/releases/yarn-4.17.1.cjs prisma:generate
 RUN node .yarn/releases/yarn-4.17.1.cjs build
 
-# ---- ssm-deps: isolated install for entrypoint's two SSM GetParameter calls ----
+# ---- ssm-deps: isolated install for entrypoint's SSM GetParameter calls ----
 # Previously this used the apt `awscli` package, on the theory that the CLI alone was
 # lighter than pulling in the full AWS SDK. In practice awscli's Debian package drags in
 # a whole Python runtime (python3 + docutils + sgml-base, ~150-250MB with
-# --no-install-recommends) just to run `aws ssm get-parameter` twice. @aws-sdk/client-ssm
+# --no-install-recommends) just to run `aws ssm get-parameter` a handful of times.
+# @aws-sdk/client-ssm
 # is pure JS with no native bindings (~15-20MB with transitive deps) — installed here in
 # its own throwaway node_modules, completely separate from the app's yarn dependency
 # tree, so it can't interact with the postinstall/prisma-generate machinery above.

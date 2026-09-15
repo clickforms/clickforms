@@ -350,8 +350,23 @@ export const SUBMISSION_EXPORT_STYLES = `
     font-size: 0.9375rem;
     margin: 0 0 0.5rem;
   }
+  /* max-height matters as much as max-width here: a portrait-oriented photo (the
+     common case from a phone camera) scaled to the full ~960px page width can render
+     taller than a single PDF page. Without a height cap, page.pdf()'s paginator still
+     honors .export-attachment-item's break-inside: avoid by starting the item on a
+     fresh page, but the oversized image then overflows that page's bottom edge anyway
+     and spills onto the next — the caption ends up alone at the top of a mostly-blank
+     page, with the image itself split across the following one or two. Capping both
+     max-width and max-height (with width/height left as auto rather than a fixed pair)
+     lets the browser scale the image down to fit whichever bound is tighter while
+     preserving its aspect ratio, so it always lands within one page. 8.5in leaves
+     headroom under the ~10.1in of vertical space actually free on an attachment's own
+     page (11.69in page height, minus generate-submission-pdf.ts's 0.6in top+bottom
+     margins, minus this section's own --form-pad-y padding) for the caption above it. */
   .export-attachment-image {
     max-width: 100%;
+    max-height: 8.5in;
+    width: auto;
     height: auto;
     display: block;
   }

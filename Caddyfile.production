@@ -21,19 +21,19 @@ clickforms.com.au, *.clickforms.com.au {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
-		X-Frame-Options "DENY"
+		# SAMEORIGIN, not DENY — the app iframes its own pages in more than one place
+		# (SubmissionPreviewModal embeds /f/[slug]/submissions/[id]/preview to show "what
+		# would print"; TemplatePreviewModal embeds /template-preview/[id] the same way),
+		# and DENY blocks ALL framing including self-framing, breaking both. SAMEORIGIN
+		# still blocks the actual threat (another site framing clickforms.com.au for
+		# clickjacking) while allowing the app to frame itself. Originally scoped this as
+		# a per-route override for just /template-preview/*, but the same DENY-breaks-
+		# same-origin-iframe problem turned up on a second, unrelated route the moment it
+		# was actually exercised — better to fix the general case once than keep
+		# allowlisting routes as each new iframe feature hits the same wall.
+		X-Frame-Options "SAMEORIGIN"
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
-
-	# The org-side template gallery (/forms/templates) iframes /template-preview/[id]
-	# ?embed=1 in a modal (see TemplatePreviewModal) to show a template before "Use this
-	# template" — same-origin, but the blanket X-Frame-Options DENY above still blocks it
-	# (DENY refuses ALL framing, including self-framing; only SAMEORIGIN would allow it).
-	# This directive runs after the block above and overrides just this one route, so the
-	# rest of the app — including the admin template builder's own Preview link, which
-	# navigates directly rather than framing — stays fully non-frameable.
-	@templatePreview path /template-preview/*
-	header @templatePreview X-Frame-Options "SAMEORIGIN"
 
 	# specs/00-infrastructure.md acceptance criteria: `curl https://<domain>/health`
 	# must return 200 over valid TLS — no special routing needed here since /health

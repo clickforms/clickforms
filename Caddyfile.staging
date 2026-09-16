@@ -10,14 +10,12 @@ staging.clickforms.com.au {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
-		X-Frame-Options "DENY"
+		# SAMEORIGIN, not DENY — see Caddyfile.production for why. The app iframes its own
+		# pages in more than one place (submission "what would print" preview, template
+		# preview), and DENY blocks self-framing too, breaking both.
+		X-Frame-Options "SAMEORIGIN"
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
-
-	# See Caddyfile.production for why this exists: the template gallery iframes
-	# /template-preview/[id]?embed=1 same-origin, which the blanket DENY above still blocks.
-	@templatePreview path /template-preview/*
-	header @templatePreview X-Frame-Options "SAMEORIGIN"
 
 	# Discourage search engines from indexing staging.
 	header X-Robots-Tag "noindex, nofollow"

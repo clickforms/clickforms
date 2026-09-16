@@ -87,7 +87,10 @@ function isWholeMonth(value: SubmissionsDateRangeValue): Date | null {
   const fromDate = parseIsoDate(value.from ?? undefined);
   const toDate = parseIsoDate(value.to ?? undefined);
   if (!fromDate || !toDate) return null;
-  if (fromDate.getFullYear() !== toDate.getFullYear() || fromDate.getMonth() !== toDate.getMonth()) {
+  if (
+    fromDate.getFullYear() !== toDate.getFullYear() ||
+    fromDate.getMonth() !== toDate.getMonth()
+  ) {
     return null;
   }
   if (fromDate.getDate() !== 1) return null;
@@ -137,6 +140,9 @@ export function SubmissionsDateRangePicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // displayMonth isn't read below — it's listed only to re-run this on month navigation,
+  // since switching months changes the calendar grid's rendered height/width.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above — deliberate trigger-only dep, not a missing usage.
   useLayoutEffect(() => {
     if (!open || !triggerRef.current || !panelRef.current) return;
     setPanelStyle(computePopoverStyle(triggerRef.current, panelRef.current));
@@ -244,7 +250,8 @@ export function SubmissionsDateRangePicker({
                 ...panelStyle,
               }}
             >
-              <div className="submissions-date-range-presets" role="group" aria-label="Quick ranges">
+              <fieldset className="submissions-date-range-presets">
+                <legend>Quick ranges</legend>
                 <button
                   type="button"
                   className="submissions-date-range-preset"
@@ -256,9 +263,7 @@ export function SubmissionsDateRangePicker({
                 <button
                   type="button"
                   className="submissions-date-range-preset"
-                  aria-pressed={
-                    value.from === thisMonth.from && value.to === thisMonth.to
-                  }
+                  aria-pressed={value.from === thisMonth.from && value.to === thisMonth.to}
                   onClick={() => applyPreset(thisMonth)}
                 >
                   This month
@@ -266,9 +271,7 @@ export function SubmissionsDateRangePicker({
                 <button
                   type="button"
                   className="submissions-date-range-preset"
-                  aria-pressed={
-                    value.from === lastMonth.from && value.to === lastMonth.to
-                  }
+                  aria-pressed={value.from === lastMonth.from && value.to === lastMonth.to}
                   onClick={() => applyPreset(lastMonth)}
                 >
                   Last month
@@ -285,7 +288,7 @@ export function SubmissionsDateRangePicker({
                 >
                   {displayMonthLabel}
                 </button>
-              </div>
+              </fieldset>
               <DayPicker
                 mode="range"
                 month={displayMonth}

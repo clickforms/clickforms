@@ -4478,12 +4478,30 @@ textarea.text-input {
   padding: 0.75rem;
 }
 
+/* <fieldset> rather than a div with role="group" (see image-crop-editor.tsx's
+   .image-crop-aspects for the same pattern) — resets the browser's default fieldset
+   border/padding/intrinsic min-width so it reads as a plain flex row. */
 .submissions-date-range-presets {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-bottom: 0.65rem;
+  margin: 0 0 0.65rem;
+  padding: 0;
+  border: none;
+  min-inline-size: 0;
   max-width: 18.5rem;
+}
+
+.submissions-date-range-presets legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .submissions-date-range-preset {

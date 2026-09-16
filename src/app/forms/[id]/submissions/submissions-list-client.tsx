@@ -241,7 +241,9 @@ export function SubmissionsListClient({
   }, [formId]);
 
   // Jump back to page 1 whenever a filter changes — skip the restore pass so opening a
-  // response and coming back keeps the stored page.
+  // response and coming back keeps the stored page. search/dateRange.from/dateRange.to
+  // are listed only to re-trigger the effect on change; the body never reads their value.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above — deliberate trigger-only deps, not missing usages.
   useEffect(() => {
     if (!filtersReady) return;
     if (skipPageReset.current) {

@@ -59,7 +59,10 @@ function computePopoverStyle(trigger: HTMLElement, panel: HTMLElement): CSSPrope
     top = aboveTop >= viewportPadding ? aboveTop : viewportPadding;
   }
 
-  let left = triggerRect.left;
+  // Hang the calendar under the trigger (right-aligned). Measuring before
+  // position:fixed used to treat the panel as full viewport width and shove it
+  // to the left edge of the page.
+  let left = triggerRect.right - panelRect.width;
   left = Math.max(
     viewportPadding,
     Math.min(left, window.innerWidth - panelRect.width - viewportPadding),
@@ -68,9 +71,36 @@ function computePopoverStyle(trigger: HTMLElement, panel: HTMLElement): CSSPrope
   return { position: 'fixed', top, left };
 }
 
-// "Jul 1 – Jul 31, 2026" — the year is only shown once, on the end date, matching how a
-// respondent would naturally read a range rather than repeating it on both ends.
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function endOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
+function rangeForMonth(date: Date): SubmissionsDateRangeValue {
+  return { from: toIsoDate(startOfMonth(date)), to: toIsoDate(endOfMonth(date)) };
+}
+
+function isWholeMonth(value: SubmissionsDateRangeValue): Date | null {
+  const fromDate = parseIsoDate(value.from ?? undefined);
+  const toDate = parseIsoDate(value.to ?? undefined);
+  if (!fromDate || !toDate) return null;
+  if (fromDate.getFullYear() !== toDate.getFullYear() || fromDate.getMonth() !== toDate.getMonth()) {
+    return null;
+  }
+  if (fromDate.getDate() !== 1) return null;
+  if (toDate.getDate() !== endOfMonth(fromDate).getDate()) return null;
+  return fromDate;
+}
+
 function formatRangeLabel(value: SubmissionsDateRangeValue): string {
+  const wholeMonth = isWholeMonth(value);
+  if (wholeMonth) {
+    return wholeMonth.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
+  }
+
   const fromDate = parseIsoDate(value.from ?? undefined);
   const toDate = parseIsoDate(value.to ?? undefined);
   if (!fromDate && !toDate) return 'All time';
@@ -98,6 +128,10 @@ export function SubmissionsDateRangePicker({
 }) {
   const [open, setOpen] = useState(false);
   const [panelStyle, setPanelStyle] = useState<CSSProperties | null>(null);
+  const today = new Date();
+  const [displayMonth, setDisplayMonth] = useState(
+    () => parseIsoDate(value.from ?? undefined) ?? today,
+  );
   const popoverId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -106,7 +140,7 @@ export function SubmissionsDateRangePicker({
   useLayoutEffect(() => {
     if (!open || !triggerRef.current || !panelRef.current) return;
     setPanelStyle(computePopoverStyle(triggerRef.current, panelRef.current));
-  }, [open]);
+  }, [open, displayMonth]);
 
   useEffect(() => {
     if (!open) return;
@@ -157,6 +191,22 @@ export function SubmissionsDateRangePicker({
   }
 
   const hasValue = Boolean(value.from || value.to);
+  const startMonth = new Date(today.getFullYear() - 10, 0, 1);
+  const endMonth = new Date(today.getFullYear() + 1, 11, 1);
+  const thisMonth = rangeForMonth(today);
+  const lastMonth = rangeForMonth(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+  const displayMonthLabel = displayMonth.toLocaleDateString('en-AU', {
+    month: 'long',
+    year: 'numeric',
+  });
+
+  function applyPreset(next: SubmissionsDateRangeValue) {
+    onChange(next);
+    if (next.from) {
+      const fromDate = parseIsoDate(next.from);
+      if (fromDate) setDisplayMonth(fromDate);
+    }
+  }
 
   return (
     <div className="submissions-date-range" ref={rootRef}>
@@ -186,13 +236,66 @@ export function SubmissionsDateRangePicker({
               id={popoverId}
               role="dialog"
               aria-label="Filter by date"
-              style={{ ...panelStyle, visibility: panelStyle ? 'visible' : 'hidden' }}
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                visibility: panelStyle ? 'visible' : 'hidden',
+                ...panelStyle,
+              }}
             >
+              <div className="submissions-date-range-presets" role="group" aria-label="Quick ranges">
+                <button
+                  type="button"
+                  className="submissions-date-range-preset"
+                  aria-pressed={!hasValue}
+                  onClick={() => applyPreset({ from: null, to: null })}
+                >
+                  All time
+                </button>
+                <button
+                  type="button"
+                  className="submissions-date-range-preset"
+                  aria-pressed={
+                    value.from === thisMonth.from && value.to === thisMonth.to
+                  }
+                  onClick={() => applyPreset(thisMonth)}
+                >
+                  This month
+                </button>
+                <button
+                  type="button"
+                  className="submissions-date-range-preset"
+                  aria-pressed={
+                    value.from === lastMonth.from && value.to === lastMonth.to
+                  }
+                  onClick={() => applyPreset(lastMonth)}
+                >
+                  Last month
+                </button>
+                <button
+                  type="button"
+                  className="submissions-date-range-preset"
+                  aria-pressed={Boolean(
+                    isWholeMonth(value) &&
+                      value.from === rangeForMonth(displayMonth).from &&
+                      value.to === rangeForMonth(displayMonth).to,
+                  )}
+                  onClick={() => applyPreset(rangeForMonth(displayMonth))}
+                >
+                  {displayMonthLabel}
+                </button>
+              </div>
               <DayPicker
                 mode="range"
+                month={displayMonth}
+                onMonthChange={setDisplayMonth}
+                captionLayout="dropdown"
+                navLayout="around"
+                startMonth={startMonth}
+                endMonth={endMonth}
                 selected={selected}
                 onSelect={handleSelect}
-                defaultMonth={selected?.from ?? new Date()}
               />
               <div className="submissions-date-range-actions">
                 <button

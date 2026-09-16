@@ -75,7 +75,6 @@ export default async function SubmissionsListPage({ params }: PageProps) {
 
       <SubmissionsListClient
         formId={form.id}
-        formSlug={form.slug}
         canDelete={canDelete}
         initialSubmissions={submissions.map((submission) => ({
           id: submission.id,

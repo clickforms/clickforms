@@ -4097,6 +4097,19 @@ textarea.text-input {
   border: 0;
 }
 
+.submission-preview-live {
+  height: 100%;
+  overflow: auto;
+  background: #e8e8e8;
+}
+
+.submission-preview-status {
+  margin: 0;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
 .modal-card--wide .settings-panel {
   padding: 0;
 }
@@ -4457,11 +4470,38 @@ textarea.text-input {
 
 .submissions-date-range-popover {
   z-index: 200;
+  width: max-content;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   padding: 0.75rem;
+}
+
+.submissions-date-range-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+  max-width: 18.5rem;
+}
+
+.submissions-date-range-preset {
+  padding: 0.28rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.submissions-date-range-preset:hover,
+.submissions-date-range-preset[aria-pressed="true"] {
+  border-color: var(--color-lavender);
+  color: var(--color-lavender-strong);
+  background: var(--color-lavender-soft);
 }
 
 .submissions-date-range-popover .rdp-root {
@@ -4472,6 +4512,16 @@ textarea.text-input {
   --rdp-day_button-border-radius: 6px;
   --rdp-selected-border: none;
   font-size: 0.8125rem;
+}
+
+.submissions-date-range-popover .rdp-dropdowns {
+  gap: 0.4rem;
+}
+
+.submissions-date-range-popover .rdp-dropdown {
+  max-width: 7.5rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
 }
 
 .submissions-date-range-actions {

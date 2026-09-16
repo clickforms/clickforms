@@ -2,7 +2,7 @@
 
 import type { SubmissionStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DeleteSubmissionModal } from '@/app/forms/[id]/submissions/delete-submission-modal';
 import { SubmissionPreviewModal } from '@/app/forms/[id]/submissions/submission-preview-modal';
 import { SubmissionStatusMenu } from '@/app/forms/[id]/submissions/submission-status-menu';
@@ -10,6 +10,10 @@ import {
   SubmissionsDateRangePicker,
   type SubmissionsDateRangeValue,
 } from '@/app/forms/[id]/submissions/submissions-date-range-picker';
+import {
+  readSubmissionFilters,
+  writeSubmissionFilters,
+} from '@/app/forms/[id]/submissions/submissions-list-filters';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
 import { parseIsoDate } from '@/lib/forms/date-value';
@@ -203,12 +207,10 @@ const SUBMISSION_STATUS_BADGE: Record<
 // response list is small enough not to warrant server-side paging.
 export function SubmissionsListClient({
   formId,
-  formSlug,
   initialSubmissions,
   canDelete,
 }: {
   formId: string;
-  formSlug: string;
   initialSubmissions: SubmissionSummary[];
   canDelete: boolean;
 }) {
@@ -218,17 +220,46 @@ export function SubmissionsListClient({
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [dateRange, setDateRange] = useState<SubmissionsDateRangeValue>({ from: null, to: null });
+  const [dateRange, setDateRange] = useState<SubmissionsDateRangeValue>({
+    from: null,
+    to: null,
+  });
   const [page, setPage] = useState(1);
+  const [filtersReady, setFiltersReady] = useState(false);
   const toast = useToast();
   const router = useRouter();
+  const skipPageReset = useRef(true);
 
-  // Jump back to page 1 whenever a filter changes — otherwise narrowing the results could
-  // strand the view on a now out-of-range page.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: deps intentionally trigger a reset even though the effect body doesn't read them
+  // Restore after mount so SSR/hydration doesn't wipe sessionStorage with empty defaults.
   useEffect(() => {
+    skipPageReset.current = true;
+    const stored = readSubmissionFilters(formId);
+    setSearch(stored.search);
+    setDateRange({ from: stored.from, to: stored.to });
+    setPage(stored.page);
+    setFiltersReady(true);
+  }, [formId]);
+
+  // Jump back to page 1 whenever a filter changes — skip the restore pass so opening a
+  // response and coming back keeps the stored page.
+  useEffect(() => {
+    if (!filtersReady) return;
+    if (skipPageReset.current) {
+      skipPageReset.current = false;
+      return;
+    }
     setPage(1);
-  }, [search, dateRange.from, dateRange.to]);
+  }, [filtersReady, search, dateRange.from, dateRange.to]);
+
+  useEffect(() => {
+    if (!filtersReady) return;
+    writeSubmissionFilters(formId, {
+      search,
+      from: dateRange.from,
+      to: dateRange.to,
+      page,
+    });
+  }, [filtersReady, formId, search, dateRange.from, dateRange.to, page]);
 
   async function handleDeleteConfirm() {
     if (!deletingId) return;
@@ -517,7 +548,7 @@ export function SubmissionsListClient({
 
       <SubmissionPreviewModal
         open={previewId !== null}
-        formSlug={formSlug}
+        formId={formId}
         submissionId={previewId}
         onClose={() => setPreviewId(null)}
       />

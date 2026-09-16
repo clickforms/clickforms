@@ -3,7 +3,6 @@ import {
   SubmissionFieldDisplay,
   submissionFieldWidthClass,
 } from '@/components/submission-export/submission-field-display';
-import type { SubmissionExportAssets } from '@/lib/forms/build-submission-export-assets';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getVisibleFieldIds } from '@/lib/forms/conditional-logic';
 import { resolveImageSpacingStyle, resolveImageStyle } from '@/lib/forms/field-styles';
@@ -14,6 +13,7 @@ import {
   DEFAULT_FORM_SECONDARY_COLOR,
   type FormSchema,
 } from '@/lib/forms/schema';
+import type { SubmissionExportAssets } from '@/lib/forms/submission-export-assets';
 
 interface SubmissionFormExportDocumentProps {
   formName: string;

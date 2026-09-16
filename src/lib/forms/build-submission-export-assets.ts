@@ -1,12 +1,13 @@
 import type { SubmissionFile } from '@prisma/client';
 import type { ResolvedSubmissionFile } from '@/lib/forms/format-submission-answer';
 import type { FormSchema } from '@/lib/forms/schema';
+import type { SubmissionExportAssets } from '@/lib/forms/submission-export-assets';
 import { createPresignedDownloadUrl } from '@/lib/s3';
 
-export interface SubmissionExportAssets {
-  fieldImages: Record<string, string>;
-  submissionFiles: Record<string, string>;
-}
+// Server-only: builds the actual data URLs (presigns against S3, then fetches and
+// base64-encodes each file). resolveSubmissionFileDataUrl/resolveSubmissionFileName —
+// the read side, safe to call from client components too — live in
+// submission-export-assets.ts instead; see that file's comment for why the split matters.
 
 async function fetchDataUrl(url: string, mimeType?: string): Promise<string | null> {
   try {
@@ -81,25 +82,4 @@ export async function buildSubmissionExportAssets(params: {
   }
 
   return { fieldImages, submissionFiles };
-}
-
-export function resolveSubmissionFileDataUrl(
-  assets: SubmissionExportAssets,
-  fieldId: string,
-  resolveFiles: (fieldId: string) => ResolvedSubmissionFile[],
-): string | null {
-  const resolved = resolveFiles(fieldId);
-  for (const file of resolved) {
-    const dataUrl = assets.submissionFiles[file.id];
-    if (dataUrl) return dataUrl;
-  }
-  return null;
-}
-
-export function resolveSubmissionFileName(
-  fieldId: string,
-  resolveFiles: (fieldId: string) => ResolvedSubmissionFile[],
-): string | null {
-  const resolved = resolveFiles(fieldId);
-  return resolved[0]?.filename ?? null;
 }

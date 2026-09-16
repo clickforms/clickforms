@@ -1,6 +1,4 @@
 import type { CSSProperties } from 'react';
-import type { SubmissionExportAssets } from '@/lib/forms/build-submission-export-assets';
-import { resolveSubmissionFileDataUrl } from '@/lib/forms/build-submission-export-assets';
 import { parseAddressAnswer, parseChoiceMatrixAnswer } from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import {
@@ -20,6 +18,8 @@ import { resolveFieldWidth } from '@/lib/forms/field-width';
 import type { ResolvedSubmissionFile } from '@/lib/forms/format-submission-answer';
 import { resolveMergeFieldsForRespondent } from '@/lib/forms/merge-fields';
 import type { FormField } from '@/lib/forms/schema';
+import type { SubmissionExportAssets } from '@/lib/forms/submission-export-assets';
+import { resolveSubmissionFileDataUrl } from '@/lib/forms/submission-export-assets';
 import { formatTimeForDisplay } from '@/lib/forms/time-value';
 
 type FieldValue = string | string[] | undefined;

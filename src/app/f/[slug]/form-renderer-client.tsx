@@ -493,6 +493,21 @@ export function FormRendererClient({
         </div>
 
         <div className="form-actions">
+          {/* Every blocking validation error (both the current-page check in
+              handleNextOrSubmit and the full-schema check in submitForm, which can jump
+              the respondent back to an earlier page) lands in `errors`, so this derives
+              straight from it rather than tracking a separate "was blocked" flag — it
+              appears the instant Next/Submit is blocked and disappears the instant the
+              last flagged field is fixed (handleAnswerChange already clears a field's own
+              entry on change). Placed by the button rather than up at the top of the
+              field list: a respondent who scrolled straight to Submit on a long page
+              would otherwise get no visible feedback at all for why nothing happened. */}
+          {Object.keys(errors).length > 0 ? (
+            <div className="form-error" role="alert">
+              Please fix the highlighted field{Object.keys(errors).length > 1 ? 's' : ''} above
+              before continuing.
+            </div>
+          ) : null}
           <div className="form-actions-primary" style={formActionsPrimaryStyle}>
             {pageIndex > 0 ? (
               <button

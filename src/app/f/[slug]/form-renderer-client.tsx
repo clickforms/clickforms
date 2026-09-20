@@ -503,10 +503,10 @@ export function FormRendererClient({
               field list: a respondent who scrolled straight to Submit on a long page
               would otherwise get no visible feedback at all for why nothing happened. */}
           {Object.keys(errors).length > 0 ? (
-            <div className="form-error" role="alert">
+            <p className="form-validation-notice" role="alert">
               Please fix the highlighted field{Object.keys(errors).length > 1 ? 's' : ''} above
               before continuing.
-            </div>
+            </p>
           ) : null}
           <div className="form-actions-primary" style={formActionsPrimaryStyle}>
             {pageIndex > 0 ? (

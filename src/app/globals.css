@@ -9401,6 +9401,16 @@ textarea.form-field-input {
   width: 100%;
 }
 
+/* Plain text, no box — matches .form-field-error's subtlety (the per-field "This field
+   is required." text) rather than .form-error's bordered banner, which read as too loud
+   for a notice that's really just pointing back at errors already shown above. */
+.form-validation-notice {
+  color: var(--color-danger);
+  font-size: 0.8125rem;
+  margin: 0;
+  text-align: center;
+}
+
 .form-submit-button {
   min-width: 9rem;
   padding: 0.7rem 2rem;

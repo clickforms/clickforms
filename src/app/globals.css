@@ -6306,11 +6306,53 @@ textarea.text-input {
   color: var(--builder-text);
 }
 
-.builder-palette > :not(.builder-rail) {
+.builder-panel-scroll {
+  position: relative;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+.builder-panel-scroll-viewport {
+  height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
+  /* Hide the OS bar (macOS overlay ignores CSS width) and clip any leftover by
+     shoving it into padding that the overflow:hidden parent above cuts off. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  width: calc(100% + 24px);
+  padding-right: 24px;
+}
+
+.builder-panel-scroll-viewport::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.builder-panel-scroll-track {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  bottom: 8px;
+  width: 8px;
+  pointer-events: none;
+}
+
+.builder-panel-scroll-thumb {
+  width: 4px;
+  margin-left: auto;
+  margin-right: 2px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.5);
+  pointer-events: auto;
+  cursor: default;
+}
+
+.builder-panel-scroll-thumb:hover,
+.builder-panel-scroll-thumb:active {
+  background-color: rgba(255, 255, 255, 0.75);
 }
 
 /* Shrink the left chrome as the builder itself gets narrower (admin nav already

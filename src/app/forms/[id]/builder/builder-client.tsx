@@ -15,6 +15,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { FormStatus } from '@prisma/client';
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BuilderPanelScroll } from '@/app/forms/[id]/builder/builder-panel-scroll';
 import { BuilderRail, type BuilderRailTab } from '@/app/forms/[id]/builder/builder-rail';
 import { CANVAS_DROPPABLE_ID, Canvas } from '@/app/forms/[id]/builder/canvas';
 import { ConditionalLogicEditor } from '@/app/forms/[id]/builder/conditional-logic-editor';
@@ -952,87 +953,89 @@ export function BuilderClient({
                 }
               >
                 <BuilderRail activeTab={activeRailTab} onChangeTab={handleChangeRailTab} />
-                {activeRailTab === 'fields' ? (
-                  editingField ? (
-                    <div className="field-settings-aside">
-                      <div className="field-settings-aside-header">
-                        <span className="field-settings-aside-title">Field</span>
-                        {!isEditingColumnChild ? (
+                <BuilderPanelScroll>
+                  {activeRailTab === 'fields' ? (
+                    editingField ? (
+                      <div className="field-settings-aside">
+                        <div className="field-settings-aside-header">
+                          <span className="field-settings-aside-title">Field</span>
+                          {!isEditingColumnChild ? (
+                            <button
+                              type="button"
+                              className="button button--ghost button--small"
+                              onClick={() => handleDuplicateField(editingField.id)}
+                            >
+                              Duplicate
+                            </button>
+                          ) : null}
                           <button
                             type="button"
-                            className="button button--ghost button--small"
-                            onClick={() => handleDuplicateField(editingField.id)}
+                            className="field-settings-aside-back"
+                            onClick={handleCloseFieldModal}
+                            aria-label="Deselect field"
                           >
-                            Duplicate
+                            <CloseIcon />
                           </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="field-settings-aside-back"
-                          onClick={handleCloseFieldModal}
-                          aria-label="Deselect field"
-                        >
-                          <CloseIcon />
-                        </button>
-                      </div>
-                      <FieldSettingsPanel
-                        formId={formId}
-                        schema={schema}
-                        field={editingField}
-                        canEdit={canEditCanvas}
-                        onUpdateField={handleUpdateField}
-                        onReplaceFieldType={handleReplaceFieldType}
-                        onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
-                      />
-                    </div>
-                  ) : (
-                    <FieldPalette
-                      onAddField={(type) => handleAddField(type)}
-                      onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
-                    />
-                  )
-                ) : activeRailTab === 'design' ? (
-                  <div className="field-settings-aside">
-                    <div className="field-settings-aside-header">
-                      <span className="field-settings-aside-title">Design</span>
-                    </div>
-                    <div className="settings-panel">
-                      <DesignSettingsPanel
-                        branding={schema.branding}
-                        canEdit={canEditCanvas}
-                        onUpdateBranding={handleUpdateBranding}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="field-settings-aside">
-                    <div className="field-settings-aside-header">
-                      <span className="field-settings-aside-title">
-                        {logicField ? `Logic — ${logicField.label || 'Untitled field'}` : 'Logic'}
-                      </span>
-                    </div>
-                    {logicField ? (
-                      <div className="settings-panel">
-                        <ConditionalLogicEditor
+                        </div>
+                        <FieldSettingsPanel
+                          formId={formId}
                           schema={schema}
-                          field={logicField}
+                          field={editingField}
                           canEdit={canEditCanvas}
-                          onSetRule={handleSetConditionalRule}
-                          onClearRule={() => handleClearConditionalRule(logicField.id)}
+                          onUpdateField={handleUpdateField}
+                          onReplaceFieldType={handleReplaceFieldType}
+                          onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
                         />
                       </div>
                     ) : (
-                      <div className="settings-panel settings-panel--empty">
-                        <div className="settings-panel-empty-state">
-                          <p className="settings-panel-empty-title">No field selected</p>
-                          <p className="settings-panel-empty">
-                            Click a field on the canvas to add conditional logic to it.
-                          </p>
-                        </div>
+                      <FieldPalette
+                        onAddField={(type) => handleAddField(type)}
+                        onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
+                      />
+                    )
+                  ) : activeRailTab === 'design' ? (
+                    <div className="field-settings-aside">
+                      <div className="field-settings-aside-header">
+                        <span className="field-settings-aside-title">Design</span>
                       </div>
-                    )}
-                  </div>
-                )}
+                      <div className="settings-panel">
+                        <DesignSettingsPanel
+                          branding={schema.branding}
+                          canEdit={canEditCanvas}
+                          onUpdateBranding={handleUpdateBranding}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="field-settings-aside">
+                      <div className="field-settings-aside-header">
+                        <span className="field-settings-aside-title">
+                          {logicField ? `Logic — ${logicField.label || 'Untitled field'}` : 'Logic'}
+                        </span>
+                      </div>
+                      {logicField ? (
+                        <div className="settings-panel">
+                          <ConditionalLogicEditor
+                            schema={schema}
+                            field={logicField}
+                            canEdit={canEditCanvas}
+                            onSetRule={handleSetConditionalRule}
+                            onClearRule={() => handleClearConditionalRule(logicField.id)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="settings-panel settings-panel--empty">
+                          <div className="settings-panel-empty-state">
+                            <p className="settings-panel-empty-title">No field selected</p>
+                            <p className="settings-panel-empty">
+                              Click a field on the canvas to add conditional logic to it.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </BuilderPanelScroll>
               </aside>
             ) : null}
 

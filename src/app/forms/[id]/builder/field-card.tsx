@@ -9,6 +9,7 @@ import { COLUMN_CHILD_FIELD_TYPES, FIELD_TYPE_LABELS } from '@/app/forms/[id]/bu
 import type { FieldPatch } from '@/app/forms/[id]/builder/schema-mutations';
 import { DatePickerField } from '@/components/date-picker/date-picker-field';
 import { TimePickerField } from '@/components/time-picker/time-picker-field';
+import { describeCalculationFormula } from '@/lib/forms/calculation';
 import { getFieldImageSrc } from '@/lib/forms/field-image';
 import {
   fieldHasCustomAppearance,
@@ -27,13 +28,18 @@ import { resolveMergeFieldsForPreview } from '@/lib/forms/merge-fields';
 import {
   DEFAULT_DIVIDER_THICKNESS_PX,
   DEFAULT_DIVIDER_WIDTH_PX,
+  DEFAULT_TABLE_ROWS,
   DIVIDER_THICKNESS_MAX_PX,
   DIVIDER_THICKNESS_MIN_PX,
   DIVIDER_WIDTH_MAX_PX,
   DIVIDER_WIDTH_MIN_PX,
   type FieldType,
   type FormField,
+  QUESTION_ROW_ANSWER_TYPE_LABEL,
+  TABLE_COLUMN_TYPE_LABEL,
+  TABLE_ROWS_MAX,
 } from '@/lib/forms/schema';
+import { maskPlaceholder } from '@/lib/forms/text-mask';
 
 /** Synthetic dnd-kit droppable id for an empty column slot — parsed back out in
  * builder-client.tsx's handleDragEnd via parseColumnSlotDroppableId(). */
@@ -124,11 +130,29 @@ function EmptyColumnSlot({
 function GripIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      {[3, 7, 11].flatMap((cy) =>
-        [4, 10].map((cx) => (
+      {[5, 9].flatMap((cy) =>
+        [3, 7, 11].map((cx) => (
           <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.3" fill="currentColor" />
         )),
       )}
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M19.4 13.05a7.6 7.6 0 0 0 .06-1.05 7.6 7.6 0 0 0-.06-1.05l2.06-1.61-1.96-3.4-2.48.99a7.9 7.9 0 0 0-1.82-1.05L14.8 2.5h-5.6l-.4 2.38c-.66.27-1.27.62-1.82 1.05l-2.48-.99-1.96 3.4 2.06 1.61A7.6 7.6 0 0 0 4.54 12a7.6 7.6 0 0 0 .06 1.05L2.54 14.66l1.96 3.4 2.48-.99c.55.43 1.16.78 1.82 1.05l.4 2.38h5.6l.4-2.38c.66-.27 1.27-.62 1.82-1.05l2.48.99 1.96-3.4-2.06-1.61Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -147,25 +171,39 @@ function CopyIcon() {
   );
 }
 
-function EditIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <path
-        d="M9.4 2.3l2.3 2.3-6.7 6.7H2.7v-2.3l6.7-6.7z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function TrashIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <path
         d="M2.5 4h9M5.5 4V2.8c0-.44.36-.8.8-.8h1.4c.44 0 .8.36.8.8V4M5 6.3v4M9 6.3v4M3.3 4l.5 7.2c.04.5.46.9.97.9h4.46c.51 0 .93-.4.97-.9L10.7 4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ArrowUpIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M7 11.2V2.8M3.2 6.6 7 2.8l3.8 3.8"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ArrowDownIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M7 2.8v8.4M3.2 7.4 7 11.2l3.8-3.8"
         stroke="currentColor"
         strokeWidth="1.3"
         strokeLinecap="round"
@@ -196,73 +234,173 @@ function CloudUploadIcon() {
   );
 }
 
-// Always mounted when canEdit; CSS reveals it on hover (see .field-card-action-overlay
-// in globals.css) rather than on click/selection. Mirrors a common "click and drag to
-// move the field or: [Edit] [Duplicate] [Delete]" panel, offering the same three actions
-// in place of tiny corner icons whenever the field is moused over.
-interface FieldActionOverlayProps {
-  light?: boolean;
-  /** Nested column cells can't be duplicated in-place (fixed slot count). */
-  showDuplicate?: boolean;
-  onEditDetails: () => void;
-  onDuplicate: () => void;
-  onRemove: () => void;
-}
+// Always mounted when canEdit; CSS reveals it on hover (see .field-card-toolbar
+// in globals.css) rather than on click/selection.
 
-function FieldActionOverlay({
-  light,
+function FieldHoverToolbar({
   showDuplicate = true,
+  showMove = true,
   onEditDetails,
   onDuplicate,
   onRemove,
-}: FieldActionOverlayProps) {
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = false,
+  canMoveDown = false,
+}: {
+  showDuplicate?: boolean;
+  /** Hidden for nested column children — "up/down" doesn't map cleanly onto a
+   * horizontal layout's side-by-side slots. */
+  showMove?: boolean;
+  onEditDetails: () => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+}) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!moreRef.current?.contains(event.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setMoreOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [moreOpen]);
+
   return (
-    <div
-      className={['field-card-action-overlay', light ? 'field-card-action-overlay--light' : '']
-        .filter(Boolean)
-        .join(' ')}
-    >
-      <p className="field-card-action-hint">
-        {showDuplicate ? 'Click and drag to move the field or:' : 'Edit this column field or:'}
-      </p>
-      <div className="field-card-action-buttons">
+    <div className="field-card-toolbar">
+      <button
+        type="button"
+        className="field-action-button"
+        onMouseDown={stopSelectPropagation}
+        onClick={(event) => {
+          event.stopPropagation();
+          onEditDetails();
+        }}
+        aria-label="Field settings"
+        title="Settings"
+      >
+        <GearIcon />
+      </button>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: stops the card's click-to-select mousedown */}
+      <div
+        className={['field-card-kebab', moreOpen ? 'field-card-kebab--open' : '']
+          .filter(Boolean)
+          .join(' ')}
+        ref={moreRef}
+        onMouseDown={stopSelectPropagation}
+      >
         <button
           type="button"
-          className="button button--secondary button--small"
-          onMouseDown={stopSelectPropagation}
+          className="field-action-button"
           onClick={(event) => {
             event.stopPropagation();
-            onEditDetails();
+            setMoreOpen((prev) => !prev);
           }}
+          aria-haspopup="menu"
+          aria-expanded={moreOpen}
+          aria-label="More field actions"
+          title="More"
         >
-          <EditIcon /> Edit
+          <KebabIcon />
         </button>
-        {showDuplicate ? (
-          <button
-            type="button"
-            className="button button--secondary button--small"
-            onMouseDown={stopSelectPropagation}
-            onClick={(event) => {
-              event.stopPropagation();
-              onDuplicate();
-            }}
-          >
-            <CopyIcon /> Duplicate
-          </button>
+        {moreOpen ? (
+          // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern
+          <ul className="field-card-kebab-panel" role="menu">
+            {showDuplicate ? (
+              <li role="none">
+                <button
+                  type="button"
+                  className="actions-menu-item"
+                  role="menuitem"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setMoreOpen(false);
+                    onDuplicate();
+                  }}
+                >
+                  <span className="actions-menu-icon">
+                    <CopyIcon />
+                  </span>
+                  Duplicate
+                </button>
+              </li>
+            ) : null}
+            {showMove ? (
+              <>
+                <li role="none">
+                  <button
+                    type="button"
+                    className="actions-menu-item"
+                    role="menuitem"
+                    disabled={!canMoveUp}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setMoreOpen(false);
+                      onMoveUp?.();
+                    }}
+                  >
+                    <span className="actions-menu-icon">
+                      <ArrowUpIcon />
+                    </span>
+                    Move Up
+                  </button>
+                </li>
+                <li role="none">
+                  <button
+                    type="button"
+                    className="actions-menu-item"
+                    role="menuitem"
+                    disabled={!canMoveDown}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setMoreOpen(false);
+                      onMoveDown?.();
+                    }}
+                  >
+                    <span className="actions-menu-icon">
+                      <ArrowDownIcon />
+                    </span>
+                    Move Down
+                  </button>
+                </li>
+              </>
+            ) : null}
+            <li role="none">
+              <button
+                type="button"
+                className="actions-menu-item actions-menu-item--danger"
+                role="menuitem"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMoreOpen(false);
+                  onRemove();
+                }}
+              >
+                <span className="actions-menu-icon">
+                  <TrashIcon />
+                </span>
+                {showDuplicate ? 'Delete' : 'Clear'}
+              </button>
+            </li>
+          </ul>
         ) : null}
-        <button
-          type="button"
-          className="button button--danger button--small field-card-action-delete"
-          onMouseDown={stopSelectPropagation}
-          onClick={(event) => {
-            event.stopPropagation();
-            onRemove();
-          }}
-          aria-label={showDuplicate ? 'Delete field' : 'Clear column field'}
-          title={showDuplicate ? 'Delete field' : 'Clear column field'}
-        >
-          <TrashIcon />
-        </button>
       </div>
     </div>
   );
@@ -271,11 +409,20 @@ function FieldActionOverlay({
 function FieldPreview({
   field,
   formId,
+  templateId,
   fields,
+  canEdit,
+  onUpdateField,
 }: {
   field: FormField;
   formId?: string;
+  templateId?: string;
   fields?: Record<string, FormField>;
+  /** Only wired up for field types with an inline-editable canvas preview (currently just
+   * 'table' — see the DividerResizeHandles precedent above for the same "edit live from
+   * the canvas" pattern). Every other field type ignores these two props entirely. */
+  canEdit?: boolean;
+  onUpdateField?: (fieldId: string, patch: FieldPatch) => void;
 }) {
   const inputStyle = resolveFieldInputStyle(field);
 
@@ -413,7 +560,9 @@ function FieldPreview({
       );
     case 'image': {
       const src =
-        field.imageStorageKey && formId ? getFieldImageSrc({ formId, fieldId: field.id }) : null;
+        field.imageStorageKey && (formId || templateId)
+          ? getFieldImageSrc({ formId, templateId, fieldId: field.id })
+          : null;
       const align = field.align ?? 'center';
       if (src) {
         return (
@@ -434,6 +583,34 @@ function FieldPreview({
       return (
         <div className="field-preview-dropzone">
           <span>Upload an image in the settings panel</span>
+        </div>
+      );
+    }
+    case 'draw_on_image': {
+      const src =
+        field.imageStorageKey && (formId || templateId)
+          ? getFieldImageSrc({ formId, templateId, fieldId: field.id })
+          : null;
+      if (!src) {
+        // No wrapping .field-preview-draw-on-image box here — it has its own dashed
+        // border, and nesting it around .field-preview-dropzone (which has one too)
+        // would double up the border with nothing but a stray "draws here" badge
+        // floating over empty space to show for it.
+        return (
+          <div className="field-preview-dropzone">
+            <span>Upload a background image in the settings panel</span>
+          </div>
+        );
+      }
+      return (
+        <div className="field-preview-draw-on-image">
+          {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URL; next/image is a poor fit here */}
+          <img
+            src={src}
+            alt={field.alt ?? field.label}
+            className="field-preview-draw-on-image-bg"
+          />
+          <span className="field-preview-draw-on-image-badge">Respondent draws here</span>
         </div>
       );
     }
@@ -507,6 +684,128 @@ function FieldPreview({
           ) : null}
         </div>
       );
+    case 'full_name':
+      return (
+        <div className="field-preview-full-name-row">
+          {field.includePrefix ? (
+            <input
+              className="text-input field-preview-input field-preview-full-name-prefix"
+              type="text"
+              placeholder="Prefix"
+              disabled
+              style={inputStyle}
+            />
+          ) : null}
+          <input
+            className="text-input field-preview-input"
+            type="text"
+            placeholder="First name"
+            disabled
+            style={inputStyle}
+          />
+          {field.includeMiddleName ? (
+            <input
+              className="text-input field-preview-input"
+              type="text"
+              placeholder="Middle name"
+              disabled
+              style={inputStyle}
+            />
+          ) : null}
+          <input
+            className="text-input field-preview-input"
+            type="text"
+            placeholder="Last name"
+            disabled
+            style={inputStyle}
+          />
+        </div>
+      );
+    case 'masked_text':
+      return (
+        <input
+          className="text-input field-preview-input"
+          type="text"
+          placeholder={field.placeholder || maskPlaceholder(field.mask)}
+          disabled
+          style={inputStyle}
+        />
+      );
+    case 'calculation':
+      return (
+        <div className="field-preview-calculation" style={inputStyle}>
+          <span className="field-preview-calculation-formula">
+            {field.formula
+              ? describeCalculationFormula(field.formula, fields ?? {})
+              : 'No formula set'}
+          </span>
+          <span className="field-preview-calculation-badge">Auto-calculated</span>
+        </div>
+      );
+    case 'yes_no':
+      return (
+        <div className="field-preview-yes-no">
+          <button type="button" className="field-preview-yes-no-option" disabled style={inputStyle}>
+            {field.yesLabel || 'Yes'}
+          </button>
+          <button type="button" className="field-preview-yes-no-option" disabled style={inputStyle}>
+            {field.noLabel || 'No'}
+          </button>
+        </div>
+      );
+    case 'ranking':
+      return (
+        <div className="field-preview-ranking">
+          {field.options.map((option, index) => (
+            <div key={option.id} className="field-preview-ranking-row">
+              <span className="field-preview-ranking-index">{index + 1}</span>
+              <span className="field-preview-ranking-label">{option.label}</span>
+              <span className="field-preview-ranking-handle" aria-hidden="true">
+                ⠿
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    case 'picture_choice':
+      return (
+        <div className="field-preview-picture-choice">
+          {field.options.map((option) => (
+            <div key={option.id} className="field-preview-picture-choice-tile">
+              {option.imageUrl ? (
+                // biome-ignore lint/performance/noImgElement: admin-supplied arbitrary URL, next/image requires a known host
+                <img
+                  src={option.imageUrl}
+                  alt={option.label}
+                  className="field-preview-picture-choice-image"
+                />
+              ) : (
+                <div className="field-preview-picture-choice-placeholder" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                    <rect
+                      x="2"
+                      y="3"
+                      width="14"
+                      height="12"
+                      rx="1.4"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                    />
+                    <circle cx="6" cy="7" r="1.3" stroke="currentColor" strokeWidth="1.2" />
+                    <path
+                      d="M3.5 13l3.5-4 2.6 2.6 2.4-3 3 4.4"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                      fill="none"
+                    />
+                  </svg>
+                </div>
+              )}
+              <span className="field-preview-picture-choice-label">{option.label}</span>
+            </div>
+          ))}
+        </div>
+      );
     case 'choice_matrix':
       return (
         <table className="field-preview-matrix">
@@ -532,6 +831,280 @@ function FieldPreview({
           </tbody>
         </table>
       );
+    case 'table': {
+      // Captured as its own const (rather than reading the outer `field` param directly)
+      // so the nested functions below keep TypeScript's 'table' narrowing — closures over
+      // a switch-narrowed function parameter lose that narrowing in TS, but closures over
+      // a const declared right here don't.
+      const tableField = field;
+      const previewRowCount = tableField.defaultRows ?? DEFAULT_TABLE_ROWS;
+      // Inline canvas editing (add/rename/remove columns, adjust the starting row count)
+      // only kicks in when the caller wired up onUpdateField — mirrors Jotform's matrix
+      // editor, where the grid itself is the primary editing surface and the field's
+      // settings panel (gear icon) is reserved for per-column type/options detail. Falls
+      // back to the plain disabled preview wherever onUpdateField isn't available (e.g.
+      // read-only contexts) or the admin can't edit.
+      const canEditInline = canEdit && Boolean(onUpdateField);
+
+      function updateColumnLabel(index: number, label: string) {
+        onUpdateField?.(tableField.id, {
+          columns: tableField.columns.map((column, i) =>
+            i === index ? { ...column, label } : column,
+          ),
+        });
+      }
+
+      function removeColumn(index: number) {
+        if (tableField.columns.length <= 1) return;
+        onUpdateField?.(tableField.id, {
+          columns: tableField.columns.filter((_, i) => i !== index),
+        });
+      }
+
+      function addColumn() {
+        onUpdateField?.(tableField.id, {
+          columns: [
+            ...tableField.columns,
+            {
+              id: crypto.randomUUID(),
+              label: `Column ${tableField.columns.length + 1}`,
+              type: 'short_text',
+            },
+          ],
+        });
+      }
+
+      function addRow() {
+        onUpdateField?.(tableField.id, {
+          defaultRows: Math.min(previewRowCount + 1, TABLE_ROWS_MAX),
+        });
+      }
+
+      function removeRow() {
+        if (previewRowCount <= 1) return;
+        onUpdateField?.(tableField.id, { defaultRows: previewRowCount - 1 });
+      }
+
+      return (
+        <div className="field-preview-table-wrap">
+          <table className="field-preview-table">
+            <thead>
+              <tr>
+                {field.columns.map((column, index) => (
+                  <th key={column.id}>
+                    {canEditInline ? (
+                      <span className="field-preview-table-col-header">
+                        <input
+                          className="field-preview-table-col-input"
+                          value={column.label}
+                          placeholder="Untitled column"
+                          onMouseDown={stopSelectPropagation}
+                          onChange={(event) => updateColumnLabel(index, event.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="field-preview-table-col-remove"
+                          disabled={field.columns.length <= 1}
+                          aria-label="Remove column"
+                          onMouseDown={stopSelectPropagation}
+                          onClick={() => removeColumn(index)}
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ) : (
+                      column.label || 'Untitled column'
+                    )}
+                  </th>
+                ))}
+                {canEditInline ? (
+                  <th className="field-preview-table-add-column-cell">
+                    <button
+                      type="button"
+                      className="field-preview-table-add-column"
+                      onMouseDown={stopSelectPropagation}
+                      onClick={addColumn}
+                    >
+                      + add column
+                    </button>
+                  </th>
+                ) : null}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: previewRowCount }, (_, rowIndex) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: placeholder rows have no real id yet — the respondent, not the admin, creates actual rows here
+                <tr key={rowIndex}>
+                  {field.columns.map((column) => (
+                    <td key={column.id}>
+                      <input
+                        className="text-input field-preview-input"
+                        type="text"
+                        disabled
+                        placeholder={TABLE_COLUMN_TYPE_LABEL[column.type]}
+                      />
+                    </td>
+                  ))}
+                  {canEditInline ? <td className="field-preview-table-add-column-cell" /> : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {canEditInline ? (
+            <div className="field-preview-table-row-controls">
+              <button
+                type="button"
+                className="field-preview-table-add-row"
+                onMouseDown={stopSelectPropagation}
+                onClick={addRow}
+              >
+                + add row
+              </button>
+              {previewRowCount > 1 ? (
+                <button
+                  type="button"
+                  className="field-preview-table-remove-row"
+                  onMouseDown={stopSelectPropagation}
+                  onClick={removeRow}
+                >
+                  &minus; remove row
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+    case 'question_table': {
+      // Same TS-narrowing capture as the 'table' case above — nested functions closing
+      // over `field` directly would lose the 'question_table' narrowing.
+      const questionTableField = field;
+      // Inline editing here is scoped to renaming/adding/removing questions (the rows) —
+      // per-row answer type and required-ness, plus the header/color settings, still live
+      // in the settings panel, mirroring how 'table' reserves per-column type/options for
+      // its settings panel while the canvas handles column labels and row count.
+      const canEditInline = canEdit && Boolean(onUpdateField);
+      const fieldColumnLabel = questionTableField.fieldColumnLabel || 'Field';
+      const valueColumnLabel = questionTableField.valueColumnLabel || 'Details';
+      const headerStyle: CSSProperties = {
+        backgroundColor: questionTableField.headerColor,
+        color: questionTableField.headerTextColor,
+      };
+      const valueStyle: CSSProperties = {
+        backgroundColor: questionTableField.valueColor,
+      };
+
+      function updateRowLabel(index: number, label: string) {
+        onUpdateField?.(questionTableField.id, {
+          rows: questionTableField.rows.map((row, i) => (i === index ? { ...row, label } : row)),
+        });
+      }
+
+      function removeRow(index: number) {
+        if (questionTableField.rows.length <= 1) return;
+        onUpdateField?.(questionTableField.id, {
+          rows: questionTableField.rows.filter((_, i) => i !== index),
+        });
+      }
+
+      function addRow() {
+        onUpdateField?.(questionTableField.id, {
+          rows: [
+            ...questionTableField.rows,
+            {
+              id: crypto.randomUUID(),
+              label: `Question ${questionTableField.rows.length + 1}`,
+              type: 'short_text',
+              required: true,
+            },
+          ],
+        });
+      }
+
+      return (
+        <div className="field-preview-question-table-wrap">
+          <table className="field-preview-question-table">
+            <thead>
+              <tr>
+                <th style={headerStyle}>{fieldColumnLabel}</th>
+                <th style={headerStyle}>{valueColumnLabel}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {questionTableField.rows.map((row, index) => (
+                <tr key={row.id}>
+                  <td className="field-preview-question-table-label-cell">
+                    {canEditInline ? (
+                      <span className="field-preview-table-col-header">
+                        <input
+                          className="field-preview-table-col-input"
+                          value={row.label}
+                          placeholder="Question"
+                          onMouseDown={stopSelectPropagation}
+                          onChange={(event) => updateRowLabel(index, event.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="field-preview-table-col-remove"
+                          disabled={questionTableField.rows.length <= 1}
+                          aria-label="Remove question"
+                          onMouseDown={stopSelectPropagation}
+                          onClick={() => removeRow(index)}
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ) : (
+                      <>
+                        {row.label || 'Untitled question'}
+                        {row.required ? <span className="field-card-required"> *</span> : null}
+                      </>
+                    )}
+                  </td>
+                  <td style={valueStyle}>
+                    {row.type === 'dropdown' ? (
+                      <select className="text-input field-preview-input" disabled>
+                        <option>Select an option</option>
+                        {(row.options ?? []).map((option) => (
+                          <option key={option.id}>{option.label || 'Untitled option'}</option>
+                        ))}
+                      </select>
+                    ) : row.type === 'date' ? (
+                      <DatePickerField
+                        id={`preview-${field.id}-${row.id}`}
+                        className="text-input field-preview-input"
+                        value=""
+                        disabled
+                        onChange={() => {}}
+                      />
+                    ) : (
+                      <input
+                        className="text-input field-preview-input"
+                        type={row.type === 'number' ? 'number' : 'text'}
+                        disabled
+                        placeholder={QUESTION_ROW_ANSWER_TYPE_LABEL[row.type]}
+                      />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {canEditInline ? (
+            <div className="field-preview-table-row-controls">
+              <button
+                type="button"
+                className="field-preview-table-add-row"
+                onMouseDown={stopSelectPropagation}
+                onClick={addRow}
+              >
+                + add question
+              </button>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
     case 'number':
       return (
         <div className="field-preview-number">
@@ -699,11 +1272,18 @@ interface FieldCardProps {
   field: FormField;
   fields?: Record<string, FormField>;
   formId?: string;
+  templateId?: string;
+  /** 1-based question number shown as "1. Label" on the canvas. Omitted for layout
+   * chrome (images, headers, dividers) and nested column children. */
+  questionNumber?: number;
   selected: boolean;
   canEdit: boolean;
   hasConditionalRule: boolean;
   visibleInPreview: boolean;
   nested?: boolean;
+  /** Presentational clone for DragOverlay — skip sortable listeners so the original
+   * canvas card can keep its id. */
+  overlay?: boolean;
   selectedFieldId?: string | null;
   visibleFieldIds?: Set<string>;
   fieldIdsWithRules?: Set<string>;
@@ -723,6 +1303,13 @@ interface FieldCardProps {
   onUpdateField?: (fieldId: string, patch: FieldPatch) => void;
   onRemove: () => void;
   onDuplicate: () => void;
+  /** Explicit reorder alternative to drag-and-drop, from the kebab menu. Omitted (along
+   * with canMoveUp/canMoveDown) for nested column children — see showMove on
+   * FieldHoverToolbar. */
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 function stopSelectPropagation(event: MouseEvent) {
@@ -835,130 +1422,11 @@ function DividerResizeHandles({
 
 function KebabIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <circle cx="7" cy="3" r="1.3" fill="currentColor" />
-      <circle cx="7" cy="7" r="1.3" fill="currentColor" />
-      <circle cx="7" cy="11" r="1.3" fill="currentColor" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="6" r="1.7" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.7" fill="currentColor" />
+      <circle cx="12" cy="18" r="1.7" fill="currentColor" />
     </svg>
-  );
-}
-
-/** Compact "⋮" menu used in place of the full-card FieldActionOverlay for fields (so far
- * just the divider) where that overlay's inset:0 panel would sit on top of controls the
- * admin actually needs to reach — the resize handles and the line itself here. Same three
- * actions, opened on click rather than shown on hover, so nothing overlaps by default. */
-function DividerActionsMenu({
-  onEditDetails,
-  onDuplicate,
-  onRemove,
-}: {
-  onEditDetails: () => void;
-  onDuplicate: () => void;
-  onRemove: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handlePointerDown(event: PointerEvent) {
-      if (!wrapperRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false);
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
-
-  return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: stops the click-to-select mousedown handler on the parent card from firing when interacting with this menu, same pattern as stopSelectPropagation elsewhere in this file
-    <div
-      className={['field-card-kebab', open ? 'field-card-kebab--open' : '']
-        .filter(Boolean)
-        .join(' ')}
-      ref={wrapperRef}
-      onMouseDown={stopSelectPropagation}
-    >
-      <button
-        type="button"
-        className="field-action-button"
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen((prev) => !prev);
-        }}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label="Field actions"
-        title="More actions"
-      >
-        <KebabIcon />
-      </button>
-      {open ? (
-        // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern, matches FormActionsMenu's panel elsewhere in the app
-        <ul className="field-card-kebab-panel" role="menu">
-          <li role="none">
-            <button
-              type="button"
-              className="actions-menu-item"
-              role="menuitem"
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpen(false);
-                onEditDetails();
-              }}
-            >
-              <span className="actions-menu-icon">
-                <EditIcon />
-              </span>
-              Edit
-            </button>
-          </li>
-          <li role="none">
-            <button
-              type="button"
-              className="actions-menu-item"
-              role="menuitem"
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpen(false);
-                onDuplicate();
-              }}
-            >
-              <span className="actions-menu-icon">
-                <CopyIcon />
-              </span>
-              Duplicate
-            </button>
-          </li>
-          <li role="none">
-            <button
-              type="button"
-              className="actions-menu-item actions-menu-item--danger"
-              role="menuitem"
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpen(false);
-                onRemove();
-              }}
-            >
-              <span className="actions-menu-icon">
-                <TrashIcon />
-              </span>
-              Remove
-            </button>
-          </li>
-        </ul>
-      ) : null}
-    </div>
   );
 }
 
@@ -966,11 +1434,14 @@ export function FieldCard({
   field,
   fields,
   formId,
+  templateId,
+  questionNumber,
   selected,
   canEdit,
   hasConditionalRule,
   visibleInPreview,
   nested = false,
+  overlay = false,
   onSelect,
   onSelectField,
   onEditDetails,
@@ -980,22 +1451,28 @@ export function FieldCard({
   onUpdateField,
   onRemove,
   onDuplicate,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = false,
+  canMoveDown = false,
   selectedFieldId = null,
   visibleFieldIds,
   fieldIdsWithRules,
 }: FieldCardProps) {
   const sortable = useSortable({
-    id: field.id,
-    disabled: !canEdit || nested,
+    id: overlay ? `__overlay-${field.id}` : field.id,
+    disabled: overlay || !canEdit || nested,
   });
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
-  const dragProps = canEdit && !nested ? { ...attributes, ...listeners } : {};
+  const dragProps = canEdit && !nested && !overlay ? { ...attributes, ...listeners } : {};
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  const style = overlay
+    ? undefined
+    : {
+        transform: CSS.Transform.toString(transform),
+        transition,
+      };
 
   if (field.type === 'column_layout') {
     return (
@@ -1019,43 +1496,28 @@ export function FieldCard({
         <div className="column-layout-header">
           {canEdit && <DragHandleCue />}
           {canEdit && (
-            <div className="field-card-toolbar">
-              <button
-                type="button"
-                className="field-action-button"
-                onMouseDown={stopSelectPropagation}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onDuplicate();
-                }}
-                aria-label="Duplicate column section"
-                title="Duplicate"
-              >
-                <CopyIcon />
-              </button>
-              <button
-                type="button"
-                className="field-action-button"
-                onMouseDown={stopSelectPropagation}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onRemove();
-                }}
-                aria-label="Remove column section"
-                title="Remove"
-              >
-                &times;
-              </button>
-            </div>
+            <FieldHoverToolbar
+              onEditDetails={onEditDetails}
+              onDuplicate={onDuplicate}
+              onRemove={onRemove}
+              onMoveUp={onMoveUp}
+              onMoveDown={onMoveDown}
+              canMoveUp={canMoveUp}
+              canMoveDown={canMoveDown}
+            />
           )}
           <div className="column-layout-heading">
-            <span className="column-layout-title">{field.label || 'Column section'}</span>
+            <span className="column-layout-title">
+              {questionNumber ? `${questionNumber}. ` : ''}
+              {field.label || 'Column section'}
+              {field.required && <span className="field-card-required">*</span>}
+            </span>
             <div className="field-card-badges">
               {hasConditionalRule && <span className="badge badge--draft">Conditional</span>}
               {!visibleInPreview && <span className="badge badge--neutral">Hidden in preview</span>}
-              <span className="badge badge--neutral">{field.columns} columns</span>
             </div>
           </div>
+          {field.helpText ? <p className="field-card-help">{field.helpText}</p> : null}
         </div>
         <div className={`column-layout-grid column-layout-grid--${field.columns}`}>
           {field.fieldIds.map((childId, slotIndex) => {
@@ -1079,6 +1541,7 @@ export function FieldCard({
                 field={child}
                 fields={fields}
                 formId={formId}
+                templateId={templateId}
                 selected={selectedFieldId === childId}
                 selectedFieldId={selectedFieldId}
                 visibleFieldIds={visibleFieldIds}
@@ -1087,6 +1550,7 @@ export function FieldCard({
                 hasConditionalRule={fieldIdsWithRules?.has(childId) ?? false}
                 visibleInPreview={visibleFieldIds?.has(childId) ?? true}
                 nested
+                overlay={overlay}
                 onSelect={() => onSelectField?.(childId)}
                 onSelectField={onSelectField}
                 onEditDetails={() => onEditFieldDetails?.(childId)}
@@ -1121,23 +1585,21 @@ export function FieldCard({
         onMouseDown={(event) => handleFieldSelectMouseDown(event, onSelect)}
         {...dragProps}
       >
-        <div
-          className={['section-break-bar', selected ? 'section-break-bar--selected' : '']
-            .filter(Boolean)
-            .join(' ')}
-          style={resolveSectionBreakStyle(field)}
-        >
-          {canEdit && <DragHandleCue light />}
+        <div className="section-break-bar" style={resolveSectionBreakStyle(field)}>
           <span className="section-break-title">{field.label || 'Header'}</span>
-          {canEdit && (
-            <FieldActionOverlay
-              light
-              onEditDetails={onEditDetails}
-              onDuplicate={onDuplicate}
-              onRemove={onRemove}
-            />
-          )}
         </div>
+        {canEdit && <DragHandleCue />}
+        {canEdit && (
+          <FieldHoverToolbar
+            onEditDetails={onEditDetails}
+            onDuplicate={onDuplicate}
+            onRemove={onRemove}
+            onMoveUp={onMoveUp}
+            onMoveDown={onMoveDown}
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
+          />
+        )}
         {field.helpText ? (
           <p className="section-break-instruction-preview">{field.helpText}</p>
         ) : null}
@@ -1165,6 +1627,17 @@ export function FieldCard({
         {...dragProps}
       >
         {canEdit && <DragHandleCue />}
+        {canEdit && (
+          <FieldHoverToolbar
+            onEditDetails={onEditDetails}
+            onDuplicate={onDuplicate}
+            onRemove={onRemove}
+            onMoveUp={onMoveUp}
+            onMoveDown={onMoveDown}
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
+          />
+        )}
         <div className="divider-resize-box" style={resolveDividerWrapStyle(field)}>
           {field.label && (field.captionPosition ?? 'above') === 'above' ? (
             <span className="divider-caption" style={resolveDividerCaptionStyle(field)}>
@@ -1181,13 +1654,6 @@ export function FieldCard({
             <DividerResizeHandles field={field} onUpdateField={onUpdateField} />
           )}
         </div>
-        {canEdit && (
-          <DividerActionsMenu
-            onEditDetails={onEditDetails}
-            onDuplicate={onDuplicate}
-            onRemove={onRemove}
-          />
-        )}
       </div>
     );
   }
@@ -1202,7 +1668,14 @@ export function FieldCard({
         className={[
           'field-card',
           'field-card--static-text',
-          'field-width--full',
+          // Only span the full canvas width at the top level — inside a column_layout
+          // slot (nested) this must NOT be added, since .field-card.field-width--full
+          // is an unscoped `grid-column: 1 / -1` rule that would also fire inside
+          // .column-layout-grid, spanning both/all of that layout's columns and pushing
+          // the sibling slot onto the next row (see field-card--nested below, which
+          // deliberately skips any width class for the same reason).
+          !nested ? 'field-width--full' : '',
+          nested ? 'field-card--nested' : '',
           canEdit ? 'field-card--draggable' : '',
           fieldHasCustomAppearance(field) ? 'field-card--has-color' : '',
           selected ? 'field-card--selected' : '',
@@ -1215,6 +1688,17 @@ export function FieldCard({
         {...dragProps}
       >
         {canEdit && <DragHandleCue />}
+        {canEdit && (
+          <FieldHoverToolbar
+            onEditDetails={onEditDetails}
+            onDuplicate={onDuplicate}
+            onRemove={onRemove}
+            onMoveUp={onMoveUp}
+            onMoveDown={onMoveDown}
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
+          />
+        )}
         <div className="field-card-header">
           <span className="field-card-label field-card-label--muted">Formatted Text</span>
           <div className="field-card-badges">
@@ -1222,14 +1706,14 @@ export function FieldCard({
             {!visibleInPreview && <span className="badge badge--neutral">Hidden in preview</span>}
           </div>
         </div>
-        <FieldPreview field={field} formId={formId} fields={fields} />
-        {canEdit && (
-          <FieldActionOverlay
-            onEditDetails={onEditDetails}
-            onDuplicate={onDuplicate}
-            onRemove={onRemove}
-          />
-        )}
+        <FieldPreview
+          field={field}
+          formId={formId}
+          templateId={templateId}
+          fields={fields}
+          canEdit={canEdit}
+          onUpdateField={onUpdateField}
+        />
       </div>
     );
   }
@@ -1255,6 +1739,15 @@ export function FieldCard({
           .join(' ')}
         onMouseDown={(event) => handleFieldSelectMouseDown(event, onSelect)}
       >
+        {canEdit && (
+          <FieldHoverToolbar
+            showDuplicate={false}
+            showMove={false}
+            onEditDetails={onEditDetails}
+            onDuplicate={onDuplicate}
+            onRemove={onRemove}
+          />
+        )}
         <div className="field-card-header">
           {!isImage ? (
             <span className="field-card-label">
@@ -1266,20 +1759,16 @@ export function FieldCard({
           ) : (
             <span className="field-card-label field-card-label--muted">Image</span>
           )}
-          <div className="field-card-badges">
-            <span className="badge badge--neutral">{FIELD_TYPE_LABELS[field.type]}</span>
-          </div>
         </div>
         {field.helpText && !isImage ? <p className="field-card-help">{field.helpText}</p> : null}
-        <FieldPreview field={field} formId={formId} fields={fields} />
-        {canEdit && (
-          <FieldActionOverlay
-            showDuplicate={false}
-            onEditDetails={onEditDetails}
-            onDuplicate={onDuplicate}
-            onRemove={onRemove}
-          />
-        )}
+        <FieldPreview
+          field={field}
+          formId={formId}
+          templateId={templateId}
+          fields={fields}
+          canEdit={canEdit}
+          onUpdateField={onUpdateField}
+        />
       </div>
     );
   }
@@ -1305,10 +1794,22 @@ export function FieldCard({
       {...dragProps}
     >
       {canEdit && <DragHandleCue />}
+      {canEdit && (
+        <FieldHoverToolbar
+          onEditDetails={onEditDetails}
+          onDuplicate={onDuplicate}
+          onRemove={onRemove}
+          onMoveUp={onMoveUp}
+          onMoveDown={onMoveDown}
+          canMoveUp={canMoveUp}
+          canMoveDown={canMoveDown}
+        />
+      )}
 
       <div className="field-card-header">
         {!isImage ? (
           <span className="field-card-label">
+            {questionNumber ? `${questionNumber}. ` : ''}
             {field.label || 'Untitled field'}
             {field.required && <span className="field-card-required">*</span>}
           </span>
@@ -1325,7 +1826,13 @@ export function FieldCard({
 
       {field.helpText && !isImage ? <p className="field-card-help">{field.helpText}</p> : null}
 
-      <FieldPreview field={field} formId={formId} />
+      <FieldPreview
+        field={field}
+        formId={formId}
+        templateId={templateId}
+        canEdit={canEdit}
+        onUpdateField={onUpdateField}
+      />
 
       {'options' in field && field.options.length === 0 && (
         <p className="form-error">This field needs at least one option.</p>
@@ -1335,13 +1842,51 @@ export function FieldCard({
         <p className="form-error">This field needs at least one row and two columns.</p>
       )}
 
-      {canEdit && (
-        <FieldActionOverlay
-          onEditDetails={onEditDetails}
-          onDuplicate={onDuplicate}
-          onRemove={onRemove}
-        />
+      {field.type === 'table' && field.columns.length === 0 && (
+        <p className="form-error">This field needs at least one column.</p>
       )}
+
+      {field.type === 'question_table' && field.rows.length === 0 && (
+        <p className="form-error">This field needs at least one question.</p>
+      )}
+    </div>
+  );
+}
+
+/** Full-field clone shown under the pointer while rearranging — palette drags still use
+ * the small chip; canvas field drags should move this whole card, matching the
+ * reference builder. */
+export function FieldDragOverlay({
+  field,
+  fields,
+  formId,
+  templateId,
+  questionNumber,
+}: {
+  field: FormField;
+  fields?: Record<string, FormField>;
+  formId?: string;
+  templateId?: string;
+  questionNumber?: number;
+}) {
+  return (
+    <div className="field-drag-overlay">
+      <FieldCard
+        field={field}
+        fields={fields}
+        formId={formId}
+        templateId={templateId}
+        questionNumber={questionNumber}
+        selected
+        overlay
+        canEdit
+        hasConditionalRule={false}
+        visibleInPreview
+        onSelect={() => {}}
+        onEditDetails={() => {}}
+        onRemove={() => {}}
+        onDuplicate={() => {}}
+      />
     </div>
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { ConditionalLogicEditor } from '@/app/forms/[id]/builder/conditional-logic-editor';
 import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import { FieldColorSettings } from '@/app/forms/[id]/builder/field-color-settings';
 import { FieldImageUpload } from '@/app/forms/[id]/builder/field-image-upload';
@@ -10,14 +9,18 @@ import {
   COLUMN_LAYOUT_LABELS,
   FIELD_TYPE_LABELS,
 } from '@/app/forms/[id]/builder/field-meta';
+import { PaletteIcon } from '@/app/forms/[id]/builder/field-palette';
 import { OptionsEditor } from '@/app/forms/[id]/builder/options-editor';
+import { PictureChoiceOptionsEditor } from '@/app/forms/[id]/builder/picture-choice-options-editor';
+import { QuestionTableRowsEditor } from '@/app/forms/[id]/builder/question-table-rows-editor';
 import { RichTextEditor } from '@/app/forms/[id]/builder/rich-text-editor';
 import { type FieldPatch, findParentColumnLayout } from '@/app/forms/[id]/builder/schema-mutations';
+import { TableColumnsEditor } from '@/app/forms/[id]/builder/table-columns-editor';
+import { describeCalculationFormula } from '@/lib/forms/calculation';
 import { FIELD_WIDTH_LABEL, FIELD_WIDTHS } from '@/lib/forms/field-width';
 import {
   COLUMN_COUNTS,
   type ColumnCount,
-  type ConditionalRule,
   DATE_DISPLAY_FORMAT_LABEL,
   DATE_DISPLAY_FORMATS,
   DEFAULT_DIVIDER_THICKNESS_PX,
@@ -55,12 +58,14 @@ import {
   RATING_MAX_MAX,
   RATING_MAX_MIN,
   type RatingIcon,
+  TABLE_ROWS_MAX,
   TEXT_ALIGN_LABEL,
   TEXT_ALIGN_OPTIONS,
   TEXT_FONT_SIZE_MAX_PX,
   TEXT_FONT_SIZE_MIN_PX,
   type TextAlign,
 } from '@/lib/forms/schema';
+import { maskPlaceholder } from '@/lib/forms/text-mask';
 
 // ---------------------------------------------------------------------------
 // This panel is organized into named, collapsible groups — Content, Validation &
@@ -72,7 +77,11 @@ import {
 // ---------------------------------------------------------------------------
 
 interface TypeSpecificSettingsProps {
-  formId: string;
+  /** Exactly one of formId/templateId is set, depending on whether this panel is
+   * editing a real tenant Form or a platform-admin FormTemplate — see the doc comment
+   * on FieldSettingsPanelProps below. */
+  formId?: string;
+  templateId?: string;
   field: FormField;
   canEdit: boolean;
   fields: Record<string, FormField>;
@@ -139,39 +148,6 @@ function SettingsGroup({
   );
 }
 
-function ContentIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <path
-        d="M2 3.5h10M2 7h10M2 10.5h6"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ValidationIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <path
-        d="M7 1.5l4.8 2v3.3c0 3-2 5.1-4.8 5.7-2.8-.6-4.8-2.7-4.8-5.7V3.5L7 1.5Z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4.9 7l1.4 1.4L9.3 5.3"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function LayoutIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -219,22 +195,6 @@ function AppearanceIcon() {
       <circle cx="6.5" cy="4" r="0.8" fill="currentColor" />
       <circle cx="9" cy="5" r="0.8" fill="currentColor" />
       <circle cx="9.3" cy="8" r="0.8" fill="currentColor" />
-    </svg>
-  );
-}
-
-function LogicIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <circle cx="3" cy="3.5" r="1.6" stroke="currentColor" strokeWidth="1.3" />
-      <circle cx="3" cy="10.5" r="1.6" stroke="currentColor" strokeWidth="1.3" />
-      <circle cx="11" cy="7" r="1.6" stroke="currentColor" strokeWidth="1.3" />
-      <path
-        d="M4.5 4.2L9.6 6.3M4.5 9.8L9.6 7.7"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
     </svg>
   );
 }
@@ -353,7 +313,6 @@ function TextStyleControls({
  * Returns null for field types with nothing beyond the label (email, time, signature,
  * address, phone, website, number). */
 function ContentExtras({
-  formId,
   field,
   canEdit,
   fields,
@@ -409,6 +368,151 @@ function ContentExtras({
             </label>
           ) : null}
         </>
+      );
+
+    case 'calculation': {
+      const candidateFields = Object.values(fields).filter(
+        (candidate) =>
+          candidate.id !== field.id &&
+          !isLayoutOnlyField(candidate.type) &&
+          candidate.type !== 'calculation',
+      );
+      return (
+        <>
+          <label className="settings-field">
+            <span className="settings-label">Formula</span>
+            <textarea
+              className="text-input"
+              rows={3}
+              placeholder="{field} * {field} + 10"
+              disabled={!canEdit}
+              value={field.formula}
+              onChange={(event) => onUpdateField(field.id, { formula: event.target.value || '0' })}
+            />
+            <span className="settings-field-hint">
+              Arithmetic only: +, -, *, /, and parentheses. Preview:{' '}
+              <code>{describeCalculationFormula(field.formula, fields)}</code>
+            </span>
+          </label>
+          {candidateFields.length > 0 ? (
+            <label className="settings-field">
+              <span className="settings-label">Insert a field</span>
+              <select
+                className="text-input"
+                disabled={!canEdit}
+                value=""
+                onChange={(event) => {
+                  if (!event.target.value) return;
+                  onUpdateField(field.id, {
+                    formula: `${field.formula} {${event.target.value}}`.trim(),
+                  });
+                }}
+              >
+                <option value="">Choose a field to insert&hellip;</option>
+                {candidateFields.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {candidate.label || 'Untitled field'}
+                  </option>
+                ))}
+              </select>
+              <span className="settings-field-hint">
+                Appends the field to the end of the formula above — rearrange the text there to
+                build the exact expression you need.
+              </span>
+            </label>
+          ) : (
+            <p className="field-card-help">
+              Add another field to this form first to build a formula.
+            </p>
+          )}
+          <div className="settings-inline-fields">
+            <label className="settings-field">
+              <span className="settings-label">Decimal places</span>
+              <input
+                className="text-input"
+                type="number"
+                min={0}
+                max={6}
+                disabled={!canEdit}
+                value={field.decimalPlaces ?? 2}
+                onChange={(event) =>
+                  onUpdateField(field.id, { decimalPlaces: toOptionalNumber(event.target.value) })
+                }
+              />
+            </label>
+            <label className="settings-field">
+              <span className="settings-label">Prefix (optional)</span>
+              <input
+                className="text-input"
+                placeholder="$"
+                maxLength={8}
+                disabled={!canEdit}
+                value={field.prefix ?? ''}
+                onChange={(event) =>
+                  onUpdateField(field.id, { prefix: event.target.value || undefined })
+                }
+              />
+            </label>
+            <label className="settings-field">
+              <span className="settings-label">Suffix (optional)</span>
+              <input
+                className="text-input"
+                placeholder="/mo"
+                maxLength={8}
+                disabled={!canEdit}
+                value={field.suffix ?? ''}
+                onChange={(event) =>
+                  onUpdateField(field.id, { suffix: event.target.value || undefined })
+                }
+              />
+            </label>
+          </div>
+        </>
+      );
+    }
+
+    case 'masked_text':
+      return (
+        <div className="settings-inline-fields">
+          <label className="settings-field">
+            <span className="settings-label">Mask pattern</span>
+            <input
+              className="text-input"
+              placeholder="(###) ###-####"
+              disabled={!canEdit}
+              value={field.mask}
+              onChange={(event) => onUpdateField(field.id, { mask: event.target.value || '#' })}
+            />
+            <span className="settings-field-hint">
+              <code>#</code> = digit, <code>A</code> = letter, <code>*</code> = either. Every other
+              character (spaces, dashes, parentheses...) is inserted automatically. Preview:{' '}
+              <code>{maskPlaceholder(field.mask)}</code>
+            </span>
+          </label>
+          <label className="settings-field">
+            <span className="settings-label">Placeholder (optional)</span>
+            <input
+              className="text-input"
+              placeholder={maskPlaceholder(field.mask)}
+              disabled={!canEdit}
+              value={field.placeholder ?? ''}
+              onChange={(event) =>
+                onUpdateField(field.id, { placeholder: event.target.value || undefined })
+              }
+            />
+          </label>
+          <label className="settings-field">
+            <span className="settings-label">Default value (optional)</span>
+            <input
+              className="text-input"
+              disabled={!canEdit}
+              value={field.defaultValue ?? ''}
+              onChange={(event) =>
+                onUpdateField(field.id, { defaultValue: event.target.value || undefined })
+              }
+            />
+          </label>
+        </div>
       );
 
     case 'short_text':
@@ -556,6 +660,125 @@ function ContentExtras({
         </label>
       );
 
+    case 'yes_no':
+      return (
+        <div className="settings-inline-fields">
+          <label className="settings-field">
+            <span className="settings-label">"Yes" button label</span>
+            <input
+              className="text-input"
+              placeholder="Yes"
+              disabled={!canEdit}
+              value={field.yesLabel ?? ''}
+              onChange={(event) =>
+                onUpdateField(field.id, { yesLabel: event.target.value || undefined })
+              }
+            />
+          </label>
+          <label className="settings-field">
+            <span className="settings-label">"No" button label</span>
+            <input
+              className="text-input"
+              placeholder="No"
+              disabled={!canEdit}
+              value={field.noLabel ?? ''}
+              onChange={(event) =>
+                onUpdateField(field.id, { noLabel: event.target.value || undefined })
+              }
+            />
+          </label>
+          <label className="settings-field">
+            <span className="settings-label">Default selection (optional)</span>
+            <select
+              className="text-input"
+              disabled={!canEdit}
+              value={field.defaultValue ?? ''}
+              onChange={(event) =>
+                onUpdateField(field.id, {
+                  defaultValue: event.target.value
+                    ? (event.target.value as 'yes' | 'no')
+                    : undefined,
+                })
+              }
+            >
+              <option value="">None</option>
+              <option value="yes">{field.yesLabel || 'Yes'}</option>
+              <option value="no">{field.noLabel || 'No'}</option>
+            </select>
+          </label>
+        </div>
+      );
+
+    case 'ranking':
+      return (
+        <div className="settings-subsection">
+          <p className="settings-subsection-title">Items to rank</p>
+          <OptionsEditor
+            options={field.options}
+            canEdit={canEdit}
+            onChange={(options) => onUpdateField(field.id, { options })}
+          />
+        </div>
+      );
+
+    case 'picture_choice':
+      return (
+        <>
+          <div className="settings-subsection">
+            <p className="settings-subsection-title">Picture options</p>
+            <PictureChoiceOptionsEditor
+              options={field.options}
+              canEdit={canEdit}
+              onChange={(options) => onUpdateField(field.id, { options })}
+            />
+          </div>
+          <label className="settings-field">
+            <span className="settings-label">Default selection (optional)</span>
+            <select
+              className="text-input"
+              disabled={!canEdit}
+              value={field.defaultValue ?? ''}
+              onChange={(event) =>
+                onUpdateField(field.id, { defaultValue: event.target.value || undefined })
+              }
+            >
+              <option value="">None</option>
+              {field.options.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      );
+
+    case 'full_name':
+      return (
+        <>
+          <label className="settings-toggle-row">
+            <span className="settings-label">Include prefix (Mr, Mrs, Dr...)</span>
+            <input
+              type="checkbox"
+              checked={field.includePrefix ?? false}
+              disabled={!canEdit}
+              onChange={(event) => onUpdateField(field.id, { includePrefix: event.target.checked })}
+            />
+          </label>
+          <label className="settings-toggle-row">
+            <span className="settings-label">Include middle name</span>
+            <input
+              type="checkbox"
+              checked={field.includeMiddleName ?? false}
+              disabled={!canEdit}
+              onChange={(event) =>
+                onUpdateField(field.id, { includeMiddleName: event.target.checked })
+              }
+            />
+          </label>
+        </>
+      );
+
     case 'choice_matrix':
       return (
         <>
@@ -573,6 +796,129 @@ function ContentExtras({
               options={field.columns}
               canEdit={canEdit}
               onChange={(columns) => onUpdateField(field.id, { columns })}
+            />
+          </div>
+        </>
+      );
+
+    case 'table':
+      return (
+        <>
+          <div className="settings-subsection">
+            <p className="settings-subsection-title">Columns</p>
+            <TableColumnsEditor
+              columns={field.columns}
+              canEdit={canEdit}
+              onChange={(columns) => onUpdateField(field.id, { columns })}
+            />
+          </div>
+          <div className="settings-inline-fields">
+            <label className="settings-field">
+              <span className="settings-label">Starting rows</span>
+              <input
+                className="text-input"
+                type="number"
+                min={1}
+                max={TABLE_ROWS_MAX}
+                disabled={!canEdit}
+                value={field.defaultRows ?? ''}
+                onChange={(event) =>
+                  onUpdateField(field.id, { defaultRows: toOptionalNumber(event.target.value) })
+                }
+              />
+              <span className="settings-field-hint">How many empty rows the form starts with.</span>
+            </label>
+            <label className="settings-field">
+              <span className="settings-label">Min rows (optional)</span>
+              <input
+                className="text-input"
+                type="number"
+                min={0}
+                max={TABLE_ROWS_MAX}
+                disabled={!canEdit}
+                value={field.minRows ?? ''}
+                onChange={(event) =>
+                  onUpdateField(field.id, { minRows: toOptionalNumber(event.target.value) })
+                }
+              />
+            </label>
+            <label className="settings-field">
+              <span className="settings-label">Max rows (optional)</span>
+              <input
+                className="text-input"
+                type="number"
+                min={1}
+                max={TABLE_ROWS_MAX}
+                disabled={!canEdit}
+                value={field.maxRows ?? ''}
+                onChange={(event) =>
+                  onUpdateField(field.id, { maxRows: toOptionalNumber(event.target.value) })
+                }
+              />
+            </label>
+          </div>
+        </>
+      );
+
+    case 'question_table':
+      return (
+        <>
+          <div className="settings-subsection">
+            <p className="settings-subsection-title">Questions</p>
+            <QuestionTableRowsEditor
+              rows={field.rows}
+              canEdit={canEdit}
+              onChange={(rows) => onUpdateField(field.id, { rows })}
+            />
+          </div>
+          <div className="settings-inline-fields">
+            <label className="settings-field">
+              <span className="settings-label">Question column label</span>
+              <input
+                className="text-input"
+                placeholder="Field"
+                disabled={!canEdit}
+                value={field.fieldColumnLabel ?? ''}
+                onChange={(event) =>
+                  onUpdateField(field.id, { fieldColumnLabel: event.target.value || undefined })
+                }
+              />
+            </label>
+            <label className="settings-field">
+              <span className="settings-label">Answer column label</span>
+              <input
+                className="text-input"
+                placeholder="Details"
+                disabled={!canEdit}
+                value={field.valueColumnLabel ?? ''}
+                onChange={(event) =>
+                  onUpdateField(field.id, { valueColumnLabel: event.target.value || undefined })
+                }
+              />
+            </label>
+          </div>
+          <div className="settings-subsection">
+            <p className="settings-subsection-title">Colors</p>
+            <FieldColorPicker
+              label="Header background"
+              value={field.headerColor}
+              defaultColor="#ffffff"
+              canEdit={canEdit}
+              onChange={(value) => onUpdateField(field.id, { headerColor: value })}
+            />
+            <FieldColorPicker
+              label="Header text color"
+              value={field.headerTextColor}
+              defaultColor={DEFAULT_FIELD_TEXT_COLOR}
+              canEdit={canEdit}
+              onChange={(value) => onUpdateField(field.id, { headerTextColor: value })}
+            />
+            <FieldColorPicker
+              label="Answer cell background"
+              value={field.valueColor}
+              defaultColor="#ffffff"
+              canEdit={canEdit}
+              onChange={(value) => onUpdateField(field.id, { valueColor: value })}
             />
           </div>
         </>
@@ -756,14 +1102,6 @@ function ContentExtras({
     case 'image':
       return (
         <>
-          <FieldImageUpload
-            formId={formId}
-            fieldId={field.id}
-            imageStorageKey={field.imageStorageKey}
-            canEdit={canEdit}
-            onUploaded={(storageKey) => onUpdateField(field.id, { imageStorageKey: storageKey })}
-            onRemove={() => onUpdateField(field.id, { imageStorageKey: undefined })}
-          />
           <label className="settings-field">
             <span className="settings-label">Alt text</span>
             <input
@@ -837,6 +1175,28 @@ function ContentExtras({
         </>
       );
 
+    case 'draw_on_image':
+      return (
+        <>
+          <p className="settings-field-hint">
+            The respondent draws on top of this background image with their finger, mouse, or
+            stylus, then submits the annotated result.
+          </p>
+          <label className="settings-field">
+            <span className="settings-label">Alt text</span>
+            <input
+              className="text-input"
+              placeholder="Describe the image for accessibility"
+              disabled={!canEdit}
+              value={field.alt ?? ''}
+              onChange={(event) =>
+                onUpdateField(field.id, { alt: event.target.value || undefined })
+              }
+            />
+          </label>
+        </>
+      );
+
     case 'hidden':
       return (
         <>
@@ -876,11 +1236,52 @@ function ContentExtras({
   }
 }
 
+/** The standalone image-upload control for field types whose whole purpose centers on one
+ * background/display image (image, draw_on_image) — broken out of ContentExtras into its
+ * own "Media" section so it reads as a distinct, visually prominent block rather than
+ * being buried among text inputs, matching the redesigned settings-panel layout. Returns
+ * null for every other field type (picture_choice's images live per-option inside
+ * PictureChoiceOptionsEditor instead, since each option needs its label and image kept
+ * together). */
+function MediaExtras({
+  formId,
+  templateId,
+  field,
+  canEdit,
+  onUpdateField,
+}: TypeSpecificSettingsProps) {
+  if (field.type !== 'image' && field.type !== 'draw_on_image') return null;
+  return (
+    <FieldImageUpload
+      formId={formId}
+      templateId={templateId}
+      fieldId={field.id}
+      imageStorageKey={field.imageStorageKey}
+      canEdit={canEdit}
+      onUploaded={(storageKey) => onUpdateField(field.id, { imageStorageKey: storageKey })}
+      onRemove={() => onUpdateField(field.id, { imageStorageKey: undefined })}
+    />
+  );
+}
+
 /** Everything that belongs in the Validation & behavior group beyond the shared
  * Required toggle / Help text already rendered above it — type-specific constraints.
  * Returns null for field types with no extra validation surface. */
 function ValidationExtras({ field, canEdit, onUpdateField }: TypeSpecificSettingsProps) {
   switch (field.type) {
+    case 'picture_choice':
+      return (
+        <label className="settings-toggle-row">
+          <span className="settings-label">Randomize option order</span>
+          <input
+            type="checkbox"
+            checked={field.randomizeOrder ?? false}
+            disabled={!canEdit}
+            onChange={(event) => onUpdateField(field.id, { randomizeOrder: event.target.checked })}
+          />
+        </label>
+      );
+
     case 'multi_choice':
     case 'checkbox':
     case 'dropdown':
@@ -1422,6 +1823,34 @@ function AppearanceExtras({ field, canEdit, onUpdateField }: TypeSpecificSetting
     );
   }
 
+  if (field.type === 'draw_on_image') {
+    return (
+      <>
+        <FieldColorPicker
+          label="Pen color"
+          value={field.strokeColor}
+          defaultColor="#1a1a1a"
+          canEdit={canEdit}
+          onChange={(value) => onUpdateField(field.id, { strokeColor: value })}
+        />
+        <label className="settings-field">
+          <span className="settings-label">Pen thickness</span>
+          <input
+            className="text-input"
+            type="number"
+            min={1}
+            max={20}
+            disabled={!canEdit}
+            value={field.strokeWidth ?? 3}
+            onChange={(event) =>
+              onUpdateField(field.id, { strokeWidth: toOptionalNumber(event.target.value) })
+            }
+          />
+        </label>
+      </>
+    );
+  }
+
   if (field.type === 'rating') {
     return (
       <>
@@ -1457,27 +1886,30 @@ function AppearanceExtras({ field, canEdit, onUpdateField }: TypeSpecificSetting
 }
 
 interface FieldSettingsPanelProps {
-  formId: string;
+  /** Exactly one of formId/templateId is expected. Real tenant forms (builder-client.tsx)
+   * pass formId; the platform-admin template builder (template-builder-client.tsx) passes
+   * templateId instead, since a FormTemplate has no organizationId to scope an image
+   * upload under (see buildTemplateFieldImageKey in src/lib/s3.ts). Everything else in
+   * this panel is identical between the two contexts. */
+  formId?: string;
+  templateId?: string;
   schema: FormSchema;
   field: FormField | null;
   canEdit: boolean;
   onUpdateField: (fieldId: string, patch: FieldPatch) => void;
   onReplaceFieldType: (fieldId: string, type: FieldType) => void;
   onSetColumnLayoutColumns: (layoutId: string, columns: ColumnCount) => void;
-  onSetConditionalRule: (rule: ConditionalRule) => void;
-  onClearConditionalRule: (fieldId: string) => void;
 }
 
 export function FieldSettingsPanel({
   formId,
+  templateId,
   schema,
   field,
   canEdit,
   onUpdateField,
   onReplaceFieldType,
   onSetColumnLayoutColumns,
-  onSetConditionalRule,
-  onClearConditionalRule,
 }: FieldSettingsPanelProps) {
   if (!field) {
     return (
@@ -1485,8 +1917,7 @@ export function FieldSettingsPanel({
         <div className="settings-panel-empty-state">
           <p className="settings-panel-empty-title">No field selected</p>
           <p className="settings-panel-empty">
-            Click a field on the canvas to edit its label, validation, colors, and conditional
-            logic.
+            Click a field on the canvas to edit its label, validation, and appearance.
           </p>
         </div>
       </div>
@@ -1500,10 +1931,22 @@ export function FieldSettingsPanel({
   const isDivider = field.type === 'divider';
   const isColumnLayout = field.type === 'column_layout';
   const isHidden = field.type === 'hidden';
+  // question_table's required-ness is driven per-row (each question has its own toggle
+  // in QuestionTableRowsEditor above) rather than one field-level flag — the generic
+  // Required toggle below is skipped for this type so admins aren't shown a control that
+  // does nothing (the field-level `required` on this type is unused, per the schema
+  // comment on questionTableFieldSchema).
+  const isQuestionTable = field.type === 'question_table';
   const isColumnChild = Boolean(findParentColumnLayout(schema, field.id));
+  // Structural/layout scaffolding (column_layout itself, section_break, divider) has no
+  // "type" a respondent would recognize as data — replaceFieldType() already refuses to
+  // touch these as a source (see schema-mutations.ts), so the switcher below just mirrors
+  // that boundary rather than showing a dropdown that would silently no-op.
+  const canSwitchType = !isSectionBreak && !isDivider && !isColumnLayout;
 
   const typeSpecificProps: TypeSpecificSettingsProps = {
     formId,
+    templateId,
     field,
     canEdit,
     fields: schema.fields,
@@ -1520,6 +1963,10 @@ export function FieldSettingsPanel({
   const showWidthGroup = showBehaviorGroup && !isColumnChild;
   const contentExtras = ContentExtras(typeSpecificProps);
   const validationExtras = showBehaviorGroup ? ValidationExtras(typeSpecificProps) : null;
+  // A separate, always-visible "Media" section for the handful of field types built
+  // around one background/display image — see MediaExtras for why picture_choice isn't
+  // included here.
+  const mediaExtras = MediaExtras(typeSpecificProps);
 
   // Every real input field, plus section_break, static_text, and image (all three are
   // stylable containers/surfaces even though image and section_break carry no answer),
@@ -1530,28 +1977,45 @@ export function FieldSettingsPanel({
 
   return (
     <div className="settings-panel" key={field.id}>
-      {isColumnChild ? (
-        <label className="settings-field">
-          <span className="settings-label">Field type</span>
-          <select
-            className="text-input"
-            value={field.type}
-            disabled={!canEdit}
-            onChange={(event) => onReplaceFieldType(field.id, event.target.value as FieldType)}
-          >
-            {COLUMN_CHILD_FIELD_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {FIELD_TYPE_LABELS[type]}
-              </option>
-            ))}
-          </select>
+      <div className="settings-field settings-field-type-switch">
+        <div className="settings-field-type-row">
+          <span className="settings-field-type-icon" aria-hidden="true">
+            <PaletteIcon type={field.type} />
+          </span>
+          {canSwitchType ? (
+            <select
+              className="text-input settings-field-type-select"
+              aria-label="Field type"
+              value={field.type}
+              disabled={!canEdit}
+              onChange={(event) => onReplaceFieldType(field.id, event.target.value as FieldType)}
+            >
+              {COLUMN_CHILD_FIELD_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {FIELD_TYPE_LABELS[type]}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              className="text-input settings-field-type-select"
+              aria-label="Field type"
+              value={field.type}
+              disabled
+            >
+              <option value={field.type}>{FIELD_TYPE_LABELS[field.type]}</option>
+            </select>
+          )}
+        </div>
+        {isColumnChild ? (
           <span className="settings-field-hint">
             Or drag a field from the palette onto this column cell to change its type.
           </span>
-        </label>
-      ) : null}
+        ) : null}
+      </div>
 
-      <SettingsGroup title="Content" icon={<ContentIcon />} defaultOpen>
+      <div className="settings-section settings-section--flat">
+        <p className="settings-section-title">Settings</p>
         {!isStaticText ? (
           <label className="settings-field">
             <span className="settings-label">
@@ -1582,34 +2046,47 @@ export function FieldSettingsPanel({
           </label>
         ) : null}
         {contentExtras}
-      </SettingsGroup>
 
-      {showBehaviorGroup ? (
-        <SettingsGroup title="Validation & behavior" icon={<ValidationIcon />} defaultOpen>
-          <label className="settings-toggle-row">
-            <span className="settings-label">Required</span>
-            <input
-              type="checkbox"
-              checked={field.required}
-              disabled={!canEdit}
-              onChange={(event) => onUpdateField(field.id, { required: event.target.checked })}
-            />
-          </label>
+        {showBehaviorGroup ? (
+          <>
+            {!isQuestionTable ? (
+              <label className="settings-toggle-row">
+                <span className="settings-label">Required</span>
+                <input
+                  type="checkbox"
+                  checked={field.required}
+                  disabled={!canEdit}
+                  onChange={(event) => onUpdateField(field.id, { required: event.target.checked })}
+                />
+              </label>
+            ) : (
+              <p className="settings-field-hint">
+                Each question below has its own required toggle instead of one for the whole field.
+              </p>
+            )}
 
-          {'helpText' in field ? (
-            <label className="settings-field">
-              <span className="settings-label">Help text</span>
-              <input
-                className="text-input"
-                value={field.helpText ?? ''}
-                disabled={!canEdit}
-                onChange={(event) => onUpdateField(field.id, { helpText: event.target.value })}
-              />
-            </label>
-          ) : null}
+            {'helpText' in field ? (
+              <label className="settings-field">
+                <span className="settings-label">Help text</span>
+                <input
+                  className="text-input"
+                  value={field.helpText ?? ''}
+                  disabled={!canEdit}
+                  onChange={(event) => onUpdateField(field.id, { helpText: event.target.value })}
+                />
+              </label>
+            ) : null}
 
-          {validationExtras}
-        </SettingsGroup>
+            {validationExtras}
+          </>
+        ) : null}
+      </div>
+
+      {mediaExtras ? (
+        <div className="settings-section settings-section--flat">
+          <p className="settings-section-title">Media</p>
+          {mediaExtras}
+        </div>
       ) : null}
 
       {showWidthGroup ? (
@@ -1634,18 +2111,6 @@ export function FieldSettingsPanel({
       {showAppearanceGroup ? (
         <SettingsGroup title="Appearance" icon={<AppearanceIcon />} defaultOpen={false}>
           <AppearanceExtras {...typeSpecificProps} />
-        </SettingsGroup>
-      ) : null}
-
-      {!isHidden ? (
-        <SettingsGroup title="Logic" icon={<LogicIcon />} defaultOpen={false}>
-          <ConditionalLogicEditor
-            schema={schema}
-            field={field}
-            canEdit={canEdit}
-            onSetRule={onSetConditionalRule}
-            onClearRule={() => onClearConditionalRule(field.id)}
-          />
         </SettingsGroup>
       ) : null}
     </div>

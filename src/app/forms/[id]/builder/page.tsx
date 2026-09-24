@@ -23,6 +23,13 @@ export default async function FormBuilderPage({ params }: PageProps) {
     return null;
   }
 
+  // See the identical comment in src/app/forms/page.tsx — FormsLayout's redirect for a
+  // platform-only admin can race with this page's own render, so this page needs its own
+  // quiet bail-out rather than assuming the layout always wins first.
+  if (!session.user.organizationId) {
+    return null;
+  }
+
   const { form, version } = await withOrgContext(session.user.organizationId, async (tx) => {
     const form = await tx.form.findFirst({
       where: { id, organizationId: requireOrganizationId(session) },

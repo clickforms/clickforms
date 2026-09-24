@@ -285,6 +285,33 @@ export function reorderFieldsInPage(
   };
 }
 
+/** Swaps a top-level field with its immediate neighbor on the page — the explicit
+ * Move Up/Move Down alternative to drag-reordering, from the field card's kebab menu
+ * (see FieldHoverToolbar in field-card.tsx). No-ops if the field isn't found on the page
+ * or is already at that edge (the menu also disables the button in that case, so this is
+ * a defensive fallback rather than the primary guard). Nested column children aren't
+ * reordered this way — see showMove on FieldHoverToolbar. */
+export function moveFieldInPage(
+  schema: FormSchema,
+  pageId: string,
+  fieldId: string,
+  direction: 'up' | 'down',
+): FormSchema {
+  const page = schema.pages.find((entry) => entry.id === pageId);
+  if (!page) return schema;
+
+  const index = page.fields.indexOf(fieldId);
+  if (index === -1) return schema;
+
+  const targetIndex = direction === 'up' ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= page.fields.length) return schema;
+
+  const fields = [...page.fields];
+  fields.splice(index, 1);
+  fields.splice(targetIndex, 0, fieldId);
+  return reorderFieldsInPage(schema, pageId, fields);
+}
+
 function cloneField(field: FormField): FormField {
   const id = crypto.randomUUID();
   const cloned = { ...field, id } as FormField;
@@ -304,6 +331,32 @@ function cloneField(field: FormField): FormField {
       ...cloned,
       rows: cloned.rows.map((row) => ({ ...row, id: crypto.randomUUID() })),
       columns: cloned.columns.map((column) => ({ ...column, id: crypto.randomUUID() })),
+    } as FormField;
+  }
+
+  // table's columns are its own nested shape (each with an id, and — for dropdown
+  // columns — a further nested `options` array), so the same shared-reference problem
+  // applies one level deeper than choice_matrix's.
+  if (cloned.type === 'table') {
+    return {
+      ...cloned,
+      columns: cloned.columns.map((column) => ({
+        ...column,
+        id: crypto.randomUUID(),
+        options: column.options?.map((option) => ({ ...option, id: crypto.randomUUID() })),
+      })),
+    } as FormField;
+  }
+
+  // question_table's rows have the same nested-options shape as table's columns above.
+  if (cloned.type === 'question_table') {
+    return {
+      ...cloned,
+      rows: cloned.rows.map((row) => ({
+        ...row,
+        id: crypto.randomUUID(),
+        options: row.options?.map((option) => ({ ...option, id: crypto.randomUUID() })),
+      })),
     } as FormField;
   }
 

@@ -24,6 +24,15 @@ function isOptionField(field: FormField): field is FormField & { options: FieldO
   return 'options' in field;
 }
 
+/** The condition value a freshly-picked trigger field should start with — the first real
+ * option for an option field, 'yes' for a yes_no field (see the matching special-case in
+ * the value <select> below), otherwise '' for a free-text/date value the admin types in. */
+function defaultConditionValue(field: FormField): string {
+  if (isOptionField(field)) return field.options[0]?.id ?? '';
+  if (field.type === 'yes_no') return 'yes';
+  return '';
+}
+
 export function ConditionalLogicEditor({
   schema,
   field,
@@ -51,7 +60,7 @@ export function ConditionalLogicEditor({
     // operatorsForTriggerType always returns a non-empty array (see field-meta.ts), so
     // indexing [0] is safe despite noUncheckedIndexedAccess widening it to `| undefined`.
     const operator = operatorsForTriggerType(firstCandidate.type)[0] as ConditionOperator;
-    const value = isOptionField(firstCandidate) ? (firstCandidate.options[0]?.id ?? '') : '';
+    const value = defaultConditionValue(firstCandidate);
     onSetRule({ fieldId: field.id, showIf: { fieldId: firstCandidate.id, operator, value } });
   }
 
@@ -92,7 +101,7 @@ export function ConditionalLogicEditor({
               if (!nextTrigger) return;
               // Same non-empty-array guarantee as above.
               const operator = operatorsForTriggerType(nextTrigger.type)[0] as ConditionOperator;
-              const value = isOptionField(nextTrigger) ? (nextTrigger.options[0]?.id ?? '') : '';
+              const value = defaultConditionValue(nextTrigger);
               onSetRule({
                 fieldId: field.id,
                 showIf: { fieldId: nextTrigger.id, operator, value },
@@ -144,6 +153,25 @@ export function ConditionalLogicEditor({
                   {option.label || 'Untitled option'}
                 </option>
               ))}
+            </select>
+          ) : triggerField?.type === 'yes_no' ? (
+            // yes_no has no admin-editable `options` list (isOptionField above only
+            // covers multi_choice/checkbox/dropdown) but its answer is still a closed set
+            // of two fixed literals — a free-text box would let an admin type a condition
+            // value that can never actually match a submitted answer.
+            <select
+              className="text-input"
+              disabled={!canEdit}
+              value={existingRule.showIf.value}
+              onChange={(event) => {
+                onSetRule({
+                  ...existingRule,
+                  showIf: { ...existingRule.showIf, value: event.target.value },
+                });
+              }}
+            >
+              <option value="yes">{triggerField.yesLabel || 'Yes'}</option>
+              <option value="no">{triggerField.noLabel || 'No'}</option>
             </select>
           ) : (
             <input

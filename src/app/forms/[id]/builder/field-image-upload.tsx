@@ -9,7 +9,11 @@ import { isCroppableImage } from '@/lib/forms/crop-image';
 import { getFieldImageSrc } from '@/lib/forms/field-image';
 
 interface FieldImageUploadProps {
-  formId: string;
+  /** Exactly one of formId/templateId is expected — whichever context this panel is
+   * rendered from (a real tenant Form, or a platform-admin FormTemplate). templateId
+   * takes precedence if both are somehow set. */
+  formId?: string;
+  templateId?: string;
   fieldId: string;
   imageStorageKey?: string;
   canEdit: boolean;
@@ -26,6 +30,7 @@ interface CropSession {
 
 export function FieldImageUpload({
   formId,
+  templateId,
   fieldId,
   imageStorageKey,
   canEdit,
@@ -36,6 +41,10 @@ export function FieldImageUpload({
   const [uploading, setUploading] = useState(false);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [cropSession, setCropSession] = useState<CropSession | null>(null);
+
+  const imageApiUrl = templateId
+    ? `/api/admin/form-templates/${templateId}/fields/${fieldId}/image`
+    : `/api/forms/${formId}/fields/${fieldId}/image`;
 
   useEffect(() => {
     return () => {
@@ -51,7 +60,7 @@ export function FieldImageUpload({
   }, [imageStorageKey, localPreviewUrl]);
 
   const imageSrc =
-    localPreviewUrl ?? (imageStorageKey ? getFieldImageSrc({ formId, fieldId }) : null);
+    localPreviewUrl ?? (imageStorageKey ? getFieldImageSrc({ formId, templateId, fieldId }) : null);
 
   const closeCropSession = useCallback(() => {
     setCropSession((prev) => {
@@ -64,7 +73,7 @@ export function FieldImageUpload({
     async (file: File) => {
       setUploading(true);
       try {
-        const presignRes = await fetch(`/api/forms/${formId}/fields/${fieldId}/image`, {
+        const presignRes = await fetch(imageApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -88,7 +97,7 @@ export function FieldImageUpload({
           throw new Error('Uploading the image failed.');
         }
 
-        const confirmRes = await fetch(`/api/forms/${formId}/fields/${fieldId}/image`, {
+        const confirmRes = await fetch(imageApiUrl, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -117,7 +126,7 @@ export function FieldImageUpload({
         setUploading(false);
       }
     },
-    [closeCropSession, fieldId, formId, onUploaded, toast],
+    [closeCropSession, imageApiUrl, onUploaded, toast],
   );
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {

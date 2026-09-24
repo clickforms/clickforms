@@ -15,10 +15,12 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { FormStatus } from '@prisma/client';
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BuilderRail, type BuilderRailTab } from '@/app/forms/[id]/builder/builder-rail';
 import { CANVAS_DROPPABLE_ID, Canvas } from '@/app/forms/[id]/builder/canvas';
+import { ConditionalLogicEditor } from '@/app/forms/[id]/builder/conditional-logic-editor';
 import { ConditionalPreviewBar } from '@/app/forms/[id]/builder/conditional-preview-bar';
-import { parseColumnSlotDroppableId } from '@/app/forms/[id]/builder/field-card';
-import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
+import { DesignSettingsPanel } from '@/app/forms/[id]/builder/design-settings-panel';
+import { FieldDragOverlay, parseColumnSlotDroppableId } from '@/app/forms/[id]/builder/field-card';
 import {
   COLUMN_LAYOUT_LABELS,
   createDefaultField,
@@ -36,6 +38,7 @@ import {
   type FieldPatch,
   findParentColumnLayout,
   isColumnChildFieldType,
+  moveFieldInPage,
   removeField,
   removePage,
   renamePage,
@@ -68,16 +71,7 @@ import type {
   FormPage,
   FormSchema,
 } from '@/lib/forms/schema';
-import {
-  createEmptyFormSchema,
-  DEFAULT_FORM_PRIMARY_COLOR,
-  DEFAULT_SUBMIT_BUTTON_TEXT,
-  formSchemaSchema,
-  SUBMIT_BUTTON_SIZE_LABEL,
-  SUBMIT_BUTTON_SIZE_OPTIONS,
-  TEXT_ALIGN_LABEL,
-  TEXT_ALIGN_OPTIONS,
-} from '@/lib/forms/schema';
+import { createEmptyFormSchema, formSchemaSchema } from '@/lib/forms/schema';
 
 interface VersionMeta {
   id: string;
@@ -101,6 +95,14 @@ interface DragPayload {
   source?: 'palette';
   fieldType?: FieldType;
   columnLayoutColumns?: ColumnCount;
+}
+
+function CloseIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function ArrowRightIcon() {
@@ -235,7 +237,7 @@ function SaveStatusBadge({
 
 export function BuilderClient({
   formId,
-  formName: _formName,
+  formName,
   initialVersion,
   initialCurrentVersionId,
   canEdit,
@@ -274,6 +276,12 @@ export function BuilderClient({
   // Which field's settings modal is open, if any — separate from selection so selecting a
   // field (to show its overlay on the canvas) doesn't itself pop the modal open.
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  // Which panel the tabs at the top of .builder-palette show —
+  // Fields (palette or the selected field's settings, today's behavior), Design
+  // (form-wide branding, previously only reachable via the "Form settings" modal below —
+  // that modal still exists too, for mobile where the palette is hidden), or Logic
+  // (conditional rules for whichever field is selected/being edited).
+  const [activeRailTab, setActiveRailTab] = useState<BuilderRailTab>('fields');
   const [showFormSettings, setShowFormSettings] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
@@ -285,7 +293,9 @@ export function BuilderClient({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [mockAnswers, setMockAnswers] = useState<FormAnswers>({});
-  const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
+  const [activeDrag, setActiveDrag] = useState<
+    { source: 'palette'; label: string } | { source: 'canvas'; fieldId: string } | null
+  >(null);
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -473,15 +483,32 @@ export function BuilderClient({
     startTransition(() => {
       setSelectedFieldId((current) => (current === fieldId ? current : fieldId));
     });
+    if (canEditCanvas) {
+      setEditingFieldId(fieldId);
+      setActiveRailTab((current) => (current === 'design' ? 'fields' : current));
+    }
   }
 
   function handleEditFieldDetails(fieldId: string) {
     setSelectedFieldId(fieldId);
     setEditingFieldId(fieldId);
+    // Design isn't scoped to a field, so a real "edit this field" action should always
+    // pull the admin back into the Fields tab to see it — but leave them on Logic alone
+    // (switching fields while reviewing logic should just re-scope to the new field, not
+    // yank them back to the Content/Validation view they weren't looking at).
+    setActiveRailTab((current) => (current === 'design' ? 'fields' : current));
   }
 
   function handleCloseFieldModal() {
     setEditingFieldId(null);
+    setSelectedFieldId(null);
+  }
+
+  function handleChangeRailTab(tab: BuilderRailTab) {
+    setActiveRailTab(tab);
+    if (tab === 'fields') {
+      handleCloseFieldModal();
+    }
   }
 
   function handleAddField(type: FieldType, index?: number) {
@@ -489,6 +516,8 @@ export function BuilderClient({
     const field: FormField = createDefaultField(type);
     setSchema((prev) => addFieldToPage(prev, activePageId, field, index));
     setSelectedFieldId(field.id);
+    setEditingFieldId(field.id);
+    setActiveRailTab((current) => (current === 'design' ? 'fields' : current));
   }
 
   function handleAddColumnLayout(columns: ColumnCount, index?: number) {
@@ -496,6 +525,8 @@ export function BuilderClient({
     const { schema: next, layoutId } = addColumnLayoutToPage(schema, activePageId, columns, index);
     setSchema(next);
     setSelectedFieldId(layoutId);
+    setEditingFieldId(layoutId);
+    setActiveRailTab((current) => (current === 'design' ? 'fields' : current));
   }
 
   function handleSetColumnLayoutColumns(layoutId: string, columns: ColumnCount) {
@@ -510,6 +541,8 @@ export function BuilderClient({
     if (!result) return;
     setSchema(result.schema);
     setSelectedFieldId(result.fieldId);
+    setEditingFieldId(result.fieldId);
+    setActiveRailTab((current) => (current === 'design' ? 'fields' : current));
   }
 
   function handleRemoveField(fieldId: string) {
@@ -533,6 +566,11 @@ export function BuilderClient({
       next.pages.find((entry) => entry.id === activePageId)?.fields[index + 1] ?? null;
     setSchema(next);
     if (newFieldId) setSelectedFieldId(newFieldId);
+  }
+
+  function handleMoveField(fieldId: string, direction: 'up' | 'down') {
+    if (!canEditCanvas) return;
+    setSchema((prev) => moveFieldInPage(prev, activePageId, fieldId, direction));
   }
 
   function handleUpdateField(fieldId: string, patch: FieldPatch) {
@@ -605,19 +643,18 @@ export function BuilderClient({
     if (!canEditCanvas) return;
     const data = event.active.data.current as DragPayload | undefined;
     if (data?.source === 'palette' && data.columnLayoutColumns) {
-      setActiveDragLabel(COLUMN_LAYOUT_LABELS[data.columnLayoutColumns]);
+      setActiveDrag({ source: 'palette', label: COLUMN_LAYOUT_LABELS[data.columnLayoutColumns] });
       return;
     }
     if (data?.source === 'palette' && data.fieldType) {
-      setActiveDragLabel(FIELD_TYPE_LABELS[data.fieldType]);
+      setActiveDrag({ source: 'palette', label: FIELD_TYPE_LABELS[data.fieldType] });
       return;
     }
-    const field = schema.fields[event.active.id.toString()];
-    setActiveDragLabel(field?.label ?? null);
+    setActiveDrag({ source: 'canvas', fieldId: event.active.id.toString() });
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    setActiveDragLabel(null);
+    setActiveDrag(null);
     if (!canEditCanvas) return;
     const { active, over } = event;
     if (!over) return;
@@ -672,6 +709,17 @@ export function BuilderClient({
   const isEditingColumnChild = editingField
     ? Boolean(findParentColumnLayout(schema, editingField.id))
     : false;
+  // The field the Logic rail tab is scoped to — prefers the field currently open in
+  // settings (editingField), but falls back to a plain canvas selection so clicking a
+  // field is enough to check/add its logic without first entering the Fields tab.
+  const logicField =
+    editingField ?? (selectedFieldId ? (schema.fields[selectedFieldId] ?? null) : null);
+  // Resolved once here (rather than indexing schema.fields[activeDrag.fieldId] twice
+  // inline in the DragOverlay JSX below) so TS can actually narrow away `undefined` —
+  // repeating the same computed-index expression doesn't narrow across two separate
+  // reads, even when the first read already gated a ternary on it being truthy.
+  const dragOverlayField =
+    activeDrag?.source === 'canvas' ? schema.fields[activeDrag.fieldId] : undefined;
 
   const visibleFieldIds = useMemo(
     () => getVisibleFieldIds(schema, mockAnswers),
@@ -885,16 +933,106 @@ export function BuilderClient({
           collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveDrag(null)}
         >
           <div
             className={`builder-workspace ${canEditCanvas ? '' : 'builder-workspace--readonly'}`}
           >
             {canEditCanvas ? (
-              <aside className="builder-palette" aria-label="Field types">
-                <FieldPalette
-                  onAddField={(type) => handleAddField(type)}
-                  onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
-                />
+              <aside
+                className="builder-palette"
+                aria-label={
+                  activeRailTab === 'design'
+                    ? 'Design'
+                    : activeRailTab === 'logic'
+                      ? 'Logic'
+                      : editingField
+                        ? 'Field settings'
+                        : 'Field types'
+                }
+              >
+                <BuilderRail activeTab={activeRailTab} onChangeTab={handleChangeRailTab} />
+                {activeRailTab === 'fields' ? (
+                  editingField ? (
+                    <div className="field-settings-aside">
+                      <div className="field-settings-aside-header">
+                        <span className="field-settings-aside-title">Field</span>
+                        {!isEditingColumnChild ? (
+                          <button
+                            type="button"
+                            className="button button--ghost button--small"
+                            onClick={() => handleDuplicateField(editingField.id)}
+                          >
+                            Duplicate
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="field-settings-aside-back"
+                          onClick={handleCloseFieldModal}
+                          aria-label="Deselect field"
+                        >
+                          <CloseIcon />
+                        </button>
+                      </div>
+                      <FieldSettingsPanel
+                        formId={formId}
+                        schema={schema}
+                        field={editingField}
+                        canEdit={canEditCanvas}
+                        onUpdateField={handleUpdateField}
+                        onReplaceFieldType={handleReplaceFieldType}
+                        onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
+                      />
+                    </div>
+                  ) : (
+                    <FieldPalette
+                      onAddField={(type) => handleAddField(type)}
+                      onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
+                    />
+                  )
+                ) : activeRailTab === 'design' ? (
+                  <div className="field-settings-aside">
+                    <div className="field-settings-aside-header">
+                      <span className="field-settings-aside-title">Design</span>
+                    </div>
+                    <div className="settings-panel">
+                      <DesignSettingsPanel
+                        branding={schema.branding}
+                        canEdit={canEditCanvas}
+                        onUpdateBranding={handleUpdateBranding}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="field-settings-aside">
+                    <div className="field-settings-aside-header">
+                      <span className="field-settings-aside-title">
+                        {logicField ? `Logic — ${logicField.label || 'Untitled field'}` : 'Logic'}
+                      </span>
+                    </div>
+                    {logicField ? (
+                      <div className="settings-panel">
+                        <ConditionalLogicEditor
+                          schema={schema}
+                          field={logicField}
+                          canEdit={canEditCanvas}
+                          onSetRule={handleSetConditionalRule}
+                          onClearRule={() => handleClearConditionalRule(logicField.id)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="settings-panel settings-panel--empty">
+                        <div className="settings-panel-empty-state">
+                          <p className="settings-panel-empty-title">No field selected</p>
+                          <p className="settings-panel-empty">
+                            Click a field on the canvas to add conditional logic to it.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </aside>
             ) : null}
 
@@ -908,6 +1046,8 @@ export function BuilderClient({
               {activePage ? (
                 <Canvas
                   formId={formId}
+                  formName={formName}
+                  branding={schema.branding}
                   page={activePage}
                   pageIndex={activePageIndex}
                   pageCount={schema.pages.length}
@@ -917,7 +1057,8 @@ export function BuilderClient({
                   onEditFieldDetails={handleEditFieldDetails}
                   onRemoveField={handleRemoveField}
                   onDuplicateField={handleDuplicateField}
-                  onAddField={(type) => handleAddField(type)}
+                  onMoveField={handleMoveField}
+                  onAddField={(type, index) => handleAddField(type, index)}
                   onAddColumnField={handleAddColumnField}
                   onUpdateField={handleUpdateField}
                   canEdit={canEditCanvas}
@@ -949,13 +1090,25 @@ export function BuilderClient({
           </div>
 
           <DragOverlay>
-            {activeDragLabel ? <div className="drag-overlay-chip">{activeDragLabel}</div> : null}
+            {activeDrag?.source === 'palette' ? (
+              <div className="drag-overlay-chip">{activeDrag.label}</div>
+            ) : dragOverlayField ? (
+              <FieldDragOverlay field={dragOverlayField} fields={schema.fields} formId={formId} />
+            ) : null}
           </DragOverlay>
         </DndContext>
 
         {editingField ? (
+          // Desktop editing now happens in-place in .builder-palette (see the aside above) —
+          // this modal only still renders because .builder-palette is hidden below 900px
+          // (see .builder-mobile-add's comment), so mobile still needs a way to reach a
+          // field's settings. modal-overlay--mobile-only keeps it display:none above that
+          // breakpoint so the two edit surfaces never show at once.
           // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
-          <div className="modal-overlay" onMouseDown={handleCloseFieldModal}>
+          <div
+            className="modal-overlay modal-overlay--mobile-only"
+            onMouseDown={handleCloseFieldModal}
+          >
             <div
               className="modal-card modal-card--wide"
               role="dialog"
@@ -996,9 +1149,19 @@ export function BuilderClient({
                 onUpdateField={handleUpdateField}
                 onReplaceFieldType={handleReplaceFieldType}
                 onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
-                onSetConditionalRule={handleSetConditionalRule}
-                onClearConditionalRule={handleClearConditionalRule}
               />
+              {editingField.type !== 'hidden' ? (
+                <div className="settings-section">
+                  <p className="settings-section-title">Logic</p>
+                  <ConditionalLogicEditor
+                    schema={schema}
+                    field={editingField}
+                    canEdit={canEditCanvas}
+                    onSetRule={handleSetConditionalRule}
+                    onClearRule={() => handleClearConditionalRule(editingField.id)}
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -1125,94 +1288,11 @@ export function BuilderClient({
                   </button>
                 </div>
               </div>
-              <div className="settings-section">
-                <p className="settings-section-title">Form title</p>
-                <label className="settings-toggle-row">
-                  <span className="settings-label">Show form title</span>
-                  <input
-                    type="checkbox"
-                    checked={schema.branding.showTitle === true}
-                    disabled={!canEditCanvas}
-                    onChange={(event) => handleUpdateBranding({ showTitle: event.target.checked })}
-                  />
-                </label>
-                {schema.branding.showTitle === true ? (
-                  <div className="settings-width-options">
-                    {TEXT_ALIGN_OPTIONS.map((align) => (
-                      <label key={align} className="settings-width-option">
-                        <input
-                          type="radio"
-                          name="form-title-align"
-                          checked={(schema.branding.titleAlign ?? 'center') === align}
-                          disabled={!canEditCanvas}
-                          onChange={() => handleUpdateBranding({ titleAlign: align })}
-                        />
-                        {TEXT_ALIGN_LABEL[align]}
-                      </label>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              <div className="settings-section">
-                <p className="settings-section-title">Submit button</p>
-                <label className="settings-field">
-                  <span className="settings-label">Button text</span>
-                  <input
-                    type="text"
-                    className="text-input"
-                    value={schema.branding.submitButtonText ?? ''}
-                    placeholder={DEFAULT_SUBMIT_BUTTON_TEXT}
-                    disabled={!canEditCanvas}
-                    onChange={(event) =>
-                      handleUpdateBranding({ submitButtonText: event.target.value || undefined })
-                    }
-                  />
-                </label>
-                <FieldColorPicker
-                  label="Button color"
-                  value={schema.branding.submitButtonColor}
-                  defaultColor={DEFAULT_FORM_PRIMARY_COLOR}
-                  canEdit={canEditCanvas}
-                  onChange={(color) => handleUpdateBranding({ submitButtonColor: color })}
-                />
-                <FieldColorPicker
-                  label="Text color"
-                  value={schema.branding.submitButtonTextColor}
-                  defaultColor="#ffffff"
-                  canEdit={canEditCanvas}
-                  onChange={(color) => handleUpdateBranding({ submitButtonTextColor: color })}
-                />
-                <p className="settings-section-title">Alignment</p>
-                <div className="settings-width-options">
-                  {TEXT_ALIGN_OPTIONS.map((align) => (
-                    <label key={align} className="settings-width-option">
-                      <input
-                        type="radio"
-                        name="submit-button-align"
-                        checked={(schema.branding.submitButtonAlign ?? 'center') === align}
-                        disabled={!canEditCanvas}
-                        onChange={() => handleUpdateBranding({ submitButtonAlign: align })}
-                      />
-                      {TEXT_ALIGN_LABEL[align]}
-                    </label>
-                  ))}
-                </div>
-                <p className="settings-section-title">Size</p>
-                <div className="settings-width-options">
-                  {SUBMIT_BUTTON_SIZE_OPTIONS.map((size) => (
-                    <label key={size} className="settings-width-option">
-                      <input
-                        type="radio"
-                        name="submit-button-size"
-                        checked={(schema.branding.submitButtonSize ?? 'medium') === size}
-                        disabled={!canEditCanvas}
-                        onChange={() => handleUpdateBranding({ submitButtonSize: size })}
-                      />
-                      {SUBMIT_BUTTON_SIZE_LABEL[size]}
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <DesignSettingsPanel
+                branding={schema.branding}
+                canEdit={canEditCanvas}
+                onUpdateBranding={handleUpdateBranding}
+              />
             </div>
           </div>
         ) : null}

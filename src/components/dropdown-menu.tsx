@@ -2,6 +2,7 @@
 
 import {
   type CSSProperties,
+  type MouseEventHandler,
   type ReactNode,
   type RefObject,
   useEffect,
@@ -48,6 +49,7 @@ interface DropdownMenuProps {
    *  default — pass a different className to opt out. */
   panelClassName?: string;
   align?: 'start' | 'end';
+  onMouseDown?: MouseEventHandler<HTMLDivElement>;
   children: ReactNode;
 }
 
@@ -61,6 +63,7 @@ export function DropdownMenu({
   triggerRef,
   panelClassName,
   align = 'start',
+  onMouseDown,
   children,
 }: DropdownMenuProps) {
   const [panelStyle, setPanelStyle] = useState<CSSProperties | null>(null);
@@ -118,11 +121,13 @@ export function DropdownMenu({
   if (!open || typeof document === 'undefined') return null;
 
   return createPortal(
+    // biome-ignore lint/a11y/noStaticElementInteractions: onMouseDown here is an optional passthrough some callers use only to preventDefault (so opening the panel doesn't steal a text selection behind it, e.g. rich-text-editor.tsx) -- the real interactive controls are the caller-supplied `children`, not this wrapper div.
     <div
       ref={panelRef}
       id={menuId}
       className={panelClassName ?? 'actions-menu-panel'}
       style={{ ...panelStyle, visibility: panelStyle ? 'visible' : 'hidden' }}
+      onMouseDown={onMouseDown}
     >
       {children}
     </div>,

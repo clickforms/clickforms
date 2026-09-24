@@ -8779,6 +8779,30 @@ textarea.text-input {
   color: var(--builder-text);
 }
 
+.builder-palette .rich-text-editor-wrap {
+  color-scheme: light;
+  background: var(--builder-canvas);
+  border-color: var(--builder-input-border);
+}
+
+.builder-palette .rich-text-toolbar {
+  background: #f4f4f5;
+  border-bottom-color: var(--builder-input-border);
+}
+
+.builder-palette .rich-text-toolbar-button {
+  color: var(--builder-canvas-text);
+}
+
+.builder-palette .rich-text-toolbar-button:hover {
+  background: #fff;
+  border-color: var(--builder-input-border);
+}
+
+.builder-palette .rich-text-editor {
+  color: var(--builder-canvas-text);
+}
+
 .canvas .date-picker-trigger,
 .canvas .time-picker-trigger {
   background-color: #fff;
@@ -9203,16 +9227,26 @@ textarea.text-input {
   position: absolute;
   top: calc(100% + 0.3rem);
   left: 0;
-  z-index: 20;
-  min-width: 9rem;
+  z-index: 80;
+  min-width: 11rem;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   padding: 0.4rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  /* Always the light document surface — this menu is a WYSIWYG control, and when
+     portaled to document.body it must not pick up the dark builder-panel tokens. */
+  color-scheme: light;
+  background: var(--builder-canvas, #ffffff);
+  color: var(--builder-canvas-text, #111827);
+  border: 1px solid var(--builder-input-border, #e2e8f0);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-card);
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: 0;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
 }
 
 .rich-text-popover--swatches {
@@ -9228,13 +9262,6 @@ textarea.text-input {
   padding: 0.6rem;
 }
 
-/* Font size list is long enough (8px-48px) to run off the bottom of the viewport on
-   shorter screens, so it scrolls internally instead of growing the popover unbounded. */
-.rich-text-popover--scrollable {
-  max-height: 16rem;
-  overflow-y: auto;
-}
-
 .rich-text-popover--merge {
   max-height: 14rem;
   overflow-y: auto;
@@ -9242,11 +9269,15 @@ textarea.text-input {
   left: auto;
 }
 
-/* Font family has a long, comprehensive list (see FONT_FAMILY_OPTIONS in schema.ts) --
-   the search input stays fixed at the top while .rich-text-popover-list scrolls beneath
-   it, rather than the whole popover (search box included) scrolling out of view. */
-.rich-text-popover--fontfamily {
+/* Font/size pickers keep the search field pinned while the list scrolls. */
+.rich-text-popover--with-search {
   max-height: 18rem;
+  overflow: hidden;
+}
+
+/* Size list is short — a handful of visible rows, then scroll for the rest. */
+.rich-text-popover--sizes {
+  max-height: 10.5rem;
   overflow: hidden;
 }
 
@@ -9255,11 +9286,14 @@ textarea.text-input {
   width: 100%;
   padding: 0.35rem 0.5rem;
   margin-bottom: 0.15rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--builder-input-border, #e2e8f0);
   border-radius: var(--radius-sm);
-  background: var(--color-surface-sunken);
-  color: var(--color-text);
+  background: #f4f4f5;
+  color: var(--builder-canvas-text, #111827);
+  font-family: var(--font-body);
   font-size: 0.8125rem;
+  font-weight: 400;
+  font-synthesis: none;
 }
 
 .rich-text-popover-search:focus {
@@ -9272,8 +9306,19 @@ textarea.text-input {
   flex-direction: column;
   flex: 1 1 auto;
   gap: 0.15rem;
+  overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
+  scrollbar-width: thin;
+}
+
+.rich-text-popover-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.rich-text-popover-list::-webkit-scrollbar-thumb {
+  background-color: rgba(17, 24, 39, 0.28);
+  border-radius: 999px;
 }
 
 .rich-text-popover-empty {
@@ -9298,21 +9343,59 @@ textarea.text-input {
 .rich-text-popover-item {
   display: block;
   width: 100%;
+  box-sizing: border-box;
   text-align: left;
   padding: 0.35rem 0.5rem;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text);
-  font-size: 0.8125rem;
+  color: #111827;
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  font-style: normal;
+  font-synthesis: none;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
+  filter: none;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.rich-text-popover-item--font {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.rich-text-font-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font:
+    400 13px / 1.4 Arial,
+    Helvetica,
+    sans-serif;
+}
+
+.rich-text-font-sample {
+  flex-shrink: 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1;
+}
+
 .rich-text-popover-item:hover {
-  background: var(--color-surface-sunken);
+  background: #f4f4f5;
 }
 
 .rich-text-popover-item:disabled {
@@ -9332,6 +9415,10 @@ textarea.text-input {
 
 .rich-text-popover-item--danger:hover {
   background: var(--color-danger-soft);
+}
+
+.rich-text-popover .field-color-picker-label {
+  color: var(--builder-canvas-text, #111827);
 }
 
 .rich-text-editor {

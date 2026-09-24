@@ -14,10 +14,11 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { common, createLowlight } from 'lowlight';
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
 import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import { MergeToken } from '@/app/forms/[id]/builder/merge-token-node';
 import { FontSize } from '@/app/forms/[id]/builder/rich-text-font-size';
+import { DropdownMenu } from '@/components/dropdown-menu';
 import { mergeableFields } from '@/lib/forms/merge-fields';
 import {
   FONT_FAMILY_CSS,
@@ -103,21 +104,59 @@ function preventDefault(event: React.MouseEvent) {
   event.preventDefault();
 }
 
+function preventToolbarMouseDown(event: React.MouseEvent) {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+    return;
+  }
+  event.preventDefault();
+}
+
+function MenuRow({
+  className,
+  onSelect,
+  children,
+}: {
+  className?: string;
+  onSelect: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      role="option"
+      tabIndex={0}
+      className={className ?? 'rich-text-popover-item'}
+      onMouseDown={preventDefault}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function ToolbarButton({
   label,
   onClick,
   active,
   disabled,
+  buttonRef,
   children,
 }: {
   label: string;
   onClick: () => void;
   active?: boolean;
   disabled?: boolean;
-  children: React.ReactNode;
+  buttonRef?: RefObject<HTMLButtonElement | null>;
+  children: ReactNode;
 }) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       className={`rich-text-toolbar-button ${active ? 'rich-text-toolbar-button--active' : ''}`}
       title={label}
@@ -360,10 +399,18 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const lastEmittedRef = useRef<string>(value);
   const [openPopover, setOpenPopover] = useState<Popover>(null);
+  const formatTriggerRef = useRef<HTMLButtonElement>(null);
+  const fontFamilyTriggerRef = useRef<HTMLButtonElement>(null);
+  const fontSizeTriggerRef = useRef<HTMLButtonElement>(null);
+  const colorTriggerRef = useRef<HTMLButtonElement>(null);
+  const highlightTriggerRef = useRef<HTMLButtonElement>(null);
+  const tableTriggerRef = useRef<HTMLButtonElement>(null);
+  const mergeTriggerRef = useRef<HTMLButtonElement>(null);
   // Filters the Font family popover's now much longer list (see FONT_FAMILY_OPTIONS in
   // schema.ts) -- cleared whenever the popover closes so it doesn't carry over stale text
   // to the next time it's opened.
   const [fontFamilyQuery, setFontFamilyQuery] = useState('');
+  const [fontSizeQuery, setFontSizeQuery] = useState('');
 
   const editor = useEditor(
     {
@@ -520,6 +567,7 @@ export function RichTextEditor({
 
         <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
           <button
+            ref={formatTriggerRef}
             type="button"
             className="rich-text-toolbar-button rich-text-toolbar-button--wide"
             onMouseDown={preventDefault}
@@ -527,33 +575,37 @@ export function RichTextEditor({
           >
             {activeFormat?.label ?? 'Paragraph'} ▾
           </button>
-          {openPopover === 'format' && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-            <div className="rich-text-popover" onMouseDown={preventDefault}>
-              {BLOCK_FORMATS.map((format) => (
-                <button
-                  key={format.label}
-                  type="button"
-                  className="rich-text-popover-item"
-                  onMouseDown={preventDefault}
-                  onClick={() => {
-                    if (format.level === null) {
-                      editor.chain().focus().setParagraph().run();
-                    } else {
-                      editor.chain().focus().toggleHeading({ level: format.level }).run();
-                    }
-                    setOpenPopover(null);
-                  }}
-                >
-                  {format.label}
-                </button>
-              ))}
-            </div>
-          )}
+          <DropdownMenu
+            open={openPopover === 'format'}
+            onOpenChange={(open) => setOpenPopover(open ? 'format' : null)}
+            triggerRef={formatTriggerRef}
+            panelClassName="rich-text-popover"
+            onMouseDown={preventDefault}
+          >
+            {BLOCK_FORMATS.map((format) => (
+              <button
+                key={format.label}
+                type="button"
+                className="rich-text-popover-item"
+                onMouseDown={preventDefault}
+                onClick={() => {
+                  if (format.level === null) {
+                    editor.chain().focus().setParagraph().run();
+                  } else {
+                    editor.chain().focus().toggleHeading({ level: format.level }).run();
+                  }
+                  setOpenPopover(null);
+                }}
+              >
+                {format.label}
+              </button>
+            ))}
+          </DropdownMenu>
         </div>
 
         <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
           <button
+            ref={fontFamilyTriggerRef}
             type="button"
             className="rich-text-toolbar-button rich-text-toolbar-button--wide"
             onMouseDown={preventDefault}
@@ -564,63 +616,42 @@ export function RichTextEditor({
           >
             {FONT_FAMILY_LABEL[activeFontFamilyOption]} ▾
           </button>
-          {openPopover === 'fontFamily' && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-            <div
-              className="rich-text-popover rich-text-popover--fontfamily"
-              // Duplicated inline (on top of the .rich-text-popover--fontfamily /
-              // .rich-text-popover-list rules in globals.css) so the cap can't silently
-              // stop applying if a stale/cached CSS bundle is ever served without a
-              // matching JS bundle -- this scrolls correctly either way.
-              style={{
-                maxHeight: '18rem',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-              onMouseDown={preventDefault}
-            >
-              <input
-                type="text"
-                className="rich-text-popover-search"
-                placeholder="Search fonts…"
-                value={fontFamilyQuery}
-                onChange={(event) => setFontFamilyQuery(event.target.value)}
-                style={{ flexShrink: 0 }}
-                // biome-ignore lint/a11y/noAutofocus: the popover itself is the thing being opened -- focusing its search field is the whole point, same as a command palette
-                autoFocus
-              />
-              <div
-                className="rich-text-popover-list"
-                style={{
-                  overflowY: 'auto',
-                  minHeight: 0,
-                  flex: '1 1 auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.15rem',
-                }}
-              >
-                {(() => {
-                  const query = fontFamilyQuery.trim().toLowerCase();
-                  const filtered = query
-                    ? FONT_FAMILY_OPTIONS.filter((option) =>
-                        FONT_FAMILY_LABEL[option].toLowerCase().includes(query),
-                      )
-                    : FONT_FAMILY_OPTIONS;
-                  if (filtered.length === 0) {
-                    return (
-                      <p className="rich-text-popover-empty">No fonts match "{fontFamilyQuery}"</p>
-                    );
-                  }
-                  return filtered.map((option) => (
-                    <button
+          <DropdownMenu
+            open={openPopover === 'fontFamily'}
+            onOpenChange={(open) => setOpenPopover(open ? 'fontFamily' : null)}
+            triggerRef={fontFamilyTriggerRef}
+            panelClassName="rich-text-popover rich-text-popover--with-search"
+            onMouseDown={preventToolbarMouseDown}
+          >
+            <input
+              type="search"
+              className="rich-text-popover-search"
+              placeholder="Search fonts…"
+              value={fontFamilyQuery}
+              onChange={(event) => setFontFamilyQuery(event.target.value)}
+              // biome-ignore lint/a11y/noAutofocus: the popover itself is the thing being opened -- focusing its search field is the whole point, same as a command palette
+              autoFocus
+            />
+            <div className="rich-text-popover-list">
+              {(() => {
+                const query = fontFamilyQuery.trim().toLowerCase();
+                const filtered = query
+                  ? FONT_FAMILY_OPTIONS.filter((option) =>
+                      FONT_FAMILY_LABEL[option].toLowerCase().includes(query),
+                    )
+                  : FONT_FAMILY_OPTIONS;
+                if (filtered.length === 0) {
+                  return (
+                    <p className="rich-text-popover-empty">No fonts match "{fontFamilyQuery}"</p>
+                  );
+                }
+                return filtered.map((option) => {
+                  const css = FONT_FAMILY_CSS[option];
+                  return (
+                    <MenuRow
                       key={option}
-                      type="button"
-                      className="rich-text-popover-item"
-                      onMouseDown={preventDefault}
-                      onClick={() => {
-                        const css = FONT_FAMILY_CSS[option];
+                      className="rich-text-popover-item rich-text-popover-item--font"
+                      onSelect={() => {
                         if (css) {
                           editor.chain().focus().setFontFamily(css).run();
                         } else {
@@ -629,62 +660,83 @@ export function RichTextEditor({
                         setOpenPopover(null);
                       }}
                     >
-                      <span style={{ fontFamily: FONT_FAMILY_CSS[option] }}>
-                        {FONT_FAMILY_LABEL[option]}
+                      <span className="rich-text-font-label">{FONT_FAMILY_LABEL[option]}</span>
+                      <span
+                        className="rich-text-font-sample"
+                        style={css ? { fontFamily: css } : undefined}
+                      >
+                        Ag
                       </span>
-                    </button>
-                  ));
-                })()}
-              </div>
+                    </MenuRow>
+                  );
+                });
+              })()}
             </div>
-          )}
+          </DropdownMenu>
         </div>
 
         <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
           <button
+            ref={fontSizeTriggerRef}
             type="button"
             className="rich-text-toolbar-button rich-text-toolbar-button--wide"
             onMouseDown={preventDefault}
-            onClick={() => setOpenPopover(openPopover === 'fontSize' ? null : 'fontSize')}
+            onClick={() => {
+              setFontSizeQuery('');
+              setOpenPopover(openPopover === 'fontSize' ? null : 'fontSize');
+            }}
           >
             {state.activeFontSize ?? 'Size'} ▾
           </button>
-          {openPopover === 'fontSize' && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-            <div
-              className="rich-text-popover rich-text-popover--scrollable"
-              // Duplicated inline for the same reason as the Font family popover below --
-              // guarantees this scrolls even if a stale CSS bundle is ever served.
-              style={{ maxHeight: '16rem', overflowY: 'auto' }}
-              onMouseDown={preventDefault}
-            >
-              <button
-                type="button"
-                className="rich-text-popover-item"
-                onMouseDown={preventDefault}
-                onClick={() => {
-                  editor.chain().focus().unsetFontSize().run();
-                  setOpenPopover(null);
-                }}
-              >
-                Default
-              </button>
-              {FONT_SIZE_OPTIONS.map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  className="rich-text-popover-item"
-                  onMouseDown={preventDefault}
-                  onClick={() => {
-                    editor.chain().focus().setFontSize(size).run();
-                    setOpenPopover(null);
-                  }}
-                >
-                  {size}
-                </button>
-              ))}
+          <DropdownMenu
+            open={openPopover === 'fontSize'}
+            onOpenChange={(open) => setOpenPopover(open ? 'fontSize' : null)}
+            triggerRef={fontSizeTriggerRef}
+            panelClassName="rich-text-popover rich-text-popover--sizes"
+            onMouseDown={preventToolbarMouseDown}
+          >
+            <input
+              type="search"
+              className="rich-text-popover-search"
+              placeholder="Search sizes…"
+              value={fontSizeQuery}
+              onChange={(event) => setFontSizeQuery(event.target.value)}
+              // biome-ignore lint/a11y/noAutofocus: focusing search when the size list opens, same as the font picker
+              autoFocus
+            />
+            <div className="rich-text-popover-list">
+              {(() => {
+                const query = fontSizeQuery.trim().toLowerCase();
+                const sizes = [
+                  { value: null as string | null, label: 'Default' },
+                  ...FONT_SIZE_OPTIONS.map((size) => ({ value: size, label: size })),
+                ];
+                const filtered = query
+                  ? sizes.filter((size) => size.label.toLowerCase().includes(query))
+                  : sizes;
+                if (filtered.length === 0) {
+                  return (
+                    <p className="rich-text-popover-empty">No sizes match "{fontSizeQuery}"</p>
+                  );
+                }
+                return filtered.map((size) => (
+                  <MenuRow
+                    key={size.label}
+                    onSelect={() => {
+                      if (size.value) {
+                        editor.chain().focus().setFontSize(size.value).run();
+                      } else {
+                        editor.chain().focus().unsetFontSize().run();
+                      }
+                      setOpenPopover(null);
+                    }}
+                  >
+                    {size.label}
+                  </MenuRow>
+                ));
+              })()}
             </div>
-          )}
+          </DropdownMenu>
         </div>
 
         <div className="rich-text-toolbar-group">
@@ -737,62 +789,64 @@ export function RichTextEditor({
 
         <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
           <ToolbarButton
+            buttonRef={colorTriggerRef}
             label="Text color"
             onClick={() => setOpenPopover(openPopover === 'color' ? null : 'color')}
           >
             <span className="rich-text-color-swatch-icon" />
           </ToolbarButton>
-          {openPopover === 'color' && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child inputs
-            <div
-              className="rich-text-popover rich-text-popover--color"
-              onMouseDown={preventDefault}
-            >
-              <FieldColorPicker
-                label="Text color"
-                value={state.activeColor ?? undefined}
-                defaultColor={DEFAULT_TEXT_COLOR}
-                canEdit
-                onChange={(color) => {
-                  if (color) {
-                    editor.chain().focus().setColor(color).run();
-                  } else {
-                    editor.chain().focus().unsetColor().run();
-                  }
-                }}
-              />
-            </div>
-          )}
+          <DropdownMenu
+            open={openPopover === 'color'}
+            onOpenChange={(open) => setOpenPopover(open ? 'color' : null)}
+            triggerRef={colorTriggerRef}
+            panelClassName="rich-text-popover rich-text-popover--color"
+            onMouseDown={preventDefault}
+          >
+            <FieldColorPicker
+              label="Text color"
+              value={state.activeColor ?? undefined}
+              defaultColor={DEFAULT_TEXT_COLOR}
+              canEdit
+              onChange={(color) => {
+                if (color) {
+                  editor.chain().focus().setColor(color).run();
+                } else {
+                  editor.chain().focus().unsetColor().run();
+                }
+              }}
+            />
+          </DropdownMenu>
         </div>
 
         <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
           <ToolbarButton
+            buttonRef={highlightTriggerRef}
             label="Highlight color"
             onClick={() => setOpenPopover(openPopover === 'highlight' ? null : 'highlight')}
           >
             <span className="rich-text-highlight-swatch-icon" />
           </ToolbarButton>
-          {openPopover === 'highlight' && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child inputs
-            <div
-              className="rich-text-popover rich-text-popover--color"
-              onMouseDown={preventDefault}
-            >
-              <FieldColorPicker
-                label="Highlight color"
-                value={state.activeHighlight ?? undefined}
-                defaultColor={DEFAULT_HIGHLIGHT_COLOR}
-                canEdit
-                onChange={(color) => {
-                  if (color) {
-                    editor.chain().focus().setHighlight({ color }).run();
-                  } else {
-                    editor.chain().focus().unsetHighlight().run();
-                  }
-                }}
-              />
-            </div>
-          )}
+          <DropdownMenu
+            open={openPopover === 'highlight'}
+            onOpenChange={(open) => setOpenPopover(open ? 'highlight' : null)}
+            triggerRef={highlightTriggerRef}
+            panelClassName="rich-text-popover rich-text-popover--color"
+            onMouseDown={preventDefault}
+          >
+            <FieldColorPicker
+              label="Highlight color"
+              value={state.activeHighlight ?? undefined}
+              defaultColor={DEFAULT_HIGHLIGHT_COLOR}
+              canEdit
+              onChange={(color) => {
+                if (color) {
+                  editor.chain().focus().setHighlight({ color }).run();
+                } else {
+                  editor.chain().focus().unsetHighlight().run();
+                }
+              }}
+            />
+          </DropdownMenu>
         </div>
 
         <div className="rich-text-toolbar-group">
@@ -880,143 +934,148 @@ export function RichTextEditor({
 
         <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
           <ToolbarButton
+            buttonRef={tableTriggerRef}
             label="Table"
             active={state.isTable}
             onClick={() => setOpenPopover(openPopover === 'table' ? null : 'table')}
           >
             <TableIcon />
           </ToolbarButton>
-          {openPopover === 'table' && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-            <div className="rich-text-popover" onMouseDown={preventDefault}>
-              {!state.isTable ? (
+          <DropdownMenu
+            open={openPopover === 'table'}
+            onOpenChange={(open) => setOpenPopover(open ? 'table' : null)}
+            triggerRef={tableTriggerRef}
+            panelClassName="rich-text-popover"
+            onMouseDown={preventDefault}
+          >
+            {!state.isTable ? (
+              <button
+                type="button"
+                className="rich-text-popover-item"
+                onMouseDown={preventDefault}
+                onClick={() => {
+                  editor
+                    .chain()
+                    .focus()
+                    .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                    .run();
+                  setOpenPopover(null);
+                }}
+              >
+                Insert table
+              </button>
+            ) : (
+              <>
                 <button
                   type="button"
                   className="rich-text-popover-item"
                   onMouseDown={preventDefault}
                   onClick={() => {
-                    editor
-                      .chain()
-                      .focus()
-                      .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-                      .run();
+                    editor.chain().focus().addColumnBefore().run();
                     setOpenPopover(null);
                   }}
                 >
-                  Insert table
+                  Insert column before
                 </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="rich-text-popover-item"
-                    onMouseDown={preventDefault}
-                    onClick={() => {
-                      editor.chain().focus().addColumnBefore().run();
-                      setOpenPopover(null);
-                    }}
-                  >
-                    Insert column before
-                  </button>
-                  <button
-                    type="button"
-                    className="rich-text-popover-item"
-                    onMouseDown={preventDefault}
-                    onClick={() => {
-                      editor.chain().focus().addColumnAfter().run();
-                      setOpenPopover(null);
-                    }}
-                  >
-                    Insert column after
-                  </button>
-                  <button
-                    type="button"
-                    className="rich-text-popover-item"
-                    onMouseDown={preventDefault}
-                    onClick={() => {
-                      editor.chain().focus().deleteColumn().run();
-                      setOpenPopover(null);
-                    }}
-                  >
-                    Delete column
-                  </button>
-                  <button
-                    type="button"
-                    className="rich-text-popover-item"
-                    onMouseDown={preventDefault}
-                    onClick={() => {
-                      editor.chain().focus().addRowBefore().run();
-                      setOpenPopover(null);
-                    }}
-                  >
-                    Insert row before
-                  </button>
-                  <button
-                    type="button"
-                    className="rich-text-popover-item"
-                    onMouseDown={preventDefault}
-                    onClick={() => {
-                      editor.chain().focus().addRowAfter().run();
-                      setOpenPopover(null);
-                    }}
-                  >
-                    Insert row after
-                  </button>
-                  <button
-                    type="button"
-                    className="rich-text-popover-item"
-                    onMouseDown={preventDefault}
-                    onClick={() => {
-                      editor.chain().focus().deleteRow().run();
-                      setOpenPopover(null);
-                    }}
-                  >
-                    Delete row
-                  </button>
-                  <button
-                    type="button"
-                    className="rich-text-popover-item"
-                    disabled={!state.canMergeCells}
-                    onMouseDown={preventDefault}
-                    onClick={() => {
-                      editor.chain().focus().mergeCells().run();
-                      setOpenPopover(null);
-                    }}
-                  >
-                    Merge cells
-                  </button>
-                  <button
-                    type="button"
-                    className="rich-text-popover-item"
-                    disabled={!state.canSplitCell}
-                    onMouseDown={preventDefault}
-                    onClick={() => {
-                      editor.chain().focus().splitCell().run();
-                      setOpenPopover(null);
-                    }}
-                  >
-                    Split cell
-                  </button>
-                  <button
-                    type="button"
-                    className="rich-text-popover-item rich-text-popover-item--danger"
-                    onMouseDown={preventDefault}
-                    onClick={() => {
-                      editor.chain().focus().deleteTable().run();
-                      setOpenPopover(null);
-                    }}
-                  >
-                    Delete table
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+                <button
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor.chain().focus().addColumnAfter().run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  Insert column after
+                </button>
+                <button
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor.chain().focus().deleteColumn().run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  Delete column
+                </button>
+                <button
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor.chain().focus().addRowBefore().run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  Insert row before
+                </button>
+                <button
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor.chain().focus().addRowAfter().run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  Insert row after
+                </button>
+                <button
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor.chain().focus().deleteRow().run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  Delete row
+                </button>
+                <button
+                  type="button"
+                  className="rich-text-popover-item"
+                  disabled={!state.canMergeCells}
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor.chain().focus().mergeCells().run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  Merge cells
+                </button>
+                <button
+                  type="button"
+                  className="rich-text-popover-item"
+                  disabled={!state.canSplitCell}
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor.chain().focus().splitCell().run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  Split cell
+                </button>
+                <button
+                  type="button"
+                  className="rich-text-popover-item rich-text-popover-item--danger"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor.chain().focus().deleteTable().run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  Delete table
+                </button>
+              </>
+            )}
+          </DropdownMenu>
         </div>
 
         {mergeable.length > 0 && (
           <div className="rich-text-toolbar-group rich-text-toolbar-group--popover rich-text-toolbar-group--push-end">
             <button
+              ref={mergeTriggerRef}
               type="button"
               className="button button--ghost button--small"
               onMouseDown={preventDefault}
@@ -1024,25 +1083,26 @@ export function RichTextEditor({
             >
               Insert form answers
             </button>
-            {openPopover === 'merge' && (
-              // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-              <div
-                className="rich-text-popover rich-text-popover--merge"
-                onMouseDown={preventDefault}
-              >
-                {mergeable.map((field) => (
-                  <button
-                    key={field.id}
-                    type="button"
-                    className="rich-text-popover-item"
-                    onMouseDown={preventDefault}
-                    onClick={() => insertMergeField(field)}
-                  >
-                    {'label' in field && field.label ? field.label : 'Untitled field'}
-                  </button>
-                ))}
-              </div>
-            )}
+            <DropdownMenu
+              open={openPopover === 'merge'}
+              onOpenChange={(open) => setOpenPopover(open ? 'merge' : null)}
+              triggerRef={mergeTriggerRef}
+              panelClassName="rich-text-popover rich-text-popover--merge"
+              align="end"
+              onMouseDown={preventDefault}
+            >
+              {mergeable.map((field) => (
+                <button
+                  key={field.id}
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => insertMergeField(field)}
+                >
+                  {'label' in field && field.label ? field.label : 'Untitled field'}
+                </button>
+              ))}
+            </DropdownMenu>
           </div>
         )}
       </div>

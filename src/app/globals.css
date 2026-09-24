@@ -17519,6 +17519,35 @@ textarea.form-field-input {
   color: var(--color-primary);
 }
 
+/* Self-service "Change plan" section — the org's own admin picking a tier directly (see
+   handleChangePlan in organisation-details-client.tsx), rather than View plans/Contact us
+   being the only ways to act on this card. */
+.organisation-plan-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.organisation-plan-switch-select {
+  max-width: 12rem;
+  border-radius: var(--radius-pill);
+}
+
+.organisation-plan-switch-warning {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.85rem;
+  background: var(--color-warning-soft);
+  border: 1px solid var(--color-warning-border);
+  border-radius: 0.6rem;
+  color: var(--color-warning);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.organisation-plan-links {
+  margin-top: 0.85rem;
+}
+
 .organisation-details-list {
   border-top: none;
 }

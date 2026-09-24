@@ -1,13 +1,58 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
 import { authOptions } from '@/lib/auth';
-import { withOrgContext } from '@/lib/db';
+import { prisma, withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
 import { requireOrganizationId } from '@/lib/session';
+import { buildOrgFormUrl, getCurrentSubdomain, getOrganizationBySubdomain } from '@/lib/tenant';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+// Same share-link-branding override as /f/[slug]/page.tsx's generateMetadata (see the
+// comment there for the full rationale) — an admin sharing a preview link to show a
+// colleague a draft, or accidentally sharing one instead of the live link (as happened in
+// the WhatsApp screenshots that prompted this), gets the same "Clickforms" + org logo
+// unfurl rather than the generic default. Note this runs unauthenticated (link-preview
+// crawlers never carry the admin's session cookie), so it can't reuse the session-based
+// org lookup below — it resolves the org from the subdomain instead, same as the public
+// page. A direct prisma.form.findFirst (no withOrgContext) is a deliberate bypass here,
+// same shape as the one documented in lib/forms/public-lookup.ts: this only confirms the
+// form exists for that org so metadata isn't shown for a slug that doesn't belong to it,
+// it's not the auth gate — the page component's session check above is what actually
+// protects the draft content.
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const subdomain = await getCurrentSubdomain();
+    if (!subdomain) return {};
+
+    const organization = await getOrganizationBySubdomain(subdomain);
+    if (!organization) return {};
+
+    const form = await prisma.form.findFirst({
+      where: { slug, organizationId: organization.id },
+      select: { id: true },
+    });
+    if (!form) return {};
+
+    const title = 'Clickforms';
+    if (!organization.logoStorageKey) {
+      return { title, description: '', openGraph: { title } };
+    }
+
+    const logoUrl = buildOrgFormUrl(subdomain, '/api/f/logo');
+    return {
+      title,
+      description: '',
+      openGraph: { title, images: [{ url: logoUrl }] },
+    };
+  } catch {
+    return {};
+  }
 }
 
 // Admin-only preview of a form, reachable at the same public URL shape as the live form

@@ -1,10 +1,57 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
 import { getFormSchemaByVersionId, getPublishedFormBySlug } from '@/lib/forms/public-lookup';
-import { resolveOrganizationIdForSlugOrRedirect } from '@/lib/tenant';
+import {
+  buildOrgFormUrl,
+  getCurrentSubdomain,
+  getOrganizationBySubdomain,
+  resolveOrganizationIdForSlugOrRedirect,
+} from '@/lib/tenant';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+// Share links (WhatsApp/iMessage/Slack unfurls, etc.) previously inherited the root
+// layout's generic "Clickforms — Internal forms & workflows" title, long description, and
+// Clickforms logo image -- confusing for a respondent who's never heard of the platform
+// and just wants to know whose form this is. This overrides all of that per-form with a
+// bare "Clickforms" title/no description, plus the org's own uploaded logo as the preview
+// image when they have one (falls back to the inherited default image otherwise).
+//
+// Deliberately doesn't use resolveOrganizationIdForSlugOrRedirect: that throws
+// redirect()/notFound() internally for the legacy bare-domain case, which is the right
+// behavior for a page navigation but not for a metadata resolver that should just fall
+// back quietly. Any failure here (no subdomain, org lookup, or form lookup) means "can't
+// customize this one", not "this page 404s" -- the page component's own resolution is
+// what actually gates the page.
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const subdomain = await getCurrentSubdomain();
+    if (!subdomain) return {};
+
+    const organization = await getOrganizationBySubdomain(subdomain);
+    if (!organization) return {};
+
+    const form = await getPublishedFormBySlug(slug, organization.id).catch(() => null);
+    if (!form) return {};
+
+    const title = 'Clickforms';
+    if (!organization.logoStorageKey) {
+      return { title, description: '', openGraph: { title } };
+    }
+
+    const logoUrl = buildOrgFormUrl(subdomain, '/api/f/logo');
+    return {
+      title,
+      description: '',
+      openGraph: { title, images: [{ url: logoUrl }] },
+    };
+  } catch {
+    return {};
+  }
 }
 
 // Public route, no session — specs/03-form-renderer.md: "An unauthenticated respondent

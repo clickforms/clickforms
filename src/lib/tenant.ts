@@ -28,7 +28,7 @@ export async function getCurrentSubdomain(): Promise<string | null> {
 export async function getOrganizationBySubdomain(subdomain: string) {
   return prisma.organization.findUnique({
     where: { subdomain },
-    select: { id: true, name: true, subdomain: true },
+    select: { id: true, name: true, subdomain: true, logoStorageKey: true },
   });
 }
 

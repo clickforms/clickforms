@@ -715,6 +715,10 @@ export type QuestionTableRow = z.infer<typeof questionTableRowSchema>;
 
 const questionTableFieldSchema = baseFieldSchema.extend({
   type: z.literal('question_table'),
+  // Overrides base's required `label` — the table's own heading isn't always needed
+  // (e.g. when the surrounding page context already makes clear what the questions are
+  // for), so admins can leave it blank rather than being forced to type a placeholder.
+  label: z.string().optional(),
   rows: z.array(questionTableRowSchema).min(1),
   // Header row text + coloring, independent of the form-wide branding.layoutStyle 'table'
   // theme (see LAYOUT_STYLE_OPTIONS) — this field renders as its own compact table with

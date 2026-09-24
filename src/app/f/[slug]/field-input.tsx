@@ -286,14 +286,18 @@ export function FieldInput({
       className={`form-field-group ${fieldHasCustomAppearance(field) ? 'form-field-group--highlighted' : ''}`}
       style={Object.keys(containerStyle).length > 0 ? containerStyle : undefined}
     >
-      <label
-        className="form-field-label"
-        htmlFor={field.id}
-        style={field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined}
-      >
-        {field.label}
-        {field.required ? <span className="form-field-required">*</span> : null}
-      </label>
+      {field.label ? (
+        <label
+          className="form-field-label"
+          htmlFor={field.id}
+          style={
+            field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined
+          }
+        >
+          {field.label}
+          {field.required ? <span className="form-field-required">*</span> : null}
+        </label>
+      ) : null}
       {field.helpText ? <p className="form-field-help">{field.helpText}</p> : null}
 
       {field.type === 'short_text' ? (

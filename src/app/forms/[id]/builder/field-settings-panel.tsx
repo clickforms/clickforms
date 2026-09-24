@@ -2042,7 +2042,9 @@ export function FieldSettingsPanel({
                   ? 'Caption (optional)'
                   : isHidden
                     ? 'Internal name'
-                    : 'Label'}
+                    : isQuestionTable
+                      ? 'Label (optional)'
+                      : 'Label'}
             </span>
             <input
               className="text-input"
@@ -2050,7 +2052,10 @@ export function FieldSettingsPanel({
               disabled={!canEdit}
               onChange={(event) =>
                 onUpdateField(field.id, {
-                  label: isDivider ? event.target.value || undefined : event.target.value,
+                  label:
+                    isDivider || isQuestionTable
+                      ? event.target.value || undefined
+                      : event.target.value,
                 })
               }
             />

@@ -14856,11 +14856,25 @@ textarea.form-field-input {
   border: 1px solid var(--landing-border);
   border-radius: 1.5rem;
   box-shadow: var(--landing-shadow);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.landing-pricing-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--landing-primary);
+  box-shadow: 0 28px 60px rgba(27, 27, 47, 0.16);
 }
 
 .landing-pricing-card[data-highlight] {
   border-color: var(--landing-primary);
   box-shadow: 0 24px 56px rgba(85, 234, 140, 0.24);
+}
+
+.landing-pricing-card[data-highlight]:hover {
+  box-shadow: 0 32px 68px rgba(85, 234, 140, 0.34);
 }
 
 .landing-pricing-badge {
@@ -15002,6 +15016,10 @@ textarea.form-field-input {
 
   .landing-pricing-card[data-highlight] {
     transform: translateY(-0.75rem);
+  }
+
+  .landing-pricing-card[data-highlight]:hover {
+    transform: translateY(calc(-0.75rem - 6px));
   }
 }
 

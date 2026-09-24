@@ -31,6 +31,34 @@ export class PlanLimitError extends Error {
   }
 }
 
+/** Thrown by src/lib/admin/plan-limits.ts's assertOrgActionsAllowed when an organisation's
+ * trial has ended — the gate on "platform actions" (creating/editing forms, inviting
+ * users, uploading files, changing org settings). Distinct from PlanLimitError: this isn't
+ * about which plan tier the org is on, it's about the org having no active plan or live
+ * trial at all. Also mapped to 402, since — same as PlanLimitError — the request is
+ * well-formed and would succeed once the org has a plan. */
+export class TrialExpiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TrialExpiredError';
+  }
+}
+
+/** Thrown by src/lib/forms/public-lookup.ts's assertOrgAcceptingNewSubmissions when a
+ * respondent tries to open or start filling in a form whose organisation's trial has
+ * expired — the "live forms go offline" half of trial expiry (assertOrgActionsAllowed
+ * above is the other half, for the org's own staff). Deliberately generic to the
+ * respondent — no mention of trials or billing, just that the form isn't available right
+ * now — and never thrown for a submission already in progress (see that function's doc
+ * comment): an in-flight fill-out is allowed to finish, same as a form taken offline
+ * manually mid-fill. */
+export class FormOfflineError extends Error {
+  constructor() {
+    super('This form is not currently accepting responses.');
+    this.name = 'FormOfflineError';
+  }
+}
+
 /**
  * Every admin API route (specs/02-form-builder.md onward) wraps its body in try/catch
  * and calls this in the catch block — one place decides which error classes map to
@@ -52,6 +80,12 @@ export function toErrorResponse(error: unknown): NextResponse {
   }
   if (error instanceof PlanLimitError) {
     return NextResponse.json({ error: error.message }, { status: 402 });
+  }
+  if (error instanceof TrialExpiredError) {
+    return NextResponse.json({ error: error.message }, { status: 402 });
+  }
+  if (error instanceof FormOfflineError) {
+    return NextResponse.json({ error: error.message }, { status: 403 });
   }
   if (error instanceof ZodError) {
     return NextResponse.json(

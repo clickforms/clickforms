@@ -116,21 +116,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error('OrganizationSuspended');
         }
 
-        // Self-service signups start on a 7-day trial (see
-        // src/app/api/auth/signup/verify/route.ts) with status flipped to 'trial' and
-        // trialEndsAt set. There's no self-serve upgrade path yet — a platform admin has
-        // to assign a real plan from /admin/billing, which also flips the org's status
-        // back to 'active' (see handlePlanChange in billing-admin-client.tsx) so it isn't
-        // still gated by this trial check afterward. Until that happens, block sign-in
-        // once trialEndsAt has passed rather than silently leaving Standard-level access
-        // open forever.
-        if (
-          user.organization?.status === 'trial' &&
-          user.organization.trialEndsAt &&
-          user.organization.trialEndsAt < new Date()
-        ) {
-          throw new Error('OrganizationTrialExpired');
-        }
+        // Deliberately does NOT block sign-in when a trial has expired (unlike the
+        // suspended check above) — an expired trial still lets people in so they can see
+        // their data, read submissions, and find the upgrade path; it's write access and
+        // public form availability that get cut off (see src/lib/admin/plan-limits.ts's
+        // assertOrgActionsAllowed and src/lib/forms/public-lookup.ts), and the dashboard
+        // shell (admin-shell-client.tsx) shows a persistent banner for it. Suspension is
+        // different: a platform admin can suspend without leaving `status` clean data to
+        // display, so locking that one out at sign-in is still the right call.
 
         return {
           id: user.id,

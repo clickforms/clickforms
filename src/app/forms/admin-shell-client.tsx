@@ -1,6 +1,7 @@
 'use client';
 
 import type { UserRole } from '@prisma/client';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { AdminHeader } from '@/app/forms/admin-header';
@@ -28,7 +29,33 @@ interface AdminShellClientProps {
    * the org's own name is more useful there than which page you're on, since the
    * sidebar nav already highlights the active page. */
   organizationName: string;
+  /** True once this org's trial has passed trialEndsAt (see isTrialExpired in
+   * plan-limits.ts) — computed fresh on every /forms/* page load in layout.tsx, not
+   * cached on the session, since a platform admin assigning a plan should clear this
+   * banner on the very next navigation, not up to 24h later on session refresh. Sign-in
+   * itself is never blocked by this (see src/lib/auth.ts) — write actions and public form
+   * access are what actually get cut off, enforced server-side regardless of whether this
+   * banner is seen or dismissed. */
+  trialExpired: boolean;
   children: ReactNode;
+}
+
+function TrialExpiredBanner() {
+  return (
+    <div className="admin-trial-banner" role="alert">
+      <span className="admin-trial-banner-text">
+        Your trial has ended. Live forms are offline and changes are paused until you subscribe.
+      </span>
+      <span className="admin-trial-banner-actions">
+        <Link href="/pricing" className="admin-trial-banner-link">
+          View plans
+        </Link>
+        <Link href="/contact" className="admin-trial-banner-link admin-trial-banner-link--ghost">
+          Contact us
+        </Link>
+      </span>
+    </div>
+  );
 }
 
 export function AdminShellClient({
@@ -39,6 +66,7 @@ export function AdminShellClient({
   isTemporaryOrgJoin,
   logoUrl,
   organizationName,
+  trialExpired,
   children,
 }: AdminShellClientProps) {
   // Two independent booleans behind one button, because the sidebar means something
@@ -149,6 +177,7 @@ export function AdminShellClient({
           onClick={() => setMobileNavOpen(false)}
         />
         <div className="admin-content">
+          {trialExpired ? <TrialExpiredBanner /> : null}
           <AdminHeader
             email={email}
             name={name}

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import type { ReactNode } from 'react';
 import { AdminShellClient } from '@/app/forms/admin-shell-client';
+import { isTrialExpired } from '@/lib/admin/plan-limits';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createPresignedDownloadUrl } from '@/lib/s3';
@@ -26,10 +27,16 @@ export default async function FormsLayout({ children }: { children: ReactNode })
       tx.user.findUnique({ where: { id: session.user.id }, select: { name: true } }),
       tx.organization.findUnique({
         where: { id: requireOrganizationId(session) },
-        select: { name: true, logoStorageKey: true },
+        select: { name: true, logoStorageKey: true, status: true, trialEndsAt: true },
       }),
     ]),
   );
+
+  // Checked on every /forms/* page load (this layout wraps all of them) rather than once
+  // at sign-in — see src/lib/auth.ts's comment on why an expired trial no longer blocks
+  // sign-in. The banner is the surface for it; write actions are separately blocked by
+  // assertOrgActionsAllowed at the API layer regardless of whether this banner renders.
+  const trialExpired = organization ? isTrialExpired(organization) : false;
 
   // Regenerated on every page load, never stored — see the "Logo" card in
   // /forms/organisation (organisation-details-client.tsx) for how it's uploaded.
@@ -56,6 +63,7 @@ export default async function FormsLayout({ children }: { children: ReactNode })
       isTemporaryOrgJoin={session.user.isTemporaryOrgJoin}
       logoUrl={logoUrl}
       organizationName={organization?.name ?? 'Clickforms'}
+      trialExpired={trialExpired}
     >
       {children}
     </AdminShellClient>

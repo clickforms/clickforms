@@ -2,7 +2,7 @@
 
 import type { UserRole } from '@prisma/client';
 import { usePathname } from 'next/navigation';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { AdminHeader } from '@/app/forms/admin-header';
 import { AdminSidebar } from '@/app/forms/admin-sidebar';
 import { ToastProvider } from '@/components/toast';
@@ -47,7 +47,11 @@ export function AdminShellClient({
   // closed" (never persisted — a mobile visitor should always land with it closed).
   // The sidebar hamburger toggles collapse on desktop; the header hamburger is mobile
   // (and Account settings overlay) only, since the rail is off-canvas there.
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Defaults to collapsed (rather than reading localStorage after mount and flipping)
+  // so the very first render already matches the common case and there's no visible
+  // snap on refresh — localStorage is only consulted to opt back into the expanded rail
+  // when a visitor had explicitly chosen that.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // Dark/light theme for the authenticated app shell only — scoped to .admin-shell (see
   // the [data-theme='dark'] overrides in globals.css) so the public marketing/auth pages,
@@ -60,8 +64,10 @@ export function AdminShellClient({
   const isAccountSettings = pathname.startsWith('/forms/settings');
 
   useEffect(() => {
-    if (window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === '1') {
-      setSidebarCollapsed(true);
+    // sidebarCollapsed already defaults to true, so only act when a visitor had
+    // explicitly expanded it before (stored '0') — nothing to do for '1'/unset.
+    if (window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === '0') {
+      setSidebarCollapsed(false);
     }
     if (window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark') {
       setIsDarkTheme(true);
@@ -81,6 +87,22 @@ export function AdminShellClient({
   // biome-ignore lint/correctness/useExhaustiveDependencies: pathname is the intentional trigger, its value is never read
   useEffect(() => {
     setMobileNavOpen(false);
+  }, [pathname]);
+
+  // Same idea for the desktop rail: once a visitor picks a destination, put the full
+  // labeled sidebar away and drop back to the narrow icon-only rail, rather than leaving
+  // it expanded over the page indefinitely. Skip this on the very first run so a page
+  // *load* still honors whatever collapsed/expanded state was persisted — only an actual
+  // in-app navigation (a pathname change after mount) should trigger the auto-collapse.
+  const isFirstPathnameRun = useRef(true);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname is the intentional trigger, its value is never read
+  useEffect(() => {
+    if (isFirstPathnameRun.current) {
+      isFirstPathnameRun.current = false;
+      return;
+    }
+    setSidebarCollapsed(true);
+    window.localStorage.setItem(COLLAPSE_STORAGE_KEY, '1');
   }, [pathname]);
 
   function toggleSidebar() {

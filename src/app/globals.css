@@ -9263,8 +9263,10 @@ textarea.text-input {
 }
 
 .rich-text-popover--color {
-  min-width: 15.5rem;
-  max-width: 15.5rem;
+  /* Wide enough that "Custom hex" label + swatch + the (now width-floored, see
+   * .field-color-hex-input) hex input + Reset button all fit on one row without wrapping. */
+  min-width: 19rem;
+  max-width: 19rem;
   padding: 0.6rem;
 }
 
@@ -9976,7 +9978,15 @@ textarea.text-input {
   flex: 1;
   width: 100%;
   max-width: 8.5rem;
-  min-width: 0;
+  /* Was 0, which let this shrink to a sliver (sometimes just the "#" placeholder visible,
+   * un-clickable/un-typeable) whenever the surrounding row was tight -- e.g. the rich text
+   * toolbar's narrower .rich-text-popover--color, where "Custom hex" label + swatch + this
+   * input + the Reset button all compete for space. min-width:0 let flexbox satisfy that
+   * squeeze by shrinking the input instead of wrapping the Reset button down, even though
+   * .field-color-custom has flex-wrap: wrap for exactly that case. A real minimum forces
+   * the wrap to kick in instead, so the input always stays wide enough to read/edit a full
+   * "#rrggbb" value. */
+  min-width: 5.5rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8125rem;
   letter-spacing: 0.02em;

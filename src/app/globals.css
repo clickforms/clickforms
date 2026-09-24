@@ -6306,6 +6306,15 @@ textarea.text-input {
   border-right: 1px solid var(--builder-panel-border);
   overflow: hidden;
   color: var(--builder-text);
+  transition: width 0.18s ease, max-width 0.18s ease, flex-basis 0.18s ease;
+}
+
+/* Toggled by the expand icon in .field-settings-aside-header -- gives table/question_table
+   column editors and the like more room than the default rail width comfortably allows. */
+.builder-palette--expanded {
+  width: 36rem;
+  max-width: 36rem;
+  flex-basis: 36rem;
 }
 
 .builder-panel-scroll {
@@ -6421,6 +6430,25 @@ textarea.text-input {
   flex-shrink: 0;
 }
 
+.field-settings-aside-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--builder-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.field-settings-aside-expand:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--builder-text);
+}
+
 .field-settings-aside-back {
   display: flex;
   align-items: center;
@@ -6453,6 +6481,17 @@ textarea.text-input {
   padding: 1.25rem 1.35rem 1.75rem;
   min-width: 0;
   overflow-x: hidden;
+}
+
+/* The Logic section (ConditionalLogicEditor) renders as a sibling of FieldSettingsPanel
+   rather than inside it (see builder-client.tsx/template-builder-client.tsx), so it sits
+   directly under .field-settings-aside/.builder-palette -- which has no padding of its
+   own -- and would otherwise touch the panel's edges instead of matching .settings-panel's
+   inset above it. */
+.field-settings-aside > .settings-section {
+  padding-left: 1.35rem;
+  padding-right: 1.35rem;
+  padding-bottom: 1.75rem;
 }
 
 /* Plain, uncluttered backdrop for the page card — takes all the space the palette
@@ -9178,6 +9217,12 @@ textarea.text-input {
   flex-wrap: wrap;
   min-width: 8rem;
   max-width: 9rem;
+}
+
+.rich-text-popover--color {
+  min-width: 15.5rem;
+  max-width: 15.5rem;
+  padding: 0.6rem;
 }
 
 .rich-text-popover--merge {

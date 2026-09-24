@@ -136,6 +136,34 @@ function BackArrowIcon() {
   );
 }
 
+// Diagonal double-arrow — toggles the field-settings panel between its normal width and a
+// wider one, for when Settings/Appearance/Logic content (a table's column editor, say)
+// needs more room than the default rail width comfortably gives it. Arrows point outward
+// (expand) or inward (collapse) depending on state — see fieldSettingsExpanded below.
+function ExpandIcon({ expanded }: { expanded: boolean }) {
+  return expanded ? (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M8.5 5.5 12 2M9.5 2h2.5v2.5M5.5 8.5 2 12M4.5 12H2V9.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ) : (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M2 5.5V2h3.5M12 8.5V12H8.5M12 2 8 6M2 12l4-4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function SettingsIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -217,6 +245,7 @@ export function TemplateBuilderClient({
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [showTemplateSettings, setShowTemplateSettings] = useState(false);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
+  const [fieldSettingsExpanded, setFieldSettingsExpanded] = useState(false);
   const [mockAnswers, setMockAnswers] = useState<FormAnswers>({});
   const [activeDrag, setActiveDrag] = useState<
     { source: 'palette'; label: string } | { source: 'canvas'; fieldId: string } | null
@@ -625,7 +654,7 @@ export function TemplateBuilderClient({
           <div className={`builder-workspace ${isEditing ? '' : 'builder-workspace--readonly'}`}>
             {isEditing ? (
               <aside
-                className="builder-palette"
+                className={`builder-palette ${editingField && fieldSettingsExpanded ? 'builder-palette--expanded' : ''}`}
                 aria-label={editingField ? 'Field settings' : 'Field types'}
               >
                 {editingField ? (
@@ -649,6 +678,15 @@ export function TemplateBuilderClient({
                           Duplicate
                         </button>
                       ) : null}
+                      <button
+                        type="button"
+                        className="field-settings-aside-expand"
+                        onClick={() => setFieldSettingsExpanded((expanded) => !expanded)}
+                        aria-label={fieldSettingsExpanded ? 'Collapse panel' : 'Expand panel'}
+                        aria-pressed={fieldSettingsExpanded}
+                      >
+                        <ExpandIcon expanded={fieldSettingsExpanded} />
+                      </button>
                     </div>
                     <FieldSettingsPanel
                       templateId={templateId}

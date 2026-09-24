@@ -15,16 +15,22 @@ import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { common, createLowlight } from 'lowlight';
 import { useEffect, useRef, useState } from 'react';
+import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import { MergeToken } from '@/app/forms/[id]/builder/merge-token-node';
 import { FontSize } from '@/app/forms/[id]/builder/rich-text-font-size';
 import { mergeableFields } from '@/lib/forms/merge-fields';
 import {
-  FIELD_COLOR_PRESETS,
   FONT_FAMILY_CSS,
   FONT_FAMILY_LABEL,
   FONT_FAMILY_OPTIONS,
   type FormField,
 } from '@/lib/forms/schema';
+
+// Text/highlight color default when nothing's applied yet -- matches the neutral ink used
+// elsewhere (DrawOnImagePad's default stroke) and a soft yellow in the highlight family
+// shown by the toolbar's own swatch icon (see .rich-text-highlight-swatch-icon).
+const DEFAULT_TEXT_COLOR = '#1a1a1a';
+const DEFAULT_HIGHLIGHT_COLOR = '#fde68a';
 
 // A comprehensive WYSIWYG editor for the "Formatted Text" field's body, built on Tiptap
 // (headless, MIT-licensed, https://tiptap.dev) rather than the browser's deprecated
@@ -433,6 +439,8 @@ export function RichTextEditor({
         isParagraph: e.isActive('paragraph') && !e.isActive('heading'),
         activeFontFamily: (e.getAttributes('textStyle').fontFamily as string | undefined) ?? null,
         activeFontSize: (e.getAttributes('textStyle').fontSize as string | undefined) ?? null,
+        activeColor: (e.getAttributes('textStyle').color as string | undefined) ?? null,
+        activeHighlight: (e.getAttributes('highlight').color as string | undefined) ?? null,
       };
     },
   });
@@ -661,36 +669,21 @@ export function RichTextEditor({
             <span className="rich-text-color-swatch-icon" />
           </ToolbarButton>
           {openPopover === 'color' && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-            <div
-              className="rich-text-popover rich-text-popover--swatches"
-              onMouseDown={preventDefault}
-            >
-              <button
-                type="button"
-                className="rich-text-popover-item"
-                onMouseDown={preventDefault}
-                onClick={() => {
-                  editor.chain().focus().unsetColor().run();
-                  setOpenPopover(null);
-                }}
-              >
-                Default
-              </button>
-              {FIELD_COLOR_PRESETS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className="rich-text-swatch"
-                  style={{ backgroundColor: color }}
-                  aria-label={color}
-                  onMouseDown={preventDefault}
-                  onClick={() => {
+            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child inputs
+            <div className="rich-text-popover rich-text-popover--color" onMouseDown={preventDefault}>
+              <FieldColorPicker
+                label="Text color"
+                value={state.activeColor ?? undefined}
+                defaultColor={DEFAULT_TEXT_COLOR}
+                canEdit
+                onChange={(color) => {
+                  if (color) {
                     editor.chain().focus().setColor(color).run();
-                    setOpenPopover(null);
-                  }}
-                />
-              ))}
+                  } else {
+                    editor.chain().focus().unsetColor().run();
+                  }
+                }}
+              />
             </div>
           )}
         </div>
@@ -703,36 +696,21 @@ export function RichTextEditor({
             <span className="rich-text-highlight-swatch-icon" />
           </ToolbarButton>
           {openPopover === 'highlight' && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-            <div
-              className="rich-text-popover rich-text-popover--swatches"
-              onMouseDown={preventDefault}
-            >
-              <button
-                type="button"
-                className="rich-text-popover-item"
-                onMouseDown={preventDefault}
-                onClick={() => {
-                  editor.chain().focus().unsetHighlight().run();
-                  setOpenPopover(null);
+            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child inputs
+            <div className="rich-text-popover rich-text-popover--color" onMouseDown={preventDefault}>
+              <FieldColorPicker
+                label="Highlight color"
+                value={state.activeHighlight ?? undefined}
+                defaultColor={DEFAULT_HIGHLIGHT_COLOR}
+                canEdit
+                onChange={(color) => {
+                  if (color) {
+                    editor.chain().focus().setHighlight({ color }).run();
+                  } else {
+                    editor.chain().focus().unsetHighlight().run();
+                  }
                 }}
-              >
-                None
-              </button>
-              {FIELD_COLOR_PRESETS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className="rich-text-swatch"
-                  style={{ backgroundColor: color }}
-                  aria-label={color}
-                  onMouseDown={preventDefault}
-                  onClick={() => {
-                    editor.chain().focus().toggleHighlight({ color }).run();
-                    setOpenPopover(null);
-                  }}
-                />
-              ))}
+              />
             </div>
           )}
         </div>

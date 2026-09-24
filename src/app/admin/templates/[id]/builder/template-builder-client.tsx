@@ -23,6 +23,7 @@ import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import {
   COLUMN_LAYOUT_LABELS,
   createDefaultField,
+  describeFormSchemaValidationError,
   FIELD_TYPE_LABELS,
 } from '@/app/forms/[id]/builder/field-meta';
 import { FieldPalette } from '@/app/forms/[id]/builder/field-palette';
@@ -272,7 +273,7 @@ export function TemplateBuilderClient({
   const saveSchema = useCallback(async (): Promise<boolean> => {
     const parsed = formSchemaSchema.safeParse(schema);
     if (!parsed.success) {
-      const message = 'Template has validation errors — fix them before saving';
+      const message = describeFormSchemaValidationError(schema, parsed.error);
       setSaveStatus('error');
       setSaveError(message);
       toast.error(message);

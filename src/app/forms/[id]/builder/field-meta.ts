@@ -1,3 +1,4 @@
+import type { z } from 'zod';
 import {
   type ColumnCount,
   type ConditionOperator,
@@ -7,6 +8,7 @@ import {
   type FieldOption,
   type FieldType,
   type FormField,
+  type FormSchema,
 } from '@/lib/forms/schema';
 
 // Shared, non-component constants/helpers for the builder — kept out of builder-client.tsx
@@ -315,3 +317,54 @@ export const OPERATOR_LABELS: Record<ConditionOperator, string> = {
   not_equals: 'is not',
   contains: 'includes',
 };
+
+/** Turns a failed `formSchemaSchema.safeParse` result into a message that actually tells
+ * the admin which field to open and what to fix, instead of a blanket "has validation
+ * errors" toast — every issue's path starts with `fields.<fieldId>...` (or `pages...` for
+ * the page-reference/column-count checks in formSchemaSchema's superRefine), so this
+ * resolves that fieldId back to the field's own label/type to build a human anchor, then
+ * appends the specific reason. Deduplicates identical (subject, reason) pairs since a
+ * missing label, say, can otherwise surface as more than one issue on the same field. */
+export function describeFormSchemaValidationError(
+  schema: Pick<FormSchema, 'fields'>,
+  error: z.ZodError,
+): string {
+  const lines: string[] = [];
+  const seen = new Set<string>();
+
+  for (const issue of error.issues) {
+    const [root, fieldId] = issue.path;
+    let subject = 'This form';
+    if (root === 'fields' && typeof fieldId === 'string') {
+      const field = schema.fields[fieldId];
+      const typeLabel = field ? (FIELD_TYPE_LABELS[field.type] ?? field.type) : 'field';
+      subject = field?.label ? `"${field.label}" (${typeLabel})` : `The untitled ${typeLabel} field`;
+    } else if (root === 'pages') {
+      subject = 'A page';
+    }
+
+    const lastKey = issue.path[issue.path.length - 1];
+    const reason =
+      lastKey === 'label' && issue.code === 'too_small'
+        ? 'needs a title'
+        : lastKey === 'rows' && issue.code === 'too_small'
+          ? 'needs at least one row'
+          : issue.message;
+
+    const line = `${subject}: ${reason}`;
+    if (!seen.has(line)) {
+      seen.add(line);
+      lines.push(line);
+    }
+  }
+
+  if (lines.length === 0) {
+    return 'This form has validation errors — fix them before saving.';
+  }
+
+  const shown = lines.slice(0, 3);
+  const remaining = lines.length - shown.length;
+  return (
+    shown.join(' • ') + (remaining > 0 ? ` • +${remaining} more issue${remaining > 1 ? 's' : ''}` : '')
+  );
+}

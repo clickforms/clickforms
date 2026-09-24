@@ -25,6 +25,7 @@ import { FieldDragOverlay, parseColumnSlotDroppableId } from '@/app/forms/[id]/b
 import {
   COLUMN_LAYOUT_LABELS,
   createDefaultField,
+  describeFormSchemaValidationError,
   FIELD_TYPE_LABELS,
 } from '@/app/forms/[id]/builder/field-meta';
 import { FieldPalette } from '@/app/forms/[id]/builder/field-palette';
@@ -327,7 +328,7 @@ export function BuilderClient({
   const saveSchema = useCallback(async (): Promise<boolean> => {
     const parsed = formSchemaSchema.safeParse(schema);
     if (!parsed.success) {
-      const message = 'Form has validation errors — fix them before saving';
+      const message = describeFormSchemaValidationError(schema, parsed.error);
       setSaveStatus('error');
       setSaveError(message);
       toast.error(message);

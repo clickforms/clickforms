@@ -1,7 +1,7 @@
 'use client';
 
 import type { ChangeEvent } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ImageCropEditor } from '@/app/forms/[id]/builder/image-crop-editor';
 import { useToast } from '@/components/toast';
 import { getErrorMessage } from '@/lib/error-message';
@@ -16,6 +16,22 @@ interface FieldImageUploadProps {
   templateId?: string;
   fieldId: string;
   imageStorageKey?: string;
+  /** A local object-URL preview of this field's just-uploaded image, if any — owned by
+   * the builder page (builder-client.tsx / template-builder-client.tsx), not this
+   * component. The image API route only ever resolves imageStorageKey against the
+   * *persisted* form/template version, and this builder has no autosave (see
+   * "Remove autosave, add manual Save/Cancel"), so right after an upload the network src
+   * would 404 until the admin saves and reloads. This lets the freshly uploaded file
+   * render immediately here, and — since the same map is threaded down to the canvas —
+   * in the field's canvas preview too. `undefined` once nothing is staged (either
+   * nothing's been uploaded yet, or the schema was reloaded and imageStorageKey now
+   * resolves for real). */
+  previewUrl?: string;
+  /** Reports a newly created object URL right after a successful upload, or `null` when
+   * clearing one (on Remove). The parent is responsible for revoking the previous URL —
+   * this component never revokes since the same URL may still be in use by the canvas
+   * preview elsewhere on the page. */
+  onPreviewUrlChange: (url: string | null) => void;
   canEdit: boolean;
   onUploaded: (storageKey: string) => void;
   onRemove: () => void;
@@ -33,34 +49,22 @@ export function FieldImageUpload({
   templateId,
   fieldId,
   imageStorageKey,
+  previewUrl,
+  onPreviewUrlChange,
   canEdit,
   onUploaded,
   onRemove,
 }: FieldImageUploadProps) {
   const toast = useToast();
   const [uploading, setUploading] = useState(false);
-  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [cropSession, setCropSession] = useState<CropSession | null>(null);
 
   const imageApiUrl = templateId
     ? `/api/admin/form-templates/${templateId}/fields/${fieldId}/image`
     : `/api/forms/${formId}/fields/${fieldId}/image`;
 
-  useEffect(() => {
-    return () => {
-      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
-    };
-  }, [localPreviewUrl]);
-
-  useEffect(() => {
-    if (imageStorageKey && localPreviewUrl) {
-      URL.revokeObjectURL(localPreviewUrl);
-      setLocalPreviewUrl(null);
-    }
-  }, [imageStorageKey, localPreviewUrl]);
-
   const imageSrc =
-    localPreviewUrl ?? (imageStorageKey ? getFieldImageSrc({ formId, templateId, fieldId }) : null);
+    previewUrl ?? (imageStorageKey ? getFieldImageSrc({ formId, templateId, fieldId }) : null);
 
   const closeCropSession = useCallback(() => {
     setCropSession((prev) => {
@@ -113,10 +117,7 @@ export function FieldImageUpload({
         }
 
         onUploaded(confirmData.storageKey);
-        setLocalPreviewUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return URL.createObjectURL(file);
-        });
+        onPreviewUrlChange(URL.createObjectURL(file));
         closeCropSession();
         toast.success('Image uploaded');
       } catch (err) {
@@ -126,7 +127,7 @@ export function FieldImageUpload({
         setUploading(false);
       }
     },
-    [closeCropSession, imageApiUrl, onUploaded, toast],
+    [closeCropSession, imageApiUrl, onPreviewUrlChange, onUploaded, toast],
   );
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -174,10 +175,7 @@ export function FieldImageUpload({
 
   function handleRemove() {
     if (!canEdit) return;
-    if (localPreviewUrl) {
-      URL.revokeObjectURL(localPreviewUrl);
-      setLocalPreviewUrl(null);
-    }
+    if (previewUrl) onPreviewUrlChange(null);
     onRemove();
   }
 

@@ -414,6 +414,7 @@ function FieldPreview({
   fields,
   canEdit,
   onUpdateField,
+  imagePreviewUrl,
 }: {
   field: FormField;
   formId?: string;
@@ -424,6 +425,11 @@ function FieldPreview({
    * the canvas" pattern). Every other field type ignores these two props entirely. */
   canEdit?: boolean;
   onUpdateField?: (fieldId: string, patch: FieldPatch) => void;
+  /** A just-uploaded-but-unsaved local preview for this field's image (image/
+   * draw_on_image only) — see the doc comment on FieldImageUpload's previewUrl prop.
+   * Takes priority over the network src, which only resolves once the upload has been
+   * saved and the schema reloaded. */
+  imagePreviewUrl?: string;
 }) {
   const inputStyle = resolveFieldInputStyle(field);
 
@@ -561,9 +567,10 @@ function FieldPreview({
       );
     case 'image': {
       const src =
-        field.imageStorageKey && (formId || templateId)
+        imagePreviewUrl ??
+        (field.imageStorageKey && (formId || templateId)
           ? getFieldImageSrc({ formId, templateId, fieldId: field.id })
-          : null;
+          : null);
       const align = field.align ?? 'center';
       if (src) {
         return (
@@ -589,9 +596,10 @@ function FieldPreview({
     }
     case 'draw_on_image': {
       const src =
-        field.imageStorageKey && (formId || templateId)
+        imagePreviewUrl ??
+        (field.imageStorageKey && (formId || templateId)
           ? getFieldImageSrc({ formId, templateId, fieldId: field.id })
-          : null;
+          : null);
       if (!src) {
         // No wrapping .field-preview-draw-on-image box here — it has its own dashed
         // border, and nesting it around .field-preview-dropzone (which has one too)
@@ -1274,6 +1282,11 @@ interface FieldCardProps {
   fields?: Record<string, FormField>;
   formId?: string;
   templateId?: string;
+  /** fieldId -> local object-URL preview for a just-uploaded-but-unsaved image field —
+   * see the doc comment on FieldImageUpload's previewUrl prop. Threaded down (and, for
+   * column_layout, recursively into nested children) so an upload shows immediately in
+   * the canvas without waiting on Save + reload. */
+  imagePreviewUrls?: Record<string, string>;
   /** 1-based question number shown as "1. Label" on the canvas. Omitted for layout
    * chrome (images, headers, dividers) and nested column children. */
   questionNumber?: number;
@@ -1436,6 +1449,7 @@ export function FieldCard({
   fields,
   formId,
   templateId,
+  imagePreviewUrls,
   questionNumber,
   selected,
   canEdit,
@@ -1543,6 +1557,7 @@ export function FieldCard({
                 fields={fields}
                 formId={formId}
                 templateId={templateId}
+                imagePreviewUrls={imagePreviewUrls}
                 selected={selectedFieldId === childId}
                 selectedFieldId={selectedFieldId}
                 visibleFieldIds={visibleFieldIds}
@@ -1714,6 +1729,7 @@ export function FieldCard({
           fields={fields}
           canEdit={canEdit}
           onUpdateField={onUpdateField}
+          imagePreviewUrl={imagePreviewUrls?.[field.id]}
         />
       </div>
     );
@@ -1784,6 +1800,7 @@ export function FieldCard({
           fields={fields}
           canEdit={canEdit}
           onUpdateField={onUpdateField}
+          imagePreviewUrl={imagePreviewUrls?.[field.id]}
         />
       </div>
     );
@@ -1861,6 +1878,7 @@ export function FieldCard({
         templateId={templateId}
         canEdit={canEdit}
         onUpdateField={onUpdateField}
+        imagePreviewUrl={imagePreviewUrls?.[field.id]}
       />
 
       {'options' in field && field.options.length === 0 && (

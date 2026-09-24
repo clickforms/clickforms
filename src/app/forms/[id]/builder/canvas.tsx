@@ -51,6 +51,10 @@ interface CanvasProps {
    * resolve an "image" field's uploaded-image URL for the in-canvas thumbnail. */
   formId?: string;
   templateId?: string;
+  /** fieldId -> local object-URL preview for a just-uploaded-but-unsaved image field —
+   * see the doc comment on FieldImageUpload's previewUrl prop, and FieldCardProps'
+   * matching field, for why this needs to reach the canvas too. */
+  imagePreviewUrls?: Record<string, string>;
   formName?: string;
   branding?: FormBranding;
   page: FormPage;
@@ -78,6 +82,7 @@ interface CanvasProps {
 export function Canvas({
   formId,
   templateId,
+  imagePreviewUrls,
   formName,
   branding,
   page,
@@ -175,6 +180,7 @@ export function Canvas({
                   fields={fields}
                   formId={formId}
                   templateId={templateId}
+                  imagePreviewUrls={imagePreviewUrls}
                   questionNumber={questionNumbers.get(field.id)}
                   selected={field.id === selectedFieldId}
                   selectedFieldId={selectedFieldId}

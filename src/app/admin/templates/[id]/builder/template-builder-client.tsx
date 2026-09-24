@@ -259,6 +259,34 @@ export function TemplateBuilderClient({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // fieldId -> local object-URL preview for an image/draw_on_image field's just-uploaded
+  // image — see the matching state in builder-client.tsx for why this is needed (no
+  // autosave here either, so the canvas would 404 the image until Save + reload without
+  // it).
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<Record<string, string>>({});
+  const imagePreviewUrlsRef = useRef(imagePreviewUrls);
+  imagePreviewUrlsRef.current = imagePreviewUrls;
+
+  const handleImagePreviewUrlChange = useCallback((fieldId: string, url: string | null) => {
+    setImagePreviewUrls((prev) => {
+      const prevUrl = prev[fieldId];
+      if (prevUrl && prevUrl !== url) URL.revokeObjectURL(prevUrl);
+      if (!url) {
+        if (!(fieldId in prev)) return prev;
+        const next = { ...prev };
+        delete next[fieldId];
+        return next;
+      }
+      return { ...prev, [fieldId]: url };
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      for (const url of Object.values(imagePreviewUrlsRef.current)) URL.revokeObjectURL(url);
+    };
+  }, []);
+
   const lastSavedSchemaJsonRef = useRef<string>(JSON.stringify(schema));
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -702,6 +730,8 @@ export function TemplateBuilderClient({
                         onUpdateField={handleUpdateField}
                         onReplaceFieldType={handleReplaceFieldType}
                         onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
+                        imagePreviewUrl={imagePreviewUrls[editingField.id]}
+                        onImagePreviewUrlChange={handleImagePreviewUrlChange}
                       />
                       {editingField.type !== 'hidden' ? (
                         <div className="settings-section">
@@ -736,6 +766,7 @@ export function TemplateBuilderClient({
               {activePage ? (
                 <Canvas
                   templateId={templateId}
+                  imagePreviewUrls={imagePreviewUrls}
                   formName={templateName}
                   branding={schema.branding}
                   page={activePage}
@@ -843,6 +874,8 @@ export function TemplateBuilderClient({
                 onUpdateField={handleUpdateField}
                 onReplaceFieldType={handleReplaceFieldType}
                 onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
+                imagePreviewUrl={imagePreviewUrls[editingField.id]}
+                onImagePreviewUrlChange={handleImagePreviewUrlChange}
               />
               {editingField.type !== 'hidden' ? (
                 <div className="settings-section">

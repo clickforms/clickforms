@@ -333,6 +333,38 @@ export function BuilderClient({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isWorkflowBusy, setIsWorkflowBusy] = useState(false);
 
+  // fieldId -> local object-URL preview for an image/draw_on_image field's just-uploaded
+  // image. The field-image API route only resolves a field's imageStorageKey against the
+  // *persisted* form version, and this builder has no autosave (edits only reach the
+  // server on Save), so without this the canvas would 404 the image until the admin
+  // saves and reloads. FieldImageUpload (rendered inside FieldSettingsPanel) reports a
+  // fresh object URL here right after upload; this component owns revoking it (on
+  // replace, on remove, and on unmount) since the same URL is shared between the
+  // settings-panel preview and the canvas preview (FieldCard) elsewhere in the tree.
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<Record<string, string>>({});
+  const imagePreviewUrlsRef = useRef(imagePreviewUrls);
+  imagePreviewUrlsRef.current = imagePreviewUrls;
+
+  const handleImagePreviewUrlChange = useCallback((fieldId: string, url: string | null) => {
+    setImagePreviewUrls((prev) => {
+      const prevUrl = prev[fieldId];
+      if (prevUrl && prevUrl !== url) URL.revokeObjectURL(prevUrl);
+      if (!url) {
+        if (!(fieldId in prev)) return prev;
+        const next = { ...prev };
+        delete next[fieldId];
+        return next;
+      }
+      return { ...prev, [fieldId]: url };
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      for (const url of Object.values(imagePreviewUrlsRef.current)) URL.revokeObjectURL(url);
+    };
+  }, []);
+
   // The last schema known to be persisted on the server — compared against the live
   // `schema` state to derive hasUnsavedChanges, and what Cancel reverts back to.
   const lastSavedSchemaJsonRef = useRef<string>(JSON.stringify(schema));
@@ -1025,6 +1057,10 @@ export function BuilderClient({
                           onUpdateField={handleUpdateField}
                           onReplaceFieldType={handleReplaceFieldType}
                           onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
+                          imagePreviewUrl={
+                            editingField ? imagePreviewUrls[editingField.id] : undefined
+                          }
+                          onImagePreviewUrlChange={handleImagePreviewUrlChange}
                         />
                       </div>
                     ) : (
@@ -1089,6 +1125,7 @@ export function BuilderClient({
               {activePage ? (
                 <Canvas
                   formId={formId}
+                  imagePreviewUrls={imagePreviewUrls}
                   formName={formName}
                   branding={schema.branding}
                   page={activePage}
@@ -1192,6 +1229,8 @@ export function BuilderClient({
                 onUpdateField={handleUpdateField}
                 onReplaceFieldType={handleReplaceFieldType}
                 onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
+                imagePreviewUrl={editingField ? imagePreviewUrls[editingField.id] : undefined}
+                onImagePreviewUrlChange={handleImagePreviewUrlChange}
               />
               {editingField.type !== 'hidden' ? (
                 <div className="settings-section">

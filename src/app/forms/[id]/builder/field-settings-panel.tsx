@@ -87,6 +87,11 @@ interface TypeSpecificSettingsProps {
   fields: Record<string, FormField>;
   onUpdateField: (fieldId: string, patch: FieldPatch) => void;
   onSetColumnLayoutColumns: (layoutId: string, columns: ColumnCount) => void;
+  /** This field's just-uploaded-but-unsaved image, if any — see the doc comment on
+   * FieldImageUpload's own previewUrl prop for why the canvas needs this too, not just
+   * this panel. Only meaningful for image/draw_on_image fields (MediaExtras below). */
+  imagePreviewUrl?: string;
+  onImagePreviewUrlChange: (fieldId: string, url: string | null) => void;
 }
 
 // Chevron used on every collapsible group's <summary> — CSS rotates it via the
@@ -1266,6 +1271,8 @@ function MediaExtras({
   field,
   canEdit,
   onUpdateField,
+  imagePreviewUrl,
+  onImagePreviewUrlChange,
 }: TypeSpecificSettingsProps) {
   if (field.type !== 'image' && field.type !== 'draw_on_image') return null;
   return (
@@ -1274,6 +1281,8 @@ function MediaExtras({
       templateId={templateId}
       fieldId={field.id}
       imageStorageKey={field.imageStorageKey}
+      previewUrl={imagePreviewUrl}
+      onPreviewUrlChange={(url) => onImagePreviewUrlChange(field.id, url)}
       canEdit={canEdit}
       onUploaded={(storageKey) => onUpdateField(field.id, { imageStorageKey: storageKey })}
       onRemove={() => onUpdateField(field.id, { imageStorageKey: undefined })}
@@ -1916,6 +1925,9 @@ interface FieldSettingsPanelProps {
   onUpdateField: (fieldId: string, patch: FieldPatch) => void;
   onReplaceFieldType: (fieldId: string, type: FieldType) => void;
   onSetColumnLayoutColumns: (layoutId: string, columns: ColumnCount) => void;
+  /** See the doc comment on TypeSpecificSettingsProps.imagePreviewUrl. */
+  imagePreviewUrl?: string;
+  onImagePreviewUrlChange: (fieldId: string, url: string | null) => void;
 }
 
 export function FieldSettingsPanel({
@@ -1927,6 +1939,8 @@ export function FieldSettingsPanel({
   onUpdateField,
   onReplaceFieldType,
   onSetColumnLayoutColumns,
+  imagePreviewUrl,
+  onImagePreviewUrlChange,
 }: FieldSettingsPanelProps) {
   if (!field) {
     return (
@@ -1969,6 +1983,8 @@ export function FieldSettingsPanel({
     fields: schema.fields,
     onUpdateField,
     onSetColumnLayoutColumns,
+    imagePreviewUrl,
+    onImagePreviewUrlChange,
   };
 
   // Hidden fields and column layouts carry no respondent-facing input, so "required" /

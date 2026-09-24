@@ -27,10 +27,11 @@ function extensionOf(filename: string): string {
 
 // specs/04-submission-handling.md: "client requests a presigned S3 PUT URL scoped to
 // org_id/form_id/submission_id/filename... Enforce file size limit and an allowlist of
-// MIME types at presign time." Used for both file_upload fields and signature images —
-// the signature pad exports a PNG blob through this same flow. Spec 05's full
-// legal-audit-trail Signature record (consent text, hash, IP/UA) is a later increment;
-// this pass stores the drawn image as a plain submission file.
+// MIME types at presign time." Used for file_upload fields, signature images, and
+// draw_on_image markups — all three export/upload a PNG blob (or, for file_upload, an
+// arbitrary file) through this same flow. Spec 05's full legal-audit-trail Signature
+// record (consent text, hash, IP/UA) is a later increment; this pass stores the drawn
+// image as a plain submission file.
 export async function POST(request: Request, { params }: RouteContext): Promise<NextResponse> {
   try {
     const { slug, submissionId } = await params;
@@ -46,7 +47,10 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
 
     const schema = await getFormSchemaByVersionId(submission.formVersionId);
     const field = schema.fields[body.fieldId];
-    if (!field || (field.type !== 'file_upload' && field.type !== 'signature')) {
+    if (
+      !field ||
+      (field.type !== 'file_upload' && field.type !== 'signature' && field.type !== 'draw_on_image')
+    ) {
       throw new InvalidRequestError(`Field "${body.fieldId}" does not accept file uploads.`);
     }
 

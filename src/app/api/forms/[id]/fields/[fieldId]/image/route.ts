@@ -34,7 +34,10 @@ async function getFormField(formId: string, fieldId: string, organizationId: str
     if (!parsed.success) return null;
 
     const field = parsed.data.fields[fieldId];
-    if (field?.type !== 'image') return null;
+    // draw_on_image reuses this exact route for its admin-uploaded background image —
+    // same imageStorageKey convention as the image field type, just rendered as a canvas
+    // backdrop on the public form instead of a plain <img>.
+    if (field?.type !== 'image' && field?.type !== 'draw_on_image') return null;
 
     return { form, field };
   });

@@ -11,6 +11,8 @@ import type { ResolvedSubmissionFile } from '@/lib/forms/format-submission-answe
 import {
   DEFAULT_FORM_PRIMARY_COLOR,
   DEFAULT_FORM_SECONDARY_COLOR,
+  DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL,
+  DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL,
   type FormSchema,
 } from '@/lib/forms/schema';
 import type { SubmissionExportAssets } from '@/lib/forms/submission-export-assets';
@@ -37,6 +39,7 @@ export function SubmissionFormExportDocument({
   const titleAlign = schema.branding.titleAlign ?? 'center';
   const primaryColor = schema.branding.primaryColor ?? DEFAULT_FORM_PRIMARY_COLOR;
   const secondaryColor = schema.branding.secondaryColor ?? DEFAULT_FORM_SECONDARY_COLOR;
+  const isTableLayoutStyle = schema.branding.layoutStyle === 'table';
 
   const firstPage = schema.pages[0];
   const firstPageFieldIds = firstPage
@@ -67,11 +70,14 @@ export function SubmissionFormExportDocument({
 
   return (
     <div
-      className="export-form"
+      className={`export-form ${isTableLayoutStyle ? 'export-form--table-theme' : ''}`}
       style={
         {
           '--color-primary': primaryColor,
           '--form-secondary-color': secondaryColor,
+          '--form-table-header-bg': schema.branding.tableThemeHeaderColor,
+          '--form-table-header-text': schema.branding.tableThemeHeaderTextColor,
+          '--form-table-value-bg': schema.branding.tableThemeValueColor,
         } as CSSProperties
       }
     >
@@ -118,6 +124,18 @@ export function SubmissionFormExportDocument({
           return (
             <section key={page.id} className="export-form-page">
               {showPageTitle ? <h2 className="export-form-page-title">{page.title}</h2> : null}
+              {isTableLayoutStyle ? (
+                <div className="export-table-theme-header">
+                  <div className="export-table-theme-header-cell">
+                    {schema.branding.tableThemeFieldColumnLabel ||
+                      DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL}
+                  </div>
+                  <div className="export-table-theme-header-cell">
+                    {schema.branding.tableThemeValueColumnLabel ||
+                      DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL}
+                  </div>
+                </div>
+              ) : null}
               <div className="export-field-list">
                 {bodyFieldIds.map((fieldId) => {
                   const field = schema.fields[fieldId];

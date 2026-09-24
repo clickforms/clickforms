@@ -47,7 +47,10 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
 
     const schema = await getFormSchemaByVersionId(submission.formVersionId);
     const field = schema.fields[body.fieldId];
-    if (!field || (field.type !== 'file_upload' && field.type !== 'signature')) {
+    if (
+      !field ||
+      (field.type !== 'file_upload' && field.type !== 'signature' && field.type !== 'draw_on_image')
+    ) {
       throw new InvalidRequestError(`Field "${body.fieldId}" does not accept file uploads.`);
     }
 

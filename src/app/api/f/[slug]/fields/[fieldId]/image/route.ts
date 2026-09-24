@@ -17,7 +17,9 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
 
     const schema = await getFormSchemaByVersionId(form.currentVersionId);
     const field = schema.fields[fieldId];
-    if (field?.type !== 'image' || !field.imageStorageKey) {
+    // draw_on_image's public renderer fetches its background image through this same
+    // route (see getFieldImageSrc) — same imageStorageKey convention as the image field.
+    if ((field?.type !== 'image' && field?.type !== 'draw_on_image') || !field.imageStorageKey) {
       return NextResponse.json({ error: 'Image not found.' }, { status: 404 });
     }
 

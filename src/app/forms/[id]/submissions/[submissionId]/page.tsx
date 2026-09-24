@@ -68,6 +68,32 @@ function renderFormattedAnswer(formatted: ReturnType<typeof formatSubmissionAnsw
     );
   }
 
+  if (formatted.kind === 'table') {
+    return (
+      <table className="submission-answer-table">
+        <thead>
+          <tr>
+            {formatted.columns.map((column, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: column labels aren't guaranteed unique, and this table has no independent column id here
+              <th key={`${column}-${index}`}>{column}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {formatted.rows.map((row, rowIndex) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: rows are plain string tuples with no stable id at this point in the pipeline
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: see row key above
+                <td key={cellIndex}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
   return (
     <ul className="submission-answer-files">
       {formatted.files.map((file) => (
@@ -108,6 +134,13 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
 
   const session = await getServerSession(authOptions);
   if (!session?.user) {
+    return null;
+  }
+
+  // See the identical comment in src/app/forms/page.tsx — FormsLayout's redirect for a
+  // platform-only admin can race with this page's own render, so this page needs its own
+  // quiet bail-out rather than assuming the layout always wins first.
+  if (!session.user.organizationId) {
     return null;
   }
 

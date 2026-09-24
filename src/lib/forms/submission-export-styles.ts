@@ -95,6 +95,80 @@ export const SUBMISSION_EXPORT_STYLES = `
     margin: -0.1rem 0 0;
     line-height: 1.45;
   }
+  /* "Table" layout style — mirrors .form-renderer--table-theme in globals.css (see that
+     rule's comment for the full explanation of the continuous-table + label-spans-every-
+     row technique). Structure only by default; tableThemeHeaderColor/
+     tableThemeHeaderTextColor/tableThemeValueColor set the --form-table-* custom
+     properties inline on .export-form (see submission-form-export-document.tsx). */
+  .export-form--table-theme .export-table-theme-header {
+    display: grid;
+    grid-template-columns: minmax(140px, 30%) 1fr;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    overflow: hidden;
+  }
+  .export-form--table-theme .export-table-theme-header-cell {
+    padding: 0.65rem 0.9rem;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    background: var(--form-table-header-bg, transparent);
+    color: var(--form-table-header-text, inherit);
+  }
+  .export-form--table-theme .export-table-theme-header-cell + .export-table-theme-header-cell {
+    border-left: 1px solid #ddd;
+  }
+  .export-form--table-theme .export-field-list {
+    display: block;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .export-form--table-theme .export-table-theme-header + .export-field-list {
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+  }
+  .export-form--table-theme .export-field-cell {
+    width: 100%;
+  }
+  .export-form--table-theme .export-field-cell:not(:last-child) {
+    border-bottom: 1px solid #ddd;
+  }
+  .export-form--table-theme .export-field-group {
+    display: grid;
+    grid-template-columns: minmax(140px, 30%) 1fr;
+    gap: 0;
+  }
+  .export-form--table-theme .export-field-group--highlighted {
+    padding: 0;
+    border-radius: 0;
+  }
+  .export-form--table-theme .export-field-label {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    background: var(--form-table-label-bg, transparent);
+    border-right: 1px solid #ddd;
+    padding: 0.75rem 0.9rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+  }
+  .export-form--table-theme .export-field-group > *:not(.export-field-label) {
+    grid-column: 2;
+    padding: 0.55rem 0.8rem;
+    margin: 0;
+  }
+  .export-form--table-theme
+    .export-field-group
+    > *:not(.export-field-label):not(.export-field-help):not(.export-field-error) {
+    background: var(--form-table-value-bg, transparent);
+  }
+  .export-form--table-theme .export-field-help {
+    padding-bottom: 0;
+  }
+  .export-form--table-theme .export-column-layout-grid {
+    display: block;
+  }
   .export-input,
   .export-textarea,
   .export-select {
@@ -192,7 +266,7 @@ export const SUBMISSION_EXPORT_STYLES = `
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #fff;
+    color: inherit;
   }
   .export-section-instruction {
     margin: 0;
@@ -266,6 +340,12 @@ export const SUBMISSION_EXPORT_STYLES = `
     border-radius: 3px;
     background: #fff;
   }
+  /* draw_on_image's flattened background+markup PNG carries more detail than a plain
+     signature scrawl — a bigger box than .export-signature's default keeps it legible. */
+  .export-drawing img {
+    max-width: 420px;
+    max-height: 320px;
+  }
   .export-address-field {
     display: flex;
     flex-direction: column;
@@ -275,6 +355,38 @@ export const SUBMISSION_EXPORT_STYLES = `
     display: grid;
     grid-template-columns: 1.4fr 1fr 1fr;
     gap: 0.55rem;
+  }
+  .export-full-name-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+  .export-full-name-row .export-input {
+    flex: 1 1 8rem;
+    min-width: 8rem;
+  }
+  .export-full-name-row .export-full-name-prefix {
+    flex: 0 0 6rem;
+    min-width: 0;
+  }
+  .export-ranking-list {
+    margin: 0;
+    padding-left: 1.4rem;
+  }
+  .export-ranking-list li {
+    padding: 0.15rem 0;
+  }
+  .export-picture-choice {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .export-picture-choice-image {
+    width: 3rem;
+    height: 3rem;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid #ddd;
   }
   .export-column-layout { display: flex; flex-direction: column; gap: 0.75rem; }
   .export-column-layout-title {
@@ -303,6 +415,47 @@ export const SUBMISSION_EXPORT_STYLES = `
     white-space: normal !important;
   }
 
+  .export-table-field {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .export-table-field th,
+  .export-table-field td {
+    padding: 0.5rem 0.65rem;
+    text-align: left;
+    border: 1px solid #ddd;
+  }
+  .export-table-field th {
+    background: #f4f4f4;
+    font-weight: 700;
+  }
+
+  /* question_table's PDF export (QuestionTableExportDisplay, submission-field-display.tsx)
+     — a fixed two-column question/answer grid. Header/answer-cell colors come from the
+     field's own headerColor/headerTextColor/valueColor (inline style, set per field
+     instance), so only structural rules live here — same split as .export-table-field
+     above vs. the whole-form .export-form--table-theme block further down. */
+  .export-question-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .export-question-table th,
+  .export-question-table td {
+    padding: 0.5rem 0.65rem;
+    text-align: left;
+    border: 1px solid #ddd;
+  }
+  .export-question-table th {
+    background: #f4f4f4;
+    font-weight: 700;
+  }
+  .export-question-table-label-cell {
+    width: 40%;
+    font-weight: 600;
+  }
+
   /* Prefer keeping short fields intact. Apply on the grid cell — Chromium often
      ignores break-inside on descendants of CSS grid. */
   .export-field-cell,
@@ -311,7 +464,11 @@ export const SUBMISSION_EXPORT_STYLES = `
   .export-section-break-wrap,
   .export-divider-wrap,
   .export-choice-matrix-wrap,
+  .export-table-field-wrap,
+  .export-question-table-wrap,
   .export-address-field,
+  .export-full-name-row,
+  .export-ranking-list,
   .export-signature,
   .export-image-field {
     break-inside: avoid;

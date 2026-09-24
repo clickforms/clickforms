@@ -111,9 +111,10 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
 
       const schema = await loadSubmissionFormSchema(tx, submission, requireOrganizationId(session));
 
-      // Every file_upload/signature answer must reference a submission_files row that
-      // actually belongs to *this* submission — otherwise a forged fileId could point at
-      // another org's file (same guard as the public respondent PATCH route).
+      // Every file_upload/signature/draw_on_image answer must reference a
+      // submission_files row that actually belongs to *this* submission — otherwise a
+      // forged fileId could point at another org's file (same guard as the public
+      // respondent PATCH route).
       const uploadedFiles = await tx.submissionFile.findMany({
         where: { submissionId: submission.id, organizationId: requireOrganizationId(session) },
         select: { id: true },
@@ -121,7 +122,12 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
       const uploadedFileIds = new Set(uploadedFiles.map((file) => file.id));
 
       for (const [fieldId, field] of Object.entries(schema.fields)) {
-        if (field.type !== 'file_upload' && field.type !== 'signature') continue;
+        if (
+          field.type !== 'file_upload' &&
+          field.type !== 'signature' &&
+          field.type !== 'draw_on_image'
+        )
+          continue;
         const value = body.answers[fieldId];
         if (value === undefined) continue;
         const fileIds = Array.isArray(value) ? value : [value];

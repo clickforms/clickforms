@@ -59,7 +59,12 @@ export async function buildSubmissionExportAssets(params: {
 
   const seenFileIds = new Set<string>();
   for (const field of Object.values(schema.fields)) {
-    if (field.type !== 'file_upload' && field.type !== 'signature') continue;
+    if (
+      field.type !== 'file_upload' &&
+      field.type !== 'signature' &&
+      field.type !== 'draw_on_image'
+    )
+      continue;
     const resolved = resolveFiles(field.id);
     for (const file of resolved) {
       if (seenFileIds.has(file.id)) continue;

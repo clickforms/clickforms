@@ -220,6 +220,33 @@ export function isTemplateThumbnailKey(params: {
   return params.storageKey.startsWith(expectedPrefix);
 }
 
+/** Template "image" content-block field assets (platform-owned, no organizationId) —
+ * the template-builder analogue of buildFormFieldImageKey. A template has no
+ * organization to scope under, so this mirrors buildTemplateThumbnailKey's
+ * `templates/<id>/...` convention instead: templates/<template id>/fields/<fieldId>/
+ * <uuid>-<filename>. Note: when a Form is created from a template (see
+ * POST /api/forms), the template schema is deep-cloned but any imageStorageKey using
+ * this key shape is deliberately stripped from the copy — it lives outside every
+ * organization's key prefix, so isFormFieldImageKey would reject it anyway, and the
+ * asset is a template-authoring placeholder, not a real asset for that organization. */
+export function buildTemplateFieldImageKey(params: {
+  templateId: string;
+  fieldId: string;
+  filename: string;
+}): string {
+  const safeName = sanitizeFilename(params.filename);
+  return `templates/${params.templateId}/fields/${params.fieldId}/${crypto.randomUUID()}-${safeName}`;
+}
+
+export function isTemplateFieldImageKey(params: {
+  storageKey: string;
+  templateId: string;
+  fieldId: string;
+}): boolean {
+  const expectedPrefix = `templates/${params.templateId}/fields/${params.fieldId}/`;
+  return params.storageKey.startsWith(expectedPrefix);
+}
+
 /** Signed PUT URL the client uploads directly to (valid 5 minutes). */
 export async function createPresignedUploadUrl(params: {
   storageKey: string;

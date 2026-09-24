@@ -55,6 +55,26 @@ export async function POST(request: Request): Promise<NextResponse> {
       // is a one-time snapshot, so this organisation's copy must never alias the
       // template's own schema object.
       initialSchema = structuredClone(template.schema) as FormSchema;
+
+      // Strip any dummy image the template author uploaded while designing the
+      // template (see FieldImageUpload in the admin template builder). Its storageKey
+      // lives under templates/<templateId>/fields/<fieldId>/... — outside every
+      // organisation's key prefix — so isFormFieldImageKey would reject it as an
+      // "Invalid image reference" 404 the moment this new form tried to display it.
+      // Rather than ship every form created from an image-bearing template with a
+      // permanently broken image, drop the reference here: the field itself, its
+      // label, and its alt text all carry over intact, and the organisation uploads
+      // its own image the normal way (matches the existing expectation, documented on
+      // template-builder-client.tsx, that "the organisation using the template can add
+      // their own after copying it").
+      for (const field of Object.values(initialSchema.fields)) {
+        // draw_on_image carries the exact same template-scoped imageStorageKey
+        // convention as image (see the schema comment on drawOnImageFieldSchema) — same
+        // stale-reference problem, same fix.
+        if ((field.type === 'image' || field.type === 'draw_on_image') && field.imageStorageKey) {
+          field.imageStorageKey = undefined;
+        }
+      }
     }
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {

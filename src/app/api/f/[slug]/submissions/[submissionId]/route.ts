@@ -40,16 +40,22 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
 
     const schema = await getFormSchemaByVersionId(submission.formVersionId);
 
-    // Every file_upload/signature answer must reference a submission_files row that was
-    // actually uploaded against *this* submission — otherwise a client could forge a
-    // fileId belonging to a different org's submission into its answers.
+    // Every file_upload/signature/draw_on_image answer must reference a
+    // submission_files row that was actually uploaded against *this* submission —
+    // otherwise a client could forge a fileId belonging to a different org's submission
+    // into its answers.
     const uploadedFiles = await withOrgContext(form.organizationId, (tx) =>
       tx.submissionFile.findMany({ where: { submissionId: submission.id }, select: { id: true } }),
     );
     const uploadedFileIds = new Set(uploadedFiles.map((file) => file.id));
 
     for (const [fieldId, field] of Object.entries(schema.fields)) {
-      if (field.type !== 'file_upload' && field.type !== 'signature') continue;
+      if (
+        field.type !== 'file_upload' &&
+        field.type !== 'signature' &&
+        field.type !== 'draw_on_image'
+      )
+        continue;
       const value = body.answers[fieldId];
       if (value === undefined) continue;
       const fileIds = Array.isArray(value) ? value : [value];

@@ -17388,20 +17388,135 @@ textarea.form-field-input {
   font-size: 0.8125rem;
 }
 
-/* Plan & Billing card (top of /forms/organisation) — reuses .contact-details-card's
-   padding:0 shell (header/actions carry their own padding), so the usage bars and
-   feature pills sandwiched between them need their own horizontal padding to line up. */
+/* General/Billing tab switcher atop /forms/organisation (organisation-details-client.tsx)
+   — a segmented pill control rather than an underlined-tab pattern, since this page only
+   ever has these two sections and the pill/surface language already matches buttons and
+   badges elsewhere on the page. */
+.organisation-settings-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.25rem;
+  margin-bottom: 1.5rem;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-pill);
+}
+
+.organisation-settings-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1.15rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.organisation-settings-tab:hover {
+  color: var(--color-text);
+}
+
+.organisation-settings-tab--active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+/* Flags the Billing tab when there's something to act on (trial/suspended) so it's
+   noticeable even while General is the active tab — same warning tone as the trial
+   banner in admin-shell-client.tsx, not tied to any specific status color. */
+.organisation-settings-tab-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--color-warning);
+}
+
+/* Plan & Billing card (Billing tab of /forms/organisation) — reuses .contact-details-card's
+   padding:0 shell (header/actions carry their own padding), so each section below carries
+   its own horizontal padding and a title + hairline divider from the section before it,
+   rather than the usage bars and feature pills running straight into each other. */
 .organisation-plan-heading {
   display: flex;
   flex-direction: column;
 }
 
-.organisation-plan-usage {
-  padding: 0 1.5rem 1rem;
+.organisation-plan-section {
+  padding: 1.15rem 1.5rem;
 }
 
-.organisation-plan-features {
-  padding: 0 1.5rem 1.35rem;
+.organisation-plan-section + .organisation-plan-section {
+  border-top: 1px solid var(--color-border);
+}
+
+.organisation-plan-section-title {
+  margin: 0 0 0.85rem;
+  color: var(--color-text-subtle);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.organisation-plan-usage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+/* Flags a resource that's over its plan's cap (e.g. an org with 3 users moved onto a
+   1-user plan) — usage-bar-fill alone caps its width at 100% and would otherwise show a
+   plain, reassuring-looking full green bar for what is actually an over-limit state. */
+.usage-bar-value--over {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.usage-bar-fill--over {
+  background: var(--color-danger);
+}
+
+.organisation-plan-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.organisation-plan-feature {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-subtle);
+}
+
+.organisation-plan-feature-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--color-text-subtle);
+}
+
+/* An included perk reads as a plain black checklist item, not another shade of pill —
+   the "off" rows stay muted so the page doesn't look broken when every pill on the
+   Standard plan happens to be off (that's the expected, correct state for that tier). */
+.organisation-plan-feature--on {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.organisation-plan-feature--on .organisation-plan-feature-icon {
+  color: var(--color-primary);
 }
 
 .organisation-details-list {
@@ -17550,6 +17665,14 @@ textarea.form-field-input {
 .organisation-settings .contact-details-actions .button {
   padding: 0.5rem 1.15rem;
   font-size: 0.8125rem;
+}
+
+/* The plan card's action row sits right after the "What's included" section above with no
+   other visual break, so — unlike the Logo/Details cards' action rows — it needs its own
+   divider to read as a distinct footer rather than the section content trailing off into
+   empty space. Same specificity as the rule above; placed after it so this wins. */
+.organisation-settings .organisation-plan-actions {
+  border-top: 1px solid var(--color-border);
 }
 
 @media (max-width: 900px) {

@@ -79,6 +79,33 @@ function InfoIcon() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3.5 8.5 6.5 11.5 12.5 5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CrossIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function MailIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -138,6 +165,12 @@ export function OrganisationDetailsClient({
   plan,
 }: OrganisationDetailsClientProps) {
   const toast = useToast();
+  // Defaults to Billing when there's something to act on (trial/suspended) so the
+  // organisation's own admin lands straight on the thing that needs attention, rather
+  // than General's identity fields they weren't looking for.
+  const [activeTab, setActiveTab] = useState<'general' | 'billing'>(
+    plan.status === 'active' ? 'general' : 'billing',
+  );
   const [logoUrl, setLogoUrl] = useState(initialOrganization.logoUrl);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isRemovingLogo, setIsRemovingLogo] = useState(false);
@@ -346,418 +379,473 @@ export function OrganisationDetailsClient({
         </p>
       </div>
 
-      <div className="card contact-details-card organisation-plan-card">
-        <div className="contact-details-header">
-          <span className="contact-details-header-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <title>Plan</title>
-              <path
-                d="M10 3 4 6.5v6L10 16l6-3.5v-6L10 3Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-              <path d="M10 9.3v6.4" stroke="currentColor" strokeWidth="1.5" />
-              <path
-                d="m4 6.5 6 2.8 6-2.8"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <div className="organisation-plan-heading">
-            <div className="contact-details-title-row">
-              <h2 className="contact-details-title">{PLAN_LABELS[plan.plan]} plan</h2>
-              <span className={`badge ${PLAN_STATUS_BADGE_CLASS[plan.status]}`}>
-                {plan.status === 'trial'
-                  ? 'Trial'
-                  : plan.status === 'suspended'
-                    ? 'Suspended'
-                    : 'Active'}
-              </span>
-            </div>
-            <p className="contact-details-intro">
-              {plan.status === 'trial' && plan.trialEndsAt ? (
-                daysUntil(plan.trialEndsAt) > 0 ? (
-                  <>
-                    Your trial ends in {daysUntil(plan.trialEndsAt)} day
-                    {daysUntil(plan.trialEndsAt) === 1 ? '' : 's'} (
-                    {formatPlanDate(plan.trialEndsAt)}
-                    ). Choose a plan before then to keep using Clickforms without interruption.
-                  </>
-                ) : (
-                  <>
-                    Your trial ended on {formatPlanDate(plan.trialEndsAt)}. Choose a plan to
-                    continue — sign-in is paused for this organisation until then.
-                  </>
-                )
-              ) : plan.status === 'suspended' ? (
-                'This organisation is suspended. Contact us to reactivate it.'
-              ) : plan.renewsAt ? (
-                <>Renews {formatPlanDate(plan.renewsAt)}.</>
-              ) : (
-                "Here's your current usage against this plan's limits."
-              )}
-            </p>
-          </div>
-        </div>
+      <div
+        className="organisation-settings-tabs"
+        role="tablist"
+        aria-label="Organisation settings sections"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'general'}
+          className={`organisation-settings-tab${activeTab === 'general' ? ' organisation-settings-tab--active' : ''}`}
+          onClick={() => setActiveTab('general')}
+        >
+          General
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'billing'}
+          className={`organisation-settings-tab${activeTab === 'billing' ? ' organisation-settings-tab--active' : ''}`}
+          onClick={() => setActiveTab('billing')}
+        >
+          Billing
+          {plan.status !== 'active' ? (
+            <span className="organisation-settings-tab-dot" aria-hidden="true" />
+          ) : null}
+        </button>
+      </div>
 
-        <div className="billing-usage-bars organisation-plan-usage">
-          {buildUsageBars(plan.plan, plan.usage).map((bar) => (
-            <div key={bar.label} className="usage-bar">
-              <div className="usage-bar-header">
-                <span>{bar.label}</span>
-                <span>{bar.formatted}</span>
-              </div>
-              <div className="usage-bar-track">
-                <div className="usage-bar-fill" style={{ width: `${bar.percent ?? 100}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="billing-feature-pills organisation-plan-features">
-          {PLAN_FEATURE_PILLS.map((feature) => (
-            <span
-              key={feature.key}
-              className={`billing-feature-pill${PLAN_LIMITS[plan.plan][feature.key] ? ' billing-feature-pill--on' : ''}`}
-            >
-              {feature.label}
+      {activeTab === 'billing' ? (
+        <div className="card contact-details-card organisation-plan-card">
+          <div className="contact-details-header">
+            <span className="contact-details-header-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <title>Plan</title>
+                <path
+                  d="M10 3 4 6.5v6L10 16l6-3.5v-6L10 3Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+                <path d="M10 9.3v6.4" stroke="currentColor" strokeWidth="1.5" />
+                <path
+                  d="m4 6.5 6 2.8 6-2.8"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </span>
-          ))}
-        </div>
-
-        <div className="contact-details-actions organisation-plan-actions">
-          <Link href="/pricing" className="button button--dark">
-            View plans
-          </Link>
-          <Link href="/contact" className="button button--ghost">
-            Contact us to upgrade
-          </Link>
-        </div>
-      </div>
-
-      <div className="card contact-details-card organisation-logo-card">
-        <div className="contact-details-header">
-          <span className="contact-details-header-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <title>Logo</title>
-              <rect
-                x="3"
-                y="3"
-                width="14"
-                height="14"
-                rx="3"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <circle cx="7.3" cy="7.5" r="1.3" stroke="currentColor" strokeWidth="1.4" />
-              <path
-                d="M3.8 14.5 8 10.3l2.6 2.6 2-2 3.6 3.6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <div>
-            <div className="contact-details-title-row">
-              <h2 className="contact-details-title">Logo</h2>
-              <span className="contact-details-scope-badge">
-                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <title>Admins only</title>
-                  <rect
-                    x="4"
-                    y="7"
-                    width="8"
-                    height="6"
-                    rx="1"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                  />
-                  <path
-                    d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Admins only
-              </span>
+            <div className="organisation-plan-heading">
+              <div className="contact-details-title-row">
+                <h2 className="contact-details-title">{PLAN_LABELS[plan.plan]} plan</h2>
+                <span className={`badge ${PLAN_STATUS_BADGE_CLASS[plan.status]}`}>
+                  {plan.status === 'trial'
+                    ? 'Trial'
+                    : plan.status === 'suspended'
+                      ? 'Suspended'
+                      : 'Active'}
+                </span>
+              </div>
+              <p className="contact-details-intro">
+                {plan.status === 'trial' && plan.trialEndsAt ? (
+                  daysUntil(plan.trialEndsAt) > 0 ? (
+                    <>
+                      Your trial ends in {daysUntil(plan.trialEndsAt)} day
+                      {daysUntil(plan.trialEndsAt) === 1 ? '' : 's'} (
+                      {formatPlanDate(plan.trialEndsAt)}
+                      ). Choose a plan before then to keep using Clickforms without interruption.
+                    </>
+                  ) : (
+                    <>
+                      Your trial ended on {formatPlanDate(plan.trialEndsAt)}. Choose a plan to
+                      continue — sign-in is paused for this organisation until then.
+                    </>
+                  )
+                ) : plan.status === 'suspended' ? (
+                  'This organisation is suspended. Contact us to reactivate it.'
+                ) : plan.renewsAt ? (
+                  <>Renews {formatPlanDate(plan.renewsAt)}.</>
+                ) : (
+                  "Here's your current usage against this plan's limits."
+                )}
+              </p>
             </div>
-            <p className="contact-details-intro">
-              Shown in the top bar in place of the default Clickforms mark. PNG, JPEG, WebP, or GIF
-              — crop and rotate before upload. SVG uploads as-is. Up to{' '}
-              {MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB.
-            </p>
+          </div>
+
+          <div className="organisation-plan-section">
+            <h3 className="organisation-plan-section-title">Usage</h3>
+            <div className="organisation-plan-usage">
+              {buildUsageBars(plan.plan, plan.usage).map((bar) => {
+                const overLimit = bar.limit !== null && bar.used > bar.limit;
+                return (
+                  <div key={bar.label} className="usage-bar">
+                    <div className="usage-bar-header">
+                      <span>{bar.label}</span>
+                      <span className={overLimit ? 'usage-bar-value--over' : undefined}>
+                        {bar.formatted}
+                        {overLimit ? ' · Over limit' : ''}
+                      </span>
+                    </div>
+                    <div className="usage-bar-track">
+                      <div
+                        className={`usage-bar-fill${overLimit ? ' usage-bar-fill--over' : ''}`}
+                        style={{ width: `${bar.percent ?? 100}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="organisation-plan-section">
+            <h3 className="organisation-plan-section-title">What&apos;s included</h3>
+            <ul className="organisation-plan-feature-list">
+              {PLAN_FEATURE_PILLS.map((feature) => {
+                const on = PLAN_LIMITS[plan.plan][feature.key];
+                return (
+                  <li
+                    key={feature.key}
+                    className={`organisation-plan-feature${on ? ' organisation-plan-feature--on' : ''}`}
+                  >
+                    <span className="organisation-plan-feature-icon" aria-hidden="true">
+                      {on ? <CheckIcon /> : <CrossIcon />}
+                    </span>
+                    {feature.label}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          <div className="contact-details-actions organisation-plan-actions">
+            <Link href="/pricing" className="button button--dark">
+              View plans
+            </Link>
+            <Link href="/contact" className="button button--ghost">
+              Contact us to upgrade
+            </Link>
           </div>
         </div>
-
-        <div className="organisation-logo-row">
-          <div className="organisation-logo-preview">
-            {logoUrl ? (
-              // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
-              <img src={logoUrl} alt="Organisation logo" />
-            ) : (
-              <span className="organisation-logo-placeholder">No logo</span>
-            )}
-          </div>
-          <div className="organisation-logo-actions">
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept={LOGO_ACCEPT}
-              className="organisation-logo-file-input"
-              onChange={(event) => void handleLogoFileChange(event)}
-              disabled={isUploadingLogo || isRemovingLogo}
-            />
-            <button
-              type="button"
-              className="button button--secondary"
-              disabled={isUploadingLogo || isRemovingLogo}
-              onClick={() => logoInputRef.current?.click()}
-            >
-              {isUploadingLogo ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
-            </button>
-            {logoUrl ? (
-              <>
-                <button
-                  type="button"
-                  className="button button--ghost"
-                  disabled={isUploadingLogo || isRemovingLogo}
-                  onClick={() => void handleEditExistingLogo()}
-                >
-                  Edit & crop
-                </button>
-                <button
-                  type="button"
-                  className="button button--ghost"
-                  disabled={isUploadingLogo || isRemovingLogo}
-                  onClick={() => void handleRemoveLogo()}
-                >
-                  {isRemovingLogo ? 'Removing…' : 'Remove'}
-                </button>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      {cropSession ? (
-        <ImageCropEditor
-          key={cropSession.imageSrc}
-          open
-          imageSrc={cropSession.imageSrc}
-          fileName={cropSession.fileName}
-          busy={isUploadingLogo}
-          onCancel={closeCropSession}
-          onApply={uploadLogo}
-        />
       ) : null}
 
-      <div className="card contact-details-card">
-        <div className="contact-details-header">
-          <span className="contact-details-header-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <title>Organisation</title>
-              <rect
-                x="4"
-                y="6.5"
-                width="12"
-                height="9.5"
-                rx="1.2"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M7.5 6.5V5.3c0-.66.54-1.2 1.2-1.2h2.6c.66 0 1.2.54 1.2 1.2v1.2"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path d="M4 10.5h12" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-          </span>
-          <div>
-            <div className="contact-details-title-row">
-              <h2 className="contact-details-title">Organisation details</h2>
-              <span className="contact-details-scope-badge">
-                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <title>Admins only</title>
+      {activeTab === 'general' ? (
+        <>
+          <div className="card contact-details-card organisation-logo-card">
+            <div className="contact-details-header">
+              <span className="contact-details-header-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <title>Logo</title>
                   <rect
-                    x="4"
-                    y="7"
-                    width="8"
-                    height="6"
-                    rx="1"
+                    x="3"
+                    y="3"
+                    width="14"
+                    height="14"
+                    rx="3"
                     stroke="currentColor"
-                    strokeWidth="1.4"
+                    strokeWidth="1.5"
                   />
+                  <circle cx="7.3" cy="7.5" r="1.3" stroke="currentColor" strokeWidth="1.4" />
                   <path
-                    d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
+                    d="M3.8 14.5 8 10.3l2.6 2.6 2-2 3.6 3.6"
                     stroke="currentColor"
-                    strokeWidth="1.4"
+                    strokeWidth="1.5"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                 </svg>
-                Admins only
               </span>
-            </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          {error ? (
-            <p className="form-error contact-details-error" role="alert">
-              {error}
-            </p>
-          ) : null}
-
-          <dl className="contact-details-list organisation-details-list">
-            <div className="contact-details-row">
-              <dt>Organisation name</dt>
-              <dd>
-                <input
-                  className="text-input contact-details-input"
-                  required
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  disabled={isSaving}
-                />
-              </dd>
-            </div>
-            <div className="contact-details-row">
-              <dt>ABN</dt>
-              <dd>
-                <input
-                  className="text-input contact-details-input"
-                  value={abn}
-                  onChange={(event) => setAbn(event.target.value)}
-                  placeholder="11 222 333 444"
-                  inputMode="numeric"
-                  disabled={isSaving}
-                />
-              </dd>
-            </div>
-            <div className="contact-details-row">
-              <dt>Contact person</dt>
-              <dd>
-                <input
-                  className="text-input contact-details-input"
-                  value={contactName}
-                  onChange={(event) => setContactName(event.target.value)}
-                  disabled={isSaving}
-                />
-              </dd>
-            </div>
-            <div className="contact-details-row">
-              <dt>Contact email</dt>
-              <dd>
-                <div className="organisation-field-control">
-                  <span className="organisation-field-icon" aria-hidden="true">
-                    <MailIcon />
+              <div>
+                <div className="contact-details-title-row">
+                  <h2 className="contact-details-title">Logo</h2>
+                  <span className="contact-details-scope-badge">
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <title>Admins only</title>
+                      <rect
+                        x="4"
+                        y="7"
+                        width="8"
+                        height="6"
+                        rx="1"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                      />
+                      <path
+                        d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    Admins only
                   </span>
-                  <input
-                    className="text-input contact-details-input"
-                    type="email"
-                    value={contactEmail}
-                    onChange={(event) => setContactEmail(event.target.value)}
-                    placeholder="contact@yourorg.com"
-                    disabled={isSaving}
-                  />
                 </div>
-              </dd>
+                <p className="contact-details-intro">
+                  Shown in the top bar in place of the default Clickforms mark. PNG, JPEG, WebP, or
+                  GIF — crop and rotate before upload. SVG uploads as-is. Up to{' '}
+                  {MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB.
+                </p>
+              </div>
             </div>
-            <div className="contact-details-row">
-              <dt>Contact phone</dt>
-              <dd>
-                <div className="organisation-field-control">
-                  <span className="organisation-field-icon" aria-hidden="true">
-                    <PhoneIcon />
-                  </span>
-                  <input
-                    className="text-input contact-details-input"
-                    type="tel"
-                    value={contactPhone}
-                    onChange={(event) => setContactPhone(event.target.value)}
-                    placeholder="0400 000 000"
-                    disabled={isSaving}
-                  />
-                </div>
-              </dd>
-            </div>
-            <div className="contact-details-row">
-              <dt>
-                <span className="organisation-label-with-help">
-                  Notification email
-                  <span className="organisation-help">
+
+            <div className="organisation-logo-row">
+              <div className="organisation-logo-preview">
+                {logoUrl ? (
+                  // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
+                  <img src={logoUrl} alt="Organisation logo" />
+                ) : (
+                  <span className="organisation-logo-placeholder">No logo</span>
+                )}
+              </div>
+              <div className="organisation-logo-actions">
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept={LOGO_ACCEPT}
+                  className="organisation-logo-file-input"
+                  onChange={(event) => void handleLogoFileChange(event)}
+                  disabled={isUploadingLogo || isRemovingLogo}
+                />
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  disabled={isUploadingLogo || isRemovingLogo}
+                  onClick={() => logoInputRef.current?.click()}
+                >
+                  {isUploadingLogo ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
+                </button>
+                {logoUrl ? (
+                  <>
                     <button
                       type="button"
-                      className="organisation-help-button"
-                      aria-describedby="notification-email-tooltip"
-                      aria-label="About notification email"
+                      className="button button--ghost"
+                      disabled={isUploadingLogo || isRemovingLogo}
+                      onClick={() => void handleEditExistingLogo()}
                     >
-                      <InfoIcon />
+                      Edit & crop
                     </button>
-                    <span
-                      id="notification-email-tooltip"
-                      role="tooltip"
-                      className="organisation-tooltip"
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      disabled={isUploadingLogo || isRemovingLogo}
+                      onClick={() => void handleRemoveLogo()}
                     >
-                      Sent to this address — with a PDF copy of the response attached — every time
-                      someone submits a response to any of your forms. This is just the
-                      organisation-wide default: any individual form can still send its own
-                      notifications to a different address, or turn them off entirely, from that
-                      form&apos;s own Settings page.
-                    </span>
-                  </span>
-                </span>
-              </dt>
-              <dd>
-                <div className="notification-toggle-row">
-                  <Toggle
-                    checked={notificationsEnabled}
-                    onChange={setNotificationsEnabled}
-                    disabled={isSaving}
-                    label="Response notification email"
+                      {isRemovingLogo ? 'Removing…' : 'Remove'}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {cropSession ? (
+            <ImageCropEditor
+              key={cropSession.imageSrc}
+              open
+              imageSrc={cropSession.imageSrc}
+              fileName={cropSession.fileName}
+              busy={isUploadingLogo}
+              onCancel={closeCropSession}
+              onApply={uploadLogo}
+            />
+          ) : null}
+
+          <div className="card contact-details-card">
+            <div className="contact-details-header">
+              <span className="contact-details-header-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <title>Organisation</title>
+                  <rect
+                    x="4"
+                    y="6.5"
+                    width="12"
+                    height="9.5"
+                    rx="1.2"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
                   />
-                  <span
-                    className={`notification-toggle-state${notificationsEnabled ? ' notification-toggle-state--on' : ''}`}
-                  >
-                    {notificationsEnabled ? 'On' : 'Off'}
+                  <path
+                    d="M7.5 6.5V5.3c0-.66.54-1.2 1.2-1.2h2.6c.66 0 1.2.54 1.2 1.2v1.2"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M4 10.5h12" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              </span>
+              <div>
+                <div className="contact-details-title-row">
+                  <h2 className="contact-details-title">Organisation details</h2>
+                  <span className="contact-details-scope-badge">
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <title>Admins only</title>
+                      <rect
+                        x="4"
+                        y="7"
+                        width="8"
+                        height="6"
+                        rx="1"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                      />
+                      <path
+                        d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    Admins only
                   </span>
                 </div>
+              </div>
+            </div>
 
-                {notificationsEnabled ? (
-                  <div className="organisation-field-control">
-                    <span className="organisation-field-icon" aria-hidden="true">
-                      <MailIcon />
-                    </span>
+            <form onSubmit={handleSubmit}>
+              {error ? (
+                <p className="form-error contact-details-error" role="alert">
+                  {error}
+                </p>
+              ) : null}
+
+              <dl className="contact-details-list organisation-details-list">
+                <div className="contact-details-row">
+                  <dt>Organisation name</dt>
+                  <dd>
                     <input
                       className="text-input contact-details-input"
-                      type="email"
-                      value={notificationEmail}
-                      onChange={(event) => setNotificationEmail(event.target.value)}
-                      placeholder="responses@yourorg.com"
-                      disabled={isSaving}
                       required
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      disabled={isSaving}
                     />
-                  </div>
-                ) : null}
-              </dd>
-            </div>
-          </dl>
+                  </dd>
+                </div>
+                <div className="contact-details-row">
+                  <dt>ABN</dt>
+                  <dd>
+                    <input
+                      className="text-input contact-details-input"
+                      value={abn}
+                      onChange={(event) => setAbn(event.target.value)}
+                      placeholder="11 222 333 444"
+                      inputMode="numeric"
+                      disabled={isSaving}
+                    />
+                  </dd>
+                </div>
+                <div className="contact-details-row">
+                  <dt>Contact person</dt>
+                  <dd>
+                    <input
+                      className="text-input contact-details-input"
+                      value={contactName}
+                      onChange={(event) => setContactName(event.target.value)}
+                      disabled={isSaving}
+                    />
+                  </dd>
+                </div>
+                <div className="contact-details-row">
+                  <dt>Contact email</dt>
+                  <dd>
+                    <div className="organisation-field-control">
+                      <span className="organisation-field-icon" aria-hidden="true">
+                        <MailIcon />
+                      </span>
+                      <input
+                        className="text-input contact-details-input"
+                        type="email"
+                        value={contactEmail}
+                        onChange={(event) => setContactEmail(event.target.value)}
+                        placeholder="contact@yourorg.com"
+                        disabled={isSaving}
+                      />
+                    </div>
+                  </dd>
+                </div>
+                <div className="contact-details-row">
+                  <dt>Contact phone</dt>
+                  <dd>
+                    <div className="organisation-field-control">
+                      <span className="organisation-field-icon" aria-hidden="true">
+                        <PhoneIcon />
+                      </span>
+                      <input
+                        className="text-input contact-details-input"
+                        type="tel"
+                        value={contactPhone}
+                        onChange={(event) => setContactPhone(event.target.value)}
+                        placeholder="0400 000 000"
+                        disabled={isSaving}
+                      />
+                    </div>
+                  </dd>
+                </div>
+                <div className="contact-details-row">
+                  <dt>
+                    <span className="organisation-label-with-help">
+                      Notification email
+                      <span className="organisation-help">
+                        <button
+                          type="button"
+                          className="organisation-help-button"
+                          aria-describedby="notification-email-tooltip"
+                          aria-label="About notification email"
+                        >
+                          <InfoIcon />
+                        </button>
+                        <span
+                          id="notification-email-tooltip"
+                          role="tooltip"
+                          className="organisation-tooltip"
+                        >
+                          Sent to this address — with a PDF copy of the response attached — every
+                          time someone submits a response to any of your forms. This is just the
+                          organisation-wide default: any individual form can still send its own
+                          notifications to a different address, or turn them off entirely, from that
+                          form&apos;s own Settings page.
+                        </span>
+                      </span>
+                    </span>
+                  </dt>
+                  <dd>
+                    <div className="notification-toggle-row">
+                      <Toggle
+                        checked={notificationsEnabled}
+                        onChange={setNotificationsEnabled}
+                        disabled={isSaving}
+                        label="Response notification email"
+                      />
+                      <span
+                        className={`notification-toggle-state${notificationsEnabled ? ' notification-toggle-state--on' : ''}`}
+                      >
+                        {notificationsEnabled ? 'On' : 'Off'}
+                      </span>
+                    </div>
 
-          <div className="contact-details-actions">
-            <button type="submit" className="button button--dark" disabled={isSaving}>
-              {isSaving ? 'Saving…' : 'Save changes'}
-            </button>
+                    {notificationsEnabled ? (
+                      <div className="organisation-field-control">
+                        <span className="organisation-field-icon" aria-hidden="true">
+                          <MailIcon />
+                        </span>
+                        <input
+                          className="text-input contact-details-input"
+                          type="email"
+                          value={notificationEmail}
+                          onChange={(event) => setNotificationEmail(event.target.value)}
+                          placeholder="responses@yourorg.com"
+                          disabled={isSaving}
+                          required
+                        />
+                      </div>
+                    ) : null}
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="contact-details-actions">
+                <button type="submit" className="button button--dark" disabled={isSaving}>
+                  {isSaving ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
-      </div>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -6440,16 +6440,22 @@ textarea.text-input {
   width: 1.75rem;
   height: 1.75rem;
   flex-shrink: 0;
-  border: none;
-  background: transparent;
-  color: var(--builder-muted);
+  border: 1px solid var(--builder-panel-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--builder-text);
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .field-settings-aside-expand:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: var(--builder-text);
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--builder-muted);
+}
+
+.field-settings-aside-expand[aria-pressed="true"] {
+  background-color: var(--builder-accent);
+  border-color: var(--builder-accent);
+  color: #fff;
 }
 
 .field-settings-aside-back {

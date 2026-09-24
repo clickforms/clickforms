@@ -338,7 +338,9 @@ export function describeFormSchemaValidationError(
     if (root === 'fields' && typeof fieldId === 'string') {
       const field = schema.fields[fieldId];
       const typeLabel = field ? (FIELD_TYPE_LABELS[field.type] ?? field.type) : 'field';
-      subject = field?.label ? `"${field.label}" (${typeLabel})` : `The untitled ${typeLabel} field`;
+      subject = field?.label
+        ? `"${field.label}" (${typeLabel})`
+        : `The untitled ${typeLabel} field`;
     } else if (root === 'pages') {
       subject = 'A page';
     }
@@ -365,6 +367,7 @@ export function describeFormSchemaValidationError(
   const shown = lines.slice(0, 3);
   const remaining = lines.length - shown.length;
   return (
-    shown.join(' • ') + (remaining > 0 ? ` • +${remaining} more issue${remaining > 1 ? 's' : ''}` : '')
+    shown.join(' • ') +
+    (remaining > 0 ? ` • +${remaining} more issue${remaining > 1 ? 's' : ''}` : '')
   );
 }

@@ -6306,7 +6306,10 @@ textarea.text-input {
   border-right: 1px solid var(--builder-panel-border);
   overflow: hidden;
   color: var(--builder-text);
-  transition: width 0.18s ease, max-width 0.18s ease, flex-basis 0.18s ease;
+  transition:
+    width 0.18s ease,
+    max-width 0.18s ease,
+    flex-basis 0.18s ease;
 }
 
 /* Toggled by the expand icon in .field-settings-aside-header -- gives table/question_table
@@ -10432,11 +10435,9 @@ textarea.text-input {
   display: none;
 }
 
-/* biome-ignore lint/complexity/noImportantStyles: overrides a Next.js dev-mode custom
-   element (nextjs-portal) that isn't under our specificity control — !important is the
-   only reliable way to hide it inside the embed preview. */
 html:has(.form-preview-embed) nextjs-portal,
 html:has(.form-preview-embed) [data-next-badge-root] {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides a Next.js dev-mode custom element (nextjs-portal) that isn't under our specificity control -- !important is the only reliable way to hide it inside the embed preview. */
   display: none !important;
 }
 
@@ -10761,8 +10762,7 @@ html:has(.form-preview-embed) [data-next-badge-root] {
 
 /* Only the actual input/answer surface gets the "fill this in" highlight — help text and
    validation errors share column 2 but stay plain so they don't look like editable cells. */
-.form-renderer--table-theme
-  .form-field-group
+.form-renderer--table-theme .form-field-group
   > *:not(.form-field-label):not(.form-field-help):not(.form-field-error) {
   background: var(--form-table-value-bg, transparent);
 }

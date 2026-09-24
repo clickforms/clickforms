@@ -670,7 +670,10 @@ export function RichTextEditor({
           </ToolbarButton>
           {openPopover === 'color' && (
             // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child inputs
-            <div className="rich-text-popover rich-text-popover--color" onMouseDown={preventDefault}>
+            <div
+              className="rich-text-popover rich-text-popover--color"
+              onMouseDown={preventDefault}
+            >
               <FieldColorPicker
                 label="Text color"
                 value={state.activeColor ?? undefined}
@@ -697,7 +700,10 @@ export function RichTextEditor({
           </ToolbarButton>
           {openPopover === 'highlight' && (
             // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child inputs
-            <div className="rich-text-popover rich-text-popover--color" onMouseDown={preventDefault}>
+            <div
+              className="rich-text-popover rich-text-popover--color"
+              onMouseDown={preventDefault}
+            >
               <FieldColorPicker
                 label="Highlight color"
                 value={state.activeHighlight ?? undefined}

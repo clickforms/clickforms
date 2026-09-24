@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import { type PointerEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 // Native OS scrollbars (especially macOS overlay) ignore CSS width, which is why
 // styling ::-webkit-scrollbar never made the Fields panel thumb thinner. This wraps

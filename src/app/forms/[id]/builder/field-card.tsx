@@ -1753,7 +1753,9 @@ export function FieldCard({
           {!isImage ? (
             <span
               className="field-card-label"
-              style={field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined}
+              style={
+                field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined
+              }
             >
               {field.label || 'Untitled field'}
               {field.required && <span className="field-card-required">*</span>}
@@ -1814,7 +1816,9 @@ export function FieldCard({
         {!isImage ? (
           <span
             className="field-card-label"
-            style={field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined}
+            style={
+              field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined
+            }
           >
             {questionNumber ? `${questionNumber}. ` : ''}
             {field.label || 'Untitled field'}

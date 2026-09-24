@@ -107,6 +107,35 @@ function CloseIcon() {
   );
 }
 
+// Diagonal double-arrow — toggles the field-settings panel between its normal width and a
+// wider one, for when Settings/Appearance/Logic content (a table's column editor, say)
+// needs more room than the default rail width comfortably gives it. Arrows point outward
+// (expand) or inward (collapse) depending on state — see fieldSettingsExpanded below.
+// Mirrors the admin template builder's identical control (template-builder-client.tsx).
+function ExpandIcon({ expanded }: { expanded: boolean }) {
+  return expanded ? (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M8.5 5.5 12 2M9.5 2h2.5v2.5M5.5 8.5 2 12M4.5 12H2V9.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ) : (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M2 5.5V2h3.5M12 8.5V12H8.5M12 2 8 6M2 12l4-4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ArrowRightIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -287,6 +316,7 @@ export function BuilderClient({
   const [showFormSettings, setShowFormSettings] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
+  const [fieldSettingsExpanded, setFieldSettingsExpanded] = useState(false);
   // Drawer state for the floating page-selector/actions box (.builder-header) — slides
   // off to the right when collapsed, leaving just its handle tab visible so it can be
   // reopened without permanently losing access to Approve/page navigation (Share now
@@ -942,7 +972,7 @@ export function BuilderClient({
           >
             {canEditCanvas ? (
               <aside
-                className="builder-palette"
+                className={`builder-palette ${editingField && fieldSettingsExpanded ? 'builder-palette--expanded' : ''}`}
                 aria-label={
                   activeRailTab === 'design'
                     ? 'Design'
@@ -969,6 +999,15 @@ export function BuilderClient({
                               Duplicate
                             </button>
                           ) : null}
+                          <button
+                            type="button"
+                            className="field-settings-aside-expand"
+                            onClick={() => setFieldSettingsExpanded((expanded) => !expanded)}
+                            aria-label={fieldSettingsExpanded ? 'Collapse panel' : 'Expand panel'}
+                            aria-pressed={fieldSettingsExpanded}
+                          >
+                            <ExpandIcon expanded={fieldSettingsExpanded} />
+                          </button>
                           <button
                             type="button"
                             className="field-settings-aside-back"

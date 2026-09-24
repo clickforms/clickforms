@@ -491,8 +491,22 @@ const fileUploadFieldSchema = baseFieldSchema.extend({
   embedInExport: z.boolean().optional(),
 });
 
+// Height of the signature pad's drawing/typing surface, in px — set by the admin in the
+// builder (see field-settings-panel.tsx's "Size" control for the signature field type).
+// Previously a respondent-facing drag handle controlled this at fill-out time; that was
+// removed in favor of a fixed, admin-chosen height, since resizing while signing isn't a
+// decision a respondent should need to make.
+export const SIGNATURE_PAD_HEIGHT_MIN_PX = 120;
+export const SIGNATURE_PAD_HEIGHT_MAX_PX = 480;
+export const DEFAULT_SIGNATURE_PAD_HEIGHT_PX = 220;
+
 const signatureFieldSchema = baseFieldSchema.extend({
   type: z.literal('signature'),
+  padHeightPx: z
+    .number()
+    .min(SIGNATURE_PAD_HEIGHT_MIN_PX)
+    .max(SIGNATURE_PAD_HEIGHT_MAX_PX)
+    .optional(),
 });
 
 const sectionBreakFieldSchema = baseFieldSchema.extend({

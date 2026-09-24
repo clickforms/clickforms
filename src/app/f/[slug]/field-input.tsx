@@ -54,7 +54,12 @@ import {
 import { resolveFieldWidth } from '@/lib/forms/field-width';
 import { resolveMergeFieldsForRespondent } from '@/lib/forms/merge-fields';
 import { OTHER_OPTION_ID } from '@/lib/forms/other-option';
-import { DEFAULT_TABLE_ROWS, type FieldOption, type FormField } from '@/lib/forms/schema';
+import {
+  DEFAULT_SIGNATURE_PAD_HEIGHT_PX,
+  DEFAULT_TABLE_ROWS,
+  type FieldOption,
+  type FormField,
+} from '@/lib/forms/schema';
 import { applyMask, maskPlaceholder } from '@/lib/forms/text-mask';
 
 // Renders a single field's input control, switching on FormField's discriminant. Owns no
@@ -296,14 +301,22 @@ export function FieldInput({
     >
       {field.label ? (
         <label
-          className="form-field-label"
+          className={`form-field-label ${field.type === 'signature' ? 'form-field-label--with-status' : ''}`}
           htmlFor={field.id}
           style={
             field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined
           }
         >
-          {field.label}
-          {field.required ? <span className="form-field-required">*</span> : null}
+          <span>
+            {field.label}
+            {field.required ? <span className="form-field-required">*</span> : null}
+          </span>
+          {/* Shown right beside the label rather than as its own line above the pad —
+              signing is staged locally (see SignatureControl below), so this is the only
+              visible confirmation a respondent gets that their signature was captured. */}
+          {field.type === 'signature' && typeof value === 'string' && value.length > 0 ? (
+            <span className="form-field-label-status">Signed ✓</span>
+          ) : null}
         </label>
       ) : null}
       {field.helpText ? <p className="form-field-help">{field.helpText}</p> : null}
@@ -807,8 +820,11 @@ function FileUploadControl({ field, value, onChange, onUploadFile }: FileUploadC
 // immediately redraw, or firing a network request moments before they might abandon the
 // form altogether. SignaturePad itself has no confirm button — it auto-captures on stroke
 // end (draw mode) or blur (type mode) — so the pad is always shown, not swapped out for a
-// "Signed ✓" summary; initialImageUrl lets it restore an in-progress signature if this
-// field remounts (e.g. navigating between pages of a multi-page form).
+// "Signed ✓" summary (that now renders inline next to the field's label instead — see the
+// generic label block above); initialImageUrl lets it restore an in-progress signature if
+// this field remounts (e.g. navigating between pages of a multi-page form). The pad's
+// height is an admin setting (field.padHeightPx, set in field-settings-panel.tsx), not a
+// respondent-facing resize handle.
 // ---------------------------------------------------------------------------
 
 interface SignatureControlProps {
@@ -818,8 +834,6 @@ interface SignatureControlProps {
 }
 
 function SignatureControl({ field, value, onCapture }: SignatureControlProps) {
-  const isSigned = typeof value === 'string' && value.length > 0;
-
   function handleCapture(blob: Blob) {
     onCapture?.(field.id, new File([blob], 'signature.png', { type: 'image/png' }));
   }
@@ -830,11 +844,11 @@ function SignatureControl({ field, value, onCapture }: SignatureControlProps) {
 
   return (
     <div>
-      {isSigned ? <p className="signature-pad-status">Signed ✓</p> : null}
       <SignaturePad
         onCapture={handleCapture}
         onClear={handleClear}
         initialImageUrl={typeof value === 'string' ? value : undefined}
+        heightPx={field.padHeightPx ?? DEFAULT_SIGNATURE_PAD_HEIGHT_PX}
       />
     </div>
   );

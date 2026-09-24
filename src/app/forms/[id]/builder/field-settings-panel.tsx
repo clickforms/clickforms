@@ -26,6 +26,7 @@ import {
   DEFAULT_DIVIDER_THICKNESS_PX,
   DEFAULT_DIVIDER_WIDTH_PX,
   DEFAULT_FIELD_TEXT_COLOR,
+  DEFAULT_SIGNATURE_PAD_HEIGHT_PX,
   DIVIDER_CAPTION_POSITIONS,
   DIVIDER_THICKNESS_MAX_PX,
   DIVIDER_THICKNESS_MIN_PX,
@@ -58,6 +59,8 @@ import {
   RATING_MAX_MAX,
   RATING_MAX_MIN,
   type RatingIcon,
+  SIGNATURE_PAD_HEIGHT_MAX_PX,
+  SIGNATURE_PAD_HEIGHT_MIN_PX,
   TABLE_ROWS_MAX,
   TEXT_ALIGN_LABEL,
   TEXT_ALIGN_OPTIONS,
@@ -1054,6 +1057,37 @@ function ContentExtras({
             />
           </div>
         </>
+      );
+
+    case 'signature':
+      return (
+        <div className="settings-subsection">
+          <p className="settings-subsection-title">Size</p>
+          <label className="settings-field">
+            <span className="settings-label">Pad height (px)</span>
+            <input
+              type="number"
+              className="text-input"
+              disabled={!canEdit}
+              min={SIGNATURE_PAD_HEIGHT_MIN_PX}
+              max={SIGNATURE_PAD_HEIGHT_MAX_PX}
+              value={field.padHeightPx ?? DEFAULT_SIGNATURE_PAD_HEIGHT_PX}
+              onChange={(event) => {
+                const raw = Number(event.target.value);
+                if (Number.isNaN(raw)) return;
+                onUpdateField(field.id, {
+                  padHeightPx: Math.min(
+                    SIGNATURE_PAD_HEIGHT_MAX_PX,
+                    Math.max(SIGNATURE_PAD_HEIGHT_MIN_PX, raw),
+                  ),
+                });
+              }}
+            />
+            <span className="settings-field-hint">
+              How tall the drawing/typing box is on the public form.
+            </span>
+          </label>
+        </div>
       );
 
     case 'column_layout':

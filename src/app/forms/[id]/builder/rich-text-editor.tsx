@@ -108,7 +108,11 @@ function preventDefault(event: React.MouseEvent) {
 }
 
 function preventToolbarMouseDown(event: React.MouseEvent) {
-  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+  const target = event.target;
+  if (
+    target instanceof HTMLElement &&
+    target.closest('input, textarea, select, [contenteditable="true"]')
+  ) {
     return;
   }
   event.preventDefault();
@@ -551,7 +555,7 @@ export function RichTextEditor({
   return (
     <div className="rich-text-editor-wrap">
       {/* biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so toolbar clicks don't steal selection from the editor; the real controls are the child buttons */}
-      <div className="rich-text-toolbar" onMouseDown={preventDefault}>
+      <div className="rich-text-toolbar" onMouseDown={preventToolbarMouseDown}>
         <div className="rich-text-toolbar-group">
           <ToolbarButton
             label="Undo"
@@ -824,7 +828,7 @@ export function RichTextEditor({
             onOpenChange={(open) => setOpenPopover(open ? 'color' : null)}
             triggerRef={colorTriggerRef}
             panelClassName="rich-text-popover rich-text-popover--color"
-            onMouseDown={preventDefault}
+            onMouseDown={preventToolbarMouseDown}
           >
             <FieldColorPicker
               label="Text color"
@@ -833,9 +837,9 @@ export function RichTextEditor({
               canEdit
               onChange={(color) => {
                 if (color) {
-                  editor.chain().focus().setColor(color).run();
+                  editor.chain().setColor(color).run();
                 } else {
-                  editor.chain().focus().unsetColor().run();
+                  editor.chain().unsetColor().run();
                 }
               }}
             />
@@ -855,7 +859,7 @@ export function RichTextEditor({
             onOpenChange={(open) => setOpenPopover(open ? 'highlight' : null)}
             triggerRef={highlightTriggerRef}
             panelClassName="rich-text-popover rich-text-popover--color"
-            onMouseDown={preventDefault}
+            onMouseDown={preventToolbarMouseDown}
           >
             <FieldColorPicker
               label="Highlight color"
@@ -864,9 +868,9 @@ export function RichTextEditor({
               canEdit
               onChange={(color) => {
                 if (color) {
-                  editor.chain().focus().setHighlight({ color }).run();
+                  editor.chain().setHighlight({ color }).run();
                 } else {
-                  editor.chain().focus().unsetHighlight().run();
+                  editor.chain().unsetHighlight().run();
                 }
               }}
             />

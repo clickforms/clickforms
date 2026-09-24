@@ -266,13 +266,37 @@ export function FieldColorPicker({
             value={hexInput}
             placeholder="#55ea8c"
             spellCheck={false}
+            autoComplete="off"
             disabled={!canEdit}
+            onMouseDown={(event) => {
+              event.stopPropagation();
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
             onChange={(event) => {
               setHexInput(event.target.value);
               setHexError(null);
             }}
+            onPaste={(event) => {
+              event.stopPropagation();
+              const text = event.clipboardData?.getData('text');
+              if (text == null || text.trim() === '') return;
+              event.preventDefault();
+              const normalized = normalizeHexColor(text);
+              if (!normalized) {
+                setHexInput(text.trim());
+                setHexError('Enter a hex color like #55ea8c');
+                return;
+              }
+              setHexInput(normalized);
+              const next = hexToHsv(normalized);
+              if (next) setHsv(next);
+              commit(next ?? hsv);
+            }}
             onBlur={commitHexInput}
             onKeyDown={(event) => {
+              event.stopPropagation();
               if (event.key === 'Enter') {
                 event.preventDefault();
                 commitHexInput();

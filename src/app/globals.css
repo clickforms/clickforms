@@ -9978,6 +9978,9 @@ textarea.text-input {
   flex: 1;
   width: 100%;
   max-width: 8.5rem;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
   /* Was 0, which let this shrink to a sliver (sometimes just the "#" placeholder visible,
    * un-clickable/un-typeable) whenever the surrounding row was tight -- e.g. the rich text
    * toolbar's narrower .rich-text-popover--color, where "Custom hex" label + swatch + this

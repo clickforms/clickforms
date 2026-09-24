@@ -77,6 +77,19 @@ export const PLAN_ORDER = [
   'enterprise',
 ] as const satisfies readonly OrgPlan[];
 
+/** The qualitative perks in PlanLimits that don't reduce to a usage bar — shared between
+ * the platform-admin /admin/billing org cards and the org-facing Organisation settings
+ * page (src/app/forms/organisation) so the two "which perks does this plan include"
+ * displays can't drift apart. Order matches the /pricing page's feature list. */
+export const PLAN_FEATURE_PILLS: {
+  key: 'removeBranding' | 'apiAccess' | 'customDomain';
+  label: string;
+}[] = [
+  { key: 'removeBranding', label: 'No Clickforms branding' },
+  { key: 'apiAccess', label: 'API access' },
+  { key: 'customDomain', label: 'Custom domain' },
+];
+
 export interface PlanUsage {
   forms: number;
   users: number;

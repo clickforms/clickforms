@@ -1,8 +1,17 @@
 'use client';
 
+import type { OrgPlan, OrgStatus } from '@prisma/client';
+import Link from 'next/link';
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ImageCropEditor } from '@/app/forms/[id]/builder/image-crop-editor';
 import { useToast } from '@/components/toast';
+import {
+  buildUsageBars,
+  PLAN_FEATURE_PILLS,
+  PLAN_LABELS,
+  PLAN_LIMITS,
+  type PlanUsage,
+} from '@/lib/admin/plan-limits';
 import { getErrorMessage, readApiError } from '@/lib/error-message';
 import { isCroppableImage } from '@/lib/forms/crop-image';
 
@@ -26,8 +35,38 @@ export interface OrganizationProfile {
   logoUrl: string | null;
 }
 
+export interface OrganizationPlanInfo {
+  plan: OrgPlan;
+  status: OrgStatus;
+  trialEndsAt: string | null;
+  renewsAt: string | null;
+  usage: PlanUsage;
+}
+
 interface OrganisationDetailsClientProps {
   initialOrganization: OrganizationProfile;
+  plan: OrganizationPlanInfo;
+}
+
+const PLAN_STATUS_BADGE_CLASS: Record<OrgStatus, string> = {
+  active: 'badge--success',
+  trial: 'badge--draft',
+  suspended: 'badge--error',
+};
+
+function formatPlanDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/** Whole days remaining until `iso`, floored at 0 rather than going negative — an already-
+ * expired trial is shown as its own distinct message (see the render below), not "-2 days". */
+function daysUntil(iso: string): number {
+  const diffMs = new Date(iso).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
 }
 
 function InfoIcon() {
@@ -94,7 +133,10 @@ function Toggle({
   );
 }
 
-export function OrganisationDetailsClient({ initialOrganization }: OrganisationDetailsClientProps) {
+export function OrganisationDetailsClient({
+  initialOrganization,
+  plan,
+}: OrganisationDetailsClientProps) {
   const toast = useToast();
   const [logoUrl, setLogoUrl] = useState(initialOrganization.logoUrl);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -302,6 +344,98 @@ export function OrganisationDetailsClient({ initialOrganization }: OrganisationD
         <p className="settings-page-lead">
           Manage the details that identify your organisation across Clickforms.
         </p>
+      </div>
+
+      <div className="card contact-details-card organisation-plan-card">
+        <div className="contact-details-header">
+          <span className="contact-details-header-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <title>Plan</title>
+              <path
+                d="M10 3 4 6.5v6L10 16l6-3.5v-6L10 3Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path d="M10 9.3v6.4" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="m4 6.5 6 2.8 6-2.8"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <div className="organisation-plan-heading">
+            <div className="contact-details-title-row">
+              <h2 className="contact-details-title">{PLAN_LABELS[plan.plan]} plan</h2>
+              <span className={`badge ${PLAN_STATUS_BADGE_CLASS[plan.status]}`}>
+                {plan.status === 'trial'
+                  ? 'Trial'
+                  : plan.status === 'suspended'
+                    ? 'Suspended'
+                    : 'Active'}
+              </span>
+            </div>
+            <p className="contact-details-intro">
+              {plan.status === 'trial' && plan.trialEndsAt ? (
+                daysUntil(plan.trialEndsAt) > 0 ? (
+                  <>
+                    Your trial ends in {daysUntil(plan.trialEndsAt)} day
+                    {daysUntil(plan.trialEndsAt) === 1 ? '' : 's'} (
+                    {formatPlanDate(plan.trialEndsAt)}
+                    ). Choose a plan before then to keep using Clickforms without interruption.
+                  </>
+                ) : (
+                  <>
+                    Your trial ended on {formatPlanDate(plan.trialEndsAt)}. Choose a plan to
+                    continue — sign-in is paused for this organisation until then.
+                  </>
+                )
+              ) : plan.status === 'suspended' ? (
+                'This organisation is suspended. Contact us to reactivate it.'
+              ) : plan.renewsAt ? (
+                <>Renews {formatPlanDate(plan.renewsAt)}.</>
+              ) : (
+                "Here's your current usage against this plan's limits."
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="billing-usage-bars organisation-plan-usage">
+          {buildUsageBars(plan.plan, plan.usage).map((bar) => (
+            <div key={bar.label} className="usage-bar">
+              <div className="usage-bar-header">
+                <span>{bar.label}</span>
+                <span>{bar.formatted}</span>
+              </div>
+              <div className="usage-bar-track">
+                <div className="usage-bar-fill" style={{ width: `${bar.percent ?? 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="billing-feature-pills organisation-plan-features">
+          {PLAN_FEATURE_PILLS.map((feature) => (
+            <span
+              key={feature.key}
+              className={`billing-feature-pill${PLAN_LIMITS[plan.plan][feature.key] ? ' billing-feature-pill--on' : ''}`}
+            >
+              {feature.label}
+            </span>
+          ))}
+        </div>
+
+        <div className="contact-details-actions organisation-plan-actions">
+          <Link href="/pricing" className="button button--dark">
+            View plans
+          </Link>
+          <Link href="/contact" className="button button--ghost">
+            Contact us to upgrade
+          </Link>
+        </div>
       </div>
 
       <div className="card contact-details-card organisation-logo-card">

@@ -17342,6 +17342,22 @@ textarea.form-field-input {
   font-size: 0.8125rem;
 }
 
+/* Plan & Billing card (top of /forms/organisation) — reuses .contact-details-card's
+   padding:0 shell (header/actions carry their own padding), so the usage bars and
+   feature pills sandwiched between them need their own horizontal padding to line up. */
+.organisation-plan-heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.organisation-plan-usage {
+  padding: 0 1.5rem 1rem;
+}
+
+.organisation-plan-features {
+  padding: 0 1.5rem 1.35rem;
+}
+
 .organisation-details-list {
   border-top: none;
 }

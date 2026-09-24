@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { OrganisationDetailsClient } from '@/app/forms/organisation/organisation-details-client';
+import { startOfCurrentMonth } from '@/lib/admin/plan-limits';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createPresignedDownloadUrl } from '@/lib/s3';
@@ -26,9 +27,10 @@ export default async function OrganisationSettingsPage() {
     redirect('/admin');
   }
 
-  const organization = await withOrgContext(session.user.organizationId, (tx) =>
-    tx.organization.findFirstOrThrow({
-      where: { id: requireOrganizationId(session) },
+  const { organization, usage } = await withOrgContext(session.user.organizationId, async (tx) => {
+    const orgId = requireOrganizationId(session);
+    const org = await tx.organization.findFirstOrThrow({
+      where: { id: orgId },
       select: {
         id: true,
         name: true,
@@ -39,9 +41,43 @@ export default async function OrganisationSettingsPage() {
         contactPhone: true,
         notificationEmail: true,
         logoStorageKey: true,
+        plan: true,
+        status: true,
+        trialEndsAt: true,
+        renewsAt: true,
       },
-    }),
-  );
+    });
+
+    // Same four numbers /admin/billing shows for this org, computed the same way
+    // (buildUsageBars in plan-limits.ts) — an org admin sees exactly what a platform
+    // admin would see for them, not a separately-derived approximation.
+    const [formCount, userCount, orgFileSum, submissionFileSum, submissionCount] =
+      await Promise.all([
+        tx.form.count({ where: { organizationId: orgId } }),
+        tx.user.count({ where: { organizationId: orgId } }),
+        tx.organizationFile.aggregate({
+          where: { organizationId: orgId },
+          _sum: { sizeBytes: true },
+        }),
+        tx.submissionFile.aggregate({
+          where: { organizationId: orgId },
+          _sum: { sizeBytes: true },
+        }),
+        tx.submission.count({
+          where: { organizationId: orgId, submittedAt: { gte: startOfCurrentMonth() } },
+        }),
+      ]);
+
+    return {
+      organization: org,
+      usage: {
+        forms: formCount,
+        users: userCount,
+        storageBytes: (orgFileSum._sum.sizeBytes ?? 0) + (submissionFileSum._sum.sizeBytes ?? 0),
+        submissionsThisMonth: submissionCount,
+      },
+    };
+  });
 
   let logoUrl: string | null = null;
   if (organization.logoStorageKey) {
@@ -69,6 +105,13 @@ export default async function OrganisationSettingsPage() {
         contactPhone: organization.contactPhone,
         notificationEmail: organization.notificationEmail,
         logoUrl,
+      }}
+      plan={{
+        plan: organization.plan,
+        status: organization.status,
+        trialEndsAt: organization.trialEndsAt?.toISOString() ?? null,
+        renewsAt: organization.renewsAt?.toISOString() ?? null,
+        usage,
       }}
     />
   );

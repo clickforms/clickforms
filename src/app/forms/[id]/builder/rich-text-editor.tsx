@@ -360,6 +360,10 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const lastEmittedRef = useRef<string>(value);
   const [openPopover, setOpenPopover] = useState<Popover>(null);
+  // Filters the Font family popover's now much longer list (see FONT_FAMILY_OPTIONS in
+  // schema.ts) -- cleared whenever the popover closes so it doesn't carry over stale text
+  // to the next time it's opened.
+  const [fontFamilyQuery, setFontFamilyQuery] = useState('');
 
   const editor = useEditor(
     {
@@ -553,37 +557,64 @@ export function RichTextEditor({
             type="button"
             className="rich-text-toolbar-button rich-text-toolbar-button--wide"
             onMouseDown={preventDefault}
-            onClick={() => setOpenPopover(openPopover === 'fontFamily' ? null : 'fontFamily')}
+            onClick={() => {
+              setFontFamilyQuery('');
+              setOpenPopover(openPopover === 'fontFamily' ? null : 'fontFamily');
+            }}
           >
             {FONT_FAMILY_LABEL[activeFontFamilyOption]} ▾
           </button>
           {openPopover === 'fontFamily' && (
             // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
             <div
-              className="rich-text-popover rich-text-popover--scrollable"
+              className="rich-text-popover rich-text-popover--fontfamily"
               onMouseDown={preventDefault}
             >
-              {FONT_FAMILY_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className="rich-text-popover-item"
-                  onMouseDown={preventDefault}
-                  onClick={() => {
-                    const css = FONT_FAMILY_CSS[option];
-                    if (css) {
-                      editor.chain().focus().setFontFamily(css).run();
-                    } else {
-                      editor.chain().focus().unsetFontFamily().run();
-                    }
-                    setOpenPopover(null);
-                  }}
-                >
-                  <span style={{ fontFamily: FONT_FAMILY_CSS[option] }}>
-                    {FONT_FAMILY_LABEL[option]}
-                  </span>
-                </button>
-              ))}
+              <input
+                type="text"
+                className="rich-text-popover-search"
+                placeholder="Search fonts…"
+                value={fontFamilyQuery}
+                onChange={(event) => setFontFamilyQuery(event.target.value)}
+                // biome-ignore lint/a11y/noAutofocus: the popover itself is the thing being opened -- focusing its search field is the whole point, same as a command palette
+                autoFocus
+              />
+              <div className="rich-text-popover-list">
+                {(() => {
+                  const query = fontFamilyQuery.trim().toLowerCase();
+                  const filtered = query
+                    ? FONT_FAMILY_OPTIONS.filter((option) =>
+                        FONT_FAMILY_LABEL[option].toLowerCase().includes(query),
+                      )
+                    : FONT_FAMILY_OPTIONS;
+                  if (filtered.length === 0) {
+                    return (
+                      <p className="rich-text-popover-empty">No fonts match "{fontFamilyQuery}"</p>
+                    );
+                  }
+                  return filtered.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      className="rich-text-popover-item"
+                      onMouseDown={preventDefault}
+                      onClick={() => {
+                        const css = FONT_FAMILY_CSS[option];
+                        if (css) {
+                          editor.chain().focus().setFontFamily(css).run();
+                        } else {
+                          editor.chain().focus().unsetFontFamily().run();
+                        }
+                        setOpenPopover(null);
+                      }}
+                    >
+                      <span style={{ fontFamily: FONT_FAMILY_CSS[option] }}>
+                        {FONT_FAMILY_LABEL[option]}
+                      </span>
+                    </button>
+                  ));
+                })()}
+              </div>
             </div>
           )}
         </div>

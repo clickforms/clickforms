@@ -9242,6 +9242,46 @@ textarea.text-input {
   left: auto;
 }
 
+/* Font family has a long, comprehensive list (see FONT_FAMILY_OPTIONS in schema.ts) --
+   the search input stays fixed at the top while .rich-text-popover-list scrolls beneath
+   it, rather than the whole popover (search box included) scrolling out of view. */
+.rich-text-popover--fontfamily {
+  max-height: 18rem;
+  overflow: hidden;
+}
+
+.rich-text-popover-search {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+}
+
+.rich-text-popover-search:focus {
+  outline: none;
+  border-color: var(--color-border-strong);
+}
+
+.rich-text-popover-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 0.15rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.rich-text-popover-empty {
+  padding: 0.35rem 0.5rem;
+  color: var(--builder-muted, #888);
+  font-size: 0.8125rem;
+}
+
 .rich-text-swatch {
   width: 1.35rem;
   height: 1.35rem;

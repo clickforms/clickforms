@@ -14782,6 +14782,229 @@ textarea.form-field-input {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* Pricing page (src/components/landing/landing-pricing.tsx) */
+.landing-pricing {
+  padding: 1rem 0 6.5rem;
+}
+
+.landing-pricing-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 3rem;
+}
+
+.landing-pricing-toggle {
+  display: inline-flex;
+  padding: 0.3rem;
+  background: var(--landing-soft);
+  border: 1px solid var(--landing-border);
+  border-radius: 999px;
+}
+
+.landing-pricing-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.15rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--landing-muted);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.landing-pricing-toggle-btn[data-active] {
+  background: var(--landing-ink);
+  color: #fff;
+}
+
+.landing-pricing-toggle-save {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--landing-primary);
+  color: #0f2718;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.landing-pricing-toggle-btn[data-active] .landing-pricing-toggle-save {
+  background: var(--landing-primary);
+  color: #0f2718;
+}
+
+.landing-pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.landing-pricing-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 1.75rem 2.25rem;
+  background: #fff;
+  border: 1px solid var(--landing-border);
+  border-radius: 1.5rem;
+  box-shadow: var(--landing-shadow);
+}
+
+.landing-pricing-card[data-highlight] {
+  border-color: var(--landing-primary);
+  box-shadow: 0 24px 56px rgba(85, 234, 140, 0.24);
+}
+
+.landing-pricing-badge {
+  position: absolute;
+  top: -0.9rem;
+  left: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: var(--landing-primary);
+  color: #0f2718;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.landing-pricing-badge svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.landing-pricing-card-name {
+  margin: 0.5rem 0 0.35rem;
+  font-family: var(--landing-display);
+  font-size: 1.375rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--landing-ink);
+}
+
+.landing-pricing-card-desc {
+  margin: 0 0 1.5rem;
+  min-height: 2.6rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--landing-muted);
+}
+
+.landing-pricing-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.landing-pricing-card-amount {
+  font-family: var(--landing-display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--landing-ink);
+}
+
+.landing-pricing-card-period {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--landing-muted);
+}
+
+.landing-pricing-card-custom {
+  font-family: var(--landing-display);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--landing-ink);
+}
+
+.landing-pricing-card-billing-note {
+  margin: 0.25rem 0 1.5rem;
+  font-size: 0.8125rem;
+  color: var(--landing-muted);
+}
+
+.landing-pricing-card-cta {
+  width: 100%;
+  margin-bottom: 1.75rem;
+}
+
+.landing-pricing-card-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--landing-border);
+  list-style: none;
+}
+
+.landing-pricing-card-limits li {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--landing-ink);
+}
+
+.landing-pricing-card-features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-pricing-card-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--landing-muted);
+}
+
+.landing-pricing-card-features li svg {
+  flex-shrink: 0;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: 0.15rem;
+  color: var(--landing-primary-dark);
+}
+
+.landing-pricing-footnote {
+  margin: 3rem 0 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--landing-muted);
+}
+
+@media (min-width: 700px) {
+  .landing-pricing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1180px) {
+  .landing-pricing-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .landing-pricing-card[data-highlight] {
+    transform: translateY(-0.75rem);
+  }
+}
+
 /* Login page — same soft forest-ink language as the landing page (mint wash, rounded
    display type, gentle rise-in), just dialled down: this is a utility screen someone
    passes through, not a page to linger on, so the motion is subtler and there's no

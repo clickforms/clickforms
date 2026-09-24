@@ -12,6 +12,7 @@ const PRODUCT_SUBLINKS = [
 ] as const;
 
 const NAV_LINKS = [
+  { label: 'Pricing', href: '/pricing' },
   { label: 'Resources', href: '/resources' },
   { label: 'Contact', href: '/contact' },
   { label: 'Help', href: '/help' },

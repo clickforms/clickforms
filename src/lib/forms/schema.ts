@@ -629,6 +629,10 @@ export const IMAGE_ALIGN_LABEL: Record<ImageAlign, string> = {
 
 const imageFieldSchema = baseFieldSchema.extend({
   type: z.literal('image'),
+  // Overrides base's required `label` — an image's caption is optional (the settings
+  // panel shows it as "Caption (optional)"); plenty of images, like a logo, need no
+  // caption at all.
+  label: z.string().optional(),
   imageStorageKey: z.string().min(1).optional(),
   alt: z.string().optional(),
   imageSize: z.enum(IMAGE_SIZE_OPTIONS).optional(),

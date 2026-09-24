@@ -10978,7 +10978,11 @@ html:has(.form-preview-embed) [data-next-badge-root] {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   padding: 0.6rem 0.95rem;
-  font-size: 0.9375rem;
+  /* 16px, not the builder's smaller 0.9375rem -- iOS Safari and Chrome for Android both
+     auto-zoom the page when a focused text input/textarea/select computes to under 16px,
+     which made tapping into any field on a phone jump-zoom before the respondent could
+     type. 16px is the documented threshold; anything at or above it disables the zoom. */
+  font-size: 1rem;
   background-color: #fff;
 }
 

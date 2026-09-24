@@ -568,6 +568,16 @@ export function RichTextEditor({
             // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
             <div
               className="rich-text-popover rich-text-popover--fontfamily"
+              // Duplicated inline (on top of the .rich-text-popover--fontfamily /
+              // .rich-text-popover-list rules in globals.css) so the cap can't silently
+              // stop applying if a stale/cached CSS bundle is ever served without a
+              // matching JS bundle -- this scrolls correctly either way.
+              style={{
+                maxHeight: '18rem',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
               onMouseDown={preventDefault}
             >
               <input
@@ -576,10 +586,21 @@ export function RichTextEditor({
                 placeholder="Search fonts…"
                 value={fontFamilyQuery}
                 onChange={(event) => setFontFamilyQuery(event.target.value)}
+                style={{ flexShrink: 0 }}
                 // biome-ignore lint/a11y/noAutofocus: the popover itself is the thing being opened -- focusing its search field is the whole point, same as a command palette
                 autoFocus
               />
-              <div className="rich-text-popover-list">
+              <div
+                className="rich-text-popover-list"
+                style={{
+                  overflowY: 'auto',
+                  minHeight: 0,
+                  flex: '1 1 auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.15rem',
+                }}
+              >
                 {(() => {
                   const query = fontFamilyQuery.trim().toLowerCase();
                   const filtered = query
@@ -632,6 +653,9 @@ export function RichTextEditor({
             // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
             <div
               className="rich-text-popover rich-text-popover--scrollable"
+              // Duplicated inline for the same reason as the Font family popover below --
+              // guarantees this scrolls even if a stale CSS bundle is ever served.
+              style={{ maxHeight: '16rem', overflowY: 'auto' }}
               onMouseDown={preventDefault}
             >
               <button

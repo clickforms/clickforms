@@ -71,8 +71,17 @@ export function hsvToHex({ h, s, v }: HsvColor): string {
 
 /** Normalizes hex or rgb() strings to lowercase #rrggbb, or null if invalid. */
 export function normalizeHexColor(input: string): string | null {
-  const trimmed = input.trim();
+  let trimmed = input.trim();
   if (!trimmed) return null;
+
+  // Accept a hex code pasted without its leading '#' -- e.g. Figma and many other design
+  // tools display/copy hex as "9b1b1b" rather than "#9b1b1b". Without this, pasting one
+  // of those fails HEX_6/HEX_3 below, commitHexInput() shows an error, and the field
+  // silently reverts to whatever color it had before -- indistinguishable from "paste
+  // doesn't work" from the outside.
+  if (!trimmed.startsWith('#') && /^[0-9a-f]{3}$|^[0-9a-f]{6}$/i.test(trimmed)) {
+    trimmed = `#${trimmed}`;
+  }
 
   if (HEX_6.test(trimmed)) {
     return trimmed.toLowerCase();

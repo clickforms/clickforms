@@ -1,36 +1,87 @@
 import type { OrgPlan } from '@prisma/client';
 
 /**
- * Hardcoded plan tiers for the /admin billing page (specs follow-up: platform admin
- * console). No payment provider is wired up — these are the caps platform admins
- * reference when deciding whether an org needs to be upgraded, not an enforced quota
- * (nothing currently blocks a form/user from being created past its plan's limit).
+ * Hardcoded plan tiers for the /admin billing page and the public /pricing page (see
+ * src/components/landing/landing-pricing.tsx — keep the two in sync by hand, there's no
+ * shared source of truth yet). No payment provider is wired up — these are the caps
+ * platform admins reference when deciding whether an org needs to be upgraded, not an
+ * enforced quota (nothing currently blocks a form/user/submission from being created past
+ * its plan's limit — see the pending enforcement work).
  * `null` means unlimited.
  */
 export interface PlanLimits {
   maxForms: number | null;
   maxUsers: number | null;
   maxStorageBytes: number | null;
+  /** Submissions counted per calendar month, not cumulative like the other three. */
+  maxSubmissionsPerMonth: number | null;
+  /** Qualitative perks that don't reduce to a number — checked directly by feature-gated
+   * UI/routes (e.g. "hide the Clickforms footer on public forms") rather than through
+   * buildUsageBars(), which only covers the four numeric caps above. */
+  removeBranding: boolean;
+  apiAccess: boolean;
+  customDomain: boolean;
 }
 
 export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
-  free: { maxForms: 10, maxUsers: 5, maxStorageBytes: 500 * 1024 * 1024 },
-  pro: { maxForms: 50, maxUsers: 15, maxStorageBytes: 10 * 1024 * 1024 * 1024 },
-  enterprise: { maxForms: null, maxUsers: null, maxStorageBytes: 100 * 1024 * 1024 * 1024 },
+  standard: {
+    maxForms: 10,
+    maxUsers: 1,
+    maxStorageBytes: 500 * 1024 * 1024,
+    maxSubmissionsPerMonth: 1000,
+    removeBranding: false,
+    apiAccess: false,
+    customDomain: false,
+  },
+  business: {
+    maxForms: 50,
+    maxUsers: 15,
+    maxStorageBytes: 10 * 1024 * 1024 * 1024,
+    maxSubmissionsPerMonth: 10000,
+    removeBranding: true,
+    apiAccess: true,
+    customDomain: false,
+  },
+  professional: {
+    maxForms: null,
+    maxUsers: 50,
+    maxStorageBytes: 50 * 1024 * 1024 * 1024,
+    maxSubmissionsPerMonth: 30000,
+    removeBranding: true,
+    apiAccess: true,
+    customDomain: true,
+  },
+  enterprise: {
+    maxForms: null,
+    maxUsers: null,
+    maxStorageBytes: null,
+    maxSubmissionsPerMonth: null,
+    removeBranding: true,
+    apiAccess: true,
+    customDomain: true,
+  },
 };
 
 export const PLAN_LABELS: Record<OrgPlan, string> = {
-  free: 'Free',
-  pro: 'Pro',
+  standard: 'Standard',
+  business: 'Business',
+  professional: 'Professional',
   enterprise: 'Enterprise',
 };
 
-export const PLAN_ORDER = ['free', 'pro', 'enterprise'] as const satisfies readonly OrgPlan[];
+export const PLAN_ORDER = [
+  'standard',
+  'business',
+  'professional',
+  'enterprise',
+] as const satisfies readonly OrgPlan[];
 
 export interface PlanUsage {
   forms: number;
   users: number;
   storageBytes: number;
+  /** Count of submissions created since the start of the current calendar month. */
+  submissionsThisMonth: number;
 }
 
 export interface PlanUsageBar {
@@ -71,12 +122,26 @@ function usageBar(
   };
 }
 
-/** Builds the three usage bars shown on an org's row in /admin/billing. */
+/** Builds the four usage bars shown on an org's row in /admin/billing. */
 export function buildUsageBars(plan: OrgPlan, usage: PlanUsage): PlanUsageBar[] {
   const limits = PLAN_LIMITS[plan];
   return [
     usageBar('Forms', usage.forms, limits.maxForms, (n) => String(n)),
     usageBar('Users', usage.users, limits.maxUsers, (n) => String(n)),
     usageBar('Storage', usage.storageBytes, limits.maxStorageBytes, formatBytes),
+    usageBar(
+      'Submissions this month',
+      usage.submissionsThisMonth,
+      limits.maxSubmissionsPerMonth,
+      (n) => n.toLocaleString(),
+    ),
   ];
+}
+
+/** Start of the current calendar month in UTC — the window buildUsageBars' submissions
+ * bar and the pending per-request enforcement both count against. Not stored anywhere;
+ * recomputed from `new Date()` on every call, same as every other usage number here. */
+export function startOfCurrentMonth(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }

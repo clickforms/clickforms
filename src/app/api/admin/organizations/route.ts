@@ -25,9 +25,9 @@ const createOrganizationBodySchema = z.object({
       message: 'ABN must be 11 digits',
     })
     .optional(),
-  // Defaults to free — matches Organization.plan's own schema default — so onboarding
+  // Defaults to standard — matches Organization.plan's own schema default — so onboarding
   // an org without picking a plan behaves exactly as it did before this field existed.
-  plan: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  plan: z.enum(['standard', 'business', 'professional', 'enterprise']).default('standard'),
 });
 
 const ORGANIZATION_LIST_SELECT = {

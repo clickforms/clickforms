@@ -73,12 +73,19 @@ enum SignupFormSituation {
 }
 
 // Billing tier, shown on /admin/billing and used by src/lib/admin/plan-limits.ts to
-// derive per-org form/user/storage caps. Purely a label + lookup key today — no
-// payment provider is wired up yet, so changing an org's plan (POST
-// /api/admin/organizations/[id]/plan) just updates this column.
+// derive per-org form/user/storage/submission caps — see /pricing for the customer-facing
+// version of the same table. Purely a label + lookup key today — no payment provider is
+// wired up yet, so changing an org's plan (POST /api/admin/organizations/[id]/plan) just
+// updates this column. Renamed from free/pro (see migration
+// 20260924000000_rename_org_plan_tiers) when the pricing model grew from 3 tiers to the
+// current 4 — existing orgs on the old `free` plan became `standard`, `pro` became
+// `business`, and `professional` was added as a new tier between `business` and
+// `enterprise`; no org retroactively lost or gained access, per the grandfathering
+// decision at the time.
 enum OrgPlan {
-  free
-  pro
+  standard
+  business
+  professional
   enterprise
 
   @@map("org_plan")
@@ -171,7 +178,7 @@ model Organization {
   // Billing/lifecycle fields for /admin/billing and the Organisations list (specs: platform
   // admin console). No payment provider integration yet — `plan` and `status` are set
   // directly by platform admins via /api/admin/organizations/[id]/plan and .../status.
-  plan        OrgPlan   @default(free)
+  plan        OrgPlan   @default(standard)
   status      OrgStatus @default(active)
   // Only meaningful while status = trial; null otherwise.
   trialEndsAt DateTime? @map("trial_ends_at")

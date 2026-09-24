@@ -19,6 +19,7 @@ export interface BillingOrgRow {
     forms: number;
     users: number;
     storageBytes: number;
+    submissionsThisMonth: number;
   };
 }
 

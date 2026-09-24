@@ -34,7 +34,7 @@ const patchOrganizationBodySchema = z.object({
   // Billing/lifecycle fields — set from the Organisations list (kebab menu Suspend/
   // Reactivate) and the Billing & plan limits page (Change plan). Kept on this same
   // PATCH endpoint rather than a new route since they're just more organization columns.
-  plan: z.enum(['free', 'pro', 'enterprise']).optional(),
+  plan: z.enum(['standard', 'business', 'professional', 'enterprise']).optional(),
   status: z.enum(['active', 'trial', 'suspended']).optional(),
   trialEndsAt: z.string().datetime().nullable().optional(),
   renewsAt: z.string().datetime().nullable().optional(),

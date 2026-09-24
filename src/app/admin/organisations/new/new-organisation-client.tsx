@@ -16,7 +16,7 @@ export function NewOrganisationClient() {
   const toast = useToast();
   const [organizationName, setOrganizationName] = useState('');
   const [abn, setAbn] = useState('');
-  const [plan, setPlan] = useState<OrgPlan>('free');
+  const [plan, setPlan] = useState<OrgPlan>('standard');
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [error, setError] = useState<string | null>(null);

@@ -3,6 +3,7 @@
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FieldInput } from '@/app/f/[slug]/field-input';
+import { ToastProvider, useToast } from '@/components/toast';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getVisibleFieldIds } from '@/lib/forms/conditional-logic';
 import { resolveFieldDefaultAnswer } from '@/lib/forms/field-defaults';
@@ -14,6 +15,8 @@ import {
   DEFAULT_FORM_PRIMARY_COLOR,
   DEFAULT_FORM_SECONDARY_COLOR,
   DEFAULT_SUBMIT_BUTTON_TEXT,
+  DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL,
+  DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL,
   type FormSchema,
   pageContainsField,
 } from '@/lib/forms/schema';
@@ -67,13 +70,30 @@ interface SubmitResponse {
   fieldErrors?: AnswerErrors;
 }
 
-export function FormRendererClient({
+function fieldErrorToastMessage(errorCount: number): string {
+  return `Please fix the highlighted field${errorCount > 1 ? 's' : ''} above before continuing.`;
+}
+
+// Thin wrapper so the validation-blocked notice (see the toast.error calls in
+// FormRendererInner below) has a ToastProvider to render into — this page has no shared
+// app shell/layout of its own to supply one, unlike the admin routes where
+// AdminShellClient already provides it.
+export function FormRendererClient(props: FormRendererClientProps) {
+  return (
+    <ToastProvider>
+      <FormRendererInner {...props} />
+    </ToastProvider>
+  );
+}
+
+function FormRendererInner({
   slug,
   formId,
   formName,
   schema,
   previewMode = false,
 }: FormRendererClientProps) {
+  const toast = useToast();
   const [pageIndex, setPageIndex] = useState(0);
   const [answers, setAnswers] = useState<FormAnswers>({});
   const [errors, setErrors] = useState<AnswerErrors>({});
@@ -88,11 +108,14 @@ export function FormRendererClient({
   // one-render delay before they're populated is invisible to the respondent.
   //
   // The same effect also seeds every *visible* field type that now carries a
-  // `defaultValue` (short_text/paragraph/email/phone/website/number/multi_choice/dropdown,
-  // plus date's 'today'|fixed-date shape) — pre-filling once on mount rather than via each
-  // input's initial `value` prop keeps `answers` (the single source of truth used by
+  // `defaultValue` (short_text/paragraph/email/phone/website/number/multi_choice/dropdown/
+  // yes_no, plus date's 'today'|fixed-date shape) — pre-filling once on mount rather than via
+  // each input's initial `value` prop keeps `answers` (the single source of truth used by
   // validation/submit/conditional-logic) in sync from the start, so an untouched
-  // default-valued field still submits its default instead of an empty answer.
+  // default-valued field still submits its default instead of an empty answer. ranking
+  // piggybacks on the same effect even though it has no admin-configured default — it's
+  // seeded to its own authored item order (see resolveFieldDefaultAnswer) so an untouched
+  // ranking still submits a real (if unmoved) answer instead of a blank one.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setAnswers((prev) => {
@@ -247,6 +270,7 @@ export function FormRendererClient({
     const allErrors = validateAnswers(schema, answers);
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
+      toast.error(fieldErrorToastMessage(Object.keys(allErrors).length));
       const firstFieldId = Object.keys(allErrors)[0];
       if (firstFieldId) setPageIndex(findPageIndexForField(firstFieldId));
       return;
@@ -274,6 +298,7 @@ export function FormRendererClient({
 
       if (data.fieldErrors) {
         setErrors(data.fieldErrors);
+        toast.error(fieldErrorToastMessage(Object.keys(data.fieldErrors).length));
         const firstFieldId = Object.keys(data.fieldErrors)[0];
         if (firstFieldId) setPageIndex(findPageIndexForField(firstFieldId));
       }
@@ -285,7 +310,7 @@ export function FormRendererClient({
     } finally {
       setSubmitting(false);
     }
-  }, [answers, ensureSubmissionId, findPageIndexForField, previewMode, schema, slug]);
+  }, [answers, ensureSubmissionId, findPageIndexForField, previewMode, schema, slug, toast]);
 
   const handleNextOrSubmit = useCallback(async () => {
     const page = schema.pages[pageIndex];
@@ -294,6 +319,7 @@ export function FormRendererClient({
     const pageErrors = validatePageAnswers(schema, page, answers);
     if (Object.keys(pageErrors).length > 0) {
       setErrors((prev) => ({ ...prev, ...pageErrors }));
+      toast.error(fieldErrorToastMessage(Object.keys(pageErrors).length));
       return;
     }
 
@@ -303,7 +329,7 @@ export function FormRendererClient({
     }
 
     await submitForm();
-  }, [answers, pageIndex, schema, submitForm]);
+  }, [answers, pageIndex, schema, submitForm, toast]);
 
   const handleBack = useCallback(() => {
     setSubmitError(null);
@@ -355,6 +381,9 @@ export function FormRendererClient({
   const brandStyle = {
     '--color-primary': primaryColor,
     '--form-secondary-color': secondaryColor,
+    '--form-table-header-bg': schema.branding.tableThemeHeaderColor,
+    '--form-table-header-text': schema.branding.tableThemeHeaderTextColor,
+    '--form-table-value-bg': schema.branding.tableThemeValueColor,
   } as CSSProperties;
   const submitButtonText = schema.branding.submitButtonText?.trim() || DEFAULT_SUBMIT_BUTTON_TEXT;
   const submitButtonSizeClass = `form-submit-button--${schema.branding.submitButtonSize ?? 'medium'}`;
@@ -367,6 +396,7 @@ export function FormRendererClient({
       : null),
   };
   const submitButtonAlign = schema.branding.submitButtonAlign ?? 'center';
+  const isTableLayoutStyle = schema.branding.layoutStyle === 'table';
   const formActionsPrimaryStyle: CSSProperties = {
     justifyContent:
       submitButtonAlign === 'left'
@@ -377,7 +407,10 @@ export function FormRendererClient({
   };
 
   return (
-    <div className="form-renderer" style={brandStyle}>
+    <div
+      className={`form-renderer ${isTableLayoutStyle ? 'form-renderer--table-theme' : ''}`}
+      style={brandStyle}
+    >
       <div className="form-renderer-body">
         <header className="form-renderer-hero" style={{ textAlign: titleAlign }}>
           {headerLogoIds.map((fieldId) => {
@@ -428,6 +461,19 @@ export function FormRendererClient({
           {showPageTitle ? <h2 className="form-page-title">{currentPage.title}</h2> : null}
 
           {submitError ? <div className="form-error">{submitError}</div> : null}
+
+          {isTableLayoutStyle ? (
+            <div className="form-table-theme-header">
+              <div className="form-table-theme-header-cell">
+                {schema.branding.tableThemeFieldColumnLabel ||
+                  DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL}
+              </div>
+              <div className="form-table-theme-header-cell">
+                {schema.branding.tableThemeValueColumnLabel ||
+                  DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL}
+              </div>
+            </div>
+          ) : null}
 
           <div className="form-field-group-list">
             {bodyFieldIds.map((fieldId) => {
@@ -493,21 +539,12 @@ export function FormRendererClient({
         </div>
 
         <div className="form-actions">
-          {/* Every blocking validation error (both the current-page check in
-              handleNextOrSubmit and the full-schema check in submitForm, which can jump
-              the respondent back to an earlier page) lands in `errors`, so this derives
-              straight from it rather than tracking a separate "was blocked" flag — it
-              appears the instant Next/Submit is blocked and disappears the instant the
-              last flagged field is fixed (handleAnswerChange already clears a field's own
-              entry on change). Placed by the button rather than up at the top of the
-              field list: a respondent who scrolled straight to Submit on a long page
-              would otherwise get no visible feedback at all for why nothing happened. */}
-          {Object.keys(errors).length > 0 ? (
-            <p className="form-validation-notice" role="alert">
-              Please fix the highlighted field{Object.keys(errors).length > 1 ? 's' : ''} above
-              before continuing.
-            </p>
-          ) : null}
+          {/* Was a persistent inline notice here, reactively shown for as long as `errors`
+              was non-empty. Now a toast instead (see the toast.error calls in
+              handleNextOrSubmit/submitForm above): it fires once, at the moment Next/Submit
+              is actually blocked, then fades — a respondent who scrolled straight to Submit
+              still gets clear feedback for why nothing happened, but it no longer sits
+              pinned above the button for the whole time a field is invalid. */}
           <div className="form-actions-primary" style={formActionsPrimaryStyle}>
             {pageIndex > 0 ? (
               <button

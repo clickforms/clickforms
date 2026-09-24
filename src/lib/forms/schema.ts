@@ -38,6 +38,15 @@ export const FIELD_TYPES = [
   'opinion_scale',
   'legal',
   'hidden',
+  'table',
+  'question_table',
+  'full_name',
+  'yes_no',
+  'ranking',
+  'picture_choice',
+  'masked_text',
+  'calculation',
+  'draw_on_image',
 ] as const;
 
 export const COLUMN_COUNTS = [2, 3, 4] as const;
@@ -72,10 +81,11 @@ export function isLayoutOnlyField(type: FieldType): boolean {
 // Field types whose answer is always a single plain string (or coerces cleanly to one) —
 // the only types eligible to be picked as a form's PDF filename "prefix" (Settings tab,
 // see FormSettingsClient / resolveFilenamePrefixValue in generate-submission-pdf.ts).
-// Deliberately excludes: paragraph (multi-line, messy in a filename), checkbox (array
-// answer), file_upload/signature/image (not text), address/choice_matrix (structured
-// objects, not a single string), rating/opinion_scale/legal (numbers/booleans, not
-// identifying text), and every layout-only type (never has an answer at all).
+// Deliberately excludes: paragraph (multi-line, messy in a filename), checkbox/ranking
+// (array answer), file_upload/signature/image/picture_choice/draw_on_image (not text),
+// address/full_name/choice_matrix/table/question_table (structured objects, not a single
+// string), rating/opinion_scale/legal/yes_no (not free identifying text), calculation (a
+// number, not identifying text), and every layout-only type (never has an answer at all).
 export const FILENAME_PREFIX_ELIGIBLE_FIELD_TYPES = [
   'short_text',
   'multi_choice',
@@ -87,6 +97,7 @@ export const FILENAME_PREFIX_ELIGIBLE_FIELD_TYPES = [
   'phone',
   'website',
   'hidden',
+  'masked_text',
 ] as const satisfies readonly FieldType[];
 
 export function isFilenamePrefixEligibleField(type: FieldType): boolean {
@@ -310,6 +321,19 @@ const shortTextFieldSchema = baseFieldSchema.extend({
   defaultValue: z.string().optional(),
 });
 
+// A single-line text field constrained to a fixed character pattern (a phone number, SSN,
+// license plate, etc.) — see lib/forms/text-mask.ts for the '#'/'A'/'*' token convention
+// `mask` is authored in and the shared apply/validate helpers every consumer (builder
+// preview, public input, server-side validation) uses so they can never drift apart on
+// what "matches the mask" means. The answer itself is a plain string, same shape as
+// short_text — the mask only constrains its characters, not its storage.
+const maskedTextFieldSchema = baseFieldSchema.extend({
+  type: z.literal('masked_text'),
+  mask: z.string().min(1),
+  placeholder: z.string().optional(),
+  defaultValue: z.string().optional(),
+});
+
 const paragraphFieldSchema = baseFieldSchema.extend({
   type: z.literal('paragraph'),
   validation: textValidationSchema.optional(),
@@ -353,6 +377,29 @@ const dropdownFieldSchema = baseFieldSchema.extend({
   placeholder: z.string().optional(),
   defaultValue: z.string().optional(),
   ...optionFieldExtras,
+});
+
+// An image tile per option instead of a text label — visually a single-select
+// multi_choice (pick exactly one), matching this app's existing "multi_choice = single
+// select" naming convention (see the FIELD_TYPE_LABELS comment above). Each tile's image
+// is a plain URL rather than an S3-backed upload like the `image` field type's
+// imageStorageKey: that upload pipeline (presign/confirm routes, S3 key builder, the
+// FieldImageUpload component) is entirely keyed by fieldId — one image per field — and
+// extending it to one-image-per-option would mean a parallel per-option upload route,
+// key namespace, and UI in both the org and platform-admin builders. A URL keeps this
+// field shippable without that new subsystem; `label` still doubles as the tile's caption
+// and its accessible alt text.
+const pictureChoiceOptionSchema = fieldOptionSchema.extend({
+  imageUrl: z.string().url().optional(),
+});
+
+export type PictureChoiceOption = z.infer<typeof pictureChoiceOptionSchema>;
+
+const pictureChoiceFieldSchema = baseFieldSchema.extend({
+  type: z.literal('picture_choice'),
+  options: z.array(pictureChoiceOptionSchema).min(2),
+  defaultValue: z.string().optional(),
+  randomizeOrder: z.boolean().optional(),
 });
 
 export const DATE_DISPLAY_FORMATS = ['iso', 'us', 'uk'] as const;
@@ -559,6 +606,19 @@ const addressFieldSchema = baseFieldSchema.extend({
   includeCountry: z.boolean().optional(),
 });
 
+// Compound first/middle/last name field (JotForm/Typeform's "Full Name") — same
+// single-JSON-string-answer pattern as address above, for the same reason (a name
+// respondent's typed across 2-4 sub-inputs shouldn't force FormAnswers' value type to
+// widen beyond `string | string[] | undefined`). First and Last are always shown and are
+// what `required` actually checks (see validate-answers.ts); Prefix/Middle are optional
+// sub-fields an admin can turn on per JotForm's own Full Name field, off by default so
+// the common case stays a plain two-box name field.
+const fullNameFieldSchema = baseFieldSchema.extend({
+  type: z.literal('full_name'),
+  includePrefix: z.boolean().optional(),
+  includeMiddleName: z.boolean().optional(),
+});
+
 // A ratings grid — one row per statement/item, one shared set of columns (e.g. a
 // Likert scale) answered per row. Like address, the answer is a single JSON string
 // (row id -> column id map), not a new value shape.
@@ -566,6 +626,104 @@ const choiceMatrixFieldSchema = baseFieldSchema.extend({
   type: z.literal('choice_matrix'),
   rows: z.array(fieldOptionSchema).min(1),
   columns: z.array(fieldOptionSchema).min(2),
+});
+
+// A repeatable input table (Jotform's "Input Table" widget) — the respondent fills in
+// N rows of structured data using a fixed, admin-defined set of columns (e.g. a packing
+// list: Item / Quantity / Notes). Unlike choice_matrix's fixed row count, the row count
+// here is chosen by the respondent (within minRows/maxRows), so the answer is naturally
+// an *array* of row objects rather than a single row-id -> column-id map. Same pattern as
+// address/choice_matrix though: serialized into a single JSON string (see
+// lib/forms/compound-answer.ts's TableAnswer) rather than widening FormAnswers' value type.
+export const TABLE_COLUMN_TYPES = ['short_text', 'number', 'dropdown', 'date'] as const;
+export type TableColumnType = (typeof TABLE_COLUMN_TYPES)[number];
+export const TABLE_COLUMN_TYPE_LABEL: Record<TableColumnType, string> = {
+  short_text: 'Short answer',
+  number: 'Number',
+  dropdown: 'Dropdown',
+  date: 'Date',
+};
+
+const tableColumnSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  type: z.enum(TABLE_COLUMN_TYPES),
+  // Only read/rendered when type === 'dropdown' — kept optional (rather than required
+  // for every column) so switching a column's type away from dropdown doesn't force
+  // clearing options an admin might switch back to.
+  options: z.array(fieldOptionSchema).optional(),
+});
+
+export type TableColumn = z.infer<typeof tableColumnSchema>;
+
+export const TABLE_ROWS_MAX = 50;
+export const DEFAULT_TABLE_ROWS = 2;
+
+const tableFieldSchema = baseFieldSchema.extend({
+  type: z.literal('table'),
+  columns: z.array(tableColumnSchema).min(1),
+  // How many empty rows the public form starts with — undefined falls through to
+  // DEFAULT_TABLE_ROWS. minRows/maxRows bound how many rows a respondent can add/remove
+  // via the +/- row controls; undefined means "no limit" (maxRows still capped at
+  // TABLE_ROWS_MAX by the input itself to keep the rendered table sane).
+  defaultRows: z.number().int().min(1).max(TABLE_ROWS_MAX).optional(),
+  minRows: z.number().int().min(0).max(TABLE_ROWS_MAX).optional(),
+  maxRows: z.number().int().min(1).max(TABLE_ROWS_MAX).optional(),
+});
+
+// A "Question Table" — the print-form label/value grid (e.g. an intake sheet: "Field" |
+// "Details", one fixed row per question) rather than table's respondent-repeatable data
+// rows. Every row IS a distinct question, admin-authored and fixed (never added/removed
+// by the respondent, unlike `table`'s rows) with its own single answer whose input type
+// is chosen per row — the opposite division of labor from `table`, where columns carry
+// the type and rows are the repeatable, respondent-authored part.
+//
+// Modeled closely on choice_matrix's `rows` (a fixed, admin-authored list) but each row
+// gets its own free-form answer instead of a shared set of rating columns, and — since
+// each row is really its own little question — its own independent `required` flag
+// rather than one required toggle for the whole field (see the screenshot this was
+// designed from: "Primary disability (optional but recommended)" sitting alongside
+// otherwise-implied-required rows). The field-level `required` from baseFieldSchema still
+// exists (every field type has it) but is deliberately unused/hidden for this type — see
+// the FieldSettingsPanel comment on why the generic Required toggle is skipped here.
+export const QUESTION_ROW_ANSWER_TYPES = ['short_text', 'number', 'dropdown', 'date'] as const;
+export type QuestionRowAnswerType = (typeof QUESTION_ROW_ANSWER_TYPES)[number];
+export const QUESTION_ROW_ANSWER_TYPE_LABEL: Record<QuestionRowAnswerType, string> = {
+  short_text: 'Short answer',
+  number: 'Number',
+  dropdown: 'Dropdown',
+  date: 'Date',
+};
+
+const questionTableRowSchema = z.object({
+  id: z.string().min(1),
+  // The question itself, e.g. "Participant name" — deliberately named `label` (matching
+  // fieldOptionSchema's shape) rather than `question`, so this can reuse the same
+  // add/remove/reorder row-editor chrome the rest of the builder already uses for
+  // choice_matrix's rows / table's columns.
+  label: z.string().min(1),
+  type: z.enum(QUESTION_ROW_ANSWER_TYPES),
+  options: z.array(fieldOptionSchema).optional(),
+  // undefined/false = optional, matching the field-level `required` convention
+  // everywhere else — a freshly added row defaults to required: true instead (see
+  // createDefaultField's question_table case) since that matches the common "intake
+  // form" case this field is for, but the schema itself makes no assumption either way.
+  required: z.boolean().optional(),
+});
+
+export type QuestionTableRow = z.infer<typeof questionTableRowSchema>;
+
+const questionTableFieldSchema = baseFieldSchema.extend({
+  type: z.literal('question_table'),
+  rows: z.array(questionTableRowSchema).min(1),
+  // Header row text + coloring, independent of the form-wide branding.layoutStyle 'table'
+  // theme (see LAYOUT_STYLE_OPTIONS) — this field renders as its own compact table with
+  // its own look, usable in any form regardless of that form's overall layout style.
+  fieldColumnLabel: z.string().min(1).max(60).optional(),
+  valueColumnLabel: z.string().min(1).max(60).optional(),
+  headerColor: hexColorSchema,
+  headerTextColor: hexColorSchema,
+  valueColor: hexColorSchema,
 });
 
 const numberValidationSchema = z
@@ -587,6 +745,21 @@ const numberFieldSchema = baseFieldSchema.extend({
   // Rendered adjacent to the input rather than baked into the stored value — e.g.
   // prefix "$" + suffix "/mo" around a plain numeric answer, matching Typeform/JotForm's
   // currency- and unit-style number fields without polluting the exported data.
+  prefix: z.string().max(8).optional(),
+  suffix: z.string().max(8).optional(),
+});
+
+// A read-only field whose value is computed from other fields rather than typed by the
+// respondent — see lib/forms/calculation.ts for the `{fieldId}`-token arithmetic formula
+// language `formula` is authored in and the shared evaluator every consumer (public
+// renderer, submission display, PDF export) uses. The stored answer is always the plain
+// numeric result as a string (e.g. "42.5"), unformatted — decimalPlaces/prefix/suffix are
+// purely display concerns applied at render time, same division of labor as the `number`
+// field type's own prefix/suffix.
+const calculationFieldSchema = baseFieldSchema.extend({
+  type: z.literal('calculation'),
+  formula: z.string().min(1),
+  decimalPlaces: z.number().int().min(0).max(6).optional(),
   prefix: z.string().max(8).optional(),
   suffix: z.string().max(8).optional(),
 });
@@ -670,6 +843,47 @@ const legalFieldSchema = baseFieldSchema.extend({
   linkUrl: z.string().optional(),
 });
 
+// A two-button single-choice field distinct from a 2-option multi_choice: the answer is
+// always the fixed literal 'yes' or 'no' (not an admin-editable option id), so relabeling
+// yesLabel/noLabel (JotForm lets you rename these to e.g. "Agree"/"Disagree") never
+// invalidates previously-submitted answers or breaks conditional-logic rules pointed at
+// this field, the way renaming a multi_choice option's label never touches its id either.
+export const YES_NO_VALUES = ['yes', 'no'] as const;
+export type YesNoValue = (typeof YES_NO_VALUES)[number];
+
+const yesNoFieldSchema = baseFieldSchema.extend({
+  type: z.literal('yes_no'),
+  yesLabel: z.string().min(1).optional(),
+  noLabel: z.string().min(1).optional(),
+  defaultValue: z.enum(YES_NO_VALUES).optional(),
+});
+
+// A drag-to-reorder list — the respondent ranks a fixed, admin-authored set of items best
+// to worst. Unlike address/full_name's structured answers, the answer here is naturally
+// an array of option ids in the respondent's chosen order — already exactly
+// `FormAnswers`' existing `string[]` shape (same as checkbox), so no
+// lib/forms/compound-answer.ts serialization is needed; array *order* carries the
+// ranking instead of array *membership* the way checkbox uses it.
+const rankingFieldSchema = baseFieldSchema.extend({
+  type: z.literal('ranking'),
+  options: z.array(fieldOptionSchema).min(2),
+});
+
+// Admin uploads a background image (same imageStorageKey convention as the `image` field
+// type — see buildFormFieldImageKey/isFormFieldImageKey in lib/s3.ts, reused unchanged);
+// the respondent then draws/annotates on top of it on a <canvas> and submits the flattened
+// result as an uploaded PNG. The answer is a SubmissionFile id (a plain string), the same
+// shape `signature` uses — it goes through the exact same public-form upload pipeline
+// (see uploadFile in form-renderer-client.tsx and the submissions/[id]/uploads/{presign,
+// confirm} routes, which allowlist 'signature' alongside this type) rather than a new one.
+const drawOnImageFieldSchema = baseFieldSchema.extend({
+  type: z.literal('draw_on_image'),
+  imageStorageKey: z.string().min(1).optional(),
+  alt: z.string().optional(),
+  strokeColor: hexColorSchema,
+  strokeWidth: z.number().int().min(1).max(20).optional(),
+});
+
 // Carries a value the respondent never sees or edits — either a fixed admin-set default,
 // or (if `sourceParam` is set) whatever value arrives on the public form URL's query
 // string under that param name (e.g. ?ref=partner_x), falling back to `defaultValue` when
@@ -709,6 +923,15 @@ const formFieldUnionSchema = z.discriminatedUnion('type', [
   opinionScaleFieldSchema,
   legalFieldSchema,
   hiddenFieldSchema,
+  tableFieldSchema,
+  questionTableFieldSchema,
+  fullNameFieldSchema,
+  yesNoFieldSchema,
+  rankingFieldSchema,
+  pictureChoiceFieldSchema,
+  maskedTextFieldSchema,
+  calculationFieldSchema,
+  drawOnImageFieldSchema,
 ]);
 
 // Preprocess step (rather than baking the migration into staticTextFieldSchema itself)
@@ -778,8 +1001,35 @@ export const SUBMIT_BUTTON_SIZE_LABEL: Record<SubmitButtonSize, string> = {
   large: 'Large',
 };
 
+// The form's overall layout treatment. 'default' is the existing stacked layout (label
+// above input). 'table' renders every real field as one continuous two-column table —
+// a label column and a value column, under a single header row naming the two columns
+// (default "Field"/"Details", editable via tableThemeFieldColumnLabel/
+// tableThemeValueColumnLabel) — matching the look of a printed label/value form.
+// Primarily useful for forms imported from a flat/scanned PDF (see document-import),
+// where that's how the source document was actually laid out, but available to any form
+// via the Form settings modal's "Layout" toggle. Ships with no color treatment of its
+// own (transparent header/value backgrounds) — tableThemeHeaderColor/
+// tableThemeHeaderTextColor/tableThemeValueColor let the admin apply their own, same
+// FieldColorPicker control already used for the submit button.
+export const LAYOUT_STYLE_OPTIONS = ['default', 'table'] as const;
+export type LayoutStyle = (typeof LAYOUT_STYLE_OPTIONS)[number];
+export const LAYOUT_STYLE_LABEL: Record<LayoutStyle, string> = {
+  default: 'Default',
+  table: 'Table',
+};
+
+export const DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL = 'Field';
+export const DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL = 'Details';
+
 const brandingSchema = z
   .object({
+    layoutStyle: z.enum(LAYOUT_STYLE_OPTIONS).optional(),
+    tableThemeFieldColumnLabel: z.string().min(1).max(60).optional(),
+    tableThemeValueColumnLabel: z.string().min(1).max(60).optional(),
+    tableThemeHeaderColor: hexColorSchema,
+    tableThemeHeaderTextColor: hexColorSchema,
+    tableThemeValueColor: hexColorSchema,
     primaryColor: z
       .string()
       .regex(/^#[0-9a-fA-F]{6}$/, 'primaryColor must be a 6-digit hex color, e.g. #55ea8c')

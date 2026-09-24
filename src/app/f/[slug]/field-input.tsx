@@ -1,15 +1,39 @@
 'use client';
 
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { ChangeEvent, CSSProperties } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { DrawOnImagePad } from '@/app/f/[slug]/draw-on-image-pad';
 import { SignaturePad } from '@/app/f/[slug]/signature-pad';
 import { DatePickerField } from '@/components/date-picker/date-picker-field';
 import { TimePickerField } from '@/components/time-picker/time-picker-field';
+import { evaluateCalculationFormula, formatCalculationResult } from '@/lib/forms/calculation';
 import {
   parseAddressAnswer,
   parseChoiceMatrixAnswer,
+  parseFullNameAnswer,
+  parseQuestionTableAnswer,
+  parseTableAnswer,
   serializeAddressAnswer,
   serializeChoiceMatrixAnswer,
+  serializeFullNameAnswer,
+  serializeQuestionTableAnswer,
+  serializeTableAnswer,
+  type TableRowAnswer,
 } from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getFieldImageSrc } from '@/lib/forms/field-image';
@@ -29,7 +53,8 @@ import {
 import { resolveFieldWidth } from '@/lib/forms/field-width';
 import { resolveMergeFieldsForRespondent } from '@/lib/forms/merge-fields';
 import { OTHER_OPTION_ID } from '@/lib/forms/other-option';
-import type { FieldOption, FormField } from '@/lib/forms/schema';
+import { DEFAULT_TABLE_ROWS, type FieldOption, type FormField } from '@/lib/forms/schema';
+import { applyMask, maskPlaceholder } from '@/lib/forms/text-mask';
 
 // Renders a single field's input control, switching on FormField's discriminant. Owns no
 // answer state itself (the wizard in form-renderer-client.tsx is the single source of
@@ -442,6 +467,22 @@ export function FieldInput({
         />
       ) : null}
 
+      {field.type === 'masked_text' ? (
+        <input
+          id={field.id}
+          type="text"
+          className="text-input form-field-input"
+          style={inputStyle}
+          placeholder={field.placeholder || maskPlaceholder(field.mask)}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(event) => onChange(applyMask(event.target.value, field.mask))}
+        />
+      ) : null}
+
+      {field.type === 'calculation' ? (
+        <CalculationControl field={field} value={value} onChange={onChange} answers={answers} />
+      ) : null}
+
       {field.type === 'file_upload' ? (
         <FileUploadControl
           field={field}
@@ -468,8 +509,25 @@ export function FieldInput({
         />
       ) : null}
 
+      {field.type === 'full_name' ? (
+        <FullNameControl
+          value={value}
+          onChange={onChange}
+          includePrefix={field.includePrefix ?? false}
+          includeMiddleName={field.includeMiddleName ?? false}
+        />
+      ) : null}
+
       {field.type === 'choice_matrix' ? (
         <ChoiceMatrixControl field={field} value={value} onChange={onChange} />
+      ) : null}
+
+      {field.type === 'table' ? (
+        <TableControl field={field} value={value} onChange={onChange} />
+      ) : null}
+
+      {field.type === 'question_table' ? (
+        <QuestionTableControl field={field} value={value} onChange={onChange} />
       ) : null}
 
       {field.type === 'number' ? (
@@ -532,6 +590,30 @@ export function FieldInput({
 
       {field.type === 'legal' ? (
         <LegalControl field={field} value={value} onChange={onChange} />
+      ) : null}
+
+      {field.type === 'yes_no' ? (
+        <YesNoControl field={field} value={value} onChange={onChange} />
+      ) : null}
+
+      {field.type === 'ranking' ? (
+        <RankingControl field={field} value={value} onChange={onChange} />
+      ) : null}
+
+      {field.type === 'picture_choice' ? (
+        <PictureChoiceControl field={field} value={value} onChange={onChange} />
+      ) : null}
+
+      {field.type === 'draw_on_image' ? (
+        <DrawOnImageControl
+          field={field}
+          value={value}
+          onChange={onChange}
+          onUploadFile={onUploadFile}
+          slug={slug}
+          formId={formId}
+          previewMode={previewMode}
+        />
       ) : null}
 
       {error ? <p className="form-field-error">{error}</p> : null}
@@ -750,6 +832,90 @@ function SignatureControl({ field, value, onChange, onUploadFile }: SignatureCon
 }
 
 // ---------------------------------------------------------------------------
+// draw_on_image — respondent annotates an admin-uploaded background image on a
+// <canvas>, then the flattened (background + annotations) PNG uploads through the exact
+// same presign/PUT/confirm pipeline signature/file_upload already use (see
+// DrawOnImagePad and lib/s3.ts's isFormFieldImageKey — the background itself is fetched
+// via the same field-image API route the `image` field type uses).
+// ---------------------------------------------------------------------------
+
+interface DrawOnImageControlProps {
+  field: Extract<FormField, { type: 'draw_on_image' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+  onUploadFile?: (fieldId: string, file: File) => Promise<string>;
+  slug?: string;
+  formId?: string;
+  previewMode?: boolean;
+}
+
+function DrawOnImageControl({
+  field,
+  value,
+  onChange,
+  onUploadFile,
+  slug,
+  formId,
+  previewMode,
+}: DrawOnImageControlProps) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const currentFileId = typeof value === 'string' ? value : undefined;
+  const backgroundSrc =
+    field.imageStorageKey && slug
+      ? (getFieldImageSrc({ slug, formId, fieldId: field.id, preferFormId: previewMode }) ??
+        undefined)
+      : undefined;
+
+  async function handleSave(blob: Blob) {
+    if (!onUploadFile) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const file = new File([blob], 'drawing.png', { type: 'image/png' });
+      const fileId = await onUploadFile(field.id, file);
+      onChange(fileId);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  if (currentFileId) {
+    return (
+      <div className="signature-pad-signed">
+        <span>Drawing submitted ✓</span>
+        <button
+          type="button"
+          className="button button--ghost button--small"
+          onClick={() => {
+            setUploadError(null);
+            onChange(undefined);
+          }}
+        >
+          Clear and redraw
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <DrawOnImagePad
+        imageSrc={backgroundSrc}
+        strokeColor={field.strokeColor}
+        strokeWidth={field.strokeWidth}
+        onSave={handleSave}
+        saving={uploading}
+      />
+      {uploadError ? <p className="form-field-error">{uploadError}</p> : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // address — four sub-inputs (street/suburb/state/postcode); the answer stored in
 // `value` is a single JSON string (see lib/forms/compound-answer.ts) so it fits the
 // same `string | string[] | undefined` slot every other field type uses.
@@ -809,6 +975,71 @@ function AddressControl({ value, onChange, includeCountry }: AddressControlProps
           onChange={(event) => update({ country: event.target.value })}
         />
       ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// full_name — 2-4 sub-inputs (optional prefix, first, optional middle, last); the answer
+// stored in `value` is a single JSON string (see lib/forms/compound-answer.ts), same
+// pattern as AddressControl above.
+// ---------------------------------------------------------------------------
+
+interface FullNameControlProps {
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+  includePrefix: boolean;
+  includeMiddleName: boolean;
+}
+
+function FullNameControl({
+  value,
+  onChange,
+  includePrefix,
+  includeMiddleName,
+}: FullNameControlProps) {
+  const name = parseFullNameAnswer(value);
+
+  function update(partial: Partial<typeof name>) {
+    onChange(serializeFullNameAnswer({ ...name, ...partial }));
+  }
+
+  return (
+    <div className="form-full-name-field">
+      {includePrefix ? (
+        <input
+          type="text"
+          className="text-input form-field-input form-full-name-prefix"
+          placeholder="Prefix"
+          value={name.prefix}
+          onChange={(event) => update({ prefix: event.target.value })}
+        />
+      ) : null}
+      <input
+        type="text"
+        className="text-input form-field-input"
+        placeholder="First name"
+        autoComplete="given-name"
+        value={name.first}
+        onChange={(event) => update({ first: event.target.value })}
+      />
+      {includeMiddleName ? (
+        <input
+          type="text"
+          className="text-input form-field-input"
+          placeholder="Middle name"
+          value={name.middle}
+          onChange={(event) => update({ middle: event.target.value })}
+        />
+      ) : null}
+      <input
+        type="text"
+        className="text-input form-field-input"
+        placeholder="Last name"
+        autoComplete="family-name"
+        value={name.last}
+        onChange={(event) => update({ last: event.target.value })}
+      />
     </div>
   );
 }
@@ -959,6 +1190,487 @@ function LegalControl({ field, value, onChange }: LegalControlProps) {
         ) : null}
       </span>
     </label>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// yes_no — two buttons; the answer is always the fixed literal 'yes'/'no' (see
+// YES_NO_VALUES in schema.ts), regardless of what yesLabel/noLabel currently say.
+// ---------------------------------------------------------------------------
+
+interface YesNoControlProps {
+  field: Extract<FormField, { type: 'yes_no' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+}
+
+function YesNoControl({ field, value, onChange }: YesNoControlProps) {
+  return (
+    <div className="form-yes-no-field" role="radiogroup">
+      <button
+        type="button"
+        className={`form-yes-no-option ${value === 'yes' ? 'form-yes-no-option--selected' : ''}`}
+        aria-pressed={value === 'yes'}
+        onClick={() => onChange(value === 'yes' ? undefined : 'yes')}
+      >
+        {field.yesLabel || 'Yes'}
+      </button>
+      <button
+        type="button"
+        className={`form-yes-no-option ${value === 'no' ? 'form-yes-no-option--selected' : ''}`}
+        aria-pressed={value === 'no'}
+        onClick={() => onChange(value === 'no' ? undefined : 'no')}
+      >
+        {field.noLabel || 'No'}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ranking — a drag-to-reorder list over a fixed, admin-authored set of items. The answer
+// is an array of option ids in the respondent's chosen order (index 0 = top-ranked) —
+// already exactly FormAnswers' existing string[] shape (same as checkbox), so no
+// lib/forms/compound-answer.ts serialization is needed here; order carries the meaning
+// instead of membership. Drag reordering (dnd-kit, same library the admin builder uses)
+// is the primary interaction, with up/down buttons alongside for keyboard/no-drag access.
+// ---------------------------------------------------------------------------
+
+interface RankingControlProps {
+  field: Extract<FormField, { type: 'ranking' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+}
+
+function RankingControl({ field, value, onChange }: RankingControlProps) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  // The respondent's current order once they've touched it; otherwise falls back to the
+  // admin-authored option order. Tolerates a saved order that references an option
+  // deleted since submission (dropped) or one added since (appended) rather than
+  // crashing or losing items.
+  const orderedIds = useMemo(() => {
+    const optionIds = field.options.map((option) => option.id);
+    if (!Array.isArray(value) || value.length === 0) return optionIds;
+    const known = value.filter((id) => optionIds.includes(id));
+    const missing = optionIds.filter((id) => !known.includes(id));
+    return [...known, ...missing];
+  }, [field.options, value]);
+
+  const labelById = useMemo(
+    () => new Map(field.options.map((option) => [option.id, option.label])),
+    [field.options],
+  );
+
+  function moveItem(fromIndex: number, toIndex: number) {
+    if (toIndex < 0 || toIndex >= orderedIds.length) return;
+    onChange(arrayMove(orderedIds, fromIndex, toIndex));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const fromIndex = orderedIds.indexOf(String(active.id));
+    const toIndex = orderedIds.indexOf(String(over.id));
+    if (fromIndex === -1 || toIndex === -1) return;
+    onChange(arrayMove(orderedIds, fromIndex, toIndex));
+  }
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
+        <div className="form-ranking-field">
+          {orderedIds.map((id, index) => (
+            <RankingItem
+              key={id}
+              id={id}
+              index={index}
+              label={labelById.get(id) ?? id}
+              isFirst={index === 0}
+              isLast={index === orderedIds.length - 1}
+              onMoveUp={() => moveItem(index, index - 1)}
+              onMoveDown={() => moveItem(index, index + 1)}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function RankingItem({
+  id,
+  index,
+  label,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
+}: {
+  id: string;
+  index: number;
+  label: string;
+  isFirst: boolean;
+  isLast: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`form-ranking-item ${isDragging ? 'form-ranking-item--dragging' : ''}`}
+    >
+      <span className="form-ranking-item-index">{index + 1}</span>
+      <span className="form-ranking-item-label">{label}</span>
+      <div className="form-ranking-item-controls">
+        <button
+          type="button"
+          className="form-ranking-move-btn"
+          disabled={isFirst}
+          onClick={onMoveUp}
+          aria-label={`Move ${label} up`}
+        >
+          ▲
+        </button>
+        <button
+          type="button"
+          className="form-ranking-move-btn"
+          disabled={isLast}
+          onClick={onMoveDown}
+          aria-label={`Move ${label} down`}
+        >
+          ▼
+        </button>
+        <span
+          className="form-ranking-item-handle"
+          aria-hidden="true"
+          {...attributes}
+          {...listeners}
+        >
+          ⠿
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// picture_choice — a grid of image tiles, single-select (radio semantics, same as
+// multi_choice) — the answer is a plain option id, same shape as multi_choice/dropdown.
+// ---------------------------------------------------------------------------
+
+interface PictureChoiceControlProps {
+  field: Extract<FormField, { type: 'picture_choice' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+}
+
+function PictureChoiceControl({ field, value, onChange }: PictureChoiceControlProps) {
+  const orderedOptions = useOrderedOptions(field.options, field.randomizeOrder);
+  return (
+    <div className="form-picture-choice-grid" role="radiogroup">
+      {orderedOptions.map((option) => {
+        const selected = value === option.id;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            className={`form-picture-choice-tile ${selected ? 'form-picture-choice-tile--selected' : ''}`}
+            aria-pressed={selected}
+            onClick={() => onChange(selected ? undefined : option.id)}
+          >
+            {option.imageUrl ? (
+              // biome-ignore lint/performance/noImgElement: admin-supplied arbitrary URL, next/image requires a known host
+              <img src={option.imageUrl} alt={option.label} className="form-picture-choice-image" />
+            ) : (
+              <div className="form-picture-choice-placeholder" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <rect
+                    x="2"
+                    y="3"
+                    width="14"
+                    height="12"
+                    rx="1.4"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                  />
+                  <circle cx="6" cy="7" r="1.3" stroke="currentColor" strokeWidth="1.2" />
+                  <path
+                    d="M3.5 13l3.5-4 2.6 2.6 2.4-3 3 4.4"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    fill="none"
+                  />
+                </svg>
+              </div>
+            )}
+            <span className="form-picture-choice-label">{option.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// calculation — a read-only field whose value is computed from other fields' answers via
+// lib/forms/calculation.ts's {fieldId}-token arithmetic formula language, rather than
+// typed by the respondent. Recomputes whenever any dependency's answer changes (this
+// effect re-runs on every `answers` change — cheap, since evaluateCalculationFormula is a
+// small string substitution + a short recursive-descent parse, not a network call) and
+// writes the result back into `answers` via onChange so it submits like a real answer.
+// ---------------------------------------------------------------------------
+
+interface CalculationControlProps {
+  field: Extract<FormField, { type: 'calculation' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+  answers: FormAnswers | undefined;
+}
+
+function CalculationControl({ field, value, onChange, answers }: CalculationControlProps) {
+  const result = useMemo(
+    () => evaluateCalculationFormula(field.formula, answers ?? {}),
+    [field.formula, answers],
+  );
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only the computed result (not the previous value/onChange identity) should trigger a rewrite — including them would either loop (onChange changes each render in some parents) or skip a legitimate recompute
+  useEffect(() => {
+    const nextValue = result === null ? undefined : String(result);
+    if (nextValue !== value) {
+      onChange(nextValue);
+    }
+  }, [result]);
+
+  const display = formatCalculationResult(result, {
+    decimalPlaces: field.decimalPlaces,
+    prefix: field.prefix,
+    suffix: field.suffix,
+  });
+
+  return (
+    <div className="form-calculation-field">
+      <span className="form-calculation-value">{display || '—'}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// table — a repeatable input table (Jotform's "Input Table"): the respondent fills in
+// however many rows they need (bounded by minRows/maxRows) using the admin-configured
+// columns. The answer is a JSON-serialized array of row objects (columnId -> cell text),
+// same "structured answer packed into one string" pattern as address/choice_matrix above.
+// ---------------------------------------------------------------------------
+
+interface TableControlProps {
+  field: Extract<FormField, { type: 'table' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+}
+
+function TableControl({ field, value, onChange }: TableControlProps) {
+  const rows = parseTableAnswer(value);
+  // Always render at least `defaultRows` (or DEFAULT_TABLE_ROWS) worth of rows, even
+  // before the respondent has typed anything — an input table with zero visible rows
+  // would look broken, not just empty.
+  const minVisibleRows = Math.max(field.minRows ?? 0, field.defaultRows ?? DEFAULT_TABLE_ROWS, 1);
+  const visibleRows: TableRowAnswer[] =
+    rows.length >= minVisibleRows
+      ? rows
+      : [...rows, ...Array.from({ length: minVisibleRows - rows.length }, () => ({}))];
+
+  function updateCell(rowIndex: number, columnId: string, cellValue: string) {
+    const next = visibleRows.map((row, index) =>
+      index === rowIndex ? { ...row, [columnId]: cellValue } : row,
+    );
+    onChange(serializeTableAnswer(next));
+  }
+
+  function addRow() {
+    onChange(serializeTableAnswer([...visibleRows, {}]));
+  }
+
+  function removeRow(rowIndex: number) {
+    onChange(serializeTableAnswer(visibleRows.filter((_, index) => index !== rowIndex)));
+  }
+
+  const canRemoveRows = visibleRows.length > (field.minRows ?? 0);
+  const canAddRows = field.maxRows === undefined || visibleRows.length < field.maxRows;
+
+  return (
+    <div className="form-table-field-wrap">
+      <table className="form-table-field">
+        <thead>
+          <tr>
+            {field.columns.map((column) => (
+              <th key={column.id}>{column.label}</th>
+            ))}
+            <th className="form-table-field-row-actions-header" />
+          </tr>
+        </thead>
+        <tbody>
+          {visibleRows.map((row, rowIndex) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id of their own (respondent-added/removed in place) — index is the row's actual identity here
+            <tr key={rowIndex}>
+              {field.columns.map((column) => {
+                const cellId = `${field.id}-${rowIndex}-${column.id}`;
+                const cellValue = row[column.id] ?? '';
+                return (
+                  <td key={column.id}>
+                    {column.type === 'dropdown' ? (
+                      <select
+                        id={cellId}
+                        className="text-input form-field-input"
+                        value={cellValue}
+                        onChange={(event) => updateCell(rowIndex, column.id, event.target.value)}
+                      >
+                        <option value="">Select…</option>
+                        {(column.options ?? []).map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : column.type === 'date' ? (
+                      <DatePickerField
+                        id={cellId}
+                        className="text-input form-field-input"
+                        value={cellValue}
+                        onChange={(nextValue) => updateCell(rowIndex, column.id, nextValue)}
+                      />
+                    ) : (
+                      <input
+                        id={cellId}
+                        type={column.type === 'number' ? 'number' : 'text'}
+                        className="text-input form-field-input"
+                        value={cellValue}
+                        onChange={(event) => updateCell(rowIndex, column.id, event.target.value)}
+                      />
+                    )}
+                  </td>
+                );
+              })}
+              <td className="form-table-field-row-actions">
+                {canRemoveRows ? (
+                  <button
+                    type="button"
+                    className="form-table-field-remove-row"
+                    onClick={() => removeRow(rowIndex)}
+                    aria-label="Remove row"
+                  >
+                    &times;
+                  </button>
+                ) : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {canAddRows ? (
+        <button type="button" className="form-table-field-add-row" onClick={addRow}>
+          + Add row
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// question_table — the print-form label/value grid (e.g. an intake sheet's "Field" |
+// "Details" table): every row is a fixed, admin-authored question with its own single
+// answer, whose input type is chosen per row. Unlike `table` above, rows are never
+// added/removed by the respondent — the row list itself is admin content, only the
+// answers are respondent-authored. The answer is a JSON-serialized rowId -> answer map,
+// same "structured answer packed into one string" pattern as address/choice_matrix/table.
+// ---------------------------------------------------------------------------
+
+interface QuestionTableControlProps {
+  field: Extract<FormField, { type: 'question_table' }>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+}
+
+function QuestionTableControl({ field, value, onChange }: QuestionTableControlProps) {
+  const answer = parseQuestionTableAnswer(value);
+
+  function updateRowAnswer(rowId: string, rowValue: string) {
+    onChange(serializeQuestionTableAnswer({ ...answer, [rowId]: rowValue }));
+  }
+
+  const headerStyle: CSSProperties = {
+    backgroundColor: field.headerColor,
+    color: field.headerTextColor,
+  };
+  const valueStyle: CSSProperties = {
+    backgroundColor: field.valueColor,
+  };
+
+  return (
+    <div className="form-question-table-wrap">
+      <table className="form-question-table">
+        <thead>
+          <tr>
+            <th style={headerStyle}>{field.fieldColumnLabel || 'Field'}</th>
+            <th style={headerStyle}>{field.valueColumnLabel || 'Details'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {field.rows.map((row) => {
+            const cellId = `${field.id}-${row.id}`;
+            const cellValue = answer[row.id] ?? '';
+            return (
+              <tr key={row.id}>
+                <td className="form-question-table-label-cell">
+                  {row.label}
+                  {row.required ? <span className="form-field-required"> *</span> : null}
+                </td>
+                <td style={valueStyle}>
+                  {row.type === 'dropdown' ? (
+                    <select
+                      id={cellId}
+                      className="text-input form-field-input"
+                      value={cellValue}
+                      onChange={(event) => updateRowAnswer(row.id, event.target.value)}
+                    >
+                      <option value="">Select…</option>
+                      {(row.options ?? []).map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : row.type === 'date' ? (
+                    <DatePickerField
+                      id={cellId}
+                      className="text-input form-field-input"
+                      value={cellValue}
+                      onChange={(nextValue) => updateRowAnswer(row.id, nextValue)}
+                    />
+                  ) : (
+                    <input
+                      id={cellId}
+                      type={row.type === 'number' ? 'number' : 'text'}
+                      className="text-input form-field-input"
+                      value={cellValue}
+                      onChange={(event) => updateRowAnswer(row.id, event.target.value)}
+                    />
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

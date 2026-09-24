@@ -149,9 +149,10 @@ export function resolveSectionBreakStyle(field: FormField): CSSProperties {
     style.borderWidth = '1px';
     style.borderStyle = 'solid';
   }
-  if (colored.textColor) {
-    style.color = colored.textColor;
-  }
+  // Default white so the title stays readable on the dark section banner. Title
+  // classes use `color: inherit` so this value actually reaches the text — a
+  // hardcoded #fff on the title would ignore the inherited color.
+  style.color = colored.textColor ?? '#ffffff';
 
   return style;
 }

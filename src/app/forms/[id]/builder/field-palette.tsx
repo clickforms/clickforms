@@ -536,6 +536,308 @@ export function PaletteIcon({ type }: { type: FieldType }) {
           />
         </svg>
       );
+    case 'table':
+      return (
+        <svg {...common} aria-hidden="true">
+          <rect
+            x="2.5"
+            y="3.5"
+            width="13"
+            height="11"
+            rx="1.2"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <line x1="2.5" y1="7" x2="15.5" y2="7" stroke="currentColor" strokeWidth="1.3" />
+          <line x1="7.3" y1="7" x2="7.3" y2="14.5" stroke="currentColor" strokeWidth="1.3" />
+          <line x1="11.6" y1="7" x2="11.6" y2="14.5" stroke="currentColor" strokeWidth="1.3" />
+        </svg>
+      );
+    case 'question_table':
+      return (
+        <svg {...common} aria-hidden="true">
+          <rect
+            x="2.5"
+            y="3.5"
+            width="13"
+            height="11"
+            rx="1.2"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <line x1="2.5" y1="7.5" x2="15.5" y2="7.5" stroke="currentColor" strokeWidth="1.3" />
+          <line x1="7.6" y1="3.5" x2="7.6" y2="14.5" stroke="currentColor" strokeWidth="1.3" />
+        </svg>
+      );
+    case 'full_name':
+      return (
+        <svg {...common} aria-hidden="true">
+          <circle cx="9" cy="5.7" r="2.7" stroke="currentColor" strokeWidth="1.5" />
+          <path
+            d="M3.2 15.3c0-3 2.6-5.1 5.8-5.1s5.8 2.1 5.8 5.1"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    case 'yes_no':
+      return (
+        <svg {...common} aria-hidden="true">
+          <rect
+            x="2"
+            y="6"
+            width="6.2"
+            height="6.2"
+            rx="1.4"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <path
+            d="M3.6 9.1l1.3 1.3 2.1-2.4"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <rect
+            x="9.8"
+            y="6"
+            width="6.2"
+            height="6.2"
+            rx="1.4"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <path
+            d="M11.5 7.7l2.8 2.6M14.3 7.7l-2.8 2.6"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    case 'ranking':
+      return (
+        <svg {...common} aria-hidden="true">
+          <circle cx="3.5" cy="4.5" r="1.3" fill="currentColor" />
+          <line
+            x1="6.3"
+            y1="4.5"
+            x2="15.5"
+            y2="4.5"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+          <circle cx="3.5" cy="9" r="1.3" stroke="currentColor" strokeWidth="1.3" fill="none" />
+          <line
+            x1="6.3"
+            y1="9"
+            x2="15.5"
+            y2="9"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+          <circle cx="3.5" cy="13.5" r="1.3" stroke="currentColor" strokeWidth="1.3" fill="none" />
+          <line
+            x1="6.3"
+            y1="13.5"
+            x2="15.5"
+            y2="13.5"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    case 'picture_choice':
+      return (
+        <svg {...common} aria-hidden="true">
+          <rect
+            x="2"
+            y="3"
+            width="6.4"
+            height="6.4"
+            rx="1"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <circle cx="4.2" cy="5.2" r="0.8" fill="currentColor" />
+          <path
+            d="M2.6 8.6l1.6-1.8 1.3 1.2 1.7-2 1.6 2.6"
+            stroke="currentColor"
+            strokeWidth="1.1"
+            fill="none"
+            strokeLinejoin="round"
+          />
+          <rect
+            x="9.6"
+            y="3"
+            width="6.4"
+            height="6.4"
+            rx="1"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <circle cx="11.8" cy="5.2" r="0.8" fill="currentColor" />
+          <path
+            d="M10.2 8.6l1.6-1.8 1.3 1.2 1.7-2 1.6 2.6"
+            stroke="currentColor"
+            strokeWidth="1.1"
+            fill="none"
+            strokeLinejoin="round"
+          />
+          <circle cx="14.4" cy="10.4" r="2.4" fill="currentColor" />
+          <path
+            d="M13.3 10.4l0.75 0.75L15.6 9.5"
+            stroke="var(--color-surface, #fff)"
+            strokeWidth="1.1"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case 'masked_text':
+      return (
+        <svg {...common} aria-hidden="true">
+          <rect
+            x="2"
+            y="6"
+            width="14"
+            height="6"
+            rx="1.2"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <line
+            x1="4.5"
+            y1="9"
+            x2="4.5"
+            y2="9"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <line
+            x1="7"
+            y1="9"
+            x2="7"
+            y2="9"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <line
+            x1="9.5"
+            y1="9"
+            x2="9.5"
+            y2="9"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <line
+            x1="12"
+            y1="9"
+            x2="13.5"
+            y2="9"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeDasharray="0.5 1.4"
+          />
+        </svg>
+      );
+    case 'calculation':
+      return (
+        <svg {...common} aria-hidden="true">
+          <rect
+            x="3"
+            y="2"
+            width="12"
+            height="14"
+            rx="1.4"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <line
+            x1="5.5"
+            y1="5.3"
+            x2="12.5"
+            y2="5.3"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+          <line
+            x1="5.7"
+            y1="9"
+            x2="7.3"
+            y2="11"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+          <line
+            x1="7.3"
+            y1="9"
+            x2="5.7"
+            y2="11"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+          <line
+            x1="9.5"
+            y1="9"
+            x2="12.5"
+            y2="9"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+          <line
+            x1="5.7"
+            y1="13.3"
+            x2="12.5"
+            y2="13.3"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    case 'draw_on_image':
+      return (
+        <svg {...common} aria-hidden="true">
+          <rect
+            x="2"
+            y="3"
+            width="14"
+            height="12"
+            rx="1.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <circle cx="6" cy="7" r="1.3" fill="currentColor" />
+          <path
+            d="M2.5 13l3.5-3.5 2.5 2.5 2-2 3.5 3"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinejoin="round"
+            fill="none"
+          />
+          <path
+            d="M11.5 8l3-3 1 1-3 3-1.4.4Z"
+            stroke="currentColor"
+            strokeWidth="1.1"
+            strokeLinejoin="round"
+            fill="var(--color-surface, #fff)"
+          />
+        </svg>
+      );
     default:
       return null;
   }
@@ -561,7 +863,7 @@ function PaletteButton({ type, onAdd }: { type: FieldType; onAdd: (type: FieldTy
       {...attributes}
       {...listeners}
     >
-      <span className="palette-item-icon">
+      <span className={`palette-item-icon palette-item-icon--${paletteIconTone(type)}`}>
         <PaletteIcon type={type} />
       </span>
       <span className="palette-item-label">{FIELD_TYPE_LABELS[type]}</span>
@@ -595,12 +897,68 @@ function ColumnLayoutButton({
       {...attributes}
       {...listeners}
     >
-      <span className="palette-item-icon">
+      <span className="palette-item-icon palette-item-icon--media">
         <PaletteIcon type="column_layout" />
       </span>
       <span className="palette-item-label">{COLUMN_LAYOUT_LABELS[columns]}</span>
     </button>
   );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      aria-hidden="true"
+      className={
+        open ? 'palette-group-chevron palette-group-chevron--open' : 'palette-group-chevron'
+      }
+    >
+      <path
+        d="M3.5 5.5L7 9l3.5-3.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function paletteIconTone(type: FieldType): string {
+  switch (type) {
+    case 'date':
+    case 'time':
+      return 'date';
+    case 'legal':
+    case 'signature':
+      return 'legal';
+    case 'file_upload':
+    case 'draw_on_image':
+    case 'image':
+    case 'section_break':
+    case 'divider':
+    case 'static_text':
+    case 'hidden':
+    case 'column_layout':
+      return 'media';
+    case 'rating':
+    case 'opinion_scale':
+      return 'rating';
+    case 'multi_choice':
+    case 'checkbox':
+    case 'dropdown':
+    case 'yes_no':
+    case 'ranking':
+    case 'picture_choice':
+    case 'choice_matrix':
+      return 'choice';
+    default:
+      return 'text';
+  }
 }
 
 export function FieldPalette({
@@ -611,16 +969,41 @@ export function FieldPalette({
   onAddColumnLayout: (columns: ColumnCount) => void;
 }) {
   const [search, setSearch] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const groups: { label: string; types: FieldType[] }[] = [
     {
       label: 'Text',
-      types: ['short_text', 'paragraph', 'email', 'phone', 'website', 'number', 'address'],
+      types: [
+        'full_name',
+        'short_text',
+        'paragraph',
+        'email',
+        'phone',
+        'website',
+        'number',
+        'masked_text',
+        'calculation',
+        'address',
+      ],
     },
-    { label: 'Choice', types: ['multi_choice', 'checkbox', 'dropdown', 'choice_matrix', 'legal'] },
+    {
+      label: 'Choice',
+      types: [
+        'multi_choice',
+        'checkbox',
+        'dropdown',
+        'yes_no',
+        'ranking',
+        'picture_choice',
+        'choice_matrix',
+        'legal',
+      ],
+    },
     { label: 'Rating & scale', types: ['rating', 'opinion_scale'] },
     { label: 'Date & time', types: ['date', 'time'] },
-    { label: 'Files & sign', types: ['file_upload', 'signature'] },
+    { label: 'Files & sign', types: ['file_upload', 'signature', 'draw_on_image'] },
+    { label: 'Table', types: ['table', 'question_table'] },
     { label: 'Layout', types: ['section_break', 'divider', 'static_text', 'image', 'hidden'] },
   ];
 
@@ -642,31 +1025,47 @@ export function FieldPalette({
 
   return (
     <div className="field-palette">
+      <h2 className="field-palette-title">Form fields</h2>
       <label className="palette-search">
         <span className="palette-search-icon">
           <SearchIcon />
         </span>
         <input
           type="text"
-          placeholder="Search fields"
+          placeholder="Search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
       </label>
       <div className="palette-groups">
-        {filteredGroups.map((group) => (
-          <div key={group.label} className="palette-group">
-            <p className="palette-group-label">{group.label}</p>
-            <div className="palette-list">
-              {group.types.map((type) => (
-                <PaletteButton key={type} type={type} onAdd={onAddField} />
-              ))}
-              {group.columnCounts.map((columns) => (
-                <ColumnLayoutButton key={columns} columns={columns} onAdd={onAddColumnLayout} />
-              ))}
+        {filteredGroups.map((group) => {
+          const collapsed = !query && collapsedGroups[group.label] === true;
+          return (
+            <div key={group.label} className="palette-group">
+              <button
+                type="button"
+                className="palette-group-toggle"
+                onClick={() =>
+                  setCollapsedGroups((prev) => ({ ...prev, [group.label]: !prev[group.label] }))
+                }
+                aria-expanded={!collapsed}
+              >
+                <span className="palette-group-label">{group.label}</span>
+                <ChevronIcon open={!collapsed} />
+              </button>
+              {collapsed ? null : (
+                <div className="palette-list">
+                  {group.types.map((type) => (
+                    <PaletteButton key={type} type={type} onAdd={onAddField} />
+                  ))}
+                  {group.columnCounts.map((columns) => (
+                    <ColumnLayoutButton key={columns} columns={columns} onAdd={onAddColumnLayout} />
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
         {filteredGroups.length === 0 ? (
           <p className="palette-empty">No fields match &ldquo;{search}&rdquo;.</p>
         ) : null}

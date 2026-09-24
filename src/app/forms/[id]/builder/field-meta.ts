@@ -3,6 +3,7 @@ import {
   type ConditionOperator,
   DEFAULT_DIVIDER_THICKNESS_PX,
   DEFAULT_DIVIDER_WIDTH_PX,
+  DEFAULT_TABLE_ROWS,
   type FieldOption,
   type FieldType,
   type FormField,
@@ -11,11 +12,21 @@ import {
 // Shared, non-component constants/helpers for the builder — kept out of builder-client.tsx
 // so that file stays focused on state/wiring rather than field-type bookkeeping.
 
-/** Palette/label copy matching splose's naming for each v1 field type (spec 02 "Scope"). */
+/** Palette/label copy matching splose's naming for each v1 field type (spec 02 "Scope").
+ *
+ * multi_choice is labeled "Single choice" (not "Multiple choice") even though the
+ * internal type name says otherwise — it only ever renders as radio buttons (pick
+ * exactly one option); `checkbox` is the separate pick-many type. The industry doesn't
+ * agree on this: Typeform uses one "Multiple Choice" type covering both via a toggle,
+ * while Jotform calls the pick-one variant "Single Choice" and reserves "Multiple
+ * Choice" for pick-many — the opposite of what "multi_choice" as a type name would
+ * suggest. Following Jotform's convention here removes the ambiguity without touching
+ * the schema/type name (which stays `multi_choice` to avoid a migration across every
+ * existing form's stored data, PDF export, and submission handling). */
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   short_text: 'Short answer',
   paragraph: 'Paragraph',
-  multi_choice: 'Multiple choice',
+  multi_choice: 'Single choice',
   checkbox: 'Checkboxes',
   dropdown: 'Dropdown',
   date: 'Date',
@@ -29,7 +40,7 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   static_text: 'Formatted Text',
   image: 'Image',
   address: 'Address',
-  choice_matrix: 'Choice matrix',
+  choice_matrix: 'Matrix',
   number: 'Number',
   phone: 'Phone number',
   website: 'Website',
@@ -37,13 +48,22 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   opinion_scale: 'Opinion scale',
   legal: 'Legal / consent',
   hidden: 'Hidden field',
+  table: 'Input Table',
+  question_table: 'Question Table',
+  full_name: 'Full Name',
+  yes_no: 'Yes/No',
+  ranking: 'Ranking',
+  picture_choice: 'Picture Choice',
+  masked_text: 'Masked Text',
+  calculation: 'Calculation',
+  draw_on_image: 'Draw on Image',
 };
 
 /** Default label given to a freshly-added field before the admin renames it. */
 export const FIELD_TYPE_DEFAULT_LABEL: Record<FieldType, string> = {
   short_text: 'Short answer question',
   paragraph: 'Paragraph question',
-  multi_choice: 'Multiple choice question',
+  multi_choice: 'Single choice question',
   checkbox: 'Checkbox question',
   dropdown: 'Dropdown question',
   date: 'Date question',
@@ -57,7 +77,9 @@ export const FIELD_TYPE_DEFAULT_LABEL: Record<FieldType, string> = {
   static_text: 'Formatted Text',
   image: 'Image',
   address: 'Address question',
-  choice_matrix: 'Rating question',
+  // Was 'Rating question' — a copy-paste bug, unrelated to this field type — found while
+  // auditing every FIELD_TYPE_DEFAULT_LABEL entry for accuracy.
+  choice_matrix: 'Matrix question',
   number: 'Number question',
   phone: 'Phone number question',
   website: 'Website question',
@@ -65,6 +87,15 @@ export const FIELD_TYPE_DEFAULT_LABEL: Record<FieldType, string> = {
   opinion_scale: 'Opinion scale question',
   legal: 'I agree to the terms',
   hidden: 'Hidden field',
+  table: 'Input table',
+  question_table: 'Question table',
+  full_name: 'Full name question',
+  yes_no: 'Yes/No question',
+  ranking: 'Ranking question',
+  picture_choice: 'Picture choice question',
+  masked_text: 'Masked text question',
+  calculation: 'Calculated value',
+  draw_on_image: 'Draw on image',
 };
 
 function newOption(label: string): FieldOption {
@@ -143,6 +174,40 @@ export function createDefaultField(type: FieldType): FormField {
       return { id, type, label, required: false };
     case 'address':
       return { id, type, label, required: false };
+    case 'full_name':
+      return { id, type, label, required: false };
+    case 'yes_no':
+      return { id, type, label, required: false };
+    case 'ranking':
+      return {
+        id,
+        type,
+        label,
+        required: false,
+        options: [newOption('Item 1'), newOption('Item 2'), newOption('Item 3')],
+      };
+    case 'picture_choice':
+      return {
+        id,
+        type,
+        label,
+        required: false,
+        options: [newOption('Option 1'), newOption('Option 2')],
+      };
+    case 'masked_text':
+      // Phone-number-shaped default — the single most common masked-text use case — an
+      // admin can freely retype the mask for SSNs, license plates, dates, etc.
+      return { id, type, label, required: false, mask: '(###) ###-####' };
+    case 'calculation':
+      // '0' rather than a guessed formula — with zero other fields on a fresh form
+      // there's nothing meaningful to reference yet, and calculationFieldSchema.formula
+      // requires a non-empty string. The settings panel's "Insert a field" picker builds
+      // a real formula one field-token at a time.
+      return { id, type, label, required: false, formula: '0' };
+    case 'draw_on_image':
+      // imageStorageKey starts unset — the admin uploads a background image via the
+      // settings panel afterwards (same FieldImageUpload flow as the `image` field type).
+      return { id, type, label, required: false };
     case 'choice_matrix':
       return {
         id,
@@ -172,6 +237,36 @@ export function createDefaultField(type: FieldType): FormField {
       };
     case 'hidden':
       return { id, type, label, required: false };
+    case 'table':
+      // A generic two-column starter (Item / Quantity) — close enough to the common
+      // "packing list"/"line items" use case that most admins can just rename the
+      // columns rather than building from a blank single column.
+      return {
+        id,
+        type,
+        label,
+        required: false,
+        columns: [
+          { id: crypto.randomUUID(), label: 'Item', type: 'short_text' },
+          { id: crypto.randomUUID(), label: 'Quantity', type: 'number' },
+        ],
+        defaultRows: DEFAULT_TABLE_ROWS,
+      };
+    case 'question_table':
+      // Two starter questions, both required by default — matches the common "intake
+      // form" use case (see the schema comment on questionTableRowSchema.required for
+      // why new rows default to required rather than following the field-level
+      // convention of opt-in).
+      return {
+        id,
+        type,
+        label,
+        required: false,
+        rows: [
+          { id: crypto.randomUUID(), label: 'Question 1', type: 'short_text', required: true },
+          { id: crypto.randomUUID(), label: 'Question 2', type: 'short_text', required: true },
+        ],
+      };
     default: {
       const exhaustiveCheck: never = type;
       throw new Error(`Unhandled field type: ${exhaustiveCheck}`);

@@ -1,13 +1,19 @@
 import {
   isAddressAnswerBlank,
+  isTableAnswerBlank,
+  isTableRowBlank,
   parseAddressAnswer,
   parseChoiceMatrixAnswer,
+  parseFullNameAnswer,
+  parseQuestionTableAnswer,
+  parseTableAnswer,
 } from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getVisibleFieldIds } from '@/lib/forms/conditional-logic';
 import { OTHER_OPTION_ID } from '@/lib/forms/other-option';
 import type { FormField, FormPage, FormSchema } from '@/lib/forms/schema';
 import { expandPageFieldIds } from '@/lib/forms/schema';
+import { isMaskSatisfied } from '@/lib/forms/text-mask';
 
 // Shared by the public renderer (spec 03, client-side pre-submit checks) and the submit
 // API route (server-side re-validation) — spec 03's acceptance criteria requires both:
@@ -48,6 +54,20 @@ function validateField(field: FormField, value: string | string[] | undefined): 
     return null;
   }
 
+  // full_name packs the same structured-JSON-string shape as address (see
+  // lib/forms/compound-answer.ts) — but unlike address (where "something, anything" is
+  // enough), a required name specifically needs its two always-visible sub-fields (first,
+  // last) filled in; the optional prefix/middle don't count toward that on their own.
+  if (field.type === 'full_name') {
+    if (field.required) {
+      const name = parseFullNameAnswer(value);
+      if (!name.first.trim() || !name.last.trim()) {
+        return 'This field is required.';
+      }
+    }
+    return null;
+  }
+
   if (field.type === 'choice_matrix') {
     if (field.required) {
       const answer = parseChoiceMatrixAnswer(value);
@@ -55,6 +75,32 @@ function validateField(field: FormField, value: string | string[] | undefined): 
       if (!allRowsAnswered) {
         return 'Please answer every row.';
       }
+    }
+    return null;
+  }
+
+  if (field.type === 'table') {
+    const answer = parseTableAnswer(value);
+    if (field.required && isTableAnswerBlank(answer)) {
+      return 'Please fill in at least one row.';
+    }
+    const minRows = field.minRows ?? (field.required ? 1 : 0);
+    const filledRows = answer.filter((row) => !isTableRowBlank(row));
+    if (filledRows.length < minRows) {
+      return `Please fill in at least ${minRows} row${minRows === 1 ? '' : 's'}.`;
+    }
+    return null;
+  }
+
+  // question_table's required-ness is per-row (see the schema comment on
+  // questionTableRowSchema.required — this field type deliberately ignores its own
+  // field-level `required`), so it's checked here, ahead of the generic isBlank() path,
+  // the same way choice_matrix/table are handled above.
+  if (field.type === 'question_table') {
+    const answer = parseQuestionTableAnswer(value);
+    const missingRequired = field.rows.some((row) => row.required && !answer[row.id]?.trim());
+    if (missingRequired) {
+      return 'Please answer every required question.';
     }
     return null;
   }
@@ -80,6 +126,14 @@ function validateField(field: FormField, value: string | string[] | undefined): 
       return null;
     }
 
+    case 'masked_text': {
+      const text = typeof value === 'string' ? value : '';
+      if (!isMaskSatisfied(text, field.mask)) {
+        return "Doesn't match the expected format.";
+      }
+      return null;
+    }
+
     case 'multi_choice':
     case 'dropdown': {
       const optionIds = new Set(field.options.map((option) => option.id));
@@ -97,6 +151,14 @@ function validateField(field: FormField, value: string | string[] | undefined): 
         return null;
       }
       return 'Select a valid option.';
+    }
+
+    case 'picture_choice': {
+      const optionIds = new Set(field.options.map((option) => option.id));
+      if (typeof value !== 'string' || !optionIds.has(value)) {
+        return 'Select a valid option.';
+      }
+      return null;
     }
 
     case 'checkbox': {
@@ -155,6 +217,7 @@ function validateField(field: FormField, value: string | string[] | undefined): 
 
     case 'file_upload':
     case 'signature':
+    case 'draw_on_image':
       // Answer value is a SubmissionFile id (or array of ids for file_upload), written
       // only after a real upload completed via the presign/confirm flow — size and MIME
       // type were already enforced server-side at presign time (src/lib/s3.ts), so
@@ -226,6 +289,28 @@ function validateField(field: FormField, value: string | string[] | undefined): 
       // The generic required/isBlank check above already covers this: the answer is the
       // literal string "true" when checked, undefined otherwise, so an unchecked-but-
       // required consent box fails the isBlank() gate before this switch is even reached.
+      return null;
+
+    case 'calculation':
+      // The respondent never types this — CalculationControl (field-input.tsx) writes
+      // the computed result itself. The generic required/isBlank check above already
+      // covers the one real failure mode (a malformed/self-referential formula that
+      // evaluates to null, leaving the answer blank); nothing else to validate here.
+      return null;
+
+    case 'yes_no':
+      // Same reasoning as 'legal' above — the generic required/isBlank check already
+      // covers a required-but-unanswered yes_no field, and the answer is always the fixed
+      // literal 'yes'/'no' (never arbitrary text), so there's nothing further to validate.
+      return null;
+
+    case 'ranking':
+      // The generic required/isBlank check above already covers this (an array with
+      // length 0 is blank) — and since resolveFieldDefaultAnswer seeds every ranking to
+      // its full option order on mount, a real respondent basically always has a
+      // non-empty answer by submit time regardless of whether they actually dragged
+      // anything. Nothing further to validate: every id in the answer is guaranteed to be
+      // a real option id (RankingControl only ever reorders field.options' own ids).
       return null;
 
     default: {

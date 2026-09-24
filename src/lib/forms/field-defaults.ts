@@ -12,7 +12,7 @@ import type { FormField } from '@/lib/forms/schema';
 export function resolveFieldDefaultAnswer(
   field: FormField,
   params: URLSearchParams,
-): string | undefined {
+): string | string[] | undefined {
   switch (field.type) {
     case 'hidden': {
       const fromParam = field.sourceParam ? params.get(field.sourceParam) : null;
@@ -24,8 +24,11 @@ export function resolveFieldDefaultAnswer(
     case 'email':
     case 'phone':
     case 'website':
+    case 'masked_text':
     case 'multi_choice':
     case 'dropdown':
+    case 'yes_no':
+    case 'picture_choice':
       return field.defaultValue;
 
     case 'number':
@@ -38,6 +41,12 @@ export function resolveFieldDefaultAnswer(
         return new Date().toISOString().slice(0, 10);
       }
       return field.defaultValue;
+
+    case 'ranking':
+      // Ranking has no admin-configured default — it's seeded to its own authored
+      // item order so an untouched ranking still submits a real (if unmoved) answer
+      // instead of a blank one, same reasoning as the string-valued defaults above.
+      return field.options.map((option) => option.id);
 
     default:
       return undefined;

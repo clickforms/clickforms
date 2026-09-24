@@ -1,5 +1,13 @@
 import type { CSSProperties } from 'react';
-import { parseAddressAnswer, parseChoiceMatrixAnswer } from '@/lib/forms/compound-answer';
+import { formatCalculationResult } from '@/lib/forms/calculation';
+import {
+  isTableRowBlank,
+  parseAddressAnswer,
+  parseChoiceMatrixAnswer,
+  parseFullNameAnswer,
+  parseQuestionTableAnswer,
+  parseTableAnswer,
+} from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import {
   fieldHasCustomAppearance,
@@ -165,7 +173,10 @@ export function SubmissionFieldDisplay({
       </div>
       {field.helpText ? <p className="export-field-help">{field.helpText}</p> : null}
 
-      {field.type === 'short_text' || field.type === 'email' || field.type === 'phone' ? (
+      {field.type === 'short_text' ||
+      field.type === 'email' ||
+      field.type === 'phone' ||
+      field.type === 'masked_text' ? (
         <input
           className="export-input"
           style={inputStyle}
@@ -191,6 +202,23 @@ export function SubmissionFieldDisplay({
           value={
             typeof value === 'string' && value
               ? [field.prefix, value, field.suffix].filter(Boolean).join('')
+              : ''
+          }
+        />
+      ) : null}
+
+      {field.type === 'calculation' ? (
+        <input
+          className="export-input"
+          style={inputStyle}
+          readOnly
+          value={
+            typeof value === 'string' && value && !Number.isNaN(Number(value))
+              ? formatCalculationResult(Number(value), {
+                  decimalPlaces: field.decimalPlaces,
+                  prefix: field.prefix,
+                  suffix: field.suffix,
+                })
               : ''
           }
         />
@@ -297,6 +325,10 @@ export function SubmissionFieldDisplay({
         <SignatureExportDisplay fieldId={field.id} assets={assets} resolveFiles={resolveFiles} />
       ) : null}
 
+      {field.type === 'draw_on_image' ? (
+        <DrawOnImageExportDisplay fieldId={field.id} assets={assets} resolveFiles={resolveFiles} />
+      ) : null}
+
       {field.type === 'address' ? (
         <AddressExportDisplay
           value={value}
@@ -305,8 +337,23 @@ export function SubmissionFieldDisplay({
         />
       ) : null}
 
+      {field.type === 'full_name' ? (
+        <FullNameExportDisplay
+          value={value}
+          inputStyle={inputStyle}
+          includePrefix={field.includePrefix ?? false}
+          includeMiddleName={field.includeMiddleName ?? false}
+        />
+      ) : null}
+
       {field.type === 'choice_matrix' ? (
         <ChoiceMatrixExportDisplay field={field} value={value} />
+      ) : null}
+
+      {field.type === 'table' ? <TableExportDisplay field={field} value={value} /> : null}
+
+      {field.type === 'question_table' ? (
+        <QuestionTableExportDisplay field={field} value={value} />
       ) : null}
 
       {field.type === 'rating' ? <RatingExportDisplay field={field} value={value} /> : null}
@@ -316,6 +363,14 @@ export function SubmissionFieldDisplay({
       ) : null}
 
       {field.type === 'legal' ? <LegalExportDisplay field={field} value={value} /> : null}
+
+      {field.type === 'yes_no' ? <YesNoExportDisplay field={field} value={value} /> : null}
+
+      {field.type === 'ranking' ? <RankingExportDisplay field={field} value={value} /> : null}
+
+      {field.type === 'picture_choice' ? (
+        <PictureChoiceExportDisplay field={field} value={value} />
+      ) : null}
     </div>
   );
 }
@@ -375,6 +430,23 @@ function LegalExportDisplay({
   return <div className="export-input">{value === 'true' ? '✓ Agreed' : 'Not agreed'}</div>;
 }
 
+function YesNoExportDisplay({
+  field,
+  value,
+}: {
+  field: Extract<FormField, { type: 'yes_no' }>;
+  value: FieldValue;
+}) {
+  if (value !== 'yes' && value !== 'no') {
+    return <div className="export-input">—</div>;
+  }
+  return (
+    <div className="export-input">
+      {value === 'yes' ? field.yesLabel || 'Yes' : field.noLabel || 'No'}
+    </div>
+  );
+}
+
 function FileExportDisplay({
   fieldId,
   resolveFiles,
@@ -419,6 +491,25 @@ function SignatureExportDisplay({
     <div className="export-signature">
       {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
       <img src={imageUrl} alt="Signature" />
+    </div>
+  );
+}
+
+function DrawOnImageExportDisplay({
+  fieldId,
+  assets,
+  resolveFiles,
+}: {
+  fieldId: string;
+  assets: SubmissionExportAssets;
+  resolveFiles: (fieldId: string) => ResolvedSubmissionFile[];
+}) {
+  const imageUrl = resolveSubmissionFileDataUrl(assets, fieldId, resolveFiles);
+  if (!imageUrl) return <div className="export-file-status">No drawing submitted</div>;
+  return (
+    <div className="export-signature export-drawing">
+      {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
+      <img src={imageUrl} alt="Drawing" />
     </div>
   );
 }
@@ -478,6 +569,101 @@ function AddressExportDisplay({
   );
 }
 
+function FullNameExportDisplay({
+  value,
+  inputStyle,
+  includePrefix,
+  includeMiddleName,
+}: {
+  value: FieldValue;
+  inputStyle: CSSProperties;
+  includePrefix: boolean;
+  includeMiddleName: boolean;
+}) {
+  const name = parseFullNameAnswer(typeof value === 'string' ? value : undefined);
+  return (
+    <div className="export-full-name-row">
+      {includePrefix ? (
+        <input
+          className="export-input export-full-name-prefix"
+          style={inputStyle}
+          readOnly
+          value={name.prefix}
+          placeholder="Prefix"
+        />
+      ) : null}
+      <input
+        className="export-input"
+        style={inputStyle}
+        readOnly
+        value={name.first}
+        placeholder="First name"
+      />
+      {includeMiddleName ? (
+        <input
+          className="export-input"
+          style={inputStyle}
+          readOnly
+          value={name.middle}
+          placeholder="Middle name"
+        />
+      ) : null}
+      <input
+        className="export-input"
+        style={inputStyle}
+        readOnly
+        value={name.last}
+        placeholder="Last name"
+      />
+    </div>
+  );
+}
+
+function RankingExportDisplay({
+  field,
+  value,
+}: {
+  field: Extract<FormField, { type: 'ranking' }>;
+  value: FieldValue;
+}) {
+  const labelById = new Map(field.options.map((option) => [option.id, option.label]));
+  // Falls back to the admin-authored option order when there's no saved answer yet
+  // (e.g. previewing a form that's never been submitted) — same fallback RankingControl
+  // uses on the public form.
+  const orderedIds =
+    Array.isArray(value) && value.length > 0 ? value : field.options.map((o) => o.id);
+  return (
+    <ol className="export-ranking-list">
+      {orderedIds.map((id) => (
+        <li key={id}>{labelById.get(id) ?? id}</li>
+      ))}
+    </ol>
+  );
+}
+
+function PictureChoiceExportDisplay({
+  field,
+  value,
+}: {
+  field: Extract<FormField, { type: 'picture_choice' }>;
+  value: FieldValue;
+}) {
+  const selected =
+    typeof value === 'string' ? field.options.find((o) => o.id === value) : undefined;
+  if (!selected) {
+    return <div className="export-input">—</div>;
+  }
+  return (
+    <div className="export-picture-choice">
+      {selected.imageUrl ? (
+        // biome-ignore lint/performance/noImgElement: admin-supplied arbitrary URL
+        <img src={selected.imageUrl} alt={selected.label} className="export-picture-choice-image" />
+      ) : null}
+      <span>{selected.label}</span>
+    </div>
+  );
+}
+
 function ChoiceMatrixExportDisplay({
   field,
   value,
@@ -508,6 +694,98 @@ function ChoiceMatrixExportDisplay({
               ))}
             </tr>
           ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TableExportDisplay({
+  field,
+  value,
+}: {
+  field: Extract<FormField, { type: 'table' }>;
+  value: FieldValue;
+}) {
+  const rows = parseTableAnswer(value).filter((row) => !isTableRowBlank(row));
+  if (rows.length === 0) {
+    return <div className="export-input">No rows entered</div>;
+  }
+  return (
+    <div className="export-table-field-wrap">
+      <table className="export-table-field">
+        <thead>
+          <tr>
+            {field.columns.map((column) => (
+              <th key={column.id}>{column.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id — same reasoning as the respondent-facing TableControl in field-input.tsx
+            <tr key={rowIndex}>
+              {field.columns.map((column) => {
+                const cell = row[column.id] ?? '';
+                const text =
+                  column.type === 'dropdown'
+                    ? (column.options?.find((option) => option.id === cell)?.label ?? cell)
+                    : cell;
+                return <td key={column.id}>{text}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function QuestionTableExportDisplay({
+  field,
+  value,
+}: {
+  field: Extract<FormField, { type: 'question_table' }>;
+  value: FieldValue;
+}) {
+  // Colors are per-field-instance here (headerColor/headerTextColor/valueColor live on
+  // the field itself), unlike the whole-form branding.layoutStyle table theme's CSS
+  // custom properties — see the schema comment on questionTableFieldSchema for why these
+  // are deliberately separate, parallel styling mechanisms.
+  const answer = parseQuestionTableAnswer(typeof value === 'string' ? value : undefined);
+  const headerStyle: CSSProperties = {
+    backgroundColor: field.headerColor,
+    color: field.headerTextColor,
+  };
+  const valueStyle: CSSProperties = {
+    backgroundColor: field.valueColor,
+  };
+
+  return (
+    <div className="export-question-table-wrap">
+      <table className="export-question-table">
+        <thead>
+          <tr>
+            <th style={headerStyle}>{field.fieldColumnLabel || 'Field'}</th>
+            <th style={headerStyle}>{field.valueColumnLabel || 'Details'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {field.rows.map((row) => {
+            const raw = answer[row.id] ?? '';
+            let text = raw;
+            if (raw && row.type === 'dropdown') {
+              text = row.options?.find((option) => option.id === raw)?.label ?? raw;
+            } else if (raw && row.type === 'date') {
+              text = formatDateValue(raw);
+            }
+            return (
+              <tr key={row.id}>
+                <td className="export-question-table-label-cell">{row.label}</td>
+                <td style={valueStyle}>{text || '—'}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -5086,6 +5086,30 @@ textarea.text-input {
   background: var(--color-primary);
 }
 
+/* Qualitative plan perks (removeBranding/apiAccess/customDomain — see PLAN_LIMITS) that
+   don't reduce to a usage bar. Dim by default so the row reads as "off"; --on flips it to
+   match the primary usage-bar-fill color so a glance across cards shows which orgs have
+   which perks. */
+.billing-feature-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.billing-feature-pill {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-subtle);
+}
+
+.billing-feature-pill--on {
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  color: var(--color-primary);
+}
+
 .billing-org-card-footer {
   font-size: 0.8rem;
   color: var(--color-text-subtle);

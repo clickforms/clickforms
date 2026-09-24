@@ -4,7 +4,7 @@ import type { OrgPlan, OrgStatus } from '@prisma/client';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useToast } from '@/components/toast';
-import { buildUsageBars, PLAN_LABELS, PLAN_ORDER } from '@/lib/admin/plan-limits';
+import { buildUsageBars, PLAN_LABELS, PLAN_LIMITS, PLAN_ORDER } from '@/lib/admin/plan-limits';
 import { readApiError } from '@/lib/error-message';
 
 export interface BillingOrgRow {
@@ -28,6 +28,16 @@ const STATUS_BADGE_CLASS: Record<OrgStatus, string> = {
   trial: 'badge--draft',
   suspended: 'badge--error',
 };
+
+// The qualitative perks PLAN_LIMITS carries alongside the four numeric caps — these
+// don't reduce to a usage bar (there's nothing to measure "used" against), so they're
+// shown as a plain on/off pill row instead. Order matches the /pricing page's feature
+// list (higher tiers add, never remove).
+const FEATURE_PILLS: { key: 'removeBranding' | 'apiAccess' | 'customDomain'; label: string }[] = [
+  { key: 'removeBranding', label: 'No Clickforms branding' },
+  { key: 'apiAccess', label: 'API access' },
+  { key: 'customDomain', label: 'Custom domain' },
+];
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
@@ -132,6 +142,7 @@ export function BillingAdminClient({
         <div className="billing-org-grid">
           {visibleOrganizations.map((org) => {
             const bars = buildUsageBars(org.plan, org.usage);
+            const limits = PLAN_LIMITS[org.plan];
             return (
               <div key={org.id} className="card billing-org-card">
                 <div className="billing-org-card-header">
@@ -183,6 +194,17 @@ export function BillingAdminClient({
                         />
                       </div>
                     </div>
+                  ))}
+                </div>
+
+                <div className="billing-feature-pills">
+                  {FEATURE_PILLS.map((feature) => (
+                    <span
+                      key={feature.key}
+                      className={`billing-feature-pill${limits[feature.key] ? ' billing-feature-pill--on' : ''}`}
+                    >
+                      {feature.label}
+                    </span>
                   ))}
                 </div>
 

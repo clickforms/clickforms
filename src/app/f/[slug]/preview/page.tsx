@@ -15,8 +15,8 @@ interface PageProps {
 // Same share-link-branding override as /f/[slug]/page.tsx's generateMetadata (see the
 // comment there for the full rationale) — an admin sharing a preview link to show a
 // colleague a draft, or accidentally sharing one instead of the live link (as happened in
-// the WhatsApp screenshots that prompted this), gets the same "Clickforms" + org logo
-// unfurl rather than the generic default. Note this runs unauthenticated (link-preview
+// the WhatsApp screenshots that prompted this), gets the same org-name + org-logo unfurl
+// rather than the generic default. Note this runs unauthenticated (link-preview
 // crawlers never carry the admin's session cookie), so it can't reuse the session-based
 // org lookup below — it resolves the org from the subdomain instead, same as the public
 // page. A direct prisma.form.findFirst (no withOrgContext) is a deliberate bypass here,
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     });
     if (!form) return {};
 
-    const title = 'Clickforms';
+    const title = organization.name;
     if (!organization.logoStorageKey) {
       return { title, description: '', openGraph: { title } };
     }

@@ -76,10 +76,11 @@ export function BillingAdminClient({
     setBusyOrgId(org.id);
     try {
       // Assigning a plan here is how a trialing org "graduates" — there's no self-serve
-      // upgrade flow yet (see src/lib/auth.ts's OrganizationTrialExpired check), so if we
-      // only patched `plan`, an org past its trialEndsAt would still get blocked at sign-in
-      // even after an admin gave it a real plan. Flip status back to 'active' in the same
-      // request whenever the org is currently trialing. Suspended orgs are left alone —
+      // upgrade flow yet, so if we only patched `plan`, an org past its trialEndsAt would
+      // still show the trial-expired banner and stay blocked from platform actions (see
+      // isTrialExpired/assertOrgActionsAllowed in src/lib/admin/plan-limits.ts) even after
+      // an admin gave it a real plan. Flip status back to 'active' in the same request
+      // whenever the org is currently trialing. Suspended orgs are left alone —
       // reactivating is a separate, explicit action (Organisations list kebab menu).
       const body: { plan: OrgPlan; status?: 'active' } =
         org.status === 'trial' ? { plan: nextPlan, status: 'active' } : { plan: nextPlan };

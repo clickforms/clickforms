@@ -12,7 +12,7 @@ import {
 import { DeleteOrganisationModal } from '@/app/admin/organisations/delete-organisation-modal';
 import { DropdownMenu } from '@/components/dropdown-menu';
 import { useToast } from '@/components/toast';
-import { PLAN_LABELS } from '@/lib/admin/plan-limits';
+import { PLAN_LABELS, PLAN_ORDER } from '@/lib/admin/plan-limits';
 import { readApiError } from '@/lib/error-message';
 import { formatUserRole } from '@/lib/user-roles';
 
@@ -32,7 +32,22 @@ export interface AdminOrgProfile {
   contactPhone: string | null;
   plan: OrgPlan;
   status: OrgStatus;
+  // Only meaningful while status === 'trial' (see isTrialExpired in plan-limits.ts) — a
+  // date left over from a past trial the org has since graduated or been suspended out of
+  // is harmless dead data, so the PATCH below always clears it back to null the moment
+  // status leaves 'trial' rather than trusting callers to remember to.
+  trialEndsAt: string | null;
   createdAt: string;
+}
+
+function toDateInputValue(iso: string | null): string {
+  return iso ? iso.slice(0, 10) : '';
+}
+
+function defaultTrialEndDate(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + 7);
+  return date.toISOString().slice(0, 10);
 }
 
 export interface AdminOrgUser {
@@ -268,6 +283,40 @@ function OrganisationDetailInner({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
 
+  // Plan/status/trial controls — a separate panel and save action from the Details form
+  // above, same pattern as handleToggleStatus being its own mutation rather than folded
+  // into handleSubmit. This is the "avoid breaking" lever: a platform admin can put any
+  // existing org (paid, active, whatever) onto a trial with a custom plan and end date, or
+  // pull one off a trial by assigning a real plan, without touching name/contact fields.
+  const [plan, setPlan] = useState<OrgPlan>(initialOrganization.plan);
+  const [status, setStatus] = useState<OrgStatus>(initialOrganization.status);
+  const [trialEndsAt, setTrialEndsAt] = useState(
+    initialOrganization.status === 'trial' ? toDateInputValue(initialOrganization.trialEndsAt) : '',
+  );
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+
+  const isPlanDirty = useMemo(() => {
+    const currentTrialEndsAt =
+      organization.status === 'trial' ? toDateInputValue(organization.trialEndsAt) : '';
+    const nextTrialEndsAt = status === 'trial' ? trialEndsAt : '';
+    return (
+      plan !== organization.plan ||
+      status !== organization.status ||
+      nextTrialEndsAt !== currentTrialEndsAt
+    );
+  }, [plan, status, trialEndsAt, organization]);
+
+  function handleStatusChange(nextStatus: OrgStatus) {
+    setStatus(nextStatus);
+    // Switching into 'trial' with nothing entered yet gets a sensible default (matches the
+    // signup flow's own 7-day trial — see src/app/api/auth/signup/verify/route.ts) but stays
+    // fully editable, since the whole point of this control is a *custom* day count.
+    if (nextStatus === 'trial' && !trialEndsAt) {
+      setTrialEndsAt(defaultTrialEndDate());
+    }
+  }
+
   const { access, isJoining, isLeaving, currentUserId, join, leave } = useJoinOrganisation(
     organization.id,
     organization.name,
@@ -402,6 +451,11 @@ function OrganisationDetailInner({
       }
       const data: { organization: AdminOrgProfile } = await res.json();
       setOrganization(data.organization);
+      setPlan(data.organization.plan);
+      setStatus(data.organization.status);
+      setTrialEndsAt(
+        data.organization.status === 'trial' ? toDateInputValue(data.organization.trialEndsAt) : '',
+      );
       toast.success(
         nextStatus === 'suspended' ? 'Organisation suspended' : 'Organisation reactivated',
       );
@@ -409,6 +463,50 @@ function OrganisationDetailInner({
       toast.error('Something went wrong. Please try again.');
     } finally {
       setIsTogglingStatus(false);
+    }
+  }
+
+  async function handleSavePlan(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPlanError(null);
+
+    if (status === 'trial' && !trialEndsAt) {
+      setPlanError('Trial end date is required while status is Trial');
+      return;
+    }
+
+    setIsSavingPlan(true);
+    try {
+      const res = await fetch(`/api/admin/organizations/${organization.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan,
+          status,
+          // Cleared the moment status isn't 'trial' — see the AdminOrgProfile.trialEndsAt
+          // comment above for why a stale date shouldn't linger once an org leaves trial.
+          trialEndsAt:
+            status === 'trial' ? new Date(`${trialEndsAt}T00:00:00`).toISOString() : null,
+        }),
+      });
+
+      if (!res.ok) {
+        setPlanError(await readApiError(res, 'Could not save plan & trial settings'));
+        return;
+      }
+
+      const data: { organization: AdminOrgProfile } = await res.json();
+      setOrganization(data.organization);
+      setPlan(data.organization.plan);
+      setStatus(data.organization.status);
+      setTrialEndsAt(
+        data.organization.status === 'trial' ? toDateInputValue(data.organization.trialEndsAt) : '',
+      );
+      toast.success('Plan & trial settings saved');
+    } catch {
+      setPlanError('Something went wrong. Please try again.');
+    } finally {
+      setIsSavingPlan(false);
     }
   }
 
@@ -537,6 +635,81 @@ function OrganisationDetailInner({
             <span className="admin-org-stat-label">{stat.label}</span>
           </div>
         ))}
+      </section>
+
+      <section className="admin-org-panel">
+        <div className="admin-org-panel-header">
+          <div>
+            <h2 className="admin-org-panel-title">Plan &amp; trial</h2>
+            <p className="admin-org-panel-copy">
+              Assign a plan, or put this organisation on a trial with a custom end date — for a new
+              trial, extending one, or moving an existing paid org onto one without disturbing
+              anything else.
+            </p>
+          </div>
+        </div>
+
+        <form className="admin-org-form" onSubmit={handleSavePlan}>
+          {planError ? (
+            <p className="form-error" role="alert">
+              {planError}
+            </p>
+          ) : null}
+
+          <div className="admin-org-fields">
+            <label className="admin-org-field">
+              <span>Plan</span>
+              <select
+                className="text-input"
+                value={plan}
+                onChange={(event) => setPlan(event.target.value as OrgPlan)}
+                disabled={isSavingPlan}
+              >
+                {PLAN_ORDER.map((planOption) => (
+                  <option key={planOption} value={planOption}>
+                    {PLAN_LABELS[planOption]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="admin-org-field">
+              <span>Status</span>
+              <select
+                className="text-input"
+                value={status}
+                onChange={(event) => handleStatusChange(event.target.value as OrgStatus)}
+                disabled={isSavingPlan}
+              >
+                {(Object.keys(STATUS_LABELS) as OrgStatus[]).map((statusOption) => (
+                  <option key={statusOption} value={statusOption}>
+                    {STATUS_LABELS[statusOption]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="admin-org-field">
+              <span>Trial ends on</span>
+              <input
+                className="text-input"
+                type="date"
+                value={trialEndsAt}
+                onChange={(event) => setTrialEndsAt(event.target.value)}
+                disabled={isSavingPlan || status !== 'trial'}
+                required={status === 'trial'}
+              />
+            </label>
+          </div>
+
+          <div className="admin-org-form-actions">
+            <button
+              type="submit"
+              className="button button--dark"
+              disabled={isSavingPlan || !isPlanDirty}
+            >
+              {isSavingPlan ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        </form>
       </section>
 
       <section className="admin-org-panel">

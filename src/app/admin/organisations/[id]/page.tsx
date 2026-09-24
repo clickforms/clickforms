@@ -33,6 +33,7 @@ export default async function AdminOrganisationDetailPage({ params }: PageProps)
         contactPhone: true,
         plan: true,
         status: true,
+        trialEndsAt: true,
         createdAt: true,
       },
     });
@@ -72,6 +73,7 @@ export default async function AdminOrganisationDetailPage({ params }: PageProps)
   const organization = {
     ...result.organization,
     createdAt: result.organization.createdAt.toISOString(),
+    trialEndsAt: result.organization.trialEndsAt?.toISOString() ?? null,
   };
 
   return (

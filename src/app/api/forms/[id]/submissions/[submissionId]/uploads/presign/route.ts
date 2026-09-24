@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { assertWithinStorageLimit } from '@/lib/admin/plan-limits';
+import { assertWithinStorageLimit } from '@/lib/admin/plan-enforcement';
 import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';

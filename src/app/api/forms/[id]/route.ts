@@ -1,7 +1,7 @@
 import type { FormNotificationMode } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
+import { assertOrgActionsAllowed } from '@/lib/admin/plan-enforcement';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';

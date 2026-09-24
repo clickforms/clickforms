@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { assertCanInviteUser, assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
+import { assertCanInviteUser, assertOrgActionsAllowed } from '@/lib/admin/plan-enforcement';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';

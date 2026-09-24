@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { assertCanCreateForm, assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
+import { assertCanCreateForm, assertOrgActionsAllowed } from '@/lib/admin/plan-enforcement';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';

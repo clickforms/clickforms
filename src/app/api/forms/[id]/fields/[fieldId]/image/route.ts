@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
+import { assertOrgActionsAllowed } from '@/lib/admin/plan-enforcement';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess, assertFormViewAccess } from '@/lib/form-access';

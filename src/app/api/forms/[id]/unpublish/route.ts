@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
+import { assertOrgActionsAllowed } from '@/lib/admin/plan-enforcement';
 import { toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';

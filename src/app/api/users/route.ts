@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertCanInviteUser } from '@/lib/admin/plan-limits';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
@@ -96,6 +97,24 @@ export async function POST(request: Request): Promise<NextResponse> {
       if (existingUser) {
         throw new InvalidRequestError(
           'A user with this email already exists in your organisation.',
+        );
+      }
+
+      // Re-inviting an email already pending (the upsert below) doesn't add a new seat,
+      // so only check the cap when this is a genuinely new invite.
+      const existingInvite = await tx.userInvite.findFirst({
+        where: { organizationId: requireOrganizationId(session), email },
+        select: { id: true },
+      });
+      if (!existingInvite) {
+        const organization = await tx.organization.findUnique({
+          where: { id: requireOrganizationId(session) },
+          select: { plan: true },
+        });
+        await assertCanInviteUser(
+          tx,
+          requireOrganizationId(session),
+          organization?.plan ?? 'standard',
         );
       }
 

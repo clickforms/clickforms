@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertWithinSubmissionLimit } from '@/lib/admin/plan-limits';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
@@ -76,6 +77,24 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
     const { updated, organizationNotificationEmail } = await withOrgContext(
       form.organizationId,
       async (tx) => {
+        // Fetched once up front: `plan` feeds the submissions-cap check right below, and
+        // `notificationEmail` is needed later for the fire-and-forget notification send.
+        const organization = await tx.organization.findUnique({
+          where: { id: form.organizationId },
+          select: { plan: true, notificationEmail: true },
+        });
+
+        // Checked immediately before flipping status to 'submitted' — matches exactly
+        // what buildUsageBars' "Submissions this month" bar and the admin billing page
+        // count, so an org can't finalize more than its plan allows in a calendar month.
+        // Public respondent, so this stays neutral rather than an upgrade pitch aimed at
+        // someone who can't act on it.
+        await assertWithinSubmissionLimit(
+          tx,
+          form.organizationId,
+          organization?.plan ?? 'standard',
+        );
+
         const result = await tx.submission.update({
           where: { id: submission.id },
           data: { answers: body.answers, status: 'submitted', submittedAt: new Date() },
@@ -92,11 +111,6 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
           },
           tx,
         );
-
-        const organization = await tx.organization.findUnique({
-          where: { id: form.organizationId },
-          select: { notificationEmail: true },
-        });
 
         return {
           updated: result,

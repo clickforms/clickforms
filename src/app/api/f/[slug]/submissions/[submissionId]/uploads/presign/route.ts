@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertWithinStorageLimit } from '@/lib/admin/plan-limits';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
+import { withOrgContext } from '@/lib/db';
 import {
   getFormForExistingSubmission,
   getFormSchemaByVersionId,
@@ -70,6 +72,24 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         );
       }
     }
+
+    // Checked at presign time, before the respondent's browser PUTs to S3 — a blocked
+    // upload should never actually land in storage just to be rejected at confirm time.
+    // audience: 'public' since this request comes from an anonymous form respondent, not
+    // the organisation itself — see assertWithinStorageLimit's doc comment.
+    await withOrgContext(form.organizationId, async (tx) => {
+      const organization = await tx.organization.findUnique({
+        where: { id: form.organizationId },
+        select: { plan: true },
+      });
+      await assertWithinStorageLimit(
+        tx,
+        form.organizationId,
+        organization?.plan ?? 'standard',
+        body.sizeBytes,
+        'public',
+      );
+    });
 
     const storageKey = buildStorageKey({
       organizationId: form.organizationId,

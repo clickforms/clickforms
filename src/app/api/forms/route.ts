@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertCanCreateForm } from '@/lib/admin/plan-limits';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
@@ -78,6 +79,19 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
+      const organization = await tx.organization.findUnique({
+        where: { id: requireOrganizationId(session) },
+        select: { plan: true },
+      });
+      // Falls back to 'standard' only if the org row is somehow missing by the time this
+      // runs (can't happen in practice — requireSession already resolved this org) rather
+      // than throwing here and turning a data anomaly into a confusing 500 on form create.
+      await assertCanCreateForm(
+        tx,
+        requireOrganizationId(session),
+        organization?.plan ?? 'standard',
+      );
+
       const existing = await tx.form.findMany({
         where: { organizationId: requireOrganizationId(session) },
         select: { slug: true },

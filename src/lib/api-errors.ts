@@ -18,6 +18,19 @@ export class InvalidRequestError extends Error {
   }
 }
 
+/** Thrown by src/lib/admin/plan-limits.ts's plan-enforcement helpers (assertCanCreateForm,
+ * assertCanInviteUser, assertWithinStorageLimit, assertWithinSubmissionLimit) when an action
+ * would push an organisation past its plan's cap (forms/users/storage/submissions — see
+ * PLAN_LIMITS). Kept distinct from InvalidRequestError so callers can special-case "upgrade
+ * to continue" messaging; mapped to 402 Payment Required, not 400, since the request itself
+ * is well-formed and would succeed on a higher plan. */
+export class PlanLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PlanLimitError';
+  }
+}
+
 /**
  * Every admin API route (specs/02-form-builder.md onward) wraps its body in try/catch
  * and calls this in the catch block — one place decides which error classes map to
@@ -36,6 +49,9 @@ export function toErrorResponse(error: unknown): NextResponse {
   }
   if (error instanceof InvalidRequestError) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  if (error instanceof PlanLimitError) {
+    return NextResponse.json({ error: error.message }, { status: 402 });
   }
   if (error instanceof ZodError) {
     return NextResponse.json(

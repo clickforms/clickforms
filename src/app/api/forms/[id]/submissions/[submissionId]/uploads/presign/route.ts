@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertWithinStorageLimit } from '@/lib/admin/plan-limits';
 import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
@@ -81,6 +82,19 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
           );
         }
       }
+
+      // Checked before the staff member's browser PUTs to S3 — an authenticated org
+      // member attaching a replacement file, so this gets the upgrade-facing message.
+      const organization = await tx.organization.findUnique({
+        where: { id: form.organizationId },
+        select: { plan: true },
+      });
+      await assertWithinStorageLimit(
+        tx,
+        form.organizationId,
+        organization?.plan ?? 'standard',
+        body.sizeBytes,
+      );
 
       return { organizationId: form.organizationId, formId: form.id, submissionId: submission.id };
     });

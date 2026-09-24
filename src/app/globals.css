@@ -3652,8 +3652,10 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* No !important needed: this rule has the same specificity as the base .dashboard-in
+     animation rule above and comes later in the cascade, so it already wins on its own. */
   .dashboard-in {
-    animation: none !important;
+    animation: none;
     opacity: 1;
     transform: none;
   }
@@ -8078,11 +8080,14 @@ textarea.text-input {
   cursor: not-allowed;
 }
 
-.field-preview-table-add-column-cell {
+/* Scoped with the th/td element (matching .field-preview-table th/td's own specificity above)
+   instead of !important, since this class alone has lower specificity than that base rule. */
+.field-preview-table th.field-preview-table-add-column-cell,
+.field-preview-table td.field-preview-table-add-column-cell {
   width: 1px;
-  border: none !important;
-  background: none !important;
-  padding: 0 !important;
+  border: none;
+  background: none;
+  padding: 0;
   vertical-align: middle;
 }
 
@@ -10382,6 +10387,9 @@ textarea.text-input {
   display: none;
 }
 
+/* biome-ignore lint/complexity/noImportantStyles: overrides a Next.js dev-mode custom
+   element (nextjs-portal) that isn't under our specificity control — !important is the
+   only reliable way to hide it inside the embed preview. */
 html:has(.form-preview-embed) nextjs-portal,
 html:has(.form-preview-embed) [data-next-badge-root] {
   display: none !important;
@@ -11489,16 +11497,18 @@ textarea.form-field-input {
   min-width: 6rem;
 }
 
-.form-table-field-row-actions-header {
+/* Scoped with the th/td element (matching .form-table-field th/td's own specificity above)
+   instead of !important, since these classes alone have lower specificity than that base rule. */
+.form-table-field th.form-table-field-row-actions-header {
   width: 2rem;
-  border: none !important;
-  background: none !important;
+  border: none;
+  background: none;
 }
 
-.form-table-field-row-actions {
-  border: none !important;
-  text-align: center !important;
-  padding: 0.25rem !important;
+.form-table-field td.form-table-field-row-actions {
+  border: none;
+  text-align: center;
+  padding: 0.25rem;
 }
 
 .form-table-field-remove-row {
@@ -12080,10 +12090,12 @@ textarea.form-field-input {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* No !important needed: same specificity as the base .landing-anim rule above, and this
+     one comes later in the cascade, so it already wins on its own. */
   .landing-anim {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 

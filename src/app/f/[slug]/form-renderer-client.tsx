@@ -39,6 +39,11 @@ interface FormRendererClientProps {
    * draft version instead of the slug route, which requires the form to be published (see
    * lib/forms/field-image.ts). Unused on the real public /f/[slug] page. */
   formId?: string;
+  /** Set by the admin template builder's preview (template-preview/[id]/page.tsx), which
+   * has neither a real slug nor a formId — its fields live on a FormTemplate instead of a
+   * Form. Takes priority over the other two when resolving image src (see
+   * lib/forms/field-image.ts). */
+  templateId?: string;
   formName: string;
   // Available for bookkeeping, but every API route below derives the effective
   // formVersionId itself from the submission row it created, so nothing here needs to
@@ -89,6 +94,7 @@ export function FormRendererClient(props: FormRendererClientProps) {
 function FormRendererInner({
   slug,
   formId,
+  templateId,
   formName,
   schema,
   previewMode = false,
@@ -419,6 +425,7 @@ function FormRendererInner({
             const src = getFieldImageSrc({
               slug,
               formId,
+              templateId,
               fieldId: field.id,
               preferFormId: previewMode,
             });
@@ -500,6 +507,7 @@ function FormRendererInner({
                             <FieldInput
                               slug={slug}
                               formId={formId}
+                              templateId={templateId}
                               previewMode={previewMode}
                               field={child}
                               value={answers[childId]}
@@ -523,6 +531,7 @@ function FormRendererInner({
                   <FieldInput
                     slug={slug}
                     formId={formId}
+                    templateId={templateId}
                     previewMode={previewMode}
                     field={field}
                     value={answers[fieldId]}

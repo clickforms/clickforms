@@ -97,6 +97,10 @@ interface FieldInputProps {
    * instead of the slug-based route, which 404s on an unpublished form (see
    * lib/forms/field-image.ts). */
   formId?: string;
+  /** Set by the admin template builder's preview (template-preview/[id]/page.tsx), which
+   * has neither a slug nor a formId — its fields live on a FormTemplate. See
+   * lib/forms/field-image.ts for how this takes priority over the other two. */
+  templateId?: string;
   previewMode?: boolean;
   field: FormField;
   value: FieldValue;
@@ -121,6 +125,7 @@ interface FieldInputProps {
 export function FieldInput({
   slug,
   formId,
+  templateId,
   previewMode,
   field,
   value,
@@ -192,10 +197,16 @@ export function FieldInput({
   }
 
   if (field.type === 'image') {
-    if (!field.imageStorageKey || !slug) {
+    if (!field.imageStorageKey || !(templateId || formId || slug)) {
       return null;
     }
-    const src = getFieldImageSrc({ slug, formId, fieldId: field.id, preferFormId: previewMode });
+    const src = getFieldImageSrc({
+      slug,
+      formId,
+      templateId,
+      fieldId: field.id,
+      preferFormId: previewMode,
+    });
     if (!src) return null;
     const align = field.align ?? 'center';
     const imageEl = (
@@ -612,6 +623,7 @@ export function FieldInput({
           onUploadFile={onUploadFile}
           slug={slug}
           formId={formId}
+          templateId={templateId}
           previewMode={previewMode}
         />
       ) : null}
@@ -846,6 +858,7 @@ interface DrawOnImageControlProps {
   onUploadFile?: (fieldId: string, file: File) => Promise<string>;
   slug?: string;
   formId?: string;
+  templateId?: string;
   previewMode?: boolean;
 }
 
@@ -856,6 +869,7 @@ function DrawOnImageControl({
   onUploadFile,
   slug,
   formId,
+  templateId,
   previewMode,
 }: DrawOnImageControlProps) {
   const [uploading, setUploading] = useState(false);
@@ -863,9 +877,14 @@ function DrawOnImageControl({
 
   const currentFileId = typeof value === 'string' ? value : undefined;
   const backgroundSrc =
-    field.imageStorageKey && slug
-      ? (getFieldImageSrc({ slug, formId, fieldId: field.id, preferFormId: previewMode }) ??
-        undefined)
+    field.imageStorageKey && (templateId || formId || slug)
+      ? (getFieldImageSrc({
+          slug,
+          formId,
+          templateId,
+          fieldId: field.id,
+          preferFormId: previewMode,
+        }) ?? undefined)
       : undefined;
 
   async function handleSave(blob: Blob) {

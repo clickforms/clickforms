@@ -53,6 +53,7 @@ export default async function TemplatePreviewPage({ params, searchParams }: Page
   const renderer = (
     <FormRendererClient
       slug=""
+      templateId={template.id}
       formName={template.name}
       formVersionId=""
       schema={schema}

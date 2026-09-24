@@ -1,5 +1,6 @@
 import type { Form, Submission } from '@prisma/client';
-import { NotFoundError } from '@/lib/api-errors';
+import { isTrialExpired } from '@/lib/admin/plan-limits';
+import { FormOfflineError, NotFoundError } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
 import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
 
@@ -29,7 +30,14 @@ import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
  * `@@unique([organizationId, slug])`), so an unscoped lookup could return the wrong
  * org's form once more than one org has forms. Callers resolve organizationId from the
  * request's subdomain first — see src/lib/tenant.ts getOrganizationBySubdomain and the
- * legacy-link fallback findOrganizationSubdomainForSlug below. */
+ * legacy-link fallback findOrganizationSubdomainForSlug below.
+ *
+ * Also throws FormOfflineError once the owning org's trial has expired — this is the
+ * "live forms go offline" entry point (every caller here is a *new* visit: the render
+ * page, the field-image proxy, and POST .../submissions which starts a fresh submission).
+ * getFormForExistingSubmission below deliberately does NOT carry this check: a submission
+ * already in progress when the trial lapsed is still allowed to finish, same principle as
+ * a form taken offline manually mid-fill (see the PATCH final-submit route). */
 export async function getPublishedFormBySlug(
   slug: string,
   organizationId: string,
@@ -40,6 +48,15 @@ export async function getPublishedFormBySlug(
   if (!form?.currentVersionId) {
     throw new NotFoundError('Form');
   }
+
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { status: true, trialEndsAt: true },
+  });
+  if (organization && isTrialExpired(organization)) {
+    throw new FormOfflineError();
+  }
+
   return form as Form & { currentVersionId: string };
 }
 

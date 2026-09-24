@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
+import { FormOfflineError } from '@/lib/api-errors';
 import { getFormSchemaByVersionId, getPublishedFormBySlug } from '@/lib/forms/public-lookup';
+import { publicFormShareMetadata } from '@/lib/forms/share-metadata';
 import {
-  buildOrgFormUrl,
   getCurrentSubdomain,
   getOrganizationBySubdomain,
   resolveOrganizationIdForSlugOrRedirect,
@@ -38,20 +39,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const form = await getPublishedFormBySlug(slug, organization.id).catch(() => null);
     if (!form) return {};
 
-    const title = organization.name;
-    if (!organization.logoStorageKey) {
-      return { title, description: '', openGraph: { title } };
-    }
-
-    const logoUrl = buildOrgFormUrl(subdomain, '/api/f/logo');
-    return {
-      title,
-      description: '',
-      // width/height must match SIDE in /api/f/logo/route.ts -- telling the crawler the
-      // image is square up front is what makes WhatsApp/etc. show it as a small icon next
-      // to the title instead of a large banner across the top of the card.
-      openGraph: { title, images: [{ url: logoUrl, width: 400, height: 400 }] },
-    };
+    return publicFormShareMetadata({
+      organizationName: organization.name,
+      subdomain,
+      hasLogo: Boolean(organization.logoStorageKey),
+    });
   } catch {
     return {};
   }
@@ -66,7 +58,27 @@ export default async function PublicFormPage({ params }: PageProps) {
   const { slug } = await params;
 
   const organizationId = await resolveOrganizationIdForSlugOrRedirect(slug, `/f/${slug}`);
-  const form = await getPublishedFormBySlug(slug, organizationId).catch(() => null);
+
+  let form: Awaited<ReturnType<typeof getPublishedFormBySlug>> | null = null;
+  try {
+    form = await getPublishedFormBySlug(slug, organizationId);
+  } catch (error) {
+    // A trial-expired org's forms are a distinct case from "this form doesn't exist" —
+    // the link itself is fine, it's just temporarily not accepting responses, so this
+    // gets its own message rather than the generic 404 every other lookup failure here
+    // falls back to.
+    if (error instanceof FormOfflineError) {
+      return (
+        <div className="form-renderer">
+          <div className="form-renderer-body form-success">
+            <h1>This form isn&apos;t accepting responses right now</h1>
+            <p>Please check back later, or contact the organisation directly.</p>
+          </div>
+        </div>
+      );
+    }
+    notFound();
+  }
   if (!form) {
     notFound();
   }

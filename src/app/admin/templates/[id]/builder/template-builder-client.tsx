@@ -16,8 +16,9 @@ import { arrayMove } from '@dnd-kit/sortable';
 import Link from 'next/link';
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CANVAS_DROPPABLE_ID, Canvas } from '@/app/forms/[id]/builder/canvas';
+import { ConditionalLogicEditor } from '@/app/forms/[id]/builder/conditional-logic-editor';
 import { ConditionalPreviewBar } from '@/app/forms/[id]/builder/conditional-preview-bar';
-import { parseColumnSlotDroppableId } from '@/app/forms/[id]/builder/field-card';
+import { FieldDragOverlay, parseColumnSlotDroppableId } from '@/app/forms/[id]/builder/field-card';
 import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import {
   COLUMN_LAYOUT_LABELS,
@@ -36,6 +37,7 @@ import {
   type FieldPatch,
   findParentColumnLayout,
   isColumnChildFieldType,
+  moveFieldInPage,
   removeField,
   removePage,
   renamePage,
@@ -61,9 +63,14 @@ import type {
   FormSchema,
 } from '@/lib/forms/schema';
 import {
+  DEFAULT_FIELD_TEXT_COLOR,
   DEFAULT_FORM_PRIMARY_COLOR,
   DEFAULT_SUBMIT_BUTTON_TEXT,
+  DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL,
+  DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL,
   formSchemaSchema,
+  LAYOUT_STYLE_LABEL,
+  LAYOUT_STYLE_OPTIONS,
   SUBMIT_BUTTON_SIZE_LABEL,
   SUBMIT_BUTTON_SIZE_OPTIONS,
   TEXT_ALIGN_LABEL,
@@ -82,16 +89,20 @@ import {
 // second "mode" through it would risk destabilizing the org-facing builder for the sake
 // of this admin-only screen.
 //
-// Known limitation: the "image" content-block field type's upload control (in
-// FieldSettingsPanel) posts to /api/forms/{formId}/fields/{fieldId}/image, which only
-// exists for real forms — there's no template-scoped equivalent yet. The field type
-// still works structurally (add it, set its label/required/width), it just can't have
-// an image uploaded into it from here yet. Low priority: templates rarely need a
-// pre-baked static image, since the organisation using the template can add their own
-// after copying it.
+// The "image" content-block field type's upload control (FieldImageUpload, rendered from
+// FieldSettingsPanel) works here too — it posts to
+// /api/admin/form-templates/{templateId}/fields/{fieldId}/image, a template-scoped sibling
+// of the tenant-form route (see buildTemplateFieldImageKey in src/lib/s3.ts for why a
+// separate key shape and route were needed: a FormTemplate has no organizationId to scope
+// under). This lets a template author put in a placeholder/dummy logo while designing the
+// template so it previews realistically. That dummy image never carries over to a real
+// Form, though: POST /api/forms strips imageStorageKey off any image field when cloning a
+// template's schema, since the key lives outside every organisation's namespace and would
+// otherwise 404 as a broken image — the organisation uploads its own after copying it.
 
 interface TemplateBuilderClientProps {
   templateId: string;
+  templateName: string;
   initialSchema: FormSchema;
 }
 
@@ -107,6 +118,20 @@ function PlusIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
       <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BackArrowIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M13 8H3M7 4l-4 4 4 4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -179,7 +204,11 @@ function SaveStatusBadge({
   return null;
 }
 
-export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBuilderClientProps) {
+export function TemplateBuilderClient({
+  templateId,
+  templateName,
+  initialSchema,
+}: TemplateBuilderClientProps) {
   const toast = useToast();
   const [schema, setSchema] = useState<FormSchema>(initialSchema);
   const [isEditing, setIsEditing] = useState(false);
@@ -189,7 +218,9 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
   const [showTemplateSettings, setShowTemplateSettings] = useState(false);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
   const [mockAnswers, setMockAnswers] = useState<FormAnswers>({});
-  const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
+  const [activeDrag, setActiveDrag] = useState<
+    { source: 'palette'; label: string } | { source: 'canvas'; fieldId: string } | null
+  >(null);
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -277,6 +308,9 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
     startTransition(() => {
       setSelectedFieldId((current) => (current === fieldId ? current : fieldId));
     });
+    if (isEditing) {
+      setEditingFieldId(fieldId);
+    }
   }
 
   function handleEditFieldDetails(fieldId: string) {
@@ -286,6 +320,7 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
 
   function handleCloseFieldModal() {
     setEditingFieldId(null);
+    setSelectedFieldId(null);
   }
 
   function handleAddField(type: FieldType, index?: number) {
@@ -293,6 +328,7 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
     const field: FormField = createDefaultField(type);
     setSchema((prev) => addFieldToPage(prev, activePageId, field, index));
     setSelectedFieldId(field.id);
+    setEditingFieldId(field.id);
   }
 
   function handleAddColumnLayout(columns: ColumnCount, index?: number) {
@@ -300,6 +336,7 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
     const { schema: next, layoutId } = addColumnLayoutToPage(schema, activePageId, columns, index);
     setSchema(next);
     setSelectedFieldId(layoutId);
+    setEditingFieldId(layoutId);
   }
 
   function handleSetColumnLayoutColumns(layoutId: string, columns: ColumnCount) {
@@ -313,6 +350,7 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
     if (!result) return;
     setSchema(result.schema);
     setSelectedFieldId(result.fieldId);
+    setEditingFieldId(result.fieldId);
   }
 
   function handleRemoveField(fieldId: string) {
@@ -336,6 +374,11 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
       next.pages.find((entry) => entry.id === activePageId)?.fields[index + 1] ?? null;
     setSchema(next);
     if (newFieldId) setSelectedFieldId(newFieldId);
+  }
+
+  function handleMoveField(fieldId: string, direction: 'up' | 'down') {
+    if (!isEditing) return;
+    setSchema((prev) => moveFieldInPage(prev, activePageId, fieldId, direction));
   }
 
   function handleUpdateField(fieldId: string, patch: FieldPatch) {
@@ -408,19 +451,18 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
     if (!isEditing) return;
     const data = event.active.data.current as DragPayload | undefined;
     if (data?.source === 'palette' && data.columnLayoutColumns) {
-      setActiveDragLabel(COLUMN_LAYOUT_LABELS[data.columnLayoutColumns]);
+      setActiveDrag({ source: 'palette', label: COLUMN_LAYOUT_LABELS[data.columnLayoutColumns] });
       return;
     }
     if (data?.source === 'palette' && data.fieldType) {
-      setActiveDragLabel(FIELD_TYPE_LABELS[data.fieldType]);
+      setActiveDrag({ source: 'palette', label: FIELD_TYPE_LABELS[data.fieldType] });
       return;
     }
-    const field = schema.fields[event.active.id.toString()];
-    setActiveDragLabel(field?.label ?? null);
+    setActiveDrag({ source: 'canvas', fieldId: event.active.id.toString() });
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    setActiveDragLabel(null);
+    setActiveDrag(null);
     if (!isEditing) return;
     const { active, over } = event;
     if (!over) return;
@@ -470,6 +512,12 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
   const isEditingColumnChild = editingField
     ? Boolean(findParentColumnLayout(schema, editingField.id))
     : false;
+  // Resolved once here (rather than indexing schema.fields[activeDrag.fieldId] twice
+  // inline in the DragOverlay JSX below) so TS can actually narrow away `undefined` —
+  // repeating the same computed-index expression doesn't narrow across two separate
+  // reads, even when the first read already gated a ternary on it being truthy.
+  const dragOverlayField =
+    activeDrag?.source === 'canvas' ? schema.fields[activeDrag.fieldId] : undefined;
 
   const visibleFieldIds = useMemo(
     () => getVisibleFieldIds(schema, mockAnswers),
@@ -572,14 +620,64 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
           collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveDrag(null)}
         >
           <div className={`builder-workspace ${isEditing ? '' : 'builder-workspace--readonly'}`}>
             {isEditing ? (
-              <aside className="builder-palette" aria-label="Field types">
-                <FieldPalette
-                  onAddField={(type) => handleAddField(type)}
-                  onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
-                />
+              <aside
+                className="builder-palette"
+                aria-label={editingField ? 'Field settings' : 'Field types'}
+              >
+                {editingField ? (
+                  <div className="field-settings-aside">
+                    <div className="field-settings-aside-header">
+                      <button
+                        type="button"
+                        className="field-settings-aside-back"
+                        onClick={handleCloseFieldModal}
+                        aria-label="Back to field list"
+                      >
+                        <BackArrowIcon />
+                      </button>
+                      <span className="field-settings-aside-title">Field settings</span>
+                      {!isEditingColumnChild ? (
+                        <button
+                          type="button"
+                          className="button button--ghost button--small"
+                          onClick={() => handleDuplicateField(editingField.id)}
+                        >
+                          Duplicate
+                        </button>
+                      ) : null}
+                    </div>
+                    <FieldSettingsPanel
+                      templateId={templateId}
+                      schema={schema}
+                      field={editingField}
+                      canEdit={isEditing}
+                      onUpdateField={handleUpdateField}
+                      onReplaceFieldType={handleReplaceFieldType}
+                      onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
+                    />
+                    {editingField.type !== 'hidden' ? (
+                      <div className="settings-section">
+                        <p className="settings-section-title">Logic</p>
+                        <ConditionalLogicEditor
+                          schema={schema}
+                          field={editingField}
+                          canEdit={isEditing}
+                          onSetRule={handleSetConditionalRule}
+                          onClearRule={() => handleClearConditionalRule(editingField.id)}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <FieldPalette
+                    onAddField={(type) => handleAddField(type)}
+                    onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
+                  />
+                )}
               </aside>
             ) : null}
 
@@ -592,7 +690,9 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
 
               {activePage ? (
                 <Canvas
-                  formId={templateId}
+                  templateId={templateId}
+                  formName={templateName}
+                  branding={schema.branding}
                   page={activePage}
                   pageIndex={activePageIndex}
                   pageCount={schema.pages.length}
@@ -602,7 +702,8 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
                   onEditFieldDetails={handleEditFieldDetails}
                   onRemoveField={handleRemoveField}
                   onDuplicateField={handleDuplicateField}
-                  onAddField={(type) => handleAddField(type)}
+                  onMoveField={handleMoveField}
+                  onAddField={(type, index) => handleAddField(type, index)}
                   onAddColumnField={handleAddColumnField}
                   onUpdateField={handleUpdateField}
                   canEdit={isEditing}
@@ -634,13 +735,29 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
           </div>
 
           <DragOverlay>
-            {activeDragLabel ? <div className="drag-overlay-chip">{activeDragLabel}</div> : null}
+            {activeDrag?.source === 'palette' ? (
+              <div className="drag-overlay-chip">{activeDrag.label}</div>
+            ) : dragOverlayField ? (
+              <FieldDragOverlay
+                field={dragOverlayField}
+                fields={schema.fields}
+                templateId={templateId}
+              />
+            ) : null}
           </DragOverlay>
         </DndContext>
 
         {editingField ? (
+          // Desktop editing now happens in-place in .builder-palette (see the aside above) —
+          // this modal only still renders because .builder-palette is hidden below 900px, so
+          // mobile still needs a way to reach a field's settings. modal-overlay--mobile-only
+          // keeps it display:none above that breakpoint so the two edit surfaces never show
+          // at once.
           // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
-          <div className="modal-overlay" onMouseDown={handleCloseFieldModal}>
+          <div
+            className="modal-overlay modal-overlay--mobile-only"
+            onMouseDown={handleCloseFieldModal}
+          >
             <div
               className="modal-card modal-card--wide"
               role="dialog"
@@ -674,16 +791,26 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
                 </div>
               </div>
               <FieldSettingsPanel
-                formId={templateId}
+                templateId={templateId}
                 schema={schema}
                 field={editingField}
                 canEdit={isEditing}
                 onUpdateField={handleUpdateField}
                 onReplaceFieldType={handleReplaceFieldType}
                 onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
-                onSetConditionalRule={handleSetConditionalRule}
-                onClearConditionalRule={handleClearConditionalRule}
               />
+              {editingField.type !== 'hidden' ? (
+                <div className="settings-section">
+                  <p className="settings-section-title">Logic</p>
+                  <ConditionalLogicEditor
+                    schema={schema}
+                    field={editingField}
+                    canEdit={isEditing}
+                    onSetRule={handleSetConditionalRule}
+                    onClearRule={() => handleClearConditionalRule(editingField.id)}
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -778,6 +905,86 @@ export function TemplateBuilderClient({ templateId, initialSchema }: TemplateBui
                       </label>
                     ))}
                   </div>
+                ) : null}
+              </div>
+              <div className="settings-section">
+                <p className="settings-section-title">Layout</p>
+                <div className="settings-width-options">
+                  {LAYOUT_STYLE_OPTIONS.map((style) => (
+                    <label key={style} className="settings-width-option">
+                      <input
+                        type="radio"
+                        name="template-layout-style"
+                        checked={(schema.branding.layoutStyle ?? 'default') === style}
+                        disabled={!isEditing}
+                        onChange={() => handleUpdateBranding({ layoutStyle: style })}
+                      />
+                      {LAYOUT_STYLE_LABEL[style]}
+                    </label>
+                  ))}
+                </div>
+                <p className="settings-field-hint">
+                  Table lays out every question as one continuous label/answer table, matching a
+                  printed form.
+                </p>
+                {schema.branding.layoutStyle === 'table' ? (
+                  <>
+                    <div className="settings-inline-fields">
+                      <label className="settings-field">
+                        <span className="settings-label">Label column header</span>
+                        <input
+                          type="text"
+                          className="text-input"
+                          placeholder={DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL}
+                          disabled={!isEditing}
+                          value={schema.branding.tableThemeFieldColumnLabel ?? ''}
+                          onChange={(event) =>
+                            handleUpdateBranding({
+                              tableThemeFieldColumnLabel: event.target.value || undefined,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="settings-field">
+                        <span className="settings-label">Answer column header</span>
+                        <input
+                          type="text"
+                          className="text-input"
+                          placeholder={DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL}
+                          disabled={!isEditing}
+                          value={schema.branding.tableThemeValueColumnLabel ?? ''}
+                          onChange={(event) =>
+                            handleUpdateBranding({
+                              tableThemeValueColumnLabel: event.target.value || undefined,
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <FieldColorPicker
+                      label="Header background"
+                      value={schema.branding.tableThemeHeaderColor}
+                      defaultColor="#ffffff"
+                      canEdit={isEditing}
+                      onChange={(color) => handleUpdateBranding({ tableThemeHeaderColor: color })}
+                    />
+                    <FieldColorPicker
+                      label="Header text color"
+                      value={schema.branding.tableThemeHeaderTextColor}
+                      defaultColor={DEFAULT_FIELD_TEXT_COLOR}
+                      canEdit={isEditing}
+                      onChange={(color) =>
+                        handleUpdateBranding({ tableThemeHeaderTextColor: color })
+                      }
+                    />
+                    <FieldColorPicker
+                      label="Answer cell background"
+                      value={schema.branding.tableThemeValueColor}
+                      defaultColor="#ffffff"
+                      canEdit={isEditing}
+                      onChange={(color) => handleUpdateBranding({ tableThemeValueColor: color })}
+                    />
+                  </>
                 ) : null}
               </div>
               <div className="settings-section">

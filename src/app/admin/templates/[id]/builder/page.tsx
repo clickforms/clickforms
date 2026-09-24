@@ -25,5 +25,11 @@ export default async function TemplateBuilderPage({ params }: { params: Promise<
     throw new Error(`Template ${template.id} has an invalid schema: ${parsed.error.message}`);
   }
 
-  return <TemplateBuilderClient templateId={template.id} initialSchema={parsed.data} />;
+  return (
+    <TemplateBuilderClient
+      templateId={template.id}
+      templateName={template.name}
+      initialSchema={parsed.data}
+    />
+  );
 }

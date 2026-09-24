@@ -18,6 +18,7 @@ import {
   resolveFieldInputStyle,
   resolveImageSpacingStyle,
   resolveImageStyle,
+  resolveQuestionTableLabelStyle,
   resolveSectionBreakStyle,
   resolveStaticTextBodyStyle,
   resolveStaticTextHeadingStyle,
@@ -167,7 +168,10 @@ export function SubmissionFieldDisplay({
       className={`export-field-group ${fieldHasCustomAppearance(field) ? 'export-field-group--highlighted' : ''}`}
       style={Object.keys(containerStyle).length > 0 ? containerStyle : undefined}
     >
-      <div className="export-field-label">
+      <div
+        className="export-field-label"
+        style={field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined}
+      >
         {field.label}
         {field.required ? ' *' : ''}
       </div>

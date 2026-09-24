@@ -46,6 +46,7 @@ import {
   resolveFieldInputStyle,
   resolveImageSpacingStyle,
   resolveImageStyle,
+  resolveQuestionTableLabelStyle,
   resolveSectionBreakStyle,
   resolveStaticTextBodyStyle,
   resolveStaticTextHeadingStyle,
@@ -285,7 +286,11 @@ export function FieldInput({
       className={`form-field-group ${fieldHasCustomAppearance(field) ? 'form-field-group--highlighted' : ''}`}
       style={Object.keys(containerStyle).length > 0 ? containerStyle : undefined}
     >
-      <label className="form-field-label" htmlFor={field.id}>
+      <label
+        className="form-field-label"
+        htmlFor={field.id}
+        style={field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined}
+      >
         {field.label}
         {field.required ? <span className="form-field-required">*</span> : null}
       </label>

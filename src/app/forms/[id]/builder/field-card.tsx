@@ -19,6 +19,7 @@ import {
   resolveFieldContainerStyle,
   resolveFieldInputStyle,
   resolveImageStyle,
+  resolveQuestionTableLabelStyle,
   resolveSectionBreakStyle,
   resolveStaticTextBodyStyle,
   resolveStaticTextHeadingStyle,
@@ -1750,7 +1751,10 @@ export function FieldCard({
         )}
         <div className="field-card-header">
           {!isImage ? (
-            <span className="field-card-label">
+            <span
+              className="field-card-label"
+              style={field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined}
+            >
               {field.label || 'Untitled field'}
               {field.required && <span className="field-card-required">*</span>}
             </span>
@@ -1808,7 +1812,10 @@ export function FieldCard({
 
       <div className="field-card-header">
         {!isImage ? (
-          <span className="field-card-label">
+          <span
+            className="field-card-label"
+            style={field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined}
+          >
             {questionNumber ? `${questionNumber}. ` : ''}
             {field.label || 'Untitled field'}
             {field.required && <span className="field-card-required">*</span>}

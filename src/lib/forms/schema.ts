@@ -724,6 +724,15 @@ const questionTableFieldSchema = baseFieldSchema.extend({
   headerColor: hexColorSchema,
   headerTextColor: hexColorSchema,
   valueColor: hexColorSchema,
+  // Styling for the field's own top-level `label` (base's required title, e.g. "Contact
+  // details") independent of the header/value cell colors above — same shape as
+  // divider's captionFontWeight/etc., reusing the same shared TextStyleControls UI (see
+  // resolveQuestionTableLabelStyle in field-styles.ts).
+  labelFontWeight: z.enum(FONT_WEIGHT_OPTIONS).optional(),
+  labelFontFamily: z.enum(FONT_FAMILY_OPTIONS).optional(),
+  labelFontSize: z.number().min(TEXT_FONT_SIZE_MIN_PX).max(TEXT_FONT_SIZE_MAX_PX).optional(),
+  labelAlign: z.enum(TEXT_ALIGN_OPTIONS).optional(),
+  labelColor: hexColorSchema,
 });
 
 const numberValidationSchema = z

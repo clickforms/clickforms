@@ -217,6 +217,43 @@ export function resolveDividerCaptionStyle(field: FormField): CSSProperties {
   return style;
 }
 
+type QuestionTableLabelStyledField = FormField & {
+  labelFontWeight?: FontWeightOption;
+  labelFontFamily?: FontFamily;
+  labelFontSize?: number;
+  labelAlign?: TextAlign;
+  labelColor?: string;
+};
+
+/** Styles for a question_table field's own top-level label/heading (e.g. "Contact
+ * details") — independent of its header-row/answer-cell colors (set separately on the
+ * field), same shape as divider's caption style props above, reusing the same shared
+ * TextStyleControls settings-panel UI. */
+export function resolveQuestionTableLabelStyle(field: FormField): CSSProperties {
+  const styled = field as QuestionTableLabelStyledField;
+  const style: CSSProperties = {};
+
+  const fontWeight = resolveFontWeight(styled.labelFontWeight);
+  if (fontWeight !== undefined) {
+    style.fontWeight = fontWeight;
+  }
+  if (styled.labelFontFamily) {
+    const fontFamily = FONT_FAMILY_CSS[styled.labelFontFamily];
+    if (fontFamily) style.fontFamily = fontFamily;
+  }
+  if (styled.labelFontSize) {
+    style.fontSize = `${styled.labelFontSize}px`;
+  }
+  if (styled.labelColor) {
+    style.color = styled.labelColor;
+  }
+  if (styled.labelAlign) {
+    style.textAlign = styled.labelAlign;
+  }
+
+  return style;
+}
+
 // Applied on top of the CSS defaults (.form-renderer-logo-img / .form-image-field-img /
 // etc. in globals.css), which stay in place as the 'undefined' (no imageSize set) case so
 // existing forms keep rendering exactly as before. `full` clears the cap entirely rather

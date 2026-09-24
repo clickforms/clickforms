@@ -921,6 +921,23 @@ function ContentExtras({
               onChange={(value) => onUpdateField(field.id, { valueColor: value })}
             />
           </div>
+          <div className="settings-subsection">
+            <p className="settings-subsection-title">Label style</p>
+            <TextStyleControls
+              radioGroupName={`question-table-label-align-${field.id}`}
+              fontWeight={field.labelFontWeight ?? 'default'}
+              onFontWeightChange={(value) => onUpdateField(field.id, { labelFontWeight: value })}
+              fontFamily={field.labelFontFamily ?? 'default'}
+              onFontFamilyChange={(value) => onUpdateField(field.id, { labelFontFamily: value })}
+              fontSize={field.labelFontSize}
+              onFontSizeChange={(value) => onUpdateField(field.id, { labelFontSize: value })}
+              color={field.labelColor}
+              onColorChange={(value) => onUpdateField(field.id, { labelColor: value })}
+              align={field.labelAlign ?? 'left'}
+              onAlignChange={(value) => onUpdateField(field.id, { labelAlign: value })}
+              canEdit={canEdit}
+            />
+          </div>
         </>
       );
 

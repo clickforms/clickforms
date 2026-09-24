@@ -2033,7 +2033,36 @@ export function FieldSettingsPanel({
 
       <div className="settings-section settings-section--flat">
         <p className="settings-section-title">Settings</p>
-        {!isStaticText ? (
+        {isQuestionTable ? (
+          // Unlike every other field type's Label input, this one is a real on/off choice
+          // rather than "fill this in or leave a placeholder" — the row/column headers below
+          // already say what the table is about, so most tables ship with no label at all.
+          // A toggle makes that an explicit, discoverable choice instead of "type something,
+          // or don't" with the canvas quietly falling back to "Untitled field" either way
+          // (see field-card.tsx's blank-label handling for question_table).
+          <div className="settings-field">
+            <label className="settings-toggle-row">
+              <span className="settings-label">Show label</span>
+              <input
+                type="checkbox"
+                checked={field.label !== undefined}
+                disabled={!canEdit}
+                onChange={(event) =>
+                  onUpdateField(field.id, { label: event.target.checked ? '' : undefined })
+                }
+              />
+            </label>
+            {field.label !== undefined ? (
+              <input
+                className="text-input"
+                placeholder="e.g. Attendees"
+                value={field.label}
+                disabled={!canEdit}
+                onChange={(event) => onUpdateField(field.id, { label: event.target.value })}
+              />
+            ) : null}
+          </div>
+        ) : !isStaticText ? (
           <label className="settings-field">
             <span className="settings-label">
               {isSectionBreak || isColumnLayout
@@ -2042,9 +2071,7 @@ export function FieldSettingsPanel({
                   ? 'Caption (optional)'
                   : isHidden
                     ? 'Internal name'
-                    : isQuestionTable
-                      ? 'Label (optional)'
-                      : 'Label'}
+                    : 'Label'}
             </span>
             <input
               className="text-input"
@@ -2052,10 +2079,7 @@ export function FieldSettingsPanel({
               disabled={!canEdit}
               onChange={(event) =>
                 onUpdateField(field.id, {
-                  label:
-                    isDivider || isQuestionTable
-                      ? event.target.value || undefined
-                      : event.target.value,
+                  label: isDivider ? event.target.value || undefined : event.target.value,
                 })
               }
             />

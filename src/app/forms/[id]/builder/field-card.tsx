@@ -1750,7 +1750,17 @@ export function FieldCard({
           />
         )}
         <div className="field-card-header">
-          {!isImage ? (
+          {field.type === 'question_table' && !field.label ? (
+            // The label is opt-in for this field type (see the "Show label" toggle in the
+            // settings panel) — most instances leave it off since the row/column headers
+            // already say what the table is about, so falling back to "Untitled field" here
+            // would read as a mistake to fix rather than a deliberate choice. A muted
+            // type-name badge, same idea as the blank-image case below, still identifies the
+            // field while editing without implying anything's missing.
+            <span className="field-card-label field-card-label--muted">
+              {FIELD_TYPE_LABELS.question_table}
+            </span>
+          ) : !isImage ? (
             <span
               className="field-card-label"
               style={
@@ -1815,13 +1825,21 @@ export function FieldCard({
       <div className="field-card-header">
         {!isImage ? (
           <span
-            className="field-card-label"
+            className={
+              field.type === 'question_table' && !field.label
+                ? 'field-card-label field-card-label--muted'
+                : 'field-card-label'
+            }
             style={
-              field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined
+              field.type === 'question_table' && field.label
+                ? resolveQuestionTableLabelStyle(field)
+                : undefined
             }
           >
             {questionNumber ? `${questionNumber}. ` : ''}
-            {field.label || 'Untitled field'}
+            {field.type === 'question_table' && !field.label
+              ? FIELD_TYPE_LABELS.question_table
+              : field.label || 'Untitled field'}
             {field.required && <span className="field-card-required">*</span>}
           </span>
         ) : field.label ? (

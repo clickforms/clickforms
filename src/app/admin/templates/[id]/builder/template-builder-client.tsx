@@ -15,6 +15,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import Link from 'next/link';
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BuilderPanelScroll } from '@/app/forms/[id]/builder/builder-panel-scroll';
 import { CANVAS_DROPPABLE_ID, Canvas } from '@/app/forms/[id]/builder/canvas';
 import { ConditionalLogicEditor } from '@/app/forms/[id]/builder/conditional-logic-editor';
 import { ConditionalPreviewBar } from '@/app/forms/[id]/builder/conditional-preview-bar';
@@ -658,65 +659,67 @@ export function TemplateBuilderClient({
                 className={`builder-palette ${editingField && fieldSettingsExpanded ? 'builder-palette--expanded' : ''}`}
                 aria-label={editingField ? 'Field settings' : 'Field types'}
               >
-                {editingField ? (
-                  <div className="field-settings-aside">
-                    <div className="field-settings-aside-header">
-                      <button
-                        type="button"
-                        className="field-settings-aside-back"
-                        onClick={handleCloseFieldModal}
-                        aria-label="Back to field list"
-                      >
-                        <BackArrowIcon />
-                      </button>
-                      <span className="field-settings-aside-title">Field settings</span>
-                      {!isEditingColumnChild ? (
+                <BuilderPanelScroll>
+                  {editingField ? (
+                    <div className="field-settings-aside">
+                      <div className="field-settings-aside-header">
                         <button
                           type="button"
-                          className="button button--ghost button--small"
-                          onClick={() => handleDuplicateField(editingField.id)}
+                          className="field-settings-aside-back"
+                          onClick={handleCloseFieldModal}
+                          aria-label="Back to field list"
                         >
-                          Duplicate
+                          <BackArrowIcon />
                         </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="field-settings-aside-expand"
-                        onClick={() => setFieldSettingsExpanded((expanded) => !expanded)}
-                        aria-label={fieldSettingsExpanded ? 'Collapse panel' : 'Expand panel'}
-                        aria-pressed={fieldSettingsExpanded}
-                      >
-                        <ExpandIcon expanded={fieldSettingsExpanded} />
-                      </button>
-                    </div>
-                    <FieldSettingsPanel
-                      templateId={templateId}
-                      schema={schema}
-                      field={editingField}
-                      canEdit={isEditing}
-                      onUpdateField={handleUpdateField}
-                      onReplaceFieldType={handleReplaceFieldType}
-                      onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
-                    />
-                    {editingField.type !== 'hidden' ? (
-                      <div className="settings-section">
-                        <p className="settings-section-title">Logic</p>
-                        <ConditionalLogicEditor
-                          schema={schema}
-                          field={editingField}
-                          canEdit={isEditing}
-                          onSetRule={handleSetConditionalRule}
-                          onClearRule={() => handleClearConditionalRule(editingField.id)}
-                        />
+                        <span className="field-settings-aside-title">Field settings</span>
+                        {!isEditingColumnChild ? (
+                          <button
+                            type="button"
+                            className="button button--ghost button--small"
+                            onClick={() => handleDuplicateField(editingField.id)}
+                          >
+                            Duplicate
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="field-settings-aside-expand"
+                          onClick={() => setFieldSettingsExpanded((expanded) => !expanded)}
+                          aria-label={fieldSettingsExpanded ? 'Collapse panel' : 'Expand panel'}
+                          aria-pressed={fieldSettingsExpanded}
+                        >
+                          <ExpandIcon expanded={fieldSettingsExpanded} />
+                        </button>
                       </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <FieldPalette
-                    onAddField={(type) => handleAddField(type)}
-                    onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
-                  />
-                )}
+                      <FieldSettingsPanel
+                        templateId={templateId}
+                        schema={schema}
+                        field={editingField}
+                        canEdit={isEditing}
+                        onUpdateField={handleUpdateField}
+                        onReplaceFieldType={handleReplaceFieldType}
+                        onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
+                      />
+                      {editingField.type !== 'hidden' ? (
+                        <div className="settings-section">
+                          <p className="settings-section-title">Logic</p>
+                          <ConditionalLogicEditor
+                            schema={schema}
+                            field={editingField}
+                            canEdit={isEditing}
+                            onSetRule={handleSetConditionalRule}
+                            onClearRule={() => handleClearConditionalRule(editingField.id)}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <FieldPalette
+                      onAddField={(type) => handleAddField(type)}
+                      onAddColumnLayout={(columns) => handleAddColumnLayout(columns)}
+                    />
+                  )}
+                </BuilderPanelScroll>
               </aside>
             ) : null}
 

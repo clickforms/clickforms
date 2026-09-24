@@ -84,7 +84,20 @@ const BLOCK_FORMATS: { label: string; level: 2 | 3 | 4 | null }[] = [
   { label: 'Heading 3', level: 4 },
 ];
 
-const FONT_SIZE_OPTIONS = ['12px', '14px', '16px', '18px', '20px', '24px', '32px', '48px'];
+const FONT_SIZE_OPTIONS = [
+  '8px',
+  '9px',
+  '10px',
+  '11px',
+  '12px',
+  '14px',
+  '16px',
+  '18px',
+  '20px',
+  '24px',
+  '32px',
+  '48px',
+];
 
 function preventDefault(event: React.MouseEvent) {
   event.preventDefault();
@@ -583,7 +596,10 @@ export function RichTextEditor({
           </button>
           {openPopover === 'fontSize' && (
             // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-            <div className="rich-text-popover" onMouseDown={preventDefault}>
+            <div
+              className="rich-text-popover rich-text-popover--scrollable"
+              onMouseDown={preventDefault}
+            >
               <button
                 type="button"
                 className="rich-text-popover-item"

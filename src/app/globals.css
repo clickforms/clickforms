@@ -9228,6 +9228,13 @@ textarea.text-input {
   padding: 0.6rem;
 }
 
+/* Font size list is long enough (8px-48px) to run off the bottom of the viewport on
+   shorter screens, so it scrolls internally instead of growing the popover unbounded. */
+.rich-text-popover--scrollable {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
 .rich-text-popover--merge {
   max-height: 14rem;
   overflow-y: auto;

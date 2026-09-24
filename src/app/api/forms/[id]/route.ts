@@ -1,6 +1,7 @@
 import type { FormNotificationMode } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
@@ -116,6 +117,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
+      await assertOrgActionsAllowed(tx, requireOrganizationId(session));
 
       // The privacy toggle is creator-only, deliberately narrower than the general edit
       // gate above: "truly private" (see formsListWhere/canViewForm) means admins/editors
@@ -304,6 +306,7 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
         where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
+      await assertOrgActionsAllowed(tx, requireOrganizationId(session));
 
       return deleteForm(tx, form, session.user.id);
     });

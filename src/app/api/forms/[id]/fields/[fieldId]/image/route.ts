@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess, assertFormViewAccess } from '@/lib/form-access';
@@ -101,6 +102,9 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     const result = await getFormField(id, fieldId, requireOrganizationId(session));
     if (!result) throw new NotFoundError('Field');
     assertFormEditAccess(result.form, session.user.role, session.user.id);
+    await withOrgContext(requireOrganizationId(session), (tx) =>
+      assertOrgActionsAllowed(tx, requireOrganizationId(session)),
+    );
 
     const storageKey = buildFormFieldImageKey({
       organizationId: result.form.organizationId,
@@ -137,6 +141,9 @@ export async function PUT(request: Request, { params }: RouteContext): Promise<N
     const result = await getFormField(id, fieldId, requireOrganizationId(session));
     if (!result) throw new NotFoundError('Field');
     assertFormEditAccess(result.form, session.user.role, session.user.id);
+    await withOrgContext(requireOrganizationId(session), (tx) =>
+      assertOrgActionsAllowed(tx, requireOrganizationId(session)),
+    );
 
     if (
       !isFormFieldImageKey({

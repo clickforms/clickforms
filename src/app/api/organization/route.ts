@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
 import { toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
@@ -76,6 +77,8 @@ export async function PATCH(request: Request): Promise<NextResponse> {
     const body = patchOrganizationBodySchema.parse(await request.json());
 
     const organization = await withOrgContext(session.user.organizationId, async (tx) => {
+      await assertOrgActionsAllowed(tx, requireOrganizationId(session));
+
       const updated = await tx.organization.update({
         where: { id: requireOrganizationId(session) },
         data: {

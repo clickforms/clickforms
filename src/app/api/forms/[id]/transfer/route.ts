@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
 import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
@@ -34,6 +35,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
+      await assertOrgActionsAllowed(tx, requireOrganizationId(session));
 
       if (body.newOwnerId === form.createdBy) {
         throw new InvalidRequestError('This form is already owned by that user.');

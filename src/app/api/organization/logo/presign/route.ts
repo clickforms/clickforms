@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
 import { toErrorResponse } from '@/lib/api-errors';
+import { withOrgContext } from '@/lib/db';
 import {
   assertLogoUploadAllowed,
   buildOrganizationLogoKey,
@@ -22,6 +24,10 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const body = presignBodySchema.parse(await request.json());
     assertLogoUploadAllowed({ mimeType: body.mimeType, sizeBytes: body.sizeBytes });
+
+    await withOrgContext(session.user.organizationId, (tx) =>
+      assertOrgActionsAllowed(tx, requireOrganizationId(session)),
+    );
 
     const storageKey = buildOrganizationLogoKey({
       organizationId: requireOrganizationId(session),

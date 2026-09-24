@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { assertWithinStorageLimit } from '@/lib/admin/plan-limits';
+import { assertOrgActionsAllowed, assertWithinStorageLimit } from '@/lib/admin/plan-limits';
 import { toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import { assertUploadAllowed, buildLibraryStorageKey, createPresignedUploadUrl } from '@/lib/s3';
@@ -24,6 +24,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     // Checked at presign time, before the client's S3 PUT — a blocked upload should never
     // actually land in S3 just to be rejected at /api/files/confirm afterward.
     await withOrgContext(session.user.organizationId, async (tx) => {
+      await assertOrgActionsAllowed(tx, requireOrganizationId(session));
+
       const organization = await tx.organization.findUnique({
         where: { id: requireOrganizationId(session) },
         select: { plan: true },

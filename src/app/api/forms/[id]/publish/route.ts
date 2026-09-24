@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
 import { toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
@@ -22,6 +23,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
         where: { id, organizationId: requireOrganizationId(session) },
       });
       assertFormEditAccess(form, session.user.role, session.user.id);
+      await assertOrgActionsAllowed(tx, requireOrganizationId(session));
 
       const { form: updatedForm, version } = await publishForm(tx, form);
 

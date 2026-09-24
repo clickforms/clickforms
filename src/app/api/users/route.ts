@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { assertCanInviteUser } from '@/lib/admin/plan-limits';
+import { assertCanInviteUser, assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
@@ -91,6 +91,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     const email = body.email.toLowerCase();
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
+      await assertOrgActionsAllowed(tx, requireOrganizationId(session));
+
       const existingUser = await tx.user.findFirst({
         where: { organizationId: session.user.organizationId, email },
       });

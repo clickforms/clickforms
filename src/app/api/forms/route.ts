@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { assertCanCreateForm } from '@/lib/admin/plan-limits';
+import { assertCanCreateForm, assertOrgActionsAllowed } from '@/lib/admin/plan-limits';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
@@ -79,6 +79,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const result = await withOrgContext(session.user.organizationId, async (tx) => {
+      await assertOrgActionsAllowed(tx, requireOrganizationId(session));
+
       const organization = await tx.organization.findUnique({
         where: { id: requireOrganizationId(session) },
         select: { plan: true },

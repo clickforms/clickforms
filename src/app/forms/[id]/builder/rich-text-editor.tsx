@@ -1,22 +1,57 @@
 'use client';
 
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
+import { Color } from '@tiptap/extension-color';
+import { FontFamily as FontFamilyExtension } from '@tiptap/extension-font-family';
+import { Highlight } from '@tiptap/extension-highlight';
+import { Image } from '@tiptap/extension-image';
+import { Placeholder } from '@tiptap/extension-placeholder';
+import { Subscript } from '@tiptap/extension-subscript';
+import { Superscript } from '@tiptap/extension-superscript';
+import { TableKit } from '@tiptap/extension-table';
+import { TextAlign } from '@tiptap/extension-text-align';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { common, createLowlight } from 'lowlight';
 import { useEffect, useRef, useState } from 'react';
-import { mergeableFields, mergeTokenHtml } from '@/lib/forms/merge-fields';
-import { FIELD_COLOR_PRESETS, type FormField } from '@/lib/forms/schema';
+import { MergeToken } from '@/app/forms/[id]/builder/merge-token-node';
+import { FontSize } from '@/app/forms/[id]/builder/rich-text-font-size';
+import { mergeableFields } from '@/lib/forms/merge-fields';
+import {
+  FIELD_COLOR_PRESETS,
+  FONT_FAMILY_CSS,
+  FONT_FAMILY_LABEL,
+  FONT_FAMILY_OPTIONS,
+  type FormField,
+} from '@/lib/forms/schema';
 
-// A small hand-built WYSIWYG editor for the "Formatted Text" field's body (matches the
-// Rich text toolbar for static_text fields: bold/italic/underline, headings,
-// alignment, lists, links, a color swatch, and an "Insert form answers" merge-field picker).
+// A comprehensive WYSIWYG editor for the "Formatted Text" field's body, built on Tiptap
+// (headless, MIT-licensed, https://tiptap.dev) rather than the browser's deprecated
+// document.execCommand API this editor used to run on. Tiptap wraps ProseMirror — every
+// mark/node toggle below goes through its command chain (editor.chain().focus()...run()),
+// and undo/redo, list handling, and paste sanitization all come from the library instead
+// of being hand-rolled.
 //
-// Deliberately not built on a rich-text library (no TipTap/Quill/etc. in this project) —
-// document.execCommand is deprecated but still broadly supported in every desktop browser
-// this internal admin tool targets, and it keeps the dependency footprint at zero for what
-// is, in scope, a fairly small formatting toolbar.
+// The one genuinely custom piece is the "Insert form answers" merge-field chip — see
+// merge-token-node.ts for why it's modeled as an atom node, and merge-fields.ts for how
+// its HTML gets resolved into real answer text outside the editor (public renderer,
+// builder canvas preview). rich-text-font-size.ts is the other local addition — Tiptap has
+// no stable official font-size extension for v3, so it follows the documented community
+// recipe of adding a fontSize attribute to the existing TextStyle mark. Everything else
+// here is stock Tiptap extensions: tables (TableKit), inline images (Image), and
+// syntax-highlighted code blocks (CodeBlockLowlight, replacing StarterKit's plain
+// bundled codeBlock — see `codeBlock: false` below) round out the toolbar so it covers
+// the same ground as most full-featured document editors.
 //
-// Selection-preservation trick: every toolbar control uses onMouseDown={preventDefault} so
-// clicking it never steals DOM focus away from the contentEditable div. Without that, the
-// browser's Selection/Range would collapse the moment focus left the editor, and commands
-// like "bold" or "insert merge field" would silently apply at the wrong place (or nowhere).
+// Selection-preservation note: unlike the old execCommand-based editor, Tiptap tracks its
+// selection in ProseMirror's own document state, not the browser's Selection/Range — that
+// state survives the editor losing DOM focus (e.g. while a toolbar popover is open), so
+// `.chain().focus()` reliably resumes at the right place. The onMouseDown={preventDefault}
+// on toolbar controls is kept anyway, purely so clicking a button doesn't visibly collapse
+// the text selection the user is looking at.
+
+const lowlight = createLowlight(common);
 
 interface RichTextEditorProps {
   value: string;
@@ -26,14 +61,24 @@ interface RichTextEditorProps {
   excludeFieldId: string;
 }
 
-type Popover = 'format' | 'color' | 'merge' | null;
+type Popover =
+  | 'format'
+  | 'color'
+  | 'highlight'
+  | 'merge'
+  | 'table'
+  | 'fontFamily'
+  | 'fontSize'
+  | null;
 
-const BLOCK_FORMATS: { label: string; tag: string }[] = [
-  { label: 'Paragraph', tag: '<p>' },
-  { label: 'Heading 1', tag: '<h2>' },
-  { label: 'Heading 2', tag: '<h3>' },
-  { label: 'Heading 3', tag: '<h4>' },
+const BLOCK_FORMATS: { label: string; level: 2 | 3 | 4 | null }[] = [
+  { label: 'Paragraph', level: null },
+  { label: 'Heading 1', level: 2 },
+  { label: 'Heading 2', level: 3 },
+  { label: 'Heading 3', level: 4 },
 ];
+
+const FONT_SIZE_OPTIONS = ['12px', '14px', '16px', '18px', '20px', '24px', '32px', '48px'];
 
 function preventDefault(event: React.MouseEvent) {
   event.preventDefault();
@@ -42,23 +87,248 @@ function preventDefault(event: React.MouseEvent) {
 function ToolbarButton({
   label,
   onClick,
+  active,
+  disabled,
   children,
 }: {
   label: string;
   onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
-      className="rich-text-toolbar-button"
+      className={`rich-text-toolbar-button ${active ? 'rich-text-toolbar-button--active' : ''}`}
       title={label}
       aria-label={label}
+      aria-pressed={active}
+      disabled={disabled}
       onMouseDown={preventDefault}
       onClick={onClick}
     >
       {children}
     </button>
+  );
+}
+
+// Inline SVGs for the handful of toolbar controls that previously used obscure Unicode
+// glyphs (align left/center/right/justify were rendering as blank boxes in most fonts —
+// see field-settings-panel.tsx / builder-rail.tsx for this codebase's usual inline-icon
+// convention, followed here) plus icons for the newly-added table/image/code-block
+// controls. Bold/Italic/Underline/Strike/lists/quote/hr/undo/redo intentionally keep their
+// existing real-HTML or well-supported-Unicode glyphs — those already render correctly.
+
+function AlignLeftIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <line
+        x1="1"
+        y1="3"
+        x2="13"
+        y2="3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <line
+        x1="1"
+        y1="7"
+        x2="9"
+        y2="7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <line
+        x1="1"
+        y1="11"
+        x2="11"
+        y2="11"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function AlignCenterIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <line
+        x1="1"
+        y1="3"
+        x2="13"
+        y2="3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <line
+        x1="3"
+        y1="7"
+        x2="11"
+        y2="7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <line
+        x1="2"
+        y1="11"
+        x2="12"
+        y2="11"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function AlignRightIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <line
+        x1="1"
+        y1="3"
+        x2="13"
+        y2="3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <line
+        x1="5"
+        y1="7"
+        x2="13"
+        y2="7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <line
+        x1="3"
+        y1="11"
+        x2="13"
+        y2="11"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function AlignJustifyIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <line
+        x1="1"
+        y1="3"
+        x2="13"
+        y2="3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <line
+        x1="1"
+        y1="7"
+        x2="13"
+        y2="7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <line
+        x1="1"
+        y1="11"
+        x2="13"
+        y2="11"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M6 8L8 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path
+        d="M5.5 9.3L4 10.8a2 2 0 01-2.8-2.8l1.8-1.8a2 2 0 012.8 0"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8.5 4.7L10 3.2a2 2 0 012.8 2.8l-1.8 1.8a2 2 0 01-2.8 0"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ClearFormatIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M2 2.5h7M5.5 2.5v6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path
+        d="M8 8.5l4.5 4.5M12.5 8.5L8 13"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function TableIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <rect x="1.5" y="2" width="11" height="10" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <line x1="1.5" y1="5.3" x2="12.5" y2="5.3" stroke="currentColor" strokeWidth="1.1" />
+      <line x1="1.5" y1="8.7" x2="12.5" y2="8.7" stroke="currentColor" strokeWidth="1.1" />
+      <line x1="5.7" y1="2" x2="5.7" y2="12" stroke="currentColor" strokeWidth="1.1" />
+      <line x1="9.3" y1="2" x2="9.3" y2="12" stroke="currentColor" strokeWidth="1.1" />
+    </svg>
+  );
+}
+
+function ImageIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <rect x="1.5" y="2.5" width="11" height="9" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <circle cx="5" cy="5.5" r="1.1" stroke="currentColor" strokeWidth="1.1" />
+      <path
+        d="M2 10.5l3.2-3.2a1 1 0 011.4 0L9 9.7M8.3 9l1.4-1.4a1 1 0 011.4 0L12.5 9.7"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CodeBlockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M4.5 3.5L1.3 7l3.2 3.5M9.5 3.5L12.7 7l-3.2 3.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -69,89 +339,317 @@ export function RichTextEditor({
   fields,
   excludeFieldId,
 }: RichTextEditorProps) {
-  const editorRef = useRef<HTMLDivElement | null>(null);
-  // Starts at '' (not `value`) so the very first effect run below still performs the
-  // initial DOM write — this div intentionally has no dangerouslySetInnerHTML in its JSX,
-  // so the effect is the *only* thing that ever writes HTML into it.
-  const lastEmittedRef = useRef<string>('');
+  const lastEmittedRef = useRef<string>(value);
   const [openPopover, setOpenPopover] = useState<Popover>(null);
 
-  // Only (re-)sync innerHTML when `value` changed for a reason other than this editor's own
-  // onInput (e.g. switching which field is selected, or an undo elsewhere) — otherwise every
-  // keystroke would reset innerHTML and throw the caret back to the start. Deliberately not
-  // using dangerouslySetInnerHTML in the JSX below: React would re-diff that prop on every
-  // parent re-render (which happens on every keystroke, since onChange flows back through
-  // parent state), and re-applying even byte-identical HTML via that path still nukes and
-  // reparses the DOM, resetting the caret — this imperative, guarded effect is the only
-  // writer.
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      editable: !disabled,
+      content: value,
+      editorProps: {
+        attributes: { class: 'rich-text-editor' },
+      },
+      extensions: [
+        StarterKit.configure({
+          heading: { levels: [2, 3, 4] },
+          link: {
+            openOnClick: false,
+            autolink: true,
+            HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' },
+          },
+          // Replaced by CodeBlockLowlight below so code blocks get real syntax
+          // highlighting instead of StarterKit's plain, unstyled <pre><code>.
+          codeBlock: false,
+        }),
+        TextStyle,
+        Color,
+        Highlight.configure({ multicolor: true }),
+        TextAlign.configure({ types: ['heading', 'paragraph'] }),
+        Superscript,
+        Subscript,
+        Placeholder.configure({ placeholder: 'Add your text here.' }),
+        MergeToken,
+        FontFamilyExtension,
+        FontSize,
+        Image,
+        TableKit.configure({ table: { resizable: true } }),
+        CodeBlockLowlight.configure({ lowlight }),
+      ],
+      onUpdate: ({ editor: updatedEditor }) => {
+        const html = updatedEditor.getHTML();
+        lastEmittedRef.current = html;
+        onChange(html);
+      },
+    },
+    [],
+  );
+
+  // Keep the editor's editable state in sync with the disabled prop without recreating
+  // the whole editor instance (recreating would lose undo history and the caret position).
   useEffect(() => {
-    if (!editorRef.current) return;
+    editor?.setEditable(!disabled);
+  }, [editor, disabled]);
+
+  // Only (re-)sync content when `value` changed for a reason other than this editor's own
+  // onUpdate (e.g. switching which field is selected) — otherwise every keystroke would
+  // reset the document and throw the caret back to the start. emitUpdate: false stops this
+  // programmatic sync from re-triggering onUpdate and looping back into onChange.
+  useEffect(() => {
+    if (!editor) return;
     if (value === lastEmittedRef.current) return;
-    editorRef.current.innerHTML = value;
+    editor.commands.setContent(value, { emitUpdate: false });
     lastEmittedRef.current = value;
-  }, [value]);
+  }, [editor, value]);
 
-  function emitChange() {
-    if (!editorRef.current) return;
-    const html = editorRef.current.innerHTML;
-    lastEmittedRef.current = html;
-    onChange(html);
-  }
+  const state = useEditorState({
+    editor,
+    selector: (ctx) => {
+      const e = ctx.editor;
+      if (!e) return null;
+      return {
+        canUndo: e.can().undo(),
+        canRedo: e.can().redo(),
+        isBold: e.isActive('bold'),
+        isItalic: e.isActive('italic'),
+        isUnderline: e.isActive('underline'),
+        isStrike: e.isActive('strike'),
+        isSuperscript: e.isActive('superscript'),
+        isSubscript: e.isActive('subscript'),
+        isBulletList: e.isActive('bulletList'),
+        isOrderedList: e.isActive('orderedList'),
+        isBlockquote: e.isActive('blockquote'),
+        isCodeBlock: e.isActive('codeBlock'),
+        isLink: e.isActive('link'),
+        isTable: e.isActive('table'),
+        canMergeCells: e.can().mergeCells(),
+        canSplitCell: e.can().splitCell(),
+        activeAlign: (['left', 'center', 'right', 'justify'] as const).find((align) =>
+          e.isActive({ textAlign: align }),
+        ),
+        activeHeadingLevel: BLOCK_FORMATS.find(
+          (format) => format.level !== null && e.isActive('heading', { level: format.level }),
+        )?.level,
+        isParagraph: e.isActive('paragraph') && !e.isActive('heading'),
+        activeFontFamily: (e.getAttributes('textStyle').fontFamily as string | undefined) ?? null,
+        activeFontSize: (e.getAttributes('textStyle').fontSize as string | undefined) ?? null,
+      };
+    },
+  });
 
-  function exec(command: string, arg?: string) {
-    editorRef.current?.focus();
-    document.execCommand(command, false, arg);
-    emitChange();
+  if (!editor || !state) {
+    return <div className="rich-text-editor-wrap rich-text-editor-wrap--loading" />;
   }
 
   function insertLink() {
-    editorRef.current?.focus();
-    const hasSelection = (document.getSelection()?.toString().length ?? 0) > 0;
-    const url = window.prompt('Link URL (e.g. https://example.com)');
-    if (!url) return;
-    if (hasSelection) {
-      document.execCommand('createLink', false, url);
-    } else {
-      document.execCommand(
-        'insertHTML',
-        false,
-        `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`,
-      );
+    const previousUrl = editor?.getAttributes('link').href as string | undefined;
+    const url = window.prompt('Link URL (e.g. https://example.com)', previousUrl ?? '');
+    if (url === null) return;
+    if (url === '') {
+      editor?.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
     }
-    emitChange();
+    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  }
+
+  function insertImage() {
+    const url = window.prompt('Image URL (e.g. https://example.com/photo.jpg)');
+    if (!url) return;
+    editor?.chain().focus().setImage({ src: url }).run();
   }
 
   function insertMergeField(field: FormField) {
-    editorRef.current?.focus();
-    document.execCommand('insertHTML', false, mergeTokenHtml(field));
-    emitChange();
+    const label = 'label' in field && field.label ? field.label : 'Untitled field';
+    editor?.chain().focus().insertMergeToken({ fieldId: field.id, label }).run();
     setOpenPopover(null);
   }
 
   const mergeable = mergeableFields(fields, excludeFieldId);
+  const activeFormat = BLOCK_FORMATS.find((format) =>
+    format.level === null ? state.isParagraph : state.activeHeadingLevel === format.level,
+  );
+  const activeFontFamilyOption =
+    FONT_FAMILY_OPTIONS.find((option) => FONT_FAMILY_CSS[option] === state.activeFontFamily) ??
+    'default';
 
   return (
     <div className="rich-text-editor-wrap">
       {/* biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so toolbar clicks don't steal selection from the editor; the real controls are the child buttons */}
       <div className="rich-text-toolbar" onMouseDown={preventDefault}>
         <div className="rich-text-toolbar-group">
-          <ToolbarButton label="Undo" onClick={() => exec('undo')}>
+          <ToolbarButton
+            label="Undo"
+            disabled={!state.canUndo}
+            onClick={() => editor.chain().focus().undo().run()}
+          >
             ↺
           </ToolbarButton>
-          <ToolbarButton label="Redo" onClick={() => exec('redo')}>
+          <ToolbarButton
+            label="Redo"
+            disabled={!state.canRedo}
+            onClick={() => editor.chain().focus().redo().run()}
+          >
             ↻
           </ToolbarButton>
         </div>
 
+        <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
+          <button
+            type="button"
+            className="rich-text-toolbar-button rich-text-toolbar-button--wide"
+            onMouseDown={preventDefault}
+            onClick={() => setOpenPopover(openPopover === 'format' ? null : 'format')}
+          >
+            {activeFormat?.label ?? 'Paragraph'} ▾
+          </button>
+          {openPopover === 'format' && (
+            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
+            <div className="rich-text-popover" onMouseDown={preventDefault}>
+              {BLOCK_FORMATS.map((format) => (
+                <button
+                  key={format.label}
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    if (format.level === null) {
+                      editor.chain().focus().setParagraph().run();
+                    } else {
+                      editor.chain().focus().toggleHeading({ level: format.level }).run();
+                    }
+                    setOpenPopover(null);
+                  }}
+                >
+                  {format.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
+          <button
+            type="button"
+            className="rich-text-toolbar-button rich-text-toolbar-button--wide"
+            onMouseDown={preventDefault}
+            onClick={() => setOpenPopover(openPopover === 'fontFamily' ? null : 'fontFamily')}
+          >
+            {FONT_FAMILY_LABEL[activeFontFamilyOption]} ▾
+          </button>
+          {openPopover === 'fontFamily' && (
+            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
+            <div className="rich-text-popover" onMouseDown={preventDefault}>
+              {FONT_FAMILY_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    const css = FONT_FAMILY_CSS[option];
+                    if (css) {
+                      editor.chain().focus().setFontFamily(css).run();
+                    } else {
+                      editor.chain().focus().unsetFontFamily().run();
+                    }
+                    setOpenPopover(null);
+                  }}
+                >
+                  <span style={{ fontFamily: FONT_FAMILY_CSS[option] }}>
+                    {FONT_FAMILY_LABEL[option]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
+          <button
+            type="button"
+            className="rich-text-toolbar-button rich-text-toolbar-button--wide"
+            onMouseDown={preventDefault}
+            onClick={() => setOpenPopover(openPopover === 'fontSize' ? null : 'fontSize')}
+          >
+            {state.activeFontSize ?? 'Size'} ▾
+          </button>
+          {openPopover === 'fontSize' && (
+            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
+            <div className="rich-text-popover" onMouseDown={preventDefault}>
+              <button
+                type="button"
+                className="rich-text-popover-item"
+                onMouseDown={preventDefault}
+                onClick={() => {
+                  editor.chain().focus().unsetFontSize().run();
+                  setOpenPopover(null);
+                }}
+              >
+                Default
+              </button>
+              {FONT_SIZE_OPTIONS.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor.chain().focus().setFontSize(size).run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="rich-text-toolbar-group">
-          <ToolbarButton label="Bold" onClick={() => exec('bold')}>
+          <ToolbarButton
+            label="Bold"
+            active={state.isBold}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
             <strong>B</strong>
           </ToolbarButton>
-          <ToolbarButton label="Italic" onClick={() => exec('italic')}>
+          <ToolbarButton
+            label="Italic"
+            active={state.isItalic}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
             <em>I</em>
           </ToolbarButton>
-          <ToolbarButton label="Underline" onClick={() => exec('underline')}>
+          <ToolbarButton
+            label="Underline"
+            active={state.isUnderline}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+          >
             <span style={{ textDecoration: 'underline' }}>U</span>
+          </ToolbarButton>
+          <ToolbarButton
+            label="Strikethrough"
+            active={state.isStrike}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+          >
+            <span style={{ textDecoration: 'line-through' }}>S</span>
+          </ToolbarButton>
+        </div>
+
+        <div className="rich-text-toolbar-group">
+          <ToolbarButton
+            label="Superscript"
+            active={state.isSuperscript}
+            onClick={() => editor.chain().focus().toggleSuperscript().run()}
+          >
+            x²
+          </ToolbarButton>
+          <ToolbarButton
+            label="Subscript"
+            active={state.isSubscript}
+            onClick={() => editor.chain().focus().toggleSubscript().run()}
+          >
+            x₂
           </ToolbarButton>
         </div>
 
@@ -168,6 +666,17 @@ export function RichTextEditor({
               className="rich-text-popover rich-text-popover--swatches"
               onMouseDown={preventDefault}
             >
+              <button
+                type="button"
+                className="rich-text-popover-item"
+                onMouseDown={preventDefault}
+                onClick={() => {
+                  editor.chain().focus().unsetColor().run();
+                  setOpenPopover(null);
+                }}
+              >
+                Default
+              </button>
               {FIELD_COLOR_PRESETS.map((color) => (
                 <button
                   key={color}
@@ -177,7 +686,7 @@ export function RichTextEditor({
                   aria-label={color}
                   onMouseDown={preventDefault}
                   onClick={() => {
-                    exec('foreColor', color);
+                    editor.chain().focus().setColor(color).run();
                     setOpenPopover(null);
                   }}
                 />
@@ -188,60 +697,263 @@ export function RichTextEditor({
 
         <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
           <ToolbarButton
-            label="Paragraph style"
-            onClick={() => setOpenPopover(openPopover === 'format' ? null : 'format')}
+            label="Highlight color"
+            onClick={() => setOpenPopover(openPopover === 'highlight' ? null : 'highlight')}
           >
-            ¶ ▾
+            <span className="rich-text-highlight-swatch-icon" />
           </ToolbarButton>
-          {openPopover === 'format' && (
+          {openPopover === 'highlight' && (
             // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-            <div className="rich-text-popover" onMouseDown={preventDefault}>
-              {BLOCK_FORMATS.map((format) => (
+            <div
+              className="rich-text-popover rich-text-popover--swatches"
+              onMouseDown={preventDefault}
+            >
+              <button
+                type="button"
+                className="rich-text-popover-item"
+                onMouseDown={preventDefault}
+                onClick={() => {
+                  editor.chain().focus().unsetHighlight().run();
+                  setOpenPopover(null);
+                }}
+              >
+                None
+              </button>
+              {FIELD_COLOR_PRESETS.map((color) => (
                 <button
-                  key={format.tag}
+                  key={color}
                   type="button"
-                  className="rich-text-popover-item"
+                  className="rich-text-swatch"
+                  style={{ backgroundColor: color }}
+                  aria-label={color}
                   onMouseDown={preventDefault}
                   onClick={() => {
-                    exec('formatBlock', format.tag);
+                    editor.chain().focus().toggleHighlight({ color }).run();
                     setOpenPopover(null);
                   }}
-                >
-                  {format.label}
-                </button>
+                />
               ))}
             </div>
           )}
         </div>
 
         <div className="rich-text-toolbar-group">
-          <ToolbarButton label="Align left" onClick={() => exec('justifyLeft')}>
-            ⯇
+          <ToolbarButton
+            label="Align left"
+            active={state.activeAlign === 'left' || state.activeAlign === undefined}
+            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          >
+            <AlignLeftIcon />
           </ToolbarButton>
-          <ToolbarButton label="Align center" onClick={() => exec('justifyCenter')}>
-            ▤
+          <ToolbarButton
+            label="Align center"
+            active={state.activeAlign === 'center'}
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          >
+            <AlignCenterIcon />
           </ToolbarButton>
-          <ToolbarButton label="Align right" onClick={() => exec('justifyRight')}>
-            ⯈
+          <ToolbarButton
+            label="Align right"
+            active={state.activeAlign === 'right'}
+            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          >
+            <AlignRightIcon />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Justify"
+            active={state.activeAlign === 'justify'}
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+          >
+            <AlignJustifyIcon />
           </ToolbarButton>
         </div>
 
         <div className="rich-text-toolbar-group">
-          <ToolbarButton label="Numbered list" onClick={() => exec('insertOrderedList')}>
+          <ToolbarButton
+            label="Numbered list"
+            active={state.isOrderedList}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          >
             1.
           </ToolbarButton>
-          <ToolbarButton label="Bulleted list" onClick={() => exec('insertUnorderedList')}>
+          <ToolbarButton
+            label="Bulleted list"
+            active={state.isBulletList}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
             •
+          </ToolbarButton>
+          <ToolbarButton
+            label="Quote"
+            active={state.isBlockquote}
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          >
+            "
+          </ToolbarButton>
+          <ToolbarButton
+            label="Horizontal rule"
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          >
+            ―
+          </ToolbarButton>
+          <ToolbarButton
+            label="Code block"
+            active={state.isCodeBlock}
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          >
+            <CodeBlockIcon />
           </ToolbarButton>
         </div>
 
         <div className="rich-text-toolbar-group">
-          <ToolbarButton label="Insert link" onClick={insertLink}>
-            🔗
+          <ToolbarButton label="Insert link" active={state.isLink} onClick={insertLink}>
+            <LinkIcon />
           </ToolbarButton>
-          <ToolbarButton label="Clear formatting" onClick={() => exec('removeFormat')}>
-            ⌫
+          <ToolbarButton label="Insert image" onClick={insertImage}>
+            <ImageIcon />
           </ToolbarButton>
+          <ToolbarButton
+            label="Clear formatting"
+            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+          >
+            <ClearFormatIcon />
+          </ToolbarButton>
+        </div>
+
+        <div className="rich-text-toolbar-group rich-text-toolbar-group--popover">
+          <ToolbarButton
+            label="Table"
+            active={state.isTable}
+            onClick={() => setOpenPopover(openPopover === 'table' ? null : 'table')}
+          >
+            <TableIcon />
+          </ToolbarButton>
+          {openPopover === 'table' && (
+            // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
+            <div className="rich-text-popover" onMouseDown={preventDefault}>
+              {!state.isTable ? (
+                <button
+                  type="button"
+                  className="rich-text-popover-item"
+                  onMouseDown={preventDefault}
+                  onClick={() => {
+                    editor
+                      .chain()
+                      .focus()
+                      .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                      .run();
+                    setOpenPopover(null);
+                  }}
+                >
+                  Insert table
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="rich-text-popover-item"
+                    onMouseDown={preventDefault}
+                    onClick={() => {
+                      editor.chain().focus().addColumnBefore().run();
+                      setOpenPopover(null);
+                    }}
+                  >
+                    Insert column before
+                  </button>
+                  <button
+                    type="button"
+                    className="rich-text-popover-item"
+                    onMouseDown={preventDefault}
+                    onClick={() => {
+                      editor.chain().focus().addColumnAfter().run();
+                      setOpenPopover(null);
+                    }}
+                  >
+                    Insert column after
+                  </button>
+                  <button
+                    type="button"
+                    className="rich-text-popover-item"
+                    onMouseDown={preventDefault}
+                    onClick={() => {
+                      editor.chain().focus().deleteColumn().run();
+                      setOpenPopover(null);
+                    }}
+                  >
+                    Delete column
+                  </button>
+                  <button
+                    type="button"
+                    className="rich-text-popover-item"
+                    onMouseDown={preventDefault}
+                    onClick={() => {
+                      editor.chain().focus().addRowBefore().run();
+                      setOpenPopover(null);
+                    }}
+                  >
+                    Insert row before
+                  </button>
+                  <button
+                    type="button"
+                    className="rich-text-popover-item"
+                    onMouseDown={preventDefault}
+                    onClick={() => {
+                      editor.chain().focus().addRowAfter().run();
+                      setOpenPopover(null);
+                    }}
+                  >
+                    Insert row after
+                  </button>
+                  <button
+                    type="button"
+                    className="rich-text-popover-item"
+                    onMouseDown={preventDefault}
+                    onClick={() => {
+                      editor.chain().focus().deleteRow().run();
+                      setOpenPopover(null);
+                    }}
+                  >
+                    Delete row
+                  </button>
+                  <button
+                    type="button"
+                    className="rich-text-popover-item"
+                    disabled={!state.canMergeCells}
+                    onMouseDown={preventDefault}
+                    onClick={() => {
+                      editor.chain().focus().mergeCells().run();
+                      setOpenPopover(null);
+                    }}
+                  >
+                    Merge cells
+                  </button>
+                  <button
+                    type="button"
+                    className="rich-text-popover-item"
+                    disabled={!state.canSplitCell}
+                    onMouseDown={preventDefault}
+                    onClick={() => {
+                      editor.chain().focus().splitCell().run();
+                      setOpenPopover(null);
+                    }}
+                  >
+                    Split cell
+                  </button>
+                  <button
+                    type="button"
+                    className="rich-text-popover-item rich-text-popover-item--danger"
+                    onMouseDown={preventDefault}
+                    onClick={() => {
+                      editor.chain().focus().deleteTable().run();
+                      setOpenPopover(null);
+                    }}
+                  >
+                    Delete table
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {mergeable.length > 0 && (
@@ -277,16 +989,7 @@ export function RichTextEditor({
         )}
       </div>
 
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: contentEditable region — the standard rich-text-editor pattern (Slate, ProseMirror, etc. all use a contentEditable div, not an input/textarea, since those can't hold rich HTML formatting) */}
-      <div
-        ref={editorRef}
-        className="rich-text-editor"
-        contentEditable={!disabled}
-        suppressContentEditableWarning
-        onInput={emitChange}
-        onBlur={emitChange}
-      />
-      {/* No dangerouslySetInnerHTML here on purpose — see the effect above. */}
+      <EditorContent editor={editor} />
     </div>
   );
 }

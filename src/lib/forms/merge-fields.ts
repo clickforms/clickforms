@@ -4,13 +4,26 @@ import { isLayoutOnlyField } from '@/lib/forms/schema';
 
 // Merge fields let a "Formatted Text" block reference another field's answer inline — e.g.
 // "Thanks for applying for {label}, {name}." The RichTextEditor's "Insert form answers"
-// picker inserts a token as a literal HTML span (see mergeTokenHtml below) rather than a
-// plain-text placeholder like {{fieldId}}, so it survives contentEditable's own HTML
-// serialization (innerHTML round-trips real DOM nodes, not markdown-ish text) and reads as
-// a distinct chip while editing. Both resolvers below only ever match that exact shape —
-// nothing else in the builder generates a `.merge-token` span — so the regex stays simple.
-const MERGE_TOKEN_PATTERN =
-  /<span class="merge-token" data-field-id="([a-zA-Z0-9-]+)" contenteditable="false">[^<]*<\/span>/g;
+// picker inserts a token as a literal HTML span (see mergeTokenHtml below and the
+// MergeToken Tiptap node in merge-token-node.ts) rather than a plain-text placeholder like
+// {{fieldId}}, so it survives the editor's own HTML serialization and reads as a distinct
+// chip while editing. Both resolvers below only ever match that shape — nothing else in
+// the builder generates a `.merge-token` span.
+//
+// The pattern is deliberately attribute-order-agnostic (matches on the presence of
+// class="merge-token" anywhere in the tag, then pulls data-field-id out separately) rather
+// than assuming a fixed attribute order. Two editor implementations have written this
+// markup over this project's life — a hand-built contentEditable editor, and the current
+// Tiptap-based one — and while both are coded to emit attributes in the same literal
+// order, the DOM's own serialization behavior isn't a contract either editor makes
+// unprompted. Being order-agnostic means content written by either one (or an editor we
+// haven't built yet) always resolves correctly, at negligible extra regex cost.
+const MERGE_TOKEN_PATTERN = /<span\b([^>]*\bclass="merge-token"[^>]*)>([^<]*)<\/span>/g;
+
+function extractMergeTokenFieldId(attributes: string): string | null {
+  const match = attributes.match(/\bdata-field-id="([a-zA-Z0-9-]+)"/);
+  return match?.[1] ?? null;
+}
 
 export function mergeTokenHtml(field: FormField): string {
   const label = 'label' in field && field.label ? field.label : 'Untitled field';
@@ -52,9 +65,10 @@ export function resolveMergeFieldsForRespondent(
   fields: Record<string, FormField>,
   answers: FormAnswers,
 ): string {
-  return body.replace(MERGE_TOKEN_PATTERN, (_match, fieldId: string) => {
-    const field = fields[fieldId];
-    if (!field) return '';
+  return body.replace(MERGE_TOKEN_PATTERN, (_match, attributes: string) => {
+    const fieldId = extractMergeTokenFieldId(attributes);
+    const field = fieldId ? fields[fieldId] : undefined;
+    if (!fieldId || !field) return '';
     return escapeHtml(answerToDisplayText(answers[fieldId]));
   });
 }
@@ -67,8 +81,9 @@ export function resolveMergeFieldsForPreview(
   body: string,
   fields: Record<string, FormField>,
 ): string {
-  return body.replace(MERGE_TOKEN_PATTERN, (_match, fieldId: string) => {
-    const field = fields[fieldId];
+  return body.replace(MERGE_TOKEN_PATTERN, (_match, attributes: string) => {
+    const fieldId = extractMergeTokenFieldId(attributes);
+    const field = fieldId ? fields[fieldId] : undefined;
     const label = field && 'label' in field && field.label ? field.label : 'Deleted field';
     return `<span class="merge-token-preview">[${escapeHtml(label)}]</span>`;
   });

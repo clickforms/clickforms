@@ -9275,15 +9275,9 @@ textarea.text-input {
   left: auto;
 }
 
-/* Font/size pickers keep the search field pinned while the list scrolls. */
+/* Font picker keeps the search field pinned while the list scrolls. */
 .rich-text-popover--with-search {
   max-height: 18rem;
-  overflow: hidden;
-}
-
-/* Size list is short — a handful of visible rows, then scroll for the rest. */
-.rich-text-popover--sizes {
-  max-height: 10.5rem;
   overflow: hidden;
 }
 
@@ -9348,10 +9342,12 @@ textarea.text-input {
 
 .rich-text-popover-item {
   display: block;
+  flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
+  min-height: 2rem;
   text-align: left;
-  padding: 0.35rem 0.5rem;
+  padding: 0.4rem 0.5rem;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -9478,18 +9474,33 @@ textarea.text-input {
    (.form-static-text-body) and the builder canvas preview
    (.field-preview-static-text-body), both of which render admin-authored HTML from this
    editor via dangerouslySetInnerHTML. */
+.rich-text-editor h1,
 .rich-text-editor h2,
 .rich-text-editor h3,
 .rich-text-editor h4,
+.rich-text-editor h5,
+.rich-text-editor h6,
+.form-static-text-body h1,
 .form-static-text-body h2,
 .form-static-text-body h3,
 .form-static-text-body h4,
+.form-static-text-body h5,
+.form-static-text-body h6,
+.field-preview-static-text-body h1,
 .field-preview-static-text-body h2,
 .field-preview-static-text-body h3,
-.field-preview-static-text-body h4 {
+.field-preview-static-text-body h4,
+.field-preview-static-text-body h5,
+.field-preview-static-text-body h6 {
   margin: 0 0 0.5rem;
   font-weight: 700;
   line-height: 1.3;
+}
+
+.rich-text-editor h1,
+.form-static-text-body h1,
+.field-preview-static-text-body h1 {
+  font-size: 1.625rem;
 }
 
 .rich-text-editor h2,
@@ -9508,6 +9519,18 @@ textarea.text-input {
 .form-static-text-body h4,
 .field-preview-static-text-body h4 {
   font-size: 1.0625rem;
+}
+
+.rich-text-editor h5,
+.form-static-text-body h5,
+.field-preview-static-text-body h5 {
+  font-size: 0.9375rem;
+}
+
+.rich-text-editor h6,
+.form-static-text-body h6,
+.field-preview-static-text-body h6 {
+  font-size: 0.8125rem;
 }
 
 .rich-text-editor p,

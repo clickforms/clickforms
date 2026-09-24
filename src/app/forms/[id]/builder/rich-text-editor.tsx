@@ -78,11 +78,14 @@ type Popover =
   | 'fontSize'
   | null;
 
-const BLOCK_FORMATS: { label: string; level: 2 | 3 | 4 | null }[] = [
+const BLOCK_FORMATS: { label: string; level: 1 | 2 | 3 | 4 | 5 | 6 | null }[] = [
   { label: 'Paragraph', level: null },
-  { label: 'Heading 1', level: 2 },
-  { label: 'Heading 2', level: 3 },
-  { label: 'Heading 3', level: 4 },
+  { label: 'Heading 1', level: 1 },
+  { label: 'Heading 2', level: 2 },
+  { label: 'Heading 3', level: 3 },
+  { label: 'Heading 4', level: 4 },
+  { label: 'Heading 5', level: 5 },
+  { label: 'Heading 6', level: 6 },
 ];
 
 const FONT_SIZE_OPTIONS = [
@@ -411,6 +414,7 @@ export function RichTextEditor({
   // to the next time it's opened.
   const [fontFamilyQuery, setFontFamilyQuery] = useState('');
   const [fontSizeQuery, setFontSizeQuery] = useState('');
+  const [formatQuery, setFormatQuery] = useState('');
 
   const editor = useEditor(
     {
@@ -422,7 +426,7 @@ export function RichTextEditor({
       },
       extensions: [
         StarterKit.configure({
-          heading: { levels: [2, 3, 4] },
+          heading: { levels: [1, 2, 3, 4, 5, 6] },
           link: {
             openOnClick: false,
             autolink: true,
@@ -571,7 +575,10 @@ export function RichTextEditor({
             type="button"
             className="rich-text-toolbar-button rich-text-toolbar-button--wide"
             onMouseDown={preventDefault}
-            onClick={() => setOpenPopover(openPopover === 'format' ? null : 'format')}
+            onClick={() => {
+              setFormatQuery('');
+              setOpenPopover(openPopover === 'format' ? null : 'format');
+            }}
           >
             {activeFormat?.label ?? 'Paragraph'} ▾
           </button>
@@ -579,27 +586,44 @@ export function RichTextEditor({
             open={openPopover === 'format'}
             onOpenChange={(open) => setOpenPopover(open ? 'format' : null)}
             triggerRef={formatTriggerRef}
-            panelClassName="rich-text-popover"
-            onMouseDown={preventDefault}
+            panelClassName="rich-text-popover rich-text-popover--with-search"
+            onMouseDown={preventToolbarMouseDown}
           >
-            {BLOCK_FORMATS.map((format) => (
-              <button
-                key={format.label}
-                type="button"
-                className="rich-text-popover-item"
-                onMouseDown={preventDefault}
-                onClick={() => {
-                  if (format.level === null) {
-                    editor.chain().focus().setParagraph().run();
-                  } else {
-                    editor.chain().focus().toggleHeading({ level: format.level }).run();
-                  }
-                  setOpenPopover(null);
-                }}
-              >
-                {format.label}
-              </button>
-            ))}
+            <input
+              type="search"
+              className="rich-text-popover-search"
+              placeholder="Search styles…"
+              value={formatQuery}
+              onChange={(event) => setFormatQuery(event.target.value)}
+              // biome-ignore lint/a11y/noAutofocus: focusing search when the style list opens, same as the font picker
+              autoFocus
+            />
+            <div className="rich-text-popover-list">
+              {(() => {
+                const query = formatQuery.trim().toLowerCase();
+                const filtered = query
+                  ? BLOCK_FORMATS.filter((format) => format.label.toLowerCase().includes(query))
+                  : BLOCK_FORMATS;
+                if (filtered.length === 0) {
+                  return <p className="rich-text-popover-empty">No styles match "{formatQuery}"</p>;
+                }
+                return filtered.map((format) => (
+                  <MenuRow
+                    key={format.label}
+                    onSelect={() => {
+                      if (format.level === null) {
+                        editor.chain().focus().setParagraph().run();
+                      } else {
+                        editor.chain().focus().toggleHeading({ level: format.level }).run();
+                      }
+                      setOpenPopover(null);
+                    }}
+                  >
+                    <span className="rich-text-font-label">{format.label}</span>
+                  </MenuRow>
+                ));
+              })()}
+            </div>
           </DropdownMenu>
         </div>
 
@@ -692,7 +716,7 @@ export function RichTextEditor({
             open={openPopover === 'fontSize'}
             onOpenChange={(open) => setOpenPopover(open ? 'fontSize' : null)}
             triggerRef={fontSizeTriggerRef}
-            panelClassName="rich-text-popover rich-text-popover--sizes"
+            panelClassName="rich-text-popover rich-text-popover--with-search"
             onMouseDown={preventToolbarMouseDown}
           >
             <input
@@ -731,7 +755,7 @@ export function RichTextEditor({
                       setOpenPopover(null);
                     }}
                   >
-                    {size.label}
+                    <span className="rich-text-font-label">{size.label}</span>
                   </MenuRow>
                 ));
               })()}

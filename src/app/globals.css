@@ -10762,7 +10762,8 @@ html:has(.form-preview-embed) [data-next-badge-root] {
 
 /* Only the actual input/answer surface gets the "fill this in" highlight — help text and
    validation errors share column 2 but stay plain so they don't look like editable cells. */
-.form-renderer--table-theme .form-field-group
+.form-renderer--table-theme
+  .form-field-group
   > *:not(.form-field-label):not(.form-field-help):not(.form-field-error) {
   background: var(--form-table-value-bg, transparent);
 }

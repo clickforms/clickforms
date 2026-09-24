@@ -70,6 +70,9 @@ import {
   DEFAULT_SUBMIT_BUTTON_TEXT,
   DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL,
   DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL,
+  FONT_FAMILY_LABEL,
+  FONT_FAMILY_OPTIONS,
+  type FontFamily,
   formSchemaSchema,
   LAYOUT_STYLE_LABEL,
   LAYOUT_STYLE_OPTIONS,
@@ -920,6 +923,30 @@ export function TemplateBuilderClient({
                     ×
                   </button>
                 </div>
+              </div>
+              <div className="settings-section">
+                <p className="settings-section-title">Typography</p>
+                <label className="settings-field">
+                  <span className="settings-label">Font family</span>
+                  <select
+                    className="text-input"
+                    disabled={!isEditing}
+                    value={schema.branding.fontFamily ?? 'default'}
+                    onChange={(event) =>
+                      handleUpdateBranding({ fontFamily: event.target.value as FontFamily })
+                    }
+                  >
+                    {FONT_FAMILY_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {FONT_FAMILY_LABEL[option]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="settings-field-hint">
+                  Applies to every field's label, help text and input by default. Any field with its
+                  own font setting (like Formatted Text or a Table's label) keeps its own choice.
+                </p>
               </div>
               <div className="settings-section">
                 <p className="settings-section-title">Form title</p>

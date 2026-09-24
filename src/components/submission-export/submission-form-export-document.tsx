@@ -13,6 +13,7 @@ import {
   DEFAULT_FORM_SECONDARY_COLOR,
   DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL,
   DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL,
+  FONT_FAMILY_CSS,
   type FormSchema,
 } from '@/lib/forms/schema';
 import type { SubmissionExportAssets } from '@/lib/forms/submission-export-assets';
@@ -73,6 +74,9 @@ export function SubmissionFormExportDocument({
       className={`export-form ${isTableLayoutStyle ? 'export-form--table-theme' : ''}`}
       style={
         {
+          // See form-renderer-client.tsx's formFontStyle comment — same inheritance-with-
+          // override behavior applies here so the PDF export matches what respondents saw.
+          fontFamily: FONT_FAMILY_CSS[schema.branding.fontFamily ?? 'default'],
           '--color-primary': primaryColor,
           '--form-secondary-color': secondaryColor,
           '--form-table-header-bg': schema.branding.tableThemeHeaderColor,

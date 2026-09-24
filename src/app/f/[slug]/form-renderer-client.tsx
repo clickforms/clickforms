@@ -17,6 +17,7 @@ import {
   DEFAULT_SUBMIT_BUTTON_TEXT,
   DEFAULT_TABLE_THEME_FIELD_COLUMN_LABEL,
   DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL,
+  FONT_FAMILY_CSS,
   type FormSchema,
   pageContainsField,
 } from '@/lib/forms/schema';
@@ -342,9 +343,17 @@ function FormRendererInner({
     setPageIndex((i) => Math.max(0, i - 1));
   }, []);
 
+  // Cascades down to every field's label/help/input/button via inheritance — anything with
+  // its own explicit font-family (a static_text heading, a question_table label, a rich-text
+  // FontFamily mark) overrides it as usual, since an explicit declaration always wins over an
+  // inherited one regardless of specificity.
+  const formFontStyle: CSSProperties = {
+    fontFamily: FONT_FAMILY_CSS[schema.branding.fontFamily ?? 'default'],
+  };
+
   if (submitted) {
     return (
-      <div className="form-renderer">
+      <div className="form-renderer" style={formFontStyle}>
         <div className="form-renderer-body form-success">
           {previewMode ? (
             <>
@@ -385,6 +394,7 @@ function FormRendererInner({
   const primaryColor = schema.branding.primaryColor ?? DEFAULT_FORM_PRIMARY_COLOR;
   const secondaryColor = schema.branding.secondaryColor ?? DEFAULT_FORM_SECONDARY_COLOR;
   const brandStyle = {
+    ...formFontStyle,
     '--color-primary': primaryColor,
     '--form-secondary-color': secondaryColor,
     '--form-table-header-bg': schema.branding.tableThemeHeaderColor,

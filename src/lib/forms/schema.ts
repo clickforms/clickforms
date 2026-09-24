@@ -1081,6 +1081,13 @@ export const DEFAULT_TABLE_THEME_VALUE_COLUMN_LABEL = 'Details';
 
 const brandingSchema = z
   .object({
+    // Form-wide default font, inherited by every field's label/help/input/button text via
+    // normal CSS cascade (applied on the outer .form-renderer/.export-form wrapper). Any
+    // field-level font control — static_text's heading/bodyFontFamily, question_table's
+    // labelFontFamily, a rich-text FontFamily mark — sets its own explicit font-family, and
+    // an explicit declaration always wins over an inherited one, so those overrides keep
+    // working unchanged regardless of this setting.
+    fontFamily: z.enum(FONT_FAMILY_OPTIONS).optional(),
     layoutStyle: z.enum(LAYOUT_STYLE_OPTIONS).optional(),
     tableThemeFieldColumnLabel: z.string().min(1).max(60).optional(),
     tableThemeValueColumnLabel: z.string().min(1).max(60).optional(),

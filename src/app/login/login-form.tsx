@@ -3,17 +3,25 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSession, signIn } from 'next-auth/react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 
 const REMEMBERED_EMAIL_KEY = 'clickforms.login.rememberedEmail';
 
-function resolveErrorMessage(error: string | undefined): string | null {
+function resolveErrorMessage(error: string | undefined): ReactNode | null {
   if (!error) return null;
   if (error === 'CredentialsSignin') {
     return 'Incorrect email or password. Please try again.';
   }
   if (error === 'OrganizationSuspended') {
     return 'This organisation has been suspended. Contact support for help.';
+  }
+  if (error === 'OrganizationTrialExpired') {
+    return (
+      <>
+        Your 7-day trial has ended. <Link href="/pricing">Choose a plan</Link> to keep going, or{' '}
+        <Link href="/contact">contact us</Link> for help.
+      </>
+    );
   }
   if (error === 'AmbiguousAccount') {
     return "This email and password match more than one of your organisations, so we can't tell which one to sign you into. Please use a different password for each organisation, or contact support for help.";
@@ -78,7 +86,7 @@ export function LoginForm({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState<string | null>(resolveErrorMessage(initialError));
+  const [error, setError] = useState<ReactNode | null>(resolveErrorMessage(initialError));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {

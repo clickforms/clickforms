@@ -81,7 +81,7 @@ export const authOptions: NextAuthOptions = {
         // means we only ever return the row whose own password hash actually verifies.
         const candidates = await prisma.user.findMany({
           where: { email: normalizedEmail },
-          include: { organization: { select: { status: true } } },
+          include: { organization: { select: { status: true, trialEndsAt: true } } },
         });
 
         const verifiedCandidates: typeof candidates = [];
@@ -114,6 +114,22 @@ export const authOptions: NextAuthOptions = {
         // touch public /f/* form access, which is a separate scope decision.
         if (user.organization?.status === 'suspended') {
           throw new Error('OrganizationSuspended');
+        }
+
+        // Self-service signups start on a 7-day trial (see
+        // src/app/api/auth/signup/verify/route.ts) with status flipped to 'trial' and
+        // trialEndsAt set. There's no self-serve upgrade path yet — a platform admin has
+        // to assign a real plan from /admin/billing, which also flips the org's status
+        // back to 'active' (see handlePlanChange in billing-admin-client.tsx) so it isn't
+        // still gated by this trial check afterward. Until that happens, block sign-in
+        // once trialEndsAt has passed rather than silently leaving Standard-level access
+        // open forever.
+        if (
+          user.organization?.status === 'trial' &&
+          user.organization.trialEndsAt &&
+          user.organization.trialEndsAt < new Date()
+        ) {
+          throw new Error('OrganizationTrialExpired');
         }
 
         return {

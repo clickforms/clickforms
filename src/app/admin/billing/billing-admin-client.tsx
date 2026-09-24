@@ -69,16 +69,26 @@ export function BillingAdminClient({
     if (nextPlan === org.plan) return;
     setBusyOrgId(org.id);
     try {
+      // Assigning a plan here is how a trialing org "graduates" — there's no self-serve
+      // upgrade flow yet (see src/lib/auth.ts's OrganizationTrialExpired check), so if we
+      // only patched `plan`, an org past its trialEndsAt would still get blocked at sign-in
+      // even after an admin gave it a real plan. Flip status back to 'active' in the same
+      // request whenever the org is currently trialing. Suspended orgs are left alone —
+      // reactivating is a separate, explicit action (Organisations list kebab menu).
+      const body: { plan: OrgPlan; status?: 'active' } =
+        org.status === 'trial' ? { plan: nextPlan, status: 'active' } : { plan: nextPlan };
       const response = await fetch(`/api/admin/organizations/${org.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: nextPlan }),
+        body: JSON.stringify(body),
       });
       if (!response.ok) {
         throw new Error(await readApiError(response, 'Could not change plan'));
       }
       setOrganizations((current) =>
-        current.map((row) => (row.id === org.id ? { ...row, plan: nextPlan } : row)),
+        current.map((row) =>
+          row.id === org.id ? { ...row, plan: nextPlan, status: body.status ?? row.status } : row,
+        ),
       );
       toast.success(`${org.name} moved to ${PLAN_LABELS[nextPlan]}`);
     } catch (err) {

@@ -46,9 +46,23 @@ export async function POST(request: Request): Promise<NextResponse> {
       new Set(existingOrganizations.map((org) => org.subdomain)),
     );
 
+    // Every self-service signup starts on a 7-day trial at Standard-level access (see
+    // /pricing) — `plan` stays at its schema default ('standard') for the numeric caps
+    // that grants, and `status: 'trial'` + `trialEndsAt` is what src/lib/auth.ts checks
+    // at sign-in to block access once the trial lapses without a plan being assigned
+    // (see the platform-admin-only /admin/billing "Change plan" control — there's no
+    // self-serve upgrade path yet).
+    const TRIAL_DAYS = 7;
+    const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+
     const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
-        data: { name: pendingSignup.organizationName, subdomain },
+        data: {
+          name: pendingSignup.organizationName,
+          subdomain,
+          status: 'trial',
+          trialEndsAt,
+        },
       });
 
       const user = await tx.user.create({

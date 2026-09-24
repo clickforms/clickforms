@@ -124,6 +124,50 @@
   --shadow-button: 0 1px 2px rgba(85, 234, 140, 0.4);
 }
 
+/* Thin, theme-aware scrollbars everywhere, replacing the browser/OS-default scrollbar —
+   chunky and always light-gray regardless of theme, which reads especially badly against
+   a dark surface like the builder's Fields palette (it was the only ungrayed, undesigned
+   element in an otherwise fully-themed dark panel). Both rule sets read the same
+   --color-* tokens so they re-theme automatically with the rest of the app, light or dark,
+   with no new dependency — just the two standard CSS mechanisms every evergreen browser
+   supports: `scrollbar-width`/`scrollbar-color` (Firefox) and the older but universally
+   supported `::-webkit-scrollbar` pseudo-elements (Chrome, Safari, Edge). Kept deliberately
+   hairline (4px) and near-invisible at rest — it should read as a faint hint that a panel
+   scrolls, not a UI element competing with the content — and only brightens on hover/drag,
+   like the minimal overlay scrollbars in modern native apps. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border-radius: 999px;
+  opacity: 0.5;
+  transition: background-color 0.15s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-subtle);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--color-text-muted);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Spot-fixes for the handful of admin-shell rules below that use hardcoded hex instead
    of the tokens above (badges, dashboard metric icons, form errors) — everything else in
    the content area already reads var(--color-*) and themes automatically. */
@@ -651,6 +695,28 @@ a {
   color: var(--color-text);
 }
 
+/* Compact icon-only theme toggle for the platform-admin top bar (AdminPlatformShell) —
+   same visual treatment as .admin-header-menu (also a circular header icon button), but
+   always visible rather than mobile-only, since /admin has no sidebar to hide behind. */
+.admin-platform-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.admin-platform-theme-toggle:hover {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
 .admin-header-brand {
   display: flex;
   align-items: center;
@@ -751,6 +817,10 @@ a {
 .admin-platform-nav-link--active {
   background: var(--color-primary-soft);
   color: #0d9f57;
+}
+
+.admin-shell[data-theme="dark"] .admin-platform-nav-link--active {
+  color: #3dd975;
 }
 
 /* Danger zone card (org deletion) — reuses .card's base styling, just with a danger-tinted
@@ -986,6 +1056,10 @@ a {
   border-radius: 50%;
   background: var(--color-primary-soft);
   color: #12b76a;
+}
+
+.admin-shell[data-theme="dark"] .form-settings-card .contact-details-header-icon {
+  color: #3dd975;
 }
 
 .form-settings-card-toggle {
@@ -1434,6 +1508,10 @@ a {
   color: #2563eb;
   font-weight: 700;
   text-decoration: underline;
+}
+
+.admin-shell[data-theme="dark"] .account-menu-org-link {
+  color: #60a5fa;
 }
 
 .account-menu-temp-join {
@@ -2514,6 +2592,10 @@ a {
   color: #0f766e;
 }
 
+.admin-shell[data-theme="dark"] .admin-home-stat-icon {
+  color: #5eead4;
+}
+
 .admin-home-stat-copy {
   display: flex;
   min-width: 0;
@@ -2656,6 +2738,10 @@ a {
   background: var(--color-primary-soft);
   color: #047857;
   font-size: 0.75rem;
+}
+
+.admin-shell[data-theme="dark"] .admin-home-org-mark {
+  color: #5eead4;
   letter-spacing: 0.02em;
 }
 
@@ -2722,6 +2808,10 @@ a {
   border-radius: 12px;
   background: var(--color-primary-soft);
   color: #0f766e;
+}
+
+.admin-shell[data-theme="dark"] .admin-home-empty-mark {
+  color: #5eead4;
 }
 
 .admin-home-empty-title {
@@ -2879,6 +2969,10 @@ a {
   color: #0d9f57;
 }
 
+.admin-shell[data-theme="dark"] .admin-orgs-chip--active {
+  color: #3dd975;
+}
+
 .admin-orgs-table {
   width: 100%;
   border-collapse: collapse;
@@ -2935,6 +3029,10 @@ a {
   color: #047857;
 }
 
+.admin-shell[data-theme="dark"] .admin-orgs-plan--pro {
+  color: #5eead4;
+}
+
 .admin-orgs-plan--enterprise {
   background: var(--color-lavender-soft);
   color: var(--color-lavender-strong);
@@ -2956,6 +3054,10 @@ a {
 
 .admin-orgs-status--active {
   color: #059669;
+}
+
+.admin-shell[data-theme="dark"] .admin-orgs-status--active {
+  color: #3dd975;
 }
 
 .admin-orgs-status--trial {
@@ -3126,6 +3228,10 @@ a {
   letter-spacing: 0.02em;
 }
 
+.admin-shell[data-theme="dark"] .admin-org-mark {
+  color: #5eead4;
+}
+
 .admin-org-title-row {
   display: flex;
   flex-wrap: wrap;
@@ -3161,6 +3267,10 @@ a {
   color: #047857;
 }
 
+.admin-shell[data-theme="dark"] .admin-org-status--active {
+  color: #5eead4;
+}
+
 .admin-org-status--trial {
   background: var(--color-warning-soft);
   color: var(--color-warning);
@@ -3186,6 +3296,10 @@ a {
   color: #065f46;
   font-size: 0.88rem;
   line-height: 1.45;
+}
+
+.admin-shell[data-theme="dark"] .admin-org-banner {
+  color: #5eead4;
 }
 
 .admin-org-banner--muted {
@@ -3605,6 +3719,13 @@ a {
     display: flex;
   }
 
+  /* .builder-palette (and its in-place field-settings swap) is hidden above, so the
+     centered "Edit field" modal becomes the only way to reach field settings at this
+     width — turn it back on to match. */
+  .modal-overlay--mobile-only {
+    display: flex;
+  }
+
   .builder-canvas-column,
   .builder-workspace--readonly .builder-canvas-column {
     width: 100%;
@@ -3974,6 +4095,13 @@ textarea.text-input {
   color: #0d9f57;
 }
 
+/* Same brightening as .admin-table-name-link's dark override below — #0d9f57 (this app's
+   brand green) reads muddy against the dark theme's near-black surfaces, so dark mode
+   swaps in the lighter green already used for dark-theme "success" text elsewhere. */
+.admin-shell[data-theme="dark"] .forms-filter-chip--active {
+  color: #3dd975;
+}
+
 .forms-filter-chip-count {
   color: var(--color-text-muted);
   font-weight: 650;
@@ -4040,6 +4168,15 @@ textarea.text-input {
 
 .modal-overlay--stack {
   z-index: 110;
+}
+
+/* The "Edit field" modal is now redundant on desktop — .builder-palette swaps in
+   FieldSettingsPanel in place instead (see .field-settings-aside above) — but on narrow
+   viewports .builder-palette is hidden entirely (see the 900px media query below), so the
+   modal is still how mobile users reach field settings. Hidden by default; the same
+   900px breakpoint that hides .builder-palette turns this back on. */
+.modal-overlay--mobile-only {
+  display: none;
 }
 
 .modal-card {
@@ -5304,6 +5441,18 @@ textarea.text-input {
   background-color: rgba(22, 163, 74, 0.08);
 }
 
+/* Same reasoning as .forms-filter-chip--active above — a light-theme green needs a
+   brighter dark-theme equivalent to stay legible on the dark surfaces. Menu items appear
+   in FormActionsMenu, shared by the forms list, form builder, and submissions pages. */
+.admin-shell[data-theme="dark"] .actions-menu-item--success {
+  color: #4ade80;
+}
+
+.admin-shell[data-theme="dark"]
+  .actions-menu-item--success:hover:not(:disabled):not(.actions-menu-item--disabled) {
+  background-color: rgba(74, 222, 128, 0.14);
+}
+
 .actions-menu-item--success .actions-menu-icon {
   color: inherit;
 }
@@ -5670,6 +5819,18 @@ textarea.text-input {
    nothing overlaps it — that clearance belongs on .builder-canvas-column alone, see
    below. */
 .builder {
+  --builder-panel: #16161a;
+  --builder-panel-elevated: #25252c;
+  --builder-panel-border: rgba(255, 255, 255, 0.14);
+  --builder-text: #f4f4f5;
+  --builder-muted: #8b8b90;
+  --builder-subtle: #63636a;
+  --builder-accent: #8b7cf6;
+  --builder-canvas: #ffffff;
+  --builder-canvas-text: #111827;
+  --builder-canvas-muted: #6b7280;
+  --builder-canvas-subtle: #9ca3af;
+  --builder-input-border: #e2e8f0;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -5679,7 +5840,7 @@ textarea.text-input {
   align-self: stretch;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background-color: var(--color-surface);
+  background-color: var(--builder-canvas);
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }
@@ -5694,19 +5855,32 @@ textarea.text-input {
 /* Drawer behavior: max-width (not width) is what animates — width would jump straight
    to "auto" with no transition, so this caps at a fixed value comfortably larger than
    the real content; overflow: hidden just clips whatever's past the current max-width.
-   Anchored via right: 0 (not translateX) so shrinking always peels away from the left,
-   leaving .builder-header-handle — the first flex child, at the box's left edge — as
-   the part still visible once collapsed, rather than sliding the whole box, handle
-   included, off-screen. */
+   Anchored via a fixed `right` offset (not translateX) so shrinking always peels away
+   from the left, leaving .builder-header-handle — the first flex child, at the box's
+   left edge — as the part still visible once collapsed, rather than sliding the whole
+   box, handle included, off-screen. */
 .builder-header {
   display: flex;
   align-items: center;
   gap: 0.55rem;
   position: absolute;
   top: 0.5rem;
-  right: 0;
+  /* 1.5rem matches the horizontal inset every other header row in the app uses
+     (.admin-header, .form-top-nav) — was flush against the edge (right: 0), which read
+     as cramped next to the rounded card corner. */
+  right: 1.5rem;
   z-index: 5;
-  max-width: 34rem;
+  /* Generous enough to fit the widest real content (edit mode: "Unsaved changes" +
+     page switcher + Preview + Settings + Cancel + Save, all in one row) without
+     clipping. This used to be 34rem, sized before the edit-mode Save/Cancel cluster and
+     "Unsaved changes" status existed — once that content was added it regularly
+     exceeded 34rem, and because .builder-header is a flex row, the browser's response
+     to "not enough space" was to shrink flex items (default flex-shrink: 1) rather than
+     clip them, squashing whichever pill-shaped button happened to give first into a
+     lens/eye shape with its label crushed to nothing. flex-shrink: 0 below is the actual
+     fix for that (nothing shrinks, ever); this larger cap just means overflow: hidden
+     never has anything to clip during the open/closed width transition. */
+  max-width: 50rem;
   overflow: hidden;
   transition: max-width 0.25s ease;
   border: 1px solid var(--color-border);
@@ -5714,6 +5888,21 @@ textarea.text-input {
   background: linear-gradient(180deg, #fcfcfd 0%, var(--color-surface) 100%);
   box-shadow: var(--shadow-card);
   padding: 0.3rem 0.55rem 0.3rem 0.3rem;
+}
+
+/* The light-mode gradient's #fcfcfd top stop is a near-white highlight meant to sit just
+   barely above --color-surface — inverted here to a near-black highlight just barely
+   above the dark theme's --color-surface (#1c2027), so the pill keeps its same subtle
+   top-edge sheen instead of rendering as a bright white bar across a dark canvas. */
+.admin-shell[data-theme="dark"] .builder-header {
+  background: linear-gradient(180deg, #21262e 0%, var(--color-surface) 100%);
+}
+
+/* Every direct child (handle, page switcher, Preview/Settings, the Edit/Cancel-Save
+   cluster, the utility group) keeps its natural width — see the comment on max-width
+   above for the squished-pill bug this prevents. */
+.builder-header > * {
+  flex-shrink: 0;
 }
 
 .builder-header--closed {
@@ -5766,6 +5955,26 @@ textarea.text-input {
 
 .builder-header-cta:hover {
   background-color: #000;
+}
+
+/* Same fix, same reasoning as .button--dark's dark override above — a hardcoded #111
+   pill is nearly indistinguishable from .builder-header's own dark-surface background,
+   so dark mode inverts to a light pill instead. */
+.admin-shell[data-theme="dark"] .builder-header-cta {
+  background-color: var(--color-text);
+  color: var(--color-bg);
+}
+
+.admin-shell[data-theme="dark"] .builder-header-cta:hover {
+  background-color: var(--color-text-muted);
+}
+
+/* .builder-header-cta--publish only overrides background-color (see below), so it would
+   otherwise inherit the dark-mode text-color flip above onto its own green background —
+   restore white, since green-on-white-or-dark contrast is already fine either way and
+   this button was never meant to invert like the neutral black variant does. */
+.admin-shell[data-theme="dark"] .builder-header-cta--publish {
+  color: #fff;
 }
 
 /* Publish reads as the one "go live" action, so it gets its own green rather than the
@@ -5918,6 +6127,13 @@ textarea.text-input {
   background-color: #000;
 }
 
+/* Same inverted-pill family as .builder-header-cta (bg: var(--color-text), text:
+   var(--color-surface)) — in dark mode that base already reads as a light pill, so a
+   literal #000 hover would flatten it to black instead of just darkening it. */
+.admin-shell[data-theme="dark"] .share-panel-view-live:hover {
+  background-color: var(--color-text-muted);
+}
+
 .builder-header .button--small {
   padding: 0.3rem 0.7rem;
   font-size: 0.75rem;
@@ -5986,9 +6202,12 @@ textarea.text-input {
   flex: 1;
   min-height: 0;
   padding: 0;
-  background-color: var(--color-surface-sunken);
+  background-color: var(--builder-canvas);
   width: 100%;
   box-sizing: border-box;
+  color: var(--builder-canvas-text);
+  container-type: inline-size;
+  container-name: builder;
 }
 
 .builder-workspace--readonly {
@@ -5996,22 +6215,200 @@ textarea.text-input {
 }
 
 /* Palette and canvas are independently-scrolling panes sharing the fixed height of
-   .builder-workspace — the field list stays put while only the canvas (the actual
-   form) scrolls. Field settings now open in a modal instead of a persistent panel.
-   Fixed (not percentage) width so the palette stays a narrow, constant-width rail and
-   the canvas column — not the palette — gets the space a wider viewport adds. Wide
-   enough that the longest field label ("Legal / consent") doesn't ellipsis in the
-   2-column grid below. */
-.builder-palette {
-  width: 23rem;
-  max-width: 23rem;
+   .builder-workspace. The palette can shrink with the workspace (flex-basis + min-width)
+   so the canvas keeps a usable share as the window narrows, instead of staying 24rem
+   until the 900px mobile breakpoint hides it entirely. */
+/* Fields / Design / Logic tabs along the top of .builder-palette — same three buttons
+   as before, just a row instead of a side rail, so the panel keeps its full width for
+   the field list and settings. */
+.builder-rail {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.15rem;
   flex-shrink: 0;
+  width: auto;
+  padding: 0.55rem 0.45rem 0.4rem;
+  background-color: var(--builder-panel);
+  border-bottom: 1px solid var(--builder-panel-border);
+  color: var(--builder-muted);
+}
+
+.builder-rail-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.2rem 0.4rem;
+  border: none;
+  background: transparent;
+  color: var(--builder-muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.builder-rail-tab:hover {
+  color: var(--builder-text);
+}
+
+.builder-rail-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 0.7rem;
+}
+
+.builder-rail-tab-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.builder-rail-tab-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.builder-rail-tab--active {
+  color: var(--builder-accent);
+}
+
+.builder-rail-tab--active .builder-rail-tab-icon {
+  background-color: color-mix(in srgb, var(--builder-accent) 22%, transparent);
+  color: var(--builder-accent);
+}
+
+.builder-rail-tab--active:hover {
+  background-color: transparent;
+}
+
+@media (max-width: 900px) {
+  .builder-rail {
+    display: none;
+  }
+}
+
+.builder-palette {
+  display: flex;
+  flex-direction: column;
+  width: 24rem;
+  max-width: 24rem;
+  min-width: 16.5rem;
+  flex: 0 1 24rem;
   min-height: 0;
-  min-width: 0;
   padding: 0;
-  background-color: var(--color-surface);
-  border-right: 1px solid var(--color-border);
+  background-color: var(--builder-panel);
+  border-right: 1px solid var(--builder-panel-border);
+  overflow: hidden;
+  color: var(--builder-text);
+}
+
+.builder-palette > :not(.builder-rail) {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+}
+
+/* Shrink the left chrome as the builder itself gets narrower (admin nav already
+   eats viewport width, so this is keyed off the workspace, not the window). */
+@container builder (max-width: 1180px) {
+  .builder-palette {
+    flex-basis: 20rem;
+    max-width: 20rem;
+  }
+}
+
+@container builder (max-width: 980px) {
+  .builder-rail-tab-icon {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+
+  .builder-rail-tab-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .builder-palette {
+    flex-basis: 17.5rem;
+    max-width: 17.5rem;
+    min-width: 15.5rem;
+  }
+
+  .field-settings-aside .settings-panel {
+    padding: 1rem 1rem 1.5rem;
+  }
+
+  .field-color-sv-canvas {
+    height: 108px;
+  }
+}
+
+/* In-place field-settings view (forms.app-style): swaps into .builder-palette in place
+   of FieldPalette when a field is being edited, rather than opening a centered modal.
+   Fills the same aside, so it inherits .builder-palette's width/scroll and just needs its
+   own internal header + padding for the settings form below. */
+.field-settings-aside {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  min-width: 0;
+}
+
+.field-settings-aside-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--builder-panel-border);
+  background-color: var(--builder-panel);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: var(--builder-text);
+  min-width: 0;
+}
+
+.field-settings-aside-header .button {
+  flex-shrink: 0;
+}
+
+.field-settings-aside-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--builder-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.field-settings-aside-back:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--builder-text);
+}
+
+.field-settings-aside-title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-poppins), var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.field-settings-aside .settings-panel {
+  padding: 1.25rem 1.35rem 1.75rem;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 /* Plain, uncluttered backdrop for the page card — takes all the space the palette
@@ -6024,37 +6421,27 @@ textarea.text-input {
   gap: 0.6rem;
   flex: 1;
   min-width: 0;
-  /* Extra top clearance (vs. the 2rem used on the sides/bottom) so the centered canvas
-     card never sits underneath .builder-header's floating box — that box overlaps this
-     column's top-right corner rather than reserving its own row, so this column has to
-     leave room for it instead. 4.75rem clears the pill itself (top: 1.5rem plus its own
-     height) with a bit of breathing room, so "Page N / Share / Approve" reads as sitting
-     just above the canvas card rather than on top of it. Extra right padding (vs. left)
-     nudges the centered card left, off-center, to sit further from that same floating
-     box. */
-  padding: 4.75rem 10rem 6rem 3rem;
+  padding: 2.75rem 1.75rem 4.5rem;
   overflow-y: auto;
   min-height: 0;
-  background-color: var(--color-surface-sunken);
+  background-color: var(--builder-canvas);
 }
 
 .builder-canvas-column .canvas {
   width: 100%;
-  max-width: 46rem;
+  max-width: 52rem;
   margin: 0;
-  /* The column is a scrolling flex container (`overflow-y: auto` + `min-height: 0`).
-     Flex items then treat `min-height: auto` as 0, so the white card would cap at the
-     visible pane and stop growing with the form. Keep it sized to its fields. */
   flex: 0 0 auto;
+  min-height: calc(100% - 1rem);
 }
 
 .builder-canvas-empty {
   width: 100%;
   padding: 2rem;
   text-align: center;
-  color: var(--color-text-muted);
-  background-color: var(--color-surface);
-  border: 1px dashed var(--color-border);
+  color: var(--builder-canvas-muted);
+  background-color: transparent;
+  border: 1px dashed var(--builder-input-border);
   border-radius: var(--radius-md);
 }
 
@@ -6141,6 +6528,26 @@ textarea.text-input {
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
+.field-drag-overlay {
+  width: min(42rem, 72vw);
+  pointer-events: none;
+  cursor: grabbing;
+}
+
+.field-drag-overlay .field-card,
+.field-drag-overlay .column-layout-wrap,
+.field-drag-overlay .divider-field-wrap,
+.field-drag-overlay .section-break-bar-wrap {
+  width: 100%;
+  background-color: #fff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+}
+
+.field-drag-overlay .field-card-toolbar,
+.field-drag-overlay .field-drag-handle {
+  opacity: 1;
+}
+
 /* Field palette — flush white panel (touching the sidebar's left/top edges, divided
    from the canvas by .builder-palette's border-right) rather than a floating card, so
    it reads as part of the same toolbar chrome above it instead of a card sitting on a
@@ -6156,14 +6563,14 @@ textarea.text-input {
 }
 
 .field-palette-title {
-  margin: 0 0 0.6rem;
-  padding: 0 0.25rem;
+  margin: 0 0 0.85rem;
+  padding: 0 0.15rem;
   font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--builder-text);
 }
 
 /* Matches .forms-search: white pill, grey border, lavender focus. */
@@ -6171,29 +6578,29 @@ textarea.text-input {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 0.1rem 0.85rem;
-  padding: 0.55rem 0.8rem;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
+  margin: 0 0.1rem 1rem;
+  padding: 0.5rem 0.8rem;
+  background-color: var(--builder-panel-elevated);
+  border: 1px solid var(--builder-panel-border);
+  border-radius: var(--radius-md);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
 .palette-search:hover {
-  border-color: var(--color-border-strong);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .palette-search:focus-within {
-  background-color: var(--color-surface);
-  border-color: var(--color-lavender);
-  box-shadow: 0 0 0 3px var(--color-lavender-soft);
+  background-color: var(--builder-panel-elevated);
+  border-color: var(--builder-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--builder-accent) 22%, transparent);
 }
 
 .palette-search-icon {
   display: inline-flex;
-  color: var(--color-text-subtle);
+  color: var(--builder-subtle);
   flex-shrink: 0;
 }
 
@@ -6205,11 +6612,11 @@ textarea.text-input {
   outline: none;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--color-text);
+  color: var(--builder-text);
 }
 
 .palette-search input::placeholder {
-  color: var(--color-text-subtle);
+  color: var(--builder-subtle);
   opacity: 1;
   font-weight: 500;
 }
@@ -6217,30 +6624,62 @@ textarea.text-input {
 .palette-groups {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.35rem;
+}
+
+.palette-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.25rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+}
+
+.palette-group-toggle:hover .palette-group-label {
+  color: var(--builder-text);
+}
+
+.palette-group-chevron {
+  color: var(--builder-subtle);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.palette-group-chevron--open {
+  transform: rotate(0deg);
+}
+
+.palette-group-toggle:not([aria-expanded="true"]) .palette-group-chevron {
+  transform: rotate(-90deg);
 }
 
 .palette-group-label {
-  margin: 0 0 0.15rem;
-  padding: 0 0.25rem;
+  margin: 0;
+  padding: 0;
   font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-text-subtle);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--builder-muted);
+  text-align: left;
 }
 
 .palette-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem 0.6rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.15rem;
 }
 
 .palette-item {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.7rem;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -6248,17 +6687,17 @@ textarea.text-input {
   background-color: transparent;
   border: none;
   border-radius: var(--radius-md);
-  padding: 0.35rem;
+  padding: 0.35rem 0.3rem;
   font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-text);
+  font-weight: 500;
+  color: var(--builder-text);
   cursor: grab;
   text-align: left;
   transition: background-color 0.12s ease;
 }
 
 .palette-item:hover {
-  background-color: var(--color-surface-sunken);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .palette-item--dragging {
@@ -6269,16 +6708,46 @@ textarea.text-input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
-  border-radius: 0.6rem;
-  background: var(--color-surface-sunken);
-  color: var(--color-text-muted);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.55rem;
+  background: #2a2a30;
+  color: #c9c9ce;
   flex-shrink: 0;
 }
 
+.palette-item-icon--date {
+  background: #3a2428;
+  color: #e8a0a4;
+}
+
+.palette-item-icon--legal {
+  background: #3a2c1f;
+  color: #d4b48a;
+}
+
+.palette-item-icon--media {
+  background: #2a2a30;
+  color: #b8b8be;
+}
+
+.palette-item-icon--rating {
+  background: #3a321c;
+  color: #e0c078;
+}
+
+.palette-item-icon--choice {
+  background: #2c2640;
+  color: #b8a8f0;
+}
+
+.palette-item-icon--text {
+  background: #1f2c38;
+  color: #8eb8d8;
+}
+
 /* Wraps to two lines rather than truncating — at the palette's 2-column width, labels
-   like "Phone number" or "Choice matrix" would otherwise lose their second word behind
+   like "Phone number" or "Opinion scale" would otherwise lose their second word behind
    an ellipsis, which is the one piece of information the icon can't stand in for. */
 .palette-item-label {
   flex: 1 1 0;
@@ -6291,50 +6760,110 @@ textarea.text-input {
   margin: 0;
   padding: 0.5rem 0.25rem;
   font-size: 0.8125rem;
-  color: var(--color-text-subtle);
+  color: var(--builder-subtle);
 }
 
-/* Canvas — floats as its own white card on the dotted .builder-canvas-column backdrop
-   above, so the page being edited reads as a distinct sheet rather than blending into
-   the surrounding chrome. */
+.field-card-label--muted {
+  color: var(--builder-canvas-muted);
+  font-weight: 500;
+}
+
+/* Canvas — full-bleed live-form preview on a white workspace. */
 .canvas {
   min-height: 320px;
   width: 100%;
-  padding: 1.75rem 1.75rem 6rem;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius-lg) + 2px);
-  box-shadow: var(--shadow-card);
+  padding: 1.5rem 1.5rem 5.5rem;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   box-sizing: border-box;
+  color: var(--builder-canvas-text);
 }
 
 .canvas--drop-target {
-  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+  box-shadow: inset 0 0 0 1px var(--builder-input-border);
+}
+
+.canvas-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.35rem;
+  margin: 0 0 2.75rem;
+}
+
+.canvas-cover-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.canvas-cover {
+  width: 5.75rem;
+  height: 5.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #f4f4f5;
+  color: #111;
+  cursor: pointer;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px var(--builder-input-border);
+}
+
+.canvas-cover:hover {
+  filter: brightness(0.94);
+}
+
+.canvas-cover--selected {
+  box-shadow: 0 0 0 2px var(--builder-accent);
+}
+
+.canvas-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.canvas-cover-placeholder {
+  display: inline-flex;
+  color: #3f3f46;
+}
+
+.canvas-form-title {
+  margin: 0;
+  font-family: var(--font-poppins), var(--font-body);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--builder-canvas-text);
+}
+
+.canvas-page-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--builder-canvas-muted);
 }
 
 .canvas-page-title {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin: -1.75rem -1.75rem 1.25rem;
-  padding: 1rem 1.75rem;
-  border-bottom: 1px solid var(--color-border);
-  font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: var(--color-text);
+  display: none;
 }
 
-/* A background pill, not just a text-only sibling with a flex gap — "Page 2" followed by
-   "2 OF 2" repeats the same digit right next to itself whenever a page keeps its default
-   name, and gap alone reads as ambiguous at this size. A visibly separate chip removes
-   the ambiguity outright regardless of what the two adjacent numbers happen to be. */
 .canvas-page-title-count {
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--color-text-subtle);
+  color: var(--builder-canvas-subtle);
   background-color: var(--color-surface-sunken);
   padding: 0.15rem 0.5rem;
   border-radius: var(--radius-pill);
@@ -6349,8 +6878,8 @@ textarea.text-input {
   align-items: center;
   text-align: center;
   padding: 3rem 1.5rem 3.25rem;
-  color: var(--color-text-muted);
-  border: 1.5px dashed var(--color-lavender);
+  color: var(--builder-canvas-muted);
+  border: 1.5px dashed rgba(139, 124, 246, 0.45);
   border-radius: var(--radius-lg);
 }
 
@@ -6362,8 +6891,8 @@ textarea.text-input {
   height: 3.5rem;
   margin-bottom: 1rem;
   border-radius: 50%;
-  background-color: var(--color-primary-soft);
-  color: var(--color-primary-hover);
+  background-color: color-mix(in srgb, var(--builder-accent) 16%, transparent);
+  color: var(--builder-accent);
 }
 
 .canvas-empty-title {
@@ -6371,7 +6900,7 @@ textarea.text-input {
   font-family: var(--font-poppins), var(--font-body);
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--builder-canvas-text);
 }
 
 .canvas-empty-hint {
@@ -6379,7 +6908,7 @@ textarea.text-input {
   font-size: 0.8125rem;
   line-height: 1.5;
   margin: 0.4rem 0 0;
-  color: var(--color-text-subtle);
+  color: var(--builder-canvas-muted);
 }
 
 .canvas-empty-quick-add {
@@ -6396,12 +6925,12 @@ textarea.text-input {
   align-items: center;
   gap: 0.4rem;
   padding: 0.45rem 0.95rem;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background-color: transparent;
+  border: 1px solid var(--builder-input-border);
   border-radius: var(--radius-pill);
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--builder-canvas-text);
   cursor: pointer;
   transition:
     border-color 0.15s ease,
@@ -6410,19 +6939,19 @@ textarea.text-input {
 
 .canvas-empty-quick-add-icon {
   display: inline-flex;
-  color: var(--color-text-subtle);
+  color: var(--builder-canvas-muted);
   flex-shrink: 0;
 }
 
 .canvas-empty-quick-add-item:hover {
-  border-color: var(--color-primary);
+  border-color: var(--builder-accent);
   background-color: var(--color-surface-sunken);
 }
 
 .canvas-field-list {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 0.65rem 0.6rem;
+  gap: 1.5rem 0.85rem;
   align-items: start;
 }
 
@@ -6443,21 +6972,27 @@ textarea.text-input {
 .column-layout-wrap {
   position: relative;
   grid-column: 1 / -1;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0.65rem 0.6rem 0.6rem;
-  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-secondary) 8%);
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  padding: 0.35rem 0.15rem 0.35rem;
+  background: transparent;
 }
 
 .column-layout-wrap--selected {
-  border-color: var(--color-secondary);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-secondary) 35%, transparent);
+  border-color: #d4d4d8;
+  box-shadow: none;
+}
+
+.column-layout-wrap--selected .column-layout-header {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dotted #c9c9ce;
 }
 
 .column-layout-header {
   position: relative;
-  margin-bottom: 0.5rem;
-  padding: 0 2.2rem 0 1.7rem;
+  margin-bottom: 0.85rem;
+  padding: 0.4rem 2.2rem 0;
 }
 
 .column-layout-heading {
@@ -6468,9 +7003,9 @@ textarea.text-input {
 }
 
 .column-layout-title {
-  font-weight: 600;
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  color: var(--builder-canvas-text);
 }
 
 .column-layout-grid {
@@ -6495,19 +7030,19 @@ textarea.text-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 3.5rem;
-  padding: 0.7rem;
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-lg);
-  background-color: var(--color-surface-sunken);
+  min-height: 2.75rem;
+  padding: 0.55rem;
+  border: 1px solid #d4d4d8;
+  border-radius: 0.4rem;
+  background-color: transparent;
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease;
 }
 
 .column-slot-empty--drop-target {
-  border-color: var(--color-primary);
-  background-color: var(--color-surface-sunken);
+  border-color: var(--builder-accent);
+  background-color: color-mix(in srgb, var(--builder-accent) 10%, transparent);
 }
 
 .column-slot-empty-trigger {
@@ -6516,7 +7051,7 @@ textarea.text-input {
   padding: 0.3rem 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--builder-canvas-muted);
   cursor: pointer;
   border-radius: var(--radius-md);
 }
@@ -6568,8 +7103,12 @@ textarea.text-input {
 }
 
 .field-card--nested {
-  padding: 0.7rem 0.65rem 0.75rem;
+  padding: 0.15rem 0.1rem 0.2rem;
   cursor: pointer;
+}
+
+.field-card--nested.field-card--selected {
+  padding: 0.75rem 0.7rem 0.7rem;
 }
 
 .field-card--nested .field-drag-handle {
@@ -6631,23 +7170,24 @@ textarea.text-input {
   justify-content: center;
 }
 
-.column-layout-wrap .field-card-toolbar {
-  opacity: 1;
+.column-layout-wrap .field-card:hover:not(.field-card--selected) {
+  border-color: transparent;
 }
 
-/* Field cards — same white/rounded/soft-shadow language as the field palette, so the
-   canvas reads as one cohesive "clean and smooth" surface rather than a plain list. */
+/* Field cards — chrome-less live-form questions; the outer box only appears
+   when a field is selected, matching the reference builder's rounded frame +
+   dotted header divider. */
 .field-card {
   position: relative;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0.7rem 2.35rem 0.75rem 1.9rem;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  padding: 0.35rem 0.15rem 0.5rem;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  box-shadow: none;
   transition:
     border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    padding 0.15s ease;
 }
 
 .field-card--draggable,
@@ -6666,55 +7206,92 @@ textarea.text-input {
 }
 
 .field-card:hover,
+.column-layout-wrap:hover,
+.section-break-bar-wrap:hover,
 .divider-field-wrap:hover {
-  border-color: var(--color-text-muted);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-text-muted) 10%, transparent);
+  border-color: #d4d4d8;
+  box-shadow: none;
 }
 
 .field-card--selected,
-.divider-field-wrap--selected {
-  border-color: var(--color-text-muted);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-text-muted) 18%, transparent);
+.divider-field-wrap--selected,
+.column-layout-wrap--selected,
+.section-break-bar-wrap--selected {
+  border-color: #d4d4d8;
+  box-shadow: none;
+}
+
+.field-card--selected,
+.divider-field-wrap--selected,
+.column-layout-wrap--selected,
+.section-break-bar-wrap--selected {
+  padding: 2.5rem 1.35rem 1.35rem;
+  background-color: #fafafa;
 }
 
 .field-card--dragging {
-  opacity: 0.6;
+  opacity: 0;
 }
 
 .field-card--hidden-preview {
   opacity: 0.45;
 }
 
+.field-card--selected .field-card-header {
+  margin-bottom: 0.15rem;
+}
+
+.field-card--selected:not(:has(.field-card-help)) .field-card-header {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dotted #c9c9ce;
+}
+
+.field-card--selected .field-card-help {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dotted #c9c9ce;
+}
+
 .field-drag-handle {
   position: absolute;
-  top: 0.65rem;
-  left: 0.45rem;
-  z-index: 4;
+  top: 0.45rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
+  width: 28px;
   height: 18px;
   padding: 0;
-  background: none;
+  background-color: #fff;
   border: none;
-  color: var(--color-text-muted);
+  border-radius: 999px;
+  color: var(--builder-canvas-muted);
   cursor: grab;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
 }
 
+.field-card--selected .field-drag-handle,
+.section-break-bar-wrap--selected .field-drag-handle,
+.divider-field-wrap--selected .field-drag-handle,
+.column-layout-wrap--selected .column-layout-header .field-drag-handle {
+  background-color: #fafafa;
+}
+
 .field-card:hover .field-drag-handle,
 .field-card--selected .field-drag-handle,
 .field-card:hover .field-card-toolbar,
 .field-card--selected .field-card-toolbar,
-.section-break-bar-wrap:hover .field-drag-handle--light,
-.section-break-bar-wrap--selected .field-drag-handle--light,
+.section-break-bar-wrap:hover .field-drag-handle,
+.section-break-bar-wrap--selected .field-drag-handle,
 .section-break-bar-wrap:hover .field-card-toolbar,
 .section-break-bar-wrap--selected .field-card-toolbar,
-.column-layout-wrap:hover .field-drag-handle,
-.column-layout-wrap--selected .field-drag-handle,
+.divider-field-wrap:hover .field-card-toolbar,
+.divider-field-wrap--selected .field-card-toolbar,
 .divider-field-wrap:hover .field-drag-handle,
 .divider-field-wrap--selected .field-drag-handle,
 .divider-field-wrap:hover .field-card-kebab,
@@ -6723,42 +7300,80 @@ textarea.text-input {
   opacity: 1;
 }
 
+/* The column layout's OWN drag handle/toolbar (rendered once, in .column-layout-header)
+   must only react to hovering/selecting the SECTION itself — not to hovering one of the
+   FieldCards nested inside .column-layout-grid. Those child cards render the exact same
+   .field-card-toolbar/.field-drag-handle markup (shared FieldHoverToolbar/DragHandleCue
+   components), so a broad `.column-layout-wrap:hover .field-card-toolbar` selector used to
+   match every descendant's toolbar at once — hovering (or selecting) the section, or any
+   one column inside it, revealed every column's gear/kebab simultaneously instead of just
+   whichever card the pointer was actually over. Triggering on `.column-layout-header:hover`
+   specifically (rather than the whole wrap) and targeting only that header's own toolbar
+   fixes both: each child's `.field-card:hover` rule above already scopes correctly on its
+   own, since a plain field-card has only one toolbar as its own descendant. */
+.column-layout-header:hover .field-card-toolbar,
+.column-layout-wrap--selected .column-layout-header .field-card-toolbar,
+.column-layout-header:hover .field-drag-handle,
+.column-layout-wrap--selected .column-layout-header .field-drag-handle {
+  opacity: 1;
+}
+
 .field-card-toolbar {
   position: absolute;
-  top: 0.4rem;
-  right: 0.4rem;
-  z-index: 2;
+  /* .field-action-button is 28px tall but .field-drag-handle (the dots, same row) is
+     only 18px tall starting from top: 0.45rem — matching that same `top` here left the
+     taller gear/kebab buttons visually sitting a few px lower than the drag handle.
+     0.14rem centers this row's 28px buttons on the drag handle's 16.2px-from-top center
+     ((0.45rem + 18px/2) — see .field-drag-handle below) instead. */
+  top: 0.14rem;
+  right: 0.55rem;
+  z-index: 5;
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.05rem;
+  padding: 0 0.1rem;
+  background-color: #fff;
+  border-radius: 0.45rem;
   opacity: 0;
   transition: opacity 0.15s ease;
+}
+
+.field-card--selected .field-card-toolbar,
+.section-break-bar-wrap--selected .field-card-toolbar,
+.divider-field-wrap--selected .field-card-toolbar,
+.column-layout-wrap--selected .column-layout-header .field-card-toolbar {
+  background-color: #fafafa;
 }
 
 .field-action-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background-color: transparent;
+  border: none;
   border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
+  color: #3f3f46;
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
   transition:
     background-color 0.12s ease,
-    border-color 0.12s ease,
     color 0.12s ease;
 }
 
 .field-action-button:hover {
-  background-color: var(--color-primary-soft);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  background-color: var(--color-surface-sunken);
+  border-color: transparent;
+  color: var(--builder-canvas-text);
+}
+
+.field-action-button--danger:hover {
+  background-color: rgba(220, 38, 38, 0.18);
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #fca5a5;
 }
 
 .field-action-button--light {
@@ -6795,6 +7410,16 @@ textarea.text-input {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease;
+}
+
+/* This hover overlay sits on top of .field-card, which goes dark with the rest of the
+   shell — a near-opaque white rgba here would flash a bright white box over a dark card
+   on every hover. Dark mode swaps in a near-opaque tint of the dark surface color
+   (--color-surface: #1c2027) at the same opacity instead. Doesn't apply to the
+   --light variant just below, which is intentionally dark-on-any-theme (it overlays a
+   section-break bar's own colored background, not the page surface). */
+.admin-shell[data-theme="dark"] .field-card-action-overlay:not(.field-card-action-overlay--light) {
+  background-color: rgba(28, 32, 39, 0.92);
 }
 
 .field-card:hover .field-card-action-overlay,
@@ -6911,18 +7536,20 @@ textarea.text-input {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.25rem 0.6rem;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.2rem;
 }
 
 .field-card-label {
   min-width: 0;
   overflow-wrap: break-word;
-  font-weight: 700;
-  font-size: 0.8125rem;
+  font-weight: 600;
+  font-size: 1.0625rem;
+  color: var(--builder-canvas-text);
+  line-height: 1.35;
 }
 
 .field-card-required {
-  color: var(--color-danger);
+  color: #f87171;
   margin-left: 0.25rem;
 }
 
@@ -6938,16 +7565,39 @@ textarea.text-input {
 }
 
 .field-card-help {
-  color: var(--color-text-muted);
-  font-size: 0.6875rem;
-  margin: 0 0 0.45rem;
+  color: var(--builder-canvas-muted);
+  font-size: 0.875rem;
+  font-style: italic;
+  margin: 0 0 0.65rem;
 }
 
 .field-preview-input {
   width: 100%;
   pointer-events: none;
-  padding: 0.45rem 0.7rem;
-  font-size: 0.8125rem;
+  padding: 0.95rem 1.1rem;
+  font-size: 0.9375rem;
+}
+
+.canvas .text-input,
+.canvas .field-preview-input,
+.canvas select.text-input {
+  background-color: #fff;
+  border: 1px solid #d4d4d8;
+  border-radius: 0.4rem;
+  color: var(--builder-canvas-text);
+  box-shadow: none;
+}
+
+.canvas .text-input::placeholder,
+.canvas .field-preview-input::placeholder {
+  color: var(--builder-canvas-subtle);
+}
+
+.canvas .text-input:disabled,
+.canvas .field-preview-input:disabled {
+  opacity: 1;
+  background-color: #fff;
+  color: var(--builder-canvas-text);
 }
 
 .field-preview-options {
@@ -7013,13 +7663,55 @@ textarea.text-input {
 }
 
 .field-preview-signature {
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 1.25rem;
-  color: var(--color-text-muted);
+  border: 1px solid var(--builder-input-border);
+  border-radius: 0.5rem;
+  padding: 2rem 1.25rem 1.25rem;
+  min-height: 5.5rem;
+  color: var(--builder-canvas-muted);
   font-family: cursive, sans-serif;
   font-size: 1rem;
   text-align: center;
+  position: relative;
+}
+
+.field-preview-signature::after {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1.35rem;
+  height: 1px;
+  background: var(--builder-input-border);
+}
+
+.field-preview-draw-on-image {
+  position: relative;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.field-preview-draw-on-image-bg {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.field-preview-draw-on-image-badge {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background-color: rgba(17, 17, 17, 0.72);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
 }
 
 .field-preview-rating {
@@ -7097,6 +7789,145 @@ textarea.text-input {
   gap: 0.5rem;
 }
 
+.field-preview-full-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.field-preview-full-name-row .field-preview-input {
+  flex: 1 1 6rem;
+  min-width: 6rem;
+}
+
+.field-preview-full-name-row .field-preview-full-name-prefix {
+  flex: 0 0 5rem;
+  min-width: 0;
+}
+
+.field-preview-yes-no {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.field-preview-yes-no-option {
+  flex: 1;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+.field-preview-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field-preview-ranking-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8125rem;
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.field-preview-ranking-index {
+  flex-shrink: 0;
+  width: 1.25rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.field-preview-ranking-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-preview-ranking-handle {
+  flex-shrink: 0;
+  color: var(--color-text-subtle);
+}
+
+.field-preview-picture-choice {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: 0.5rem;
+}
+
+.field-preview-picture-choice-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem;
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.field-preview-picture-choice-image {
+  width: 100%;
+  height: 3.5rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.field-preview-picture-choice-placeholder {
+  width: 100%;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-subtle);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-sm);
+}
+
+.field-preview-picture-choice-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.field-preview-calculation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8125rem;
+  background-color: var(--color-surface-sunken);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.field-preview-calculation-formula {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  color: var(--color-text-muted);
+}
+
+.field-preview-calculation-badge {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-subtle);
+  background-color: var(--color-surface);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full, 999px);
+}
+
 .field-preview-matrix {
   width: 100%;
   border-collapse: collapse;
@@ -7118,6 +7949,178 @@ textarea.text-input {
 .field-preview-matrix-row-label {
   text-align: left;
   color: var(--color-text);
+}
+
+.field-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.field-preview-table th,
+.field-preview-table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  border: 1px solid var(--color-border);
+}
+
+.field-preview-table th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  background-color: var(--color-surface-sunken);
+}
+
+.field-preview-table .field-preview-input {
+  width: 100%;
+  min-width: 5rem;
+}
+
+/* Inline canvas editing for the Input Table field (add/rename/remove columns, adjust the
+   starting row count directly from the canvas) — matches Jotform's matrix-editor pattern,
+   where the grid on the canvas is itself the primary editing surface rather than a
+   separate settings panel. See the 'table' case in FieldPreview (field-card.tsx). */
+.field-preview-table-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-preview-table-col-header {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.field-preview-table-col-input {
+  flex: 1;
+  min-width: 4rem;
+  border: 1px solid transparent;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+}
+
+.field-preview-table-col-input:hover,
+.field-preview-table-col-input:focus {
+  border-color: var(--color-border);
+  background-color: var(--color-surface);
+  outline: none;
+}
+
+.field-preview-table-col-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.field-preview-table-col-remove:hover {
+  background-color: var(--color-surface);
+  color: var(--color-danger);
+}
+
+.field-preview-table-col-remove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.field-preview-table-add-column-cell {
+  width: 1px;
+  border: none !important;
+  background: none !important;
+  padding: 0 !important;
+  vertical-align: middle;
+}
+
+.field-preview-table-add-column {
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.2rem;
+}
+
+.field-preview-table-add-column:hover {
+  color: var(--color-primary-hover);
+}
+
+.field-preview-table-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.field-preview-table-add-row,
+.field-preview-table-remove-row {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0;
+}
+
+.field-preview-table-add-row:hover,
+.field-preview-table-remove-row:hover {
+  color: var(--color-primary-hover);
+}
+
+/* question_table's canvas preview — a fixed two-column question/answer grid (see the
+   'question_table' case in FieldPreview, field-card.tsx). Reuses the .field-preview-table-*
+   column-header/remove/row-controls classes above for its inline row editing, since the
+   interaction (rename in place, remove, add) is identical, just row- instead of
+   column-oriented. Header/answer-cell colors come from the field's own headerColor/
+   headerTextColor/valueColor (inline style, set per field instance) rather than a shared
+   CSS custom property — see the schema comment on questionTableFieldSchema for why these
+   are a separate, per-field mechanism from the whole-form table theme. */
+.field-preview-question-table-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-preview-question-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.field-preview-question-table th,
+.field-preview-question-table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  border: 1px solid var(--color-border);
+}
+
+.field-preview-question-table th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  background-color: var(--color-surface-sunken);
+}
+
+.field-preview-question-table-label-cell {
+  width: 40%;
+  font-weight: 500;
+}
+
+.field-preview-question-table .field-preview-input {
+  width: 100%;
+  min-width: 5rem;
 }
 
 .field-remove-button {
@@ -7146,6 +8149,9 @@ textarea.text-input {
 /* Section break — a solid full-width bar rather than a card (splose reference). */
 .section-break-bar-wrap {
   position: relative;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  padding: 0.35rem 0.15rem 0.5rem;
 }
 
 .section-break-bar {
@@ -7155,17 +8161,13 @@ textarea.text-input {
   gap: 0.4rem;
   background-color: var(--color-secondary);
   border-radius: var(--radius-md);
-  padding: 0.6rem 2.35rem 0.6rem 1.9rem;
-}
-
-.section-break-bar--selected {
-  box-shadow: 0 0 0 2px rgba(31, 42, 32, 0.25);
+  padding: 0.75rem 1.15rem;
 }
 
 .section-break-title {
   background: none;
   border: none;
-  color: #fff;
+  color: inherit;
   font-weight: 700;
   font-size: 0.875rem;
   text-align: left;
@@ -7199,12 +8201,12 @@ textarea.text-input {
   align-items: center;
   justify-content: center;
   min-height: 3.25rem;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0.7rem 2.35rem 0.75rem 1.9rem;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  padding: 0.35rem 0.15rem 0.5rem;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  box-shadow: none;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -7280,6 +8282,13 @@ textarea.text-input {
   z-index: 4;
   opacity: 0;
   transition: opacity 0.15s ease;
+}
+
+.field-card-toolbar .field-card-kebab {
+  position: relative;
+  top: auto;
+  right: auto;
+  opacity: 1;
 }
 
 .field-card-kebab-panel {
@@ -7542,6 +8551,172 @@ textarea.text-input {
   line-height: 1.5;
 }
 
+.builder-palette .settings-panel-empty-title,
+.builder-palette .settings-section-title,
+.builder-palette .settings-label,
+.builder-palette .field-settings-aside-title,
+.builder-palette .field-color-picker-label,
+.builder-palette .settings-width-option {
+  color: var(--builder-text);
+}
+
+.builder-palette .settings-panel-empty,
+.builder-palette .settings-field-hint,
+.builder-palette .settings-subsection-title,
+.builder-palette .settings-toggle-row--compact .settings-label {
+  color: var(--builder-muted);
+}
+
+.builder-palette .text-input,
+.builder-palette select.text-input,
+.builder-palette textarea.text-input {
+  background-color: var(--builder-panel-elevated);
+  border-color: var(--builder-panel-border);
+  color: var(--builder-text);
+  border-radius: var(--radius-md);
+}
+
+.builder-palette .text-input::placeholder {
+  color: var(--builder-subtle);
+}
+
+.builder-palette .text-input:focus {
+  border-color: var(--builder-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--builder-accent) 22%, transparent);
+}
+
+.builder-palette .button--ghost {
+  color: var(--builder-text);
+  border-color: var(--builder-panel-border);
+}
+
+.builder-palette .button--ghost:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.builder-palette .settings-subsection,
+.builder-palette .table-columns-editor-dropdown-options,
+.builder-palette .field-color-picker + .field-color-picker {
+  border-color: var(--builder-panel-border);
+}
+
+.builder-palette .table-columns-editor {
+  gap: 0.75rem;
+}
+
+.builder-palette .table-columns-editor-row {
+  padding: 0.7rem;
+  border: 1px solid var(--builder-panel-border);
+  border-radius: var(--radius-md);
+  background-color: rgba(255, 255, 255, 0.035);
+}
+
+.builder-palette .table-columns-editor-row:last-of-type {
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--builder-panel-border);
+}
+
+.builder-palette .table-columns-editor > .button {
+  width: 100%;
+  justify-content: center;
+}
+
+.builder-palette .table-columns-editor-row .text-input {
+  background-color: #1a1a1f;
+}
+
+.builder-palette .field-color-picker {
+  padding: 0.75rem;
+  border: 1px solid var(--builder-panel-border);
+  border-radius: var(--radius-md);
+  background-color: rgba(255, 255, 255, 0.035);
+}
+
+.builder-palette .field-color-picker + .field-color-picker {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+.builder-palette .page-tab-move,
+.builder-palette .options-editor-remove {
+  color: var(--builder-muted);
+}
+
+.builder-palette .page-tab-move:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--builder-text);
+}
+
+.builder-palette .options-editor-remove:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #f87171;
+}
+
+.builder-palette .field-color-sv-canvas,
+.builder-palette .field-color-hue-canvas,
+.builder-palette .field-color-preview {
+  border-color: var(--builder-panel-border);
+}
+
+.builder-palette .settings-group {
+  background: var(--builder-panel-elevated);
+  border-color: var(--builder-panel-border);
+  box-shadow: none;
+  color: var(--builder-text);
+}
+
+.builder-palette .settings-group-summary {
+  color: var(--builder-text);
+}
+
+.builder-palette .settings-group[open] > .settings-group-summary,
+.builder-palette .settings-group-summary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom-color: var(--builder-panel-border);
+}
+
+.builder-palette .settings-group-hint,
+.builder-palette .settings-group-chevron {
+  color: var(--builder-muted);
+}
+
+.builder-palette .settings-group-icon {
+  background: color-mix(in srgb, var(--builder-accent) 22%, transparent);
+  color: var(--builder-accent);
+}
+
+.builder-palette .settings-group-content {
+  background: transparent;
+  color: var(--builder-text);
+}
+
+.canvas .date-picker-trigger,
+.canvas .time-picker-trigger {
+  background-color: #fff;
+  border: 1px solid #d4d4d8;
+  color: var(--builder-canvas-text);
+  border-radius: 0.4rem;
+}
+
+.canvas .date-picker-placeholder,
+.canvas .time-picker-placeholder {
+  color: var(--builder-canvas-subtle);
+}
+
+.canvas .field-preview-option,
+.canvas .field-preview-option--other {
+  color: var(--builder-canvas-text);
+}
+
+.canvas .field-preview-dropzone {
+  border-color: var(--builder-input-border);
+  color: var(--builder-canvas-muted);
+}
+
+.canvas .field-preview-hint {
+  color: var(--builder-canvas-muted);
+}
+
 .settings-field {
   display: flex;
   flex-direction: column;
@@ -7577,12 +8752,70 @@ textarea.text-input {
   gap: 0.75rem;
 }
 
+/* Every boolean setting in the builder (Required, Add a time field, Show form title,
+   Allow multiple files, etc.) shares this one .settings-toggle-row markup — a label with
+   a plain <input type="checkbox"> — so restyling that checkbox here as a pill switch
+   (track + sliding knob) upgrades every one of those controls at once, matching the
+   reference builder's toggle look instead of the browser's native checkbox square.
+   Built with appearance: none + a ::before knob rather than a second dependency, same
+   no-new-library approach as the rest of this app's custom inputs. */
+.settings-toggle-row input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 1.3rem;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-border-strong);
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.settings-toggle-row input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.settings-toggle-row input[type="checkbox"]:checked {
+  background-color: var(--color-primary);
+}
+
+.settings-toggle-row input[type="checkbox"]:checked::before {
+  transform: translateX(0.95rem);
+}
+
+.settings-toggle-row input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.settings-toggle-row input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-lavender-strong);
+  outline-offset: 2px;
+}
+
 .settings-section {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--color-border);
+  min-width: 0;
+}
+
+.builder-palette .settings-section {
+  border-top-color: var(--builder-panel-border);
 }
 
 .settings-section-title {
@@ -7591,6 +8824,44 @@ textarea.text-input {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+/* The redesigned field-settings-panel.tsx merges the old Content/Validation & behavior
+   accordions into one flat, always-visible "Settings" section (no expand/collapse — see
+   the plain .settings-section block right after the field-type switcher), with a
+   type-relevant "Media" section (image upload) below it for the handful of field types
+   built around one image. When Settings is the first thing under the type switcher, the
+   divider border-top would land directly under it with almost no gap — so drop it there;
+   Media still gets its divider since it follows Settings. */
+.settings-field-type-switch + .settings-section--flat {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* Leading icon chip beside the field-type <select>, echoing the field's palette icon so
+   the header row reads at a glance (matches the target screenshot's calendar-icon +
+   "Date" dropdown). */
+.settings-field-type-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-field-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.settings-field-type-select {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Grouped, collapsible settings sections (Content / Validation & behavior / Layout /
@@ -7711,6 +8982,7 @@ textarea.text-input {
   gap: 0.6rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--color-border);
+  min-width: 0;
 }
 
 .settings-subsection:first-child {
@@ -7734,6 +9006,13 @@ textarea.text-input {
   border-radius: var(--radius-sm);
   overflow: visible;
   background: var(--color-surface);
+}
+
+/* Tiptap's useEditor defers its first render a tick (immediatelyRender: false, needed to
+   avoid an SSR/hydration mismatch) — this keeps the field from visibly collapsing to
+   nothing for that one tick. */
+.rich-text-editor-wrap--loading {
+  min-height: 12rem;
 }
 
 .rich-text-toolbar {
@@ -7792,11 +9071,42 @@ textarea.text-input {
   border-color: var(--color-border);
 }
 
+.rich-text-toolbar-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rich-text-toolbar-button:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+.rich-text-toolbar-button--active {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary-hover);
+}
+
+.rich-text-toolbar-button--wide {
+  width: auto;
+  padding: 0 0.45rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
 .rich-text-color-swatch-icon {
   width: 0.9rem;
   height: 0.9rem;
   border-radius: 2px;
   background: linear-gradient(135deg, #f43f5e, #55ea8c, #2563eb);
+  display: block;
+}
+
+.rich-text-highlight-swatch-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #fde68a, #fca5a5, #a7f3d0);
   display: block;
 }
 
@@ -7863,6 +9173,25 @@ textarea.text-input {
   background: var(--color-surface-sunken);
 }
 
+.rich-text-popover-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rich-text-popover-item:disabled:hover {
+  background: transparent;
+}
+
+/* "Delete table" — the one destructive action in the table-tools popover, called out the
+   same way .button--danger marks destructive actions elsewhere in the app. */
+.rich-text-popover-item--danger {
+  color: var(--color-danger);
+}
+
+.rich-text-popover-item--danger:hover {
+  background: var(--color-danger-soft);
+}
+
 .rich-text-editor {
   min-height: 8rem;
   padding: 0.65rem 0.75rem;
@@ -7874,9 +9203,40 @@ textarea.text-input {
   border-bottom-right-radius: var(--radius-sm);
 }
 
-.rich-text-editor:empty::before {
-  content: "Add your text here.";
+/* Tiptap's Placeholder extension marks the empty first paragraph with this class and a
+   data-placeholder attribute (see rich-text-editor.tsx's Placeholder.configure) rather
+   than relying on :empty, since the ProseMirror doc always has at least one paragraph
+   node even when "empty". */
+.rich-text-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
   color: var(--color-text-subtle);
+  pointer-events: none;
+}
+
+.rich-text-editor blockquote,
+.form-static-text-body blockquote,
+.field-preview-static-text-body blockquote {
+  margin: 0 0 0.75rem;
+  padding-left: 0.85rem;
+  border-left: 3px solid var(--color-border-strong);
+  color: var(--color-text-muted);
+}
+
+.rich-text-editor hr,
+.form-static-text-body hr,
+.field-preview-static-text-body hr {
+  margin: 0.75rem 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.rich-text-editor mark,
+.form-static-text-body mark,
+.field-preview-static-text-body mark {
+  border-radius: 2px;
+  padding: 0 0.1em;
 }
 
 /* Typography for rendered rich text output — shared by the public renderer
@@ -7944,6 +9304,215 @@ textarea.text-input {
   text-decoration: underline;
 }
 
+/* Inline images — the Image extension added to rich-text-editor.tsx. Capped to the
+   content width (a pasted/linked image is very often larger than the field) and given
+   the same rounded-corner treatment as the rest of the app's media (FieldImageUpload
+   previews, etc.). */
+.rich-text-editor img,
+.form-static-text-body img,
+.field-preview-static-text-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  display: block;
+  margin: 0 0 0.75rem;
+}
+
+/* ProseMirror marks the currently-selected image (an atom-like leaf node) with this class
+   instead of a normal text selection, same treatment as the merge-token chip below. */
+.rich-text-editor img.ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Tables — TableKit (rich-text-editor.tsx) wraps every table in a `.tableWrapper` div for
+   horizontal scrolling on narrow fields, and needs a handful of ProseMirror-specific
+   classes (`.selectedCell`, `.column-resize-handle`, `.resize-cursor`) styled per Tiptap's
+   own table guide. `.form-static-text-body`/`.field-preview-static-text-body` only ever
+   render already-resolved, non-editable HTML, so they skip the resize-handle/tableWrapper
+   rules (those classes only appear in the live editor's DOM) but still need the base
+   table/cell/header look for saved content to render correctly outside the editor. */
+.rich-text-editor .tableWrapper {
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.rich-text-editor table,
+.form-static-text-body table,
+.field-preview-static-text-body table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0 0 0.75rem;
+  overflow: hidden;
+}
+
+.rich-text-editor table td,
+.rich-text-editor table th,
+.form-static-text-body table td,
+.form-static-text-body table th,
+.field-preview-static-text-body table td,
+.field-preview-static-text-body table th {
+  border: 1px solid var(--color-border-strong);
+  box-sizing: border-box;
+  min-width: 1em;
+  padding: 0.35rem 0.5rem;
+  position: relative;
+  vertical-align: top;
+}
+
+.rich-text-editor table td > *:last-child,
+.rich-text-editor table th > *:last-child,
+.form-static-text-body table td > *:last-child,
+.form-static-text-body table th > *:last-child,
+.field-preview-static-text-body table td > *:last-child,
+.field-preview-static-text-body table th > *:last-child {
+  margin-bottom: 0;
+}
+
+.rich-text-editor table th,
+.form-static-text-body table th,
+.field-preview-static-text-body table th {
+  background-color: var(--color-surface-sunken);
+  font-weight: 700;
+  text-align: left;
+}
+
+.rich-text-editor table .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary-soft);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.rich-text-editor table .column-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: -2px;
+  right: -2px;
+  width: 4px;
+  background-color: var(--color-primary);
+  pointer-events: none;
+}
+
+.rich-text-editor.resize-cursor {
+  cursor: col-resize;
+}
+
+/* Code blocks — CodeBlockLowlight (rich-text-editor.tsx). Kept a fixed dark background
+   regardless of the app's own light/dark theme toggle, matching the near-universal
+   convention (GitHub, Notion, etc.) that a code block's own chrome doesn't flip with the
+   surrounding page — it's already a deliberately distinct "terminal" surface. */
+.rich-text-editor pre,
+.form-static-text-body pre,
+.field-preview-static-text-body pre {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: #1e1e2e;
+  color: #cdd6f4;
+  overflow-x: auto;
+}
+
+.rich-text-editor pre code,
+.form-static-text-body pre code,
+.field-preview-static-text-body pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: 0.8125rem;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+.rich-text-editor .hljs-comment,
+.form-static-text-body .hljs-comment,
+.field-preview-static-text-body .hljs-comment,
+.rich-text-editor .hljs-quote,
+.form-static-text-body .hljs-quote,
+.field-preview-static-text-body .hljs-quote {
+  color: #6c7086;
+}
+
+.rich-text-editor .hljs-variable,
+.form-static-text-body .hljs-variable,
+.field-preview-static-text-body .hljs-variable,
+.rich-text-editor .hljs-attribute,
+.form-static-text-body .hljs-attribute,
+.field-preview-static-text-body .hljs-attribute,
+.rich-text-editor .hljs-tag,
+.form-static-text-body .hljs-tag,
+.field-preview-static-text-body .hljs-tag,
+.rich-text-editor .hljs-regexp,
+.form-static-text-body .hljs-regexp,
+.field-preview-static-text-body .hljs-regexp,
+.rich-text-editor .hljs-name,
+.form-static-text-body .hljs-name,
+.field-preview-static-text-body .hljs-name {
+  color: #f38ba8;
+}
+
+.rich-text-editor .hljs-number,
+.form-static-text-body .hljs-number,
+.field-preview-static-text-body .hljs-number,
+.rich-text-editor .hljs-built_in,
+.form-static-text-body .hljs-built_in,
+.field-preview-static-text-body .hljs-built_in,
+.rich-text-editor .hljs-literal,
+.form-static-text-body .hljs-literal,
+.field-preview-static-text-body .hljs-literal,
+.rich-text-editor .hljs-type,
+.form-static-text-body .hljs-type,
+.field-preview-static-text-body .hljs-type,
+.rich-text-editor .hljs-params,
+.form-static-text-body .hljs-params,
+.field-preview-static-text-body .hljs-params {
+  color: #fab387;
+}
+
+.rich-text-editor .hljs-string,
+.form-static-text-body .hljs-string,
+.field-preview-static-text-body .hljs-string,
+.rich-text-editor .hljs-symbol,
+.form-static-text-body .hljs-symbol,
+.field-preview-static-text-body .hljs-symbol,
+.rich-text-editor .hljs-bullet,
+.form-static-text-body .hljs-bullet,
+.field-preview-static-text-body .hljs-bullet {
+  color: #a6e3a1;
+}
+
+.rich-text-editor .hljs-title,
+.form-static-text-body .hljs-title,
+.field-preview-static-text-body .hljs-title,
+.rich-text-editor .hljs-section,
+.form-static-text-body .hljs-section,
+.field-preview-static-text-body .hljs-section {
+  color: #f9e2af;
+}
+
+.rich-text-editor .hljs-keyword,
+.form-static-text-body .hljs-keyword,
+.field-preview-static-text-body .hljs-keyword,
+.rich-text-editor .hljs-selector-tag,
+.form-static-text-body .hljs-selector-tag,
+.field-preview-static-text-body .hljs-selector-tag {
+  color: #89dceb;
+}
+
+.rich-text-editor .hljs-emphasis,
+.form-static-text-body .hljs-emphasis,
+.field-preview-static-text-body .hljs-emphasis {
+  font-style: italic;
+}
+
+.rich-text-editor .hljs-strong,
+.form-static-text-body .hljs-strong,
+.field-preview-static-text-body .hljs-strong {
+  font-weight: 700;
+}
+
 .merge-token,
 .merge-token-preview {
   display: inline-block;
@@ -7954,6 +9523,14 @@ textarea.text-input {
   font-size: 0.85em;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* ProseMirror marks the currently-selected atom node (our merge-token chip is the only
+   one) with this class instead of a normal text selection, since the caret can't step
+   inside an atom node. */
+.rich-text-editor .merge-token.ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
 .form-static-text-heading,
@@ -7984,7 +9561,7 @@ textarea.text-input {
 
 .settings-inline-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: 0.6rem;
   min-width: 0;
 }
@@ -8014,6 +9591,11 @@ textarea.text-input {
   gap: 1.25rem;
 }
 
+.field-color-picker {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .field-color-picker + .field-color-picker {
   padding-top: 1rem;
   border-top: 1px solid var(--color-border);
@@ -8026,30 +9608,91 @@ textarea.text-input {
   color: var(--color-text);
 }
 
-.field-color-presets {
+.field-color-spectrum {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.field-color-swatch {
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 2px solid transparent;
+.field-color-sv-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 0;
+}
+
+.field-color-sv-canvas {
+  width: 100%;
+  max-width: 100%;
+  height: 130px;
+  display: block;
   border-radius: var(--radius-sm);
-  cursor: pointer;
-  padding: 0;
+  border: 1px solid var(--color-border);
+  cursor: crosshair;
+  touch-action: none;
 }
 
-.field-color-swatch--active {
-  border-color: var(--color-text);
-  box-shadow: 0 0 0 2px var(--color-surface);
+.field-color-sv-canvas--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.field-color-sv-cursor {
+  position: absolute;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.field-color-hue-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 0;
+}
+
+.field-color-hue-canvas {
+  width: 100%;
+  max-width: 100%;
+  height: 14px;
+  display: block;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.field-color-hue-canvas--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.field-color-hue-cursor {
+  position: absolute;
+  top: 50%;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  background: transparent;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 .field-color-custom {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 0.75rem;
   min-width: 0;
@@ -8072,8 +9715,9 @@ textarea.text-input {
 }
 
 .field-color-hex-input {
+  flex: 1;
   width: 100%;
-  max-width: 7rem;
+  max-width: 8.5rem;
   min-width: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8125rem;
@@ -8117,6 +9761,21 @@ textarea.text-input {
   flex-shrink: 0;
 }
 
+.picture-choice-options-editor-row {
+  align-items: flex-start;
+}
+
+.picture-choice-options-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.picture-choice-options-editor-row .options-editor-controls {
+  padding-top: 0.15rem;
+}
+
 .options-editor-remove {
   display: inline-flex;
   align-items: center;
@@ -8141,6 +9800,71 @@ textarea.text-input {
   cursor: not-allowed;
 }
 
+.table-columns-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.table-columns-editor-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+  min-width: 0;
+}
+
+.table-columns-editor-row:last-of-type {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.table-columns-editor-row-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.table-columns-editor-row-main > .text-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.table-columns-editor-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.table-columns-editor-row-meta .text-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.table-columns-editor-dropdown-options {
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--color-border);
+}
+
+/* Per-row Required toggle in QuestionTableRowsEditor — sits inline under a row's
+   label/type controls, so it's given a tighter footprint than the standalone
+   .settings-toggle-row used elsewhere in the settings panel (e.g. the field-level
+   Required toggle, which question_table itself skips — see field-settings-panel.tsx). */
+.settings-toggle-row--compact {
+  padding-left: 0.1rem;
+}
+
+.settings-toggle-row--compact .settings-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
 /* Conditional logic preview bar */
 .builder-canvas-column .conditional-preview-bar {
   width: 100%;
@@ -8149,6 +9873,7 @@ textarea.text-input {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
+  color: var(--builder-canvas-text);
 }
 
 .conditional-preview-bar {
@@ -8313,6 +10038,10 @@ textarea.text-input {
   background: #16a34a;
 }
 
+.admin-shell[data-theme="dark"] .submission-status-chip--approved .submission-status-dot {
+  background: #3dd975;
+}
+
 .submission-status-chip--rejected .submission-status-dot {
   background: var(--color-danger);
 }
@@ -8321,6 +10050,15 @@ textarea.text-input {
   background: #f3faf6;
   border-color: #d8efe3;
   color: #157a45;
+}
+
+/* Same translucent-success treatment already used for .badge--success in dark mode —
+   this chip is the same "pale green background + dark green text" pattern under a
+   different class name, and was missing the matching dark override. */
+.admin-shell[data-theme="dark"] .submission-status-chip--approved {
+  background: rgba(85, 234, 140, 0.14);
+  border-color: rgba(85, 234, 140, 0.35);
+  color: #5eead4;
 }
 
 .submission-status-chip--rejected {
@@ -8442,11 +10180,30 @@ textarea.text-input {
   color: var(--color-text-muted);
 }
 
+.submission-answer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.submission-answer-table th,
+.submission-answer-table td {
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  border: 1px solid var(--color-border);
+}
+
+.submission-answer-table th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  background-color: var(--color-surface-sunken);
+}
+
 .submission-section-break {
   display: flex;
   align-items: center;
   background-color: var(--color-secondary);
-  color: #fff;
+  color: inherit;
   border-radius: var(--radius-lg);
   padding: 0.75rem 1.15rem;
   font-weight: 700;
@@ -8819,6 +10576,113 @@ html:has(.form-preview-embed) [data-next-badge-root] {
   line-height: 1.45;
 }
 
+/* "Table" layout style (Form settings modal -> Layout) — renders the whole field list as
+   one continuous two-column table under a single header row naming the columns (default
+   "Field"/"Details"), rather than the default stacked label-above-input layout. Structure
+   only by default (transparent header/value backgrounds) — tableThemeHeaderColor/
+   tableThemeHeaderTextColor/tableThemeValueColor (Form settings modal) let the admin
+   apply whatever coloring they want via the --form-table-* custom properties set inline
+   on .form-renderer (see form-renderer-client.tsx's brandStyle).
+
+   Three things make the field list read as one continuous table with pure CSS, no JSX
+   restructuring:
+   1. .form-field-group-list drops its multi-column grid for a plain block stack (so
+      half/third-width fields also go full-width — one column, like the source table).
+   2. The list gets a single outer border; each .form-field-cell gets a bottom border
+      instead of each field owning its own boxed border, so adjacent rows share one line
+      rather than doubling up.
+   3. Within a field, the label spans every implicit row via `grid-row: 1 / -1` while its
+      siblings (help text, the actual input, any validation error) auto-flow into column
+      2, one per row, in DOM order — this is what makes "shaded label | everything else"
+      work for every field type without per-type JSX changes. */
+.form-renderer--table-theme .form-table-theme-header {
+  display: grid;
+  grid-template-columns: minmax(140px, 30%) 1fr;
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  overflow: hidden;
+}
+
+.form-renderer--table-theme .form-table-theme-header-cell {
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  background: var(--form-table-header-bg, transparent);
+  color: var(--form-table-header-text, inherit);
+}
+
+.form-renderer--table-theme .form-table-theme-header-cell + .form-table-theme-header-cell {
+  border-left: 1px solid var(--color-border);
+}
+
+.form-renderer--table-theme .form-field-group-list {
+  display: block;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.form-renderer--table-theme .form-table-theme-header + .form-field-group-list {
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.form-renderer--table-theme .form-field-cell {
+  width: 100%;
+}
+
+.form-renderer--table-theme .form-field-cell:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.form-renderer--table-theme .form-field-group {
+  display: grid;
+  grid-template-columns: minmax(140px, 30%) 1fr;
+  gap: 0;
+}
+
+.form-renderer--table-theme .form-field-group--highlighted {
+  padding: 0;
+  border-radius: 0;
+}
+
+.form-renderer--table-theme .form-field-label {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  background: var(--form-table-label-bg, transparent);
+  border-right: 1px solid var(--color-border);
+  padding: 0.85rem 1rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.form-renderer--table-theme .form-field-group > *:not(.form-field-label) {
+  grid-column: 2;
+  padding: 0.6rem 0.85rem;
+  margin: 0;
+}
+
+/* Only the actual input/answer surface gets the "fill this in" highlight — help text and
+   validation errors share column 2 but stay plain so they don't look like editable cells. */
+.form-renderer--table-theme
+  .form-field-group
+  > *:not(.form-field-label):not(.form-field-help):not(.form-field-error) {
+  background: var(--form-table-value-bg, transparent);
+}
+
+.form-renderer--table-theme .form-field-help {
+  padding-bottom: 0;
+}
+
+/* Nested column-layout children reuse .form-field-cell, so the same bottom-divider rule
+   above already applies to them — this just collapses their side-by-side grid to a single
+   stacked column too, matching the rest of the table theme. */
+.form-renderer--table-theme .form-column-layout-grid {
+  display: block;
+}
+
 .form-field-error {
   color: var(--color-danger);
   font-size: 0.8125rem;
@@ -8863,6 +10727,11 @@ html:has(.form-preview-embed) [data-next-badge-root] {
   opacity: 0.7;
 }
 
+.canvas .date-picker-trigger:disabled,
+.canvas .time-picker-trigger:disabled {
+  opacity: 1;
+}
+
 .date-picker-trigger[aria-expanded="true"],
 .date-picker-trigger:focus-visible {
   outline: none;
@@ -8872,6 +10741,10 @@ html:has(.form-preview-embed) [data-next-badge-root] {
 
 .date-picker-placeholder {
   color: #888;
+}
+
+.admin-shell[data-theme="dark"] .date-picker-placeholder {
+  color: var(--color-text-muted);
 }
 
 .date-picker-value {
@@ -8898,6 +10771,18 @@ html:has(.form-preview-embed) [data-next-badge-root] {
   --rdp-day_button-border-radius: 4px;
   --rdp-selected-border: none;
   font-size: 0.875rem;
+}
+
+/* Only reachable inside the admin shell (builder canvas preview) — the public form
+   renderer's own date/time fields never sit inside .admin-shell, so these overrides
+   can't affect the "paper surface" appearance those keep on the public form. */
+.admin-shell[data-theme="dark"] .date-picker-popover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.admin-shell[data-theme="dark"] .date-picker-popover .rdp-root {
+  --rdp-accent-background-color: var(--color-primary-soft);
 }
 
 .time-picker-field {
@@ -8931,6 +10816,10 @@ html:has(.form-preview-embed) [data-next-badge-root] {
   color: #888;
 }
 
+.admin-shell[data-theme="dark"] .time-picker-placeholder {
+  color: var(--color-text-muted);
+}
+
 .time-picker-value {
   color: inherit;
 }
@@ -8948,6 +10837,13 @@ html:has(.form-preview-embed) [data-next-badge-root] {
   padding: 0.5rem;
 }
 
+/* Only reachable inside the admin shell (builder canvas preview) — see the matching
+   comment on .date-picker-popover above. */
+.admin-shell[data-theme="dark"] .time-picker-popover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
 .time-picker-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -8960,6 +10856,10 @@ html:has(.form-preview-embed) [data-next-badge-root] {
   border: 1px solid #ececec;
   border-radius: 4px;
   padding: 0.2rem;
+}
+
+.admin-shell[data-theme="dark"] .time-picker-column {
+  border-color: var(--color-border);
 }
 
 .time-picker-option {
@@ -8980,10 +10880,18 @@ html:has(.form-preview-embed) [data-next-badge-root] {
   background-color: #f0f2f5;
 }
 
+.admin-shell[data-theme="dark"] .time-picker-option:hover {
+  background-color: var(--color-surface-sunken);
+}
+
 .time-picker-option--selected {
   background-color: #e6f7ef;
   color: var(--color-primary, #55ea8c);
   font-weight: 600;
+}
+
+.admin-shell[data-theme="dark"] .time-picker-option--selected {
+  background-color: var(--color-primary-soft);
 }
 
 .time-picker-footer {
@@ -8994,6 +10902,10 @@ html:has(.form-preview-embed) [data-next-badge-root] {
   margin-top: 0.5rem;
   padding-top: 0.45rem;
   border-top: 1px solid #ececec;
+}
+
+.admin-shell[data-theme="dark"] .time-picker-footer {
+  border-top-color: var(--color-border);
 }
 
 .form-field-input {
@@ -9270,6 +11182,206 @@ textarea.form-field-input {
   gap: 0.55rem;
 }
 
+.form-full-name-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.form-full-name-field .form-field-input {
+  flex: 1 1 8rem;
+  min-width: 8rem;
+}
+
+.form-full-name-field .form-full-name-prefix {
+  flex: 0 0 6rem;
+  min-width: 0;
+}
+
+.form-yes-no-field {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.form-yes-no-option {
+  flex: 1;
+  max-width: 10rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--color-text-muted);
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.form-yes-no-option:hover {
+  border-color: var(--color-primary-hover);
+}
+
+.form-yes-no-option--selected {
+  color: var(--color-primary-hover);
+  background-color: var(--color-primary-soft);
+  border-color: var(--color-primary-hover);
+}
+
+.form-ranking-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.form-ranking-item--dragging {
+  z-index: 1;
+  border-color: var(--color-primary-hover);
+  box-shadow: 0 8px 20px rgba(38, 30, 20, 0.12);
+}
+
+.form-ranking-item-index {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary-hover);
+  background-color: var(--color-primary-soft);
+  border-radius: 50%;
+}
+
+.form-ranking-item-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9375rem;
+}
+
+.form-ranking-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.form-ranking-move-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1;
+  padding: 0.3rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.form-ranking-move-btn:hover:not(:disabled) {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.form-ranking-move-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.form-ranking-item-handle {
+  cursor: grab;
+  color: var(--color-text-subtle);
+  padding: 0.3rem;
+  touch-action: none;
+}
+
+.form-ranking-item-handle:active {
+  cursor: grabbing;
+}
+
+.form-picture-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+.form-picture-choice-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  font-family: inherit;
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.form-picture-choice-tile:hover {
+  border-color: var(--color-primary-hover);
+}
+
+.form-picture-choice-tile--selected {
+  border-color: var(--color-primary-hover);
+  background-color: var(--color-primary-soft);
+}
+
+.form-picture-choice-image {
+  width: 100%;
+  height: 6rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.form-picture-choice-placeholder {
+  width: 100%;
+  height: 6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-subtle);
+  background-color: var(--color-surface-sunken);
+  border-radius: var(--radius-sm);
+}
+
+.form-picture-choice-label {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.form-calculation-field {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 0.9rem;
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.form-calculation-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 .form-choice-matrix-wrap {
   overflow-x: auto;
 }
@@ -9303,6 +11415,109 @@ textarea.form-field-input {
   width: 1.05rem;
   height: 1.05rem;
   accent-color: var(--color-primary);
+}
+
+.form-table-field-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-x: auto;
+}
+
+.form-table-field {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.form-table-field th,
+.form-table-field td {
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  border: 1px solid var(--color-border);
+}
+
+.form-table-field th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  background-color: var(--color-surface-sunken);
+}
+
+.form-table-field td .text-input {
+  min-width: 6rem;
+}
+
+.form-table-field-row-actions-header {
+  width: 2rem;
+  border: none !important;
+  background: none !important;
+}
+
+.form-table-field-row-actions {
+  border: none !important;
+  text-align: center !important;
+  padding: 0.25rem !important;
+}
+
+.form-table-field-remove-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.form-table-field-remove-row:hover {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-danger);
+}
+
+.form-table-field-add-row {
+  align-self: flex-start;
+}
+
+/* question_table's public-form renderer (QuestionTableControl, field-input.tsx) — a
+   fixed two-column question/answer grid; unlike .form-table-field above, there's no
+   add/remove-row chrome since the row list is admin-authored and fixed for every
+   respondent. Header/answer-cell colors come from the field's own headerColor/
+   headerTextColor/valueColor (inline style), matching the builder preview. */
+.form-question-table-wrap {
+  overflow-x: auto;
+}
+
+.form-question-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.form-question-table th,
+.form-question-table td {
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  border: 1px solid var(--color-border);
+}
+
+.form-question-table th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  background-color: var(--color-surface-sunken);
+}
+
+.form-question-table-label-cell {
+  width: 40%;
+  font-weight: 500;
+}
+
+.form-question-table td .text-input {
+  min-width: 6rem;
 }
 
 .form-field-file-status {
@@ -9340,7 +11555,7 @@ textarea.form-field-input {
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #fff;
+  color: inherit;
 }
 
 .form-section-instruction {
@@ -9404,13 +11619,6 @@ textarea.form-field-input {
 /* Plain text, no box — matches .form-field-error's subtlety (the per-field "This field
    is required." text) rather than .form-error's bordered banner, which read as too loud
    for a notice that's really just pointing back at errors already shown above. */
-.form-validation-notice {
-  color: var(--color-danger);
-  font-size: 0.8125rem;
-  margin: 0;
-  text-align: center;
-}
-
 .form-submit-button {
   min-width: 9rem;
   padding: 0.7rem 2rem;
@@ -9587,6 +11795,43 @@ textarea.form-field-input {
   font-size: 0.875rem;
   color: #56642c;
   font-weight: 600;
+}
+
+/* draw_on_image's respondent-facing markup pad — same drawing-surface chrome as
+   .signature-pad-canvas (touch-action:none, crosshair cursor), just full-height for a
+   background image instead of a fixed short signature strip. */
+.draw-on-image-pad {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.draw-on-image-pad-canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: auto;
+  display: block;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  border: 1px solid #c8c8c8;
+  border-radius: 3px;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.draw-on-image-pad-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.draw-on-image-pad-controls .button:not(.button--ghost) {
+  background-color: #111;
+  color: #fff;
+}
+
+.draw-on-image-pad-controls .button:not(.button--ghost):hover:not(:disabled) {
+  background-color: #000;
 }
 
 @media (max-width: 640px) {
@@ -12380,6 +14625,10 @@ textarea.form-field-input {
   text-underline-offset: 0.2em;
 }
 
+.admin-shell[data-theme="dark"] .login-field-hint-link {
+  color: #3dd975;
+}
+
 .login-field-hint-link:hover {
   text-decoration: underline;
 }
@@ -13568,6 +15817,10 @@ textarea.form-field-input {
   color: #047857;
 }
 
+.admin-shell[data-theme="dark"] .admin-template-status-chip--published {
+  color: #5eead4;
+}
+
 .admin-template-status-chip--archived {
   background: var(--color-lavender-soft);
   color: var(--color-lavender-strong);
@@ -13599,6 +15852,10 @@ textarea.form-field-input {
   background: var(--color-primary-soft);
   border-color: transparent;
   color: #0d9f57;
+}
+
+.admin-shell[data-theme="dark"] .admin-template-status-option--active {
+  color: #3dd975;
 }
 
 .admin-template fieldset.admin-org-field {
@@ -13816,6 +16073,10 @@ textarea.form-field-input {
   flex: 1;
   width: 100%;
   min-height: 0;
+}
+
+.admin-shell[data-theme="dark"] .settings-shell {
+  --settings-accent: #3dd975;
 }
 
 .settings-nav {
@@ -14511,6 +16772,10 @@ textarea.form-field-input {
   height: 2.35rem;
   border-radius: 50%;
   color: #12b76a;
+}
+
+.admin-shell[data-theme="dark"] .organisation-settings .contact-details-header-icon {
+  color: #3dd975;
 }
 
 .organisation-settings .contact-details-title {

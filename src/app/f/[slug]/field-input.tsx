@@ -107,9 +107,16 @@ interface FieldInputProps {
   value: FieldValue;
   error?: string;
   onChange: (value: FieldValue) => void;
-  /** Required for file_upload/signature fields — runs the presign/PUT/confirm flow and
+  /** Required for file_upload/draw_on_image fields — runs the presign/PUT/confirm flow and
    * resolves with the resulting SubmissionFile id. */
   onUploadFile?: (fieldId: string, file: File) => Promise<string>;
+  /** Required for signature fields. Unlike file_upload/draw_on_image, a signature isn't
+   * uploaded the moment the respondent confirms it — it's only staged locally (see
+   * SignatureControl below) and actually uploaded by form-renderer-client.tsx's
+   * submitForm, right before the final PATCH, so "Use this signature" doesn't fire a
+   * network request the respondent might abandon the form straight after. Pass
+   * `undefined` as `file` to clear a previously staged signature. */
+  onCaptureSignature?: (fieldId: string, file: File | undefined) => void;
   /** Only needed for static_text fields — lets its merge-field tokens resolve against the
    * respondent's answers so far (see lib/forms/merge-fields.ts). Optional because every
    * other field type ignores it. */
@@ -133,6 +140,7 @@ export function FieldInput({
   error,
   onChange,
   onUploadFile,
+  onCaptureSignature,
   allFields,
   answers,
   disableOptionGrid,
@@ -513,12 +521,7 @@ export function FieldInput({
       ) : null}
 
       {field.type === 'signature' ? (
-        <SignatureControl
-          field={field}
-          value={value}
-          onChange={onChange}
-          onUploadFile={onUploadFile}
-        />
+        <SignatureControl field={field} value={value} onCapture={onCaptureSignature} />
       ) : null}
 
       {field.type === 'address' ? (
@@ -794,49 +797,38 @@ function FileUploadControl({ field, value, onChange, onUploadFile }: FileUploadC
 }
 
 // ---------------------------------------------------------------------------
-// signature — embeds SignaturePad; once the drawn PNG is uploaded the answer is the
-// resulting fileId, same shape as file_upload.
+// signature — embeds SignaturePad. Unlike file_upload/draw_on_image, confirming a
+// signature doesn't upload it right away: it's just staged locally via onCaptureSignature
+// (form-renderer-client.tsx keeps the actual File in a ref, plus a local object-URL
+// placeholder as this field's answer so required-field validation and the "Signed" state
+// below both work before there's a real fileId). The real presign/PUT/confirm upload only
+// happens once, for every staged signature at once, right before the final submit PATCH —
+// see submitForm's resolvePendingSignatures. This avoids uploading a signature the
+// respondent might immediately redraw, or firing a network request moments before they
+// might abandon the form altogether.
 // ---------------------------------------------------------------------------
 
 interface SignatureControlProps {
   field: Extract<FormField, { type: 'signature' }>;
   value: FieldValue;
-  onChange: (value: FieldValue) => void;
-  onUploadFile?: (fieldId: string, file: File) => Promise<string>;
+  onCapture?: (fieldId: string, file: File | undefined) => void;
 }
 
-function SignatureControl({ field, value, onChange, onUploadFile }: SignatureControlProps) {
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+function SignatureControl({ field, value, onCapture }: SignatureControlProps) {
+  const isSigned = typeof value === 'string' && value.length > 0;
 
-  const currentFileId = typeof value === 'string' ? value : undefined;
-
-  async function handleSave(blob: Blob) {
-    if (!onUploadFile) return;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const file = new File([blob], 'signature.png', { type: 'image/png' });
-      const fileId = await onUploadFile(field.id, file);
-      onChange(fileId);
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
-    } finally {
-      setUploading(false);
-    }
+  function handleSave(blob: Blob) {
+    onCapture?.(field.id, new File([blob], 'signature.png', { type: 'image/png' }));
   }
 
-  if (currentFileId) {
+  if (isSigned) {
     return (
       <div className="signature-pad-signed">
         <span>Signed ✓</span>
         <button
           type="button"
           className="button button--ghost button--small"
-          onClick={() => {
-            setUploadError(null);
-            onChange(undefined);
-          }}
+          onClick={() => onCapture?.(field.id, undefined)}
         >
           Clear and re-sign
         </button>
@@ -846,8 +838,7 @@ function SignatureControl({ field, value, onChange, onUploadFile }: SignatureCon
 
   return (
     <div>
-      <SignaturePad onSave={handleSave} saving={uploading} />
-      {uploadError ? <p className="form-field-error">{uploadError}</p> : null}
+      <SignaturePad onSave={handleSave} />
     </div>
   );
 }

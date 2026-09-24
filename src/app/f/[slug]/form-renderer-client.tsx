@@ -192,6 +192,38 @@ function FormRendererInner({
     [],
   );
 
+  // Signature fields defer their actual upload to submitForm (see resolvePendingSignatures
+  // below) rather than uploading the moment "Use this signature" is clicked, so a
+  // respondent isn't firing a network request for a signature they might immediately
+  // redraw or a form they might abandon right after. This ref holds the real File for
+  // every field currently awaiting that upload; a local object URL stands in as the
+  // field's answer in the meantime so required-field validation and the "Signed ✓" UI in
+  // SignatureControl both treat it as answered without needing to know it isn't final yet.
+  const pendingSignaturesRef = useRef<Map<string, File>>(new Map());
+
+  const captureSignature = useCallback((fieldId: string, file: File | undefined) => {
+    setAnswers((prev) => {
+      const prevValue = prev[fieldId];
+      if (typeof prevValue === 'string' && prevValue.startsWith('blob:')) {
+        URL.revokeObjectURL(prevValue);
+      }
+      if (!file) {
+        pendingSignaturesRef.current.delete(fieldId);
+        const next = { ...prev };
+        delete next[fieldId];
+        return next;
+      }
+      pendingSignaturesRef.current.set(fieldId, file);
+      return { ...prev, [fieldId]: URL.createObjectURL(file) };
+    });
+    setErrors((prev) => {
+      if (!(fieldId in prev)) return prev;
+      const next = { ...prev };
+      delete next[fieldId];
+      return next;
+    });
+  }, []);
+
   const uploadFile = useCallback(
     async (fieldId: string, file: File): Promise<string> => {
       // No real submission to attach an upload to, and no S3 bucket to presign against —
@@ -259,6 +291,36 @@ function FormRendererInner({
     [ensureSubmissionId, previewMode, slug],
   );
 
+  // Runs every staged signature's real presign/PUT/confirm upload (see captureSignature
+  // above), swapping each one's placeholder object-URL answer for its real fileId. Called
+  // from submitForm right before the final PATCH -- not per-field as each is captured --
+  // so a signature never uploads until the respondent actually tries to submit. Resolved
+  // fields are removed from pendingSignaturesRef and written back into `answers` state
+  // immediately (not just the returned object) so a failed submit's retry doesn't
+  // re-upload a signature that already succeeded.
+  const resolvePendingSignatures = useCallback(
+    async (currentAnswers: FormAnswers): Promise<FormAnswers> => {
+      if (pendingSignaturesRef.current.size === 0) return currentAnswers;
+      const resolved = { ...currentAnswers };
+      await Promise.all(
+        Array.from(pendingSignaturesRef.current.entries()).map(async ([fieldId, file]) => {
+          const fileId = await uploadFile(fieldId, file);
+          pendingSignaturesRef.current.delete(fieldId);
+          resolved[fieldId] = fileId;
+          setAnswers((prev) => {
+            const prevValue = prev[fieldId];
+            if (typeof prevValue === 'string' && prevValue.startsWith('blob:')) {
+              URL.revokeObjectURL(prevValue);
+            }
+            return { ...prev, [fieldId]: fileId };
+          });
+        }),
+      );
+      return resolved;
+    },
+    [uploadFile],
+  );
+
   const findPageIndexForField = useCallback(
     (fieldId: string): number => {
       const index = schema.pages.findIndex((page) =>
@@ -290,11 +352,14 @@ function FormRendererInner({
 
     setSubmitting(true);
     try {
+      // Uploads every staged signature now, at the last possible moment, rather than the
+      // instant each was drawn — see resolvePendingSignatures/captureSignature.
+      const resolvedAnswers = await resolvePendingSignatures(answers);
       const submissionId = await ensureSubmissionId();
       const res = await fetch(`/api/f/${slug}/submissions/${submissionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({ answers: resolvedAnswers }),
       });
       const data: SubmitResponse = await res.json();
 
@@ -317,7 +382,16 @@ function FormRendererInner({
     } finally {
       setSubmitting(false);
     }
-  }, [answers, ensureSubmissionId, findPageIndexForField, previewMode, schema, slug, toast]);
+  }, [
+    answers,
+    ensureSubmissionId,
+    findPageIndexForField,
+    previewMode,
+    resolvePendingSignatures,
+    schema,
+    slug,
+    toast,
+  ]);
 
   const handleNextOrSubmit = useCallback(async () => {
     const page = schema.pages[pageIndex];
@@ -524,6 +598,7 @@ function FormRendererInner({
                               error={errors[childId]}
                               onChange={(value) => handleAnswerChange(childId, value)}
                               onUploadFile={uploadFile}
+                              onCaptureSignature={captureSignature}
                               allFields={schema.fields}
                               answers={answers}
                               disableOptionGrid
@@ -548,6 +623,7 @@ function FormRendererInner({
                     error={errors[fieldId]}
                     onChange={(value) => handleAnswerChange(fieldId, value)}
                     onUploadFile={uploadFile}
+                    onCaptureSignature={captureSignature}
                     allFields={schema.fields}
                     answers={answers}
                   />

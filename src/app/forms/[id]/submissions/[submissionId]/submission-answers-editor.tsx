@@ -424,6 +424,26 @@ export function SubmissionAnswersEditor({
     [formId, submissionId],
   );
 
+  // Unlike the public form (see form-renderer-client.tsx's submitForm/
+  // resolvePendingSignatures, which stage a signature locally and only upload it at final
+  // submit), there's no "might abandon the form" concern here — this submission already
+  // exists, so a signature captured while editing it just uploads immediately, same as
+  // every other upload field in this editor.
+  const captureSignature = useCallback(
+    (fieldId: string, file: File | undefined) => {
+      if (!file) {
+        handleChange(fieldId, undefined);
+        return;
+      }
+      void uploadFile(fieldId, file)
+        .then((fileId) => handleChange(fieldId, fileId))
+        .catch((err) => {
+          toast.error(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+        });
+    },
+    [uploadFile, handleChange, toast],
+  );
+
   function handleCancel() {
     setAnswers(initialAnswers);
     setErrors({});
@@ -578,6 +598,7 @@ export function SubmissionAnswersEditor({
                                   error={errors[childId]}
                                   onChange={(value) => handleChange(childId, value)}
                                   onUploadFile={uploadFile}
+                                  onCaptureSignature={captureSignature}
                                   allFields={schema.fields}
                                   answers={answers}
                                   disableOptionGrid

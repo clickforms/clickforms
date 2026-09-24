@@ -187,24 +187,68 @@ export const TEXT_ALIGN_LABEL: Record<TextAlign, string> = {
   right: 'Right',
 };
 
-// Shared by the static_text field's heading and body font-family controls — a small
-// curated set of web-safe stacks rather than a free-text field, so every respondent's
-// browser (and the PDF export renderer) renders the same thing without a font loader.
-export const FONT_FAMILY_OPTIONS = ['default', 'sans-serif', 'serif', 'monospace'] as const;
+// Shared by the static_text field's heading and body font-family controls — a curated
+// set of web-safe stacks rather than a free-text field, so every respondent's browser
+// (and the PDF export renderer) renders the same thing without a font loader. The
+// generic categories (sans-serif/serif/monospace) came first and are kept as-is for
+// backwards compatibility with forms that already saved one of those keys; the named
+// fonts below were added later to give admins the same kind of comprehensive picker
+// word processors offer, without touching the existing keys' meaning.
+export const FONT_FAMILY_OPTIONS = [
+  'default',
+  'sans-serif',
+  'serif',
+  'monospace',
+  'arial',
+  'helvetica',
+  'times-new-roman',
+  'georgia',
+  'verdana',
+  'tahoma',
+  'trebuchet-ms',
+  'garamond',
+  'courier-new',
+  'comic-sans-ms',
+  'impact',
+] as const;
 export type FontFamily = (typeof FONT_FAMILY_OPTIONS)[number];
 export const FONT_FAMILY_LABEL: Record<FontFamily, string> = {
   default: 'Default',
   'sans-serif': 'Sans-serif',
   serif: 'Serif',
   monospace: 'Monospace',
+  arial: 'Arial',
+  helvetica: 'Helvetica',
+  'times-new-roman': 'Times New Roman',
+  georgia: 'Georgia',
+  verdana: 'Verdana',
+  tahoma: 'Tahoma',
+  'trebuchet-ms': 'Trebuchet MS',
+  garamond: 'Garamond',
+  'courier-new': 'Courier New',
+  'comic-sans-ms': 'Comic Sans MS',
+  impact: 'Impact',
 };
 // 'default' intentionally maps to undefined so it falls through to the surrounding
-// theme's font instead of forcing a specific stack.
+// theme's font instead of forcing a specific stack. Every other stack ends in a generic
+// family (sans-serif/serif/monospace/cursive) as a fallback for the rare system missing
+// the named font.
 export const FONT_FAMILY_CSS: Record<FontFamily, string | undefined> = {
   default: undefined,
   'sans-serif': 'Arial, Helvetica, sans-serif',
   serif: "Georgia, 'Times New Roman', serif",
   monospace: "'Courier New', Courier, monospace",
+  arial: 'Arial, Helvetica, sans-serif',
+  helvetica: 'Helvetica, Arial, sans-serif',
+  'times-new-roman': "'Times New Roman', Times, serif",
+  georgia: "Georgia, 'Times New Roman', serif",
+  verdana: 'Verdana, Geneva, sans-serif',
+  tahoma: 'Tahoma, Geneva, sans-serif',
+  'trebuchet-ms': "'Trebuchet MS', Helvetica, sans-serif",
+  garamond: "Garamond, 'Times New Roman', serif",
+  'courier-new': "'Courier New', Courier, monospace",
+  'comic-sans-ms': "'Comic Sans MS', cursive",
+  impact: 'Impact, Haettenschweiler, sans-serif',
 };
 
 // Shared by the static_text field's heading and body "Size" controls — a plain pixel

@@ -559,7 +559,10 @@ export function RichTextEditor({
           </button>
           {openPopover === 'fontFamily' && (
             // biome-ignore lint/a11y/noStaticElementInteractions: mousedown here only preventDefaults so the popover click doesn't steal selection from the editor; the real controls are the child buttons
-            <div className="rich-text-popover" onMouseDown={preventDefault}>
+            <div
+              className="rich-text-popover rich-text-popover--scrollable"
+              onMouseDown={preventDefault}
+            >
               {FONT_FAMILY_OPTIONS.map((option) => (
                 <button
                   key={option}

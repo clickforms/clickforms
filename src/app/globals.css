@@ -12073,24 +12073,19 @@ textarea.form-field-input {
   color: var(--color-text-subtle);
 }
 
-.signature-pad-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding-top: 0.6rem;
+/* Small status note shown above the pad once a signature has been captured — the pad
+   itself stays visible (no confirm button, no collapsed "Signed" summary) since signing
+   is staged locally and can be redrawn any time before submit. */
+.signature-pad-status {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #56642c;
 }
 
-/* Solid black rather than brand green — same treatment as the builder's primary CTA
-   (.builder-header-cta), applied here too now that this control should read black. */
-.signature-pad-controls .button {
-  background-color: #111;
-  color: #fff;
-}
-
-.signature-pad-controls .button:hover:not(:disabled) {
-  background-color: #000;
-}
-
+/* Still used by draw_on_image's "Drawing submitted ✓" summary — signature no longer
+   collapses to this view (see SignatureControl in field-input.tsx), but draw_on_image
+   still uploads immediately on save and shows this as its confirmed state. */
 .signature-pad-signed {
   display: flex;
   align-items: center;

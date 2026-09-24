@@ -6,7 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // Plain HTML5 canvas signature pad — Pointer Events (not separate mouse/touch listeners)
 // give us mouse + touch + pen drawing from one set of handlers, per specs/03: "supporting
 // both mouse and touch drawing". The parent (field-input.tsx) owns what happens to the
-// exported PNG blob (presign/PUT/confirm upload flow) — this component only draws and exports.
+// captured PNG blob — signing is staged locally and only uploaded at final form submit,
+// so this component auto-captures (no separate confirm button) and only draws/exports.
 
 const CANVAS_WIDTH = 600;
 const DEFAULT_SURFACE_HEIGHT = 220;
@@ -23,13 +24,22 @@ const SIGNATURE_CANVAS_FONT = `56px "${SIGNATURE_FONT_FAMILY}", cursive`;
 type SignatureMode = 'draw' | 'type';
 
 interface SignaturePadProps {
-  /** Called with the drawn signature as a PNG blob when the respondent confirms it. */
-  onSave: (blob: Blob) => void | Promise<void>;
-  /** True while the parent is uploading the exported blob — disables the pad's controls. */
-  saving?: boolean;
+  /** Called with the signature as a PNG blob automatically — after each completed stroke
+   * in "draw" mode, or on blur in "type" mode. There's no separate confirm step: signing
+   * is staged locally (see field-input.tsx's SignatureControl) rather than uploaded right
+   * away, so there's nothing left for a button to trigger. */
+  onCapture: (blob: Blob) => void;
+  /** Called when the pad is cleared, or the Draw/Type mode is switched — either discards
+   * whatever was previously captured. */
+  onClear: () => void;
+  /** This field's current answer, if any — restores it onto the canvas on mount so
+   * navigating back to an earlier page of a multi-page form (which remounts this
+   * component fresh) doesn't make an already-captured signature look like it vanished.
+   * Only consulted once, at mount. */
+  initialImageUrl?: string;
 }
 
-export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
+export function SignaturePad({ onCapture, onClear, initialImageUrl }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -53,7 +63,12 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
   }, []);
 
   // Paint a white background once on mount so the exported PNG isn't transparent (a
-  // transparent signature can render invisible depending on where it's later viewed).
+  // transparent signature can render invisible depending on where it's later viewed) --
+  // then, if this field was already answered before this component mounted (e.g. the
+  // respondent signed, moved to another page, and came back), redraw that onto the
+  // canvas so it doesn't look like the signature was lost. blob: URLs from a File this
+  // same tab created are always readable here, no CORS taint.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only -- re-running this every time initialImageUrl changes (which happens on every stroke, once onCapture's result round-trips back into the value prop) would fight the respondent's in-progress drawing.
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -63,6 +78,15 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = INK_COLOR;
+
+    if (initialImageUrl) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setHasDrawing(true);
+      };
+      img.src = initialImageUrl;
+    }
   }, [paintBlankCanvas]);
 
   function handleModeChange(nextMode: SignatureMode) {
@@ -71,6 +95,7 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
     setHasDrawing(false);
     setTypedName('');
     paintBlankCanvas();
+    onClear();
   }
 
   // Vertical-only resize (the box already stretches to its container's width) — same drag
@@ -136,8 +161,16 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
     };
   }
 
+  function exportCanvas() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (blob) onCapture(blob);
+    }, 'image/png');
+  }
+
   function handlePointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (saving || mode !== 'draw') return;
+    if (mode !== 'draw') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     canvas.setPointerCapture(event.pointerId);
@@ -164,63 +197,58 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
   }
 
   function stopDrawing(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const wasDrawing = isDrawingRef.current;
     isDrawingRef.current = false;
     lastPointRef.current = null;
     const canvas = canvasRef.current;
     if (canvas?.hasPointerCapture(event.pointerId)) {
       canvas.releasePointerCapture(event.pointerId);
     }
+    // Auto-capture at the end of every completed stroke — there's no separate "confirm"
+    // step now that signing is staged locally rather than uploaded right away. Gated on
+    // wasDrawing so a stray pointerup/pointerleave without an actual drag (or one that
+    // fires again after the pointer's already been released) doesn't re-export.
+    if (wasDrawing && hasDrawing) exportCanvas();
   }
 
   function handleClear() {
     if (mode === 'type') {
       setTypedName('');
-      return;
+    } else {
+      paintBlankCanvas();
+      setHasDrawing(false);
+    }
+    onClear();
+  }
+
+  // Type mode never draws to the canvas while the respondent is typing (the visible
+  // "signature" then is the plain DOM <input>, not the hidden canvas) — it's only
+  // rendered here, on blur, which now doubles as this mode's auto-capture trigger.
+  // document.fonts.load must come first: unlike DOM text, a canvas fillText() call fired
+  // before the webfont finishes loading just silently draws with the fallback font and
+  // never repaints once the real one arrives.
+  async function captureTypedSignature() {
+    const name = typedName.trim();
+    if (!name) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      try {
+        await document.fonts.load(SIGNATURE_CANVAS_FONT);
+      } catch {
+        // Font failed to load (offline, blocked request, etc.) — fall through and
+        // draw with whatever the browser substitutes rather than leaving it blank.
+      }
     }
     paintBlankCanvas();
-    setHasDrawing(false);
+    ctx.fillStyle = INK_COLOR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = SIGNATURE_CANVAS_FONT;
+    ctx.fillText(name, canvas.width / 2, canvas.height / 2, canvas.width - 64);
+    exportCanvas();
   }
-
-  async function handleUseSignature() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Type mode never draws to the canvas while the respondent is typing (the visible
-    // "signature" then is the plain DOM <input>, not the hidden canvas) — it's only
-    // rendered here, once, right before export. document.fonts.load must come first:
-    // unlike DOM text, a canvas fillText() call fired before the webfont finishes
-    // loading just silently draws with the fallback font and never repaints once the
-    // real one arrives.
-    if (mode === 'type') {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      if (typeof document !== 'undefined' && 'fonts' in document) {
-        try {
-          await document.fonts.load(SIGNATURE_CANVAS_FONT);
-        } catch {
-          // Font failed to load (offline, blocked request, etc.) — fall through and
-          // draw with whatever the browser substitutes rather than leaving it blank.
-        }
-      }
-      paintBlankCanvas();
-      const name = typedName.trim();
-      if (name) {
-        ctx.fillStyle = INK_COLOR;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = SIGNATURE_CANVAS_FONT;
-        ctx.fillText(name, canvas.width / 2, canvas.height / 2, canvas.width - 64);
-      }
-    }
-
-    canvas.toBlob((blob) => {
-      if (blob) {
-        void onSave(blob);
-      }
-    }, 'image/png');
-  }
-
-  const hasContent = mode === 'draw' ? hasDrawing : typedName.trim().length > 0;
 
   return (
     <div className="signature-pad">
@@ -229,7 +257,6 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
           type="button"
           className={`signature-pad-tab ${mode === 'draw' ? 'signature-pad-tab--active' : ''}`}
           onClick={() => handleModeChange('draw')}
-          disabled={saving}
         >
           Draw signature
         </button>
@@ -240,16 +267,10 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
           type="button"
           className={`signature-pad-tab ${mode === 'type' ? 'signature-pad-tab--active' : ''}`}
           onClick={() => handleModeChange('type')}
-          disabled={saving}
         >
           Type signature
         </button>
-        <button
-          type="button"
-          className="signature-pad-clear"
-          onClick={handleClear}
-          disabled={saving}
-        >
+        <button type="button" className="signature-pad-clear" onClick={handleClear}>
           Clear
         </button>
       </div>
@@ -257,7 +278,7 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
         {/* One box, not two: the canvas is the drawing surface in "draw" mode and the
             input takes its exact place in "type" mode — never both on screen together.
             The canvas stays mounted (just hidden) either way since canvasRef is also the
-            export target in handleUseSignature. */}
+            export target in captureTypedSignature. */}
         {mode === 'type' ? (
           <input
             type="text"
@@ -265,8 +286,8 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
             style={{ height: surfaceHeight }}
             value={typedName}
             onChange={(event) => setTypedName(event.target.value)}
+            onBlur={() => void captureTypedSignature()}
             placeholder="Type your full name"
-            disabled={saving}
             // biome-ignore lint/a11y/noAutofocus: switching into type mode is a deliberate action, focusing the field is expected
             autoFocus
           />
@@ -288,19 +309,8 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
           className="signature-pad-resize-handle"
           aria-label="Drag to resize the signature box"
           title="Drag to resize"
-          disabled={saving}
           onPointerDown={startResize}
         />
-      </div>
-      <div className="signature-pad-controls">
-        <button
-          type="button"
-          className="button button--small"
-          onClick={() => void handleUseSignature()}
-          disabled={!hasContent || saving}
-        >
-          {saving ? 'Uploading…' : 'Use this signature'}
-        </button>
       </div>
     </div>
   );

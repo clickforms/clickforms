@@ -24,6 +24,14 @@ export default async function FormPreviewPage({ params }: PageProps) {
     notFound();
   }
 
+  // Unlike /forms/**, this route has no layout that already gates on organizationId — a
+  // platform-only admin (isPlatformAdmin, no org membership) has no form to preview
+  // anyway, so treat a missing org the same as a missing session rather than letting
+  // withOrgContext throw a raw "organizationId is required" error.
+  if (!session.user.organizationId) {
+    notFound();
+  }
+
   const { form, version } = await withOrgContext(session.user.organizationId, async (tx) => {
     const form = await tx.form.findFirst({
       where: { slug, organizationId: requireOrganizationId(session) },

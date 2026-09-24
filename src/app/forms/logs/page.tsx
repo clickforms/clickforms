@@ -27,6 +27,13 @@ export default async function OrgLogsPage() {
     redirect('/forms');
   }
 
+  // A platform-only admin (no organizationId) would fail canManageUsers's role check
+  // anyway in practice, but withOrgContext throws a raw error rather than a friendly
+  // redirect if it's ever reached with no org — fail closed the same way the layout does.
+  if (!session.user.organizationId) {
+    redirect('/admin');
+  }
+
   const { entries, targets } = await withOrgContext(session.user.organizationId, async (tx) => {
     const rows = await tx.auditLog.findMany({
       where: { organizationId: requireOrganizationId(session) },

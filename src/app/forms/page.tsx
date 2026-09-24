@@ -11,6 +11,15 @@ export default async function DashboardPage() {
     return null;
   }
 
+  // FormsLayout already redirects a platform-only admin (no organizationId) to /admin —
+  // but Next can render a layout and its page concurrently, so this page's own body can
+  // still execute (and withOrgContext would throw) before that redirect takes effect.
+  // Bailing out here quietly, rather than duplicating the redirect, avoids a noisy
+  // uncaught error while the layout's redirect resolves.
+  if (!session.user.organizationId) {
+    return null;
+  }
+
   // Sequential, not Promise.all — both queries share one connection via withOrgContext's
   // transaction, and concurrent queries on a single `pg` client are deprecated (and will
   // error in pg@9.0).

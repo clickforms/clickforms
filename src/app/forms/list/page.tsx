@@ -12,6 +12,13 @@ export default async function FormsListPage() {
     return null;
   }
 
+  // See the identical comment in src/app/forms/page.tsx — FormsLayout's redirect for a
+  // platform-only admin can race with this page's own render, so this page needs its own
+  // quiet bail-out rather than assuming the layout always wins first.
+  if (!session.user.organizationId) {
+    return null;
+  }
+
   // These run sequentially (not Promise.all) because they share a single connection via
   // withOrgContext's transaction — issuing concurrent queries on one `pg` client triggers
   // a deprecation warning (and will error outright in pg@9.0).

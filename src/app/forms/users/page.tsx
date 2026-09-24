@@ -16,6 +16,12 @@ export default async function UsersPage() {
     redirect('/forms');
   }
 
+  // See the identical comment in src/app/forms/logs/page.tsx — fail closed rather than
+  // let withOrgContext throw a raw error for a platform-only admin with no org.
+  if (!session.user.organizationId) {
+    redirect('/admin');
+  }
+
   const { users, pendingInvites } = await withOrgContext(
     session.user.organizationId,
     async (tx) => {

@@ -10,6 +10,12 @@ export default async function UserDetailsPage() {
     redirect('/login');
   }
 
+  // See the identical comment in src/app/forms/logs/page.tsx — fail closed rather than
+  // let withOrgContext throw a raw error for a platform-only admin with no org.
+  if (!session.user.organizationId) {
+    redirect('/admin');
+  }
+
   const user = await withOrgContext(session.user.organizationId, (tx) =>
     tx.user.findFirstOrThrow({
       where: { id: session.user.id },

@@ -2,10 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { AccountMenu } from '@/app/forms/account-menu';
 import { BrandMark } from '@/components/brand-mark';
+import { ThemeToggleIconButton } from '@/components/theme-toggle';
 import { ToastProvider } from '@/components/toast';
+
+const THEME_STORAGE_KEY = 'admin-platform-theme';
 
 interface AdminPlatformShellProps {
   email: string;
@@ -42,9 +45,29 @@ export function AdminPlatformShell({
   const onAuditLog = pathname.startsWith('/admin/audit-log');
   const onTeam = pathname.startsWith('/admin/team');
 
+  // Independent from the org workspace's own dark/light preference (forms-admin-theme,
+  // set in AdminShellClient) — a platform staffer might reasonably want one area dark
+  // and the other light, same reasoning as the two shells' separately-scoped sidebar
+  // collapse state.
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+
+  useEffect(() => {
+    if (window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark') {
+      setIsDarkTheme(true);
+    }
+  }, []);
+
+  function toggleTheme() {
+    setIsDarkTheme((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(THEME_STORAGE_KEY, next ? 'dark' : 'light');
+      return next;
+    });
+  }
+
   return (
     <ToastProvider>
-      <div className="admin-shell" data-theme="light">
+      <div className="admin-shell" data-theme={isDarkTheme ? 'dark' : 'light'}>
         <div className="admin-content">
           <header className="admin-header">
             <div className="admin-header-left">
@@ -105,6 +128,7 @@ export function AdminPlatformShell({
               </nav>
             </div>
             <div className="admin-header-right">
+              <ThemeToggleIconButton isDarkTheme={isDarkTheme} onToggleTheme={toggleTheme} />
               <AccountMenu
                 email={email}
                 name={name}

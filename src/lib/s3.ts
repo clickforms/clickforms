@@ -310,6 +310,21 @@ export async function createPresignedDownloadUrl(params: {
   return getSignedUrl(getS3Client(), command, { expiresIn: 300 });
 }
 
+/** Reads an object's full bytes through the server — the one deliberate exception to this
+ * file's "never stream bytes through the app server" rule (see the top-of-file comment).
+ * Needed by the public logo-proxy route (src/app/api/f/logo/route.ts), which resizes the
+ * org's uploaded logo into a square OG-image thumbnail before serving it: that transform
+ * has to happen server-side, so a plain presigned-URL redirect (the pattern every other
+ * image route uses) doesn't work here. Not for general-purpose file serving. */
+export async function getObjectBytes(storageKey: string): Promise<Uint8Array> {
+  const command = new GetObjectCommand({ Bucket: getBucketName(), Key: storageKey });
+  const response = await getS3Client().send(command);
+  if (!response.Body) {
+    throw new Error(`S3 object body missing for key: ${storageKey}`);
+  }
+  return response.Body.transformToByteArray();
+}
+
 /** Best-effort delete — used when a new org logo replaces an old one, or the logo is
  * removed entirely (src/app/api/organization/logo). Callers should not let a failure
  * here block the database update; an orphaned S3 object is harmless clutter, but a

@@ -47,7 +47,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title,
       description: '',
-      openGraph: { title, images: [{ url: logoUrl }] },
+      // width/height must match SIDE in /api/f/logo/route.ts -- telling the crawler the
+      // image is square up front is what makes WhatsApp/etc. show it as a small icon next
+      // to the title instead of a large banner across the top of the card.
+      openGraph: { title, images: [{ url: logoUrl, width: 400, height: 400 }] },
     };
   } catch {
     return {};

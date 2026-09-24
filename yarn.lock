@@ -2609,6 +2609,7 @@ __metadata:
     react-image-crop: "npm:^11.1.2"
     resend: "npm:^6.28.0"
     server-only: "npm:^0.0.1"
+    sharp: "npm:^0.35.4"
     tsx: "npm:^4.23.0"
     typescript: "npm:^6.0.0"
     vitest: "npm:^4.1.10"

@@ -9,7 +9,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // exported PNG blob (presign/PUT/confirm upload flow) — this component only draws and exports.
 
 const CANVAS_WIDTH = 600;
-const CANVAS_HEIGHT = 220;
+const DEFAULT_SURFACE_HEIGHT = 220;
+const MIN_SURFACE_HEIGHT = 120;
+const MAX_SURFACE_HEIGHT = 480;
 const INK_COLOR = '#1f2a20';
 // Loaded via @font-face in globals.css rather than next/font in layout.tsx, so this
 // component's font dependency stays self-contained — canvas text needs the font to have
@@ -34,6 +36,13 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
   const [hasDrawing, setHasDrawing] = useState(false);
   const [mode, setMode] = useState<SignatureMode>('draw');
   const [typedName, setTypedName] = useState('');
+  // Drives the box's visible height (both the canvas and, in "type" mode, the input that
+  // takes its place) — dragged via the resize handle below. The canvas's own height
+  // attribute is mutated imperatively in startResize rather than through this state
+  // directly, since resizing a <canvas> clears its bitmap and needs the old content
+  // copied back in; this state just needs to end up matching so the visible box and the
+  // drawable area stay in lockstep (see getPoint's scale factor, which relies on that).
+  const [surfaceHeight, setSurfaceHeight] = useState(DEFAULT_SURFACE_HEIGHT);
 
   const paintBlankCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -62,6 +71,57 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
     setHasDrawing(false);
     setTypedName('');
     paintBlankCanvas();
+  }
+
+  // Vertical-only resize (the box already stretches to its container's width) — same drag
+  // pattern as field-card.tsx's DividerResizeHandles, adapted to also keep the canvas
+  // bitmap in sync: changing a <canvas>'s height attribute clears whatever was drawn, so
+  // we snapshot it first and paint it back afterward, anchored top-left rather than
+  // stretched, so an in-progress signature keeps its proportions (growing the box just
+  // reveals blank space below it; shrinking crops from the bottom).
+  function startResize(event: ReactPointerEvent) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const startY = event.clientY;
+    const startHeight = surfaceHeight;
+
+    function handleMove(moveEvent: PointerEvent) {
+      const nextHeight = Math.round(
+        Math.min(
+          MAX_SURFACE_HEIGHT,
+          Math.max(MIN_SURFACE_HEIGHT, startHeight + (moveEvent.clientY - startY)),
+        ),
+      );
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (canvas && ctx && canvas.height !== nextHeight) {
+        const snapshot = document.createElement('canvas');
+        snapshot.width = canvas.width;
+        snapshot.height = canvas.height;
+        snapshot.getContext('2d')?.drawImage(canvas, 0, 0);
+
+        canvas.height = nextHeight;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const copyHeight = Math.min(snapshot.height, nextHeight);
+        ctx.drawImage(snapshot, 0, 0, canvas.width, copyHeight, 0, 0, canvas.width, copyHeight);
+        // Resizing a canvas resets all 2D context state back to defaults — restore what
+        // the mount effect originally set.
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = INK_COLOR;
+      }
+      setSurfaceHeight(nextHeight);
+    }
+
+    function handleUp() {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    }
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
   }
 
   function getPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
@@ -193,34 +253,45 @@ export function SignaturePad({ onSave, saving = false }: SignaturePadProps) {
           Clear
         </button>
       </div>
-      {/* One box, not two: the canvas is the drawing surface in "draw" mode and the
-          input takes its exact place in "type" mode — never both on screen together.
-          The canvas stays mounted (just hidden) either way since canvasRef is also the
-          export target in handleUseSignature. */}
-      {mode === 'type' ? (
-        <input
-          type="text"
-          className="signature-pad-canvas signature-pad-type-input"
-          value={typedName}
-          onChange={(event) => setTypedName(event.target.value)}
-          placeholder="Type your full name"
-          disabled={saving}
-          // biome-ignore lint/a11y/noAutofocus: switching into type mode is a deliberate action, focusing the field is expected
-          autoFocus
+      <div className="signature-pad-surface">
+        {/* One box, not two: the canvas is the drawing surface in "draw" mode and the
+            input takes its exact place in "type" mode — never both on screen together.
+            The canvas stays mounted (just hidden) either way since canvasRef is also the
+            export target in handleUseSignature. */}
+        {mode === 'type' ? (
+          <input
+            type="text"
+            className="signature-pad-canvas signature-pad-type-input"
+            style={{ height: surfaceHeight }}
+            value={typedName}
+            onChange={(event) => setTypedName(event.target.value)}
+            placeholder="Type your full name"
+            disabled={saving}
+            // biome-ignore lint/a11y/noAutofocus: switching into type mode is a deliberate action, focusing the field is expected
+            autoFocus
+          />
+        ) : null}
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_WIDTH}
+          height={DEFAULT_SURFACE_HEIGHT}
+          className="signature-pad-canvas"
+          style={mode === 'type' ? { display: 'none' } : { height: surfaceHeight }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={stopDrawing}
+          onPointerLeave={stopDrawing}
+          onPointerCancel={stopDrawing}
         />
-      ) : null}
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_WIDTH}
-        height={CANVAS_HEIGHT}
-        className="signature-pad-canvas"
-        style={mode === 'type' ? { display: 'none' } : undefined}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={stopDrawing}
-        onPointerLeave={stopDrawing}
-        onPointerCancel={stopDrawing}
-      />
+        <button
+          type="button"
+          className="signature-pad-resize-handle"
+          aria-label="Drag to resize the signature box"
+          title="Drag to resize"
+          disabled={saving}
+          onPointerDown={startResize}
+        />
+      </div>
       <div className="signature-pad-controls">
         <button
           type="button"

@@ -12003,9 +12003,18 @@ textarea.form-field-input {
   cursor: pointer;
 }
 
+/* Wraps the canvas/input + the resize handle below -- position: relative is only for the
+   handle's absolute positioning, not for sizing (that's the canvas/input's own inline
+   height style, driven by signature-pad.tsx's surfaceHeight state). */
+.signature-pad-surface {
+  position: relative;
+}
+
 .signature-pad-canvas {
   width: 100%;
-  height: 180px;
+  /* Actual height comes from an inline style (surfaceHeight) so it can be dragged via
+     .signature-pad-resize-handle -- this is just the pre-hydration/no-JS fallback. */
+  height: 220px;
   display: block;
   box-sizing: border-box;
   background-color: #ffffff;
@@ -12013,6 +12022,33 @@ textarea.form-field-input {
   border-radius: 3px;
   touch-action: none;
   cursor: crosshair;
+}
+
+/* Bottom-right drag grip, same idea as a native <textarea>'s resize handle -- three
+   diagonal notches via a repeating gradient, angled into the corner. Vertical-only resize
+   (cursor: ns-resize) since the box already stretches to its container's width. */
+.signature-pad-resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 0.9rem;
+  height: 0.9rem;
+  padding: 0;
+  border: none;
+  background: repeating-linear-gradient(135deg, transparent 0, transparent 2px, #999 2px, #999 3px);
+  background-clip: content-box;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.signature-pad-resize-handle:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.signature-pad-resize-handle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* Type mode's box in the same slot the canvas occupies in draw mode (shares

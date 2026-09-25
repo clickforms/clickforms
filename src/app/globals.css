@@ -6565,7 +6565,6 @@ textarea.text-input {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-color: color-mix(in srgb, var(--color-lavender) 45%, var(--color-border));
 }
 
 .form-share-modal:focus {
@@ -6578,7 +6577,7 @@ textarea.text-input {
   justify-content: space-between;
   gap: 1rem;
   padding: 1.25rem 1.25rem 1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-lavender) 40%, var(--color-border));
+  border-bottom: 1px solid var(--color-border);
 }
 
 .form-share-head-copy {
@@ -6641,17 +6640,16 @@ textarea.text-input {
 .form-share-access {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.9rem 1rem 1rem;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
   background: var(--color-lavender-soft);
-  border: 1px solid color-mix(in srgb, var(--color-lavender) 70%, var(--color-border));
-  border-radius: 0.75rem;
+  border-radius: 0.625rem;
 }
 
 .form-share-access-meta {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.55rem;
   min-width: 0;
 }
 
@@ -6660,10 +6658,10 @@ textarea.text-input {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 1.6rem;
+  height: 1.6rem;
   border-radius: 999px;
-  background: var(--color-primary-soft);
+  background: var(--color-surface);
   color: #15803d;
 }
 
@@ -6673,16 +6671,10 @@ textarea.text-input {
 
 .form-share-access-title {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--color-text);
-}
-
-.form-share-access-caption {
-  margin: 0.1rem 0 0;
-  font-size: 0.75rem;
-  color: var(--color-lavender-strong);
 }
 
 .form-share-url-field {
@@ -6692,7 +6684,7 @@ textarea.text-input {
   min-width: 0;
   padding: 0.25rem 0.25rem 0.25rem 0.75rem;
   background: var(--color-surface);
-  border: 1px solid color-mix(in srgb, var(--color-lavender) 55%, var(--color-border));
+  border: 1px solid var(--color-border);
   border-radius: 0.625rem;
 }
 
@@ -6754,7 +6746,7 @@ textarea.text-input {
   flex-direction: column;
   gap: 0.7rem;
   padding-top: 0.15rem;
-  border-top: 1px solid color-mix(in srgb, var(--color-lavender) 35%, var(--color-border));
+  border-top: 1px solid var(--color-border);
 }
 
 .form-share-section-label {
@@ -6770,7 +6762,7 @@ textarea.text-input {
   grid-template-columns: 1fr 1fr;
   gap: 0.2rem;
   padding: 0.2rem;
-  background: var(--color-lavender-soft);
+  background: var(--color-surface-sunken);
   border-radius: 0.625rem;
 }
 
@@ -6780,7 +6772,7 @@ textarea.text-input {
   border: 0;
   border-radius: 0.45rem;
   background: transparent;
-  color: var(--color-lavender-strong);
+  color: var(--color-text-muted);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -6795,7 +6787,7 @@ textarea.text-input {
   color: var(--color-text);
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.08),
-    0 0 0 1px color-mix(in srgb, var(--color-lavender) 55%, transparent);
+    0 0 0 1px var(--color-border);
 }
 
 .admin-shell[data-theme="dark"] .form-share-segment-btn--active {
@@ -6835,23 +6827,23 @@ textarea.text-input {
   color: var(--color-text-muted);
 }
 
+/* Plain text+icon rather than a filled pill — this is a secondary, low-commitment
+   affordance next to the Message label, not another button competing with Send. */
 .form-share-preview-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0.55rem;
+  gap: 0.25rem;
+  padding: 0;
   border: 0;
-  border-radius: 999px;
-  background: var(--color-lavender-soft);
-  color: var(--color-lavender-strong);
+  background: transparent;
+  color: var(--color-text-muted);
   font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
 }
 
 .form-share-preview-toggle:hover {
-  background: color-mix(in srgb, var(--color-lavender) 55%, var(--color-lavender-soft));
-  color: var(--color-text);
+  color: var(--color-lavender-strong);
 }
 
 .form-share-field .text-input {
@@ -6871,44 +6863,38 @@ textarea.text-input {
 }
 
 .form-share-hint {
-  margin: -0.2rem 0 0;
-  font-size: 0.75rem;
+  margin: 0;
+  font-size: 0.7rem;
   line-height: 1.4;
   color: var(--color-text-subtle);
 }
 
-/* Mirrors the actual send templates: for email, the same light-card-with-lavender-
-   accent treatment as formShareEmail()'s messageCallout in the real HTML email
-   (src/lib/emails/layout.ts); for SMS, a chat bubble. This is what will really be sent,
-   not a mockup — same fallback logic as the server (message.trim() || the default). */
+/* Deliberately un-boxed — sits directly in the form's flow (a hairline divider comes
+   from the field spacing above, not another background/border) so the callout below is
+   the only bordered surface here. Mirrors the real send templates: for email, the same
+   light-card-with-lavender-accent treatment as formShareEmail()'s messageCallout in the
+   actual HTML email (src/lib/emails/layout.ts); the "Open form" line is styled as plain
+   text, not a button, since it's a mockup of the real CTA rather than a clickable one.
+   This is what will really be sent, not an approximation — same fallback logic as the
+   server (message.trim() || the default). */
 .form-share-preview {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  margin: -0.15rem 0 0;
-  padding: 0.85rem 0.9rem;
-  background: var(--color-surface-sunken);
-  border: 1px solid var(--color-border);
-  border-radius: 0.625rem;
+  gap: 0.5rem;
 }
 
 .form-share-preview-label {
   margin: 0;
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-}
-
-.form-share-preview-label strong {
-  color: var(--color-text);
+  font-size: 0.75rem;
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .form-share-preview-callout {
-  padding: 0.7rem 0.85rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-lavender-strong);
-  border-radius: 0.5rem;
+  padding: 0.65rem 0.8rem;
+  background: var(--color-surface-sunken);
+  border-left: 2px solid var(--color-lavender-strong);
+  border-radius: 0.375rem;
   font-size: 0.8125rem;
   line-height: 1.55;
   color: var(--color-text);
@@ -6916,26 +6902,20 @@ textarea.text-input {
 }
 
 .form-share-preview-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   align-self: flex-start;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  background: #16a34a;
-  color: #fff;
-  font-size: 0.75rem;
+  color: #15803d;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: default;
 }
 
-.form-share-preview--sms {
-  align-items: flex-end;
-  background: transparent;
-  border: 0;
-  padding: 0;
-}
-
 .form-share-preview-bubble {
+  align-self: flex-end;
   margin: 0;
-  max-width: 90%;
+  max-width: 85%;
   padding: 0.55rem 0.75rem;
   background: var(--color-lavender-soft);
   color: var(--color-text);

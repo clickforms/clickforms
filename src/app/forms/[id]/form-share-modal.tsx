@@ -53,6 +53,20 @@ function EyeIcon() {
   );
 }
 
+function ArrowIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3.5 8h9M8.5 4l4 4-4 4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 interface FormShareModalProps {
   open: boolean;
   formId: string;
@@ -220,12 +234,9 @@ export function FormShareModal({
               <span className="form-share-access-icon">
                 <GlobeIcon />
               </span>
-              <div>
-                <h3 className="form-share-access-title" id="form-share-access-label">
-                  Anyone with the link
-                </h3>
-                <p className="form-share-access-caption">Can fill and submit this form</p>
-              </div>
+              <h3 className="form-share-access-title" id="form-share-access-label">
+                Anyone with the link can fill this out
+              </h3>
             </div>
 
             <div className="form-share-url-field">
@@ -322,32 +333,36 @@ export function FormShareModal({
                   maxLength={2000}
                   disabled={isSending}
                 />
+                {!previewOpen ? (
+                  <p className="form-share-hint">
+                    {channel === 'email'
+                      ? 'The form link is added as a button under this message.'
+                      : 'Keep the link in the text so they can open the form.'}
+                  </p>
+                ) : null}
               </div>
-              <p className="form-share-hint">
-                {channel === 'email'
-                  ? 'The form link is added as a button under this message.'
-                  : 'Keep the link in the text so they can open the form.'}
-              </p>
 
               {previewOpen && channel === 'email' && previewEmail ? (
                 <div className="form-share-preview" aria-live="polite">
-                  <p className="form-share-preview-label">
-                    Subject: <strong>{previewEmail.subject}</strong>
-                  </p>
+                  <p className="form-share-preview-label">{previewEmail.subject}</p>
                   <div className="form-share-preview-callout">{emailMessageBody}</div>
-                  <span className="form-share-preview-cta">Open form</span>
+                  <span className="form-share-preview-cta">
+                    Open form
+                    <ArrowIcon />
+                  </span>
                 </div>
               ) : null}
               {previewOpen && channel === 'sms' && previewSms ? (
-                <div className="form-share-preview form-share-preview--sms" aria-live="polite">
-                  <p className="form-share-preview-bubble">{previewSms}</p>
-                </div>
+                <p className="form-share-preview-bubble" aria-live="polite">
+                  {previewSms}
+                </p>
               ) : null}
+
               <div className="form-share-footer">
                 <p className="form-share-from">Sending as {senderName}</p>
                 <button
                   type="submit"
-                  className="button button--success form-share-send-btn"
+                  className="button button--dark form-share-send-btn"
                   disabled={!recipientIsValid || isSending}
                 >
                   {isSending ? 'Sending…' : channel === 'email' ? 'Send email' : 'Send text'}

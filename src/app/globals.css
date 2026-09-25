@@ -5088,21 +5088,29 @@ textarea.text-input {
   gap: 0.75rem;
 }
 
-.billing-org-card-plan {
+.billing-org-card-form {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface-sunken);
+}
+
+.billing-org-card-fields-row {
+  display: flex;
   gap: 0.75rem;
 }
 
-.billing-plan-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
+.billing-org-card-fields-row .admin-org-field,
+.billing-org-card-form > .admin-org-field {
+  flex: 1;
 }
 
-.billing-org-card-plan select {
-  max-width: 160px;
+.billing-org-card-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .billing-usage-bars {

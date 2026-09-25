@@ -35,6 +35,12 @@ const STATUS_BADGE_CLASS: Record<OrgStatus, string> = {
   suspended: 'badge--error',
 };
 
+const STATUS_LABELS: Record<OrgStatus, string> = {
+  active: 'Active',
+  trial: 'Trial',
+  suspended: 'Suspended',
+};
+
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-AU', {
@@ -42,6 +48,20 @@ function formatDate(iso: string | null): string {
     month: 'short',
     year: 'numeric',
   });
+}
+
+function toDateInputValue(iso: string | null): string {
+  return iso ? iso.slice(0, 10) : '';
+}
+
+// Same default as the Organisations detail page's own Plan & trial panel (see
+// defaultTrialEndDate there) — matches the signup flow's 7-day trial so picking "Trial"
+// here isn't left with an empty, unsavable date, while staying fully editable to any
+// custom length an admin wants to grant.
+function defaultTrialEndDate(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + 7);
+  return date.toISOString().slice(0, 10);
 }
 
 function SearchIcon() {
@@ -60,8 +80,6 @@ export function BillingAdminClient({
 }) {
   const [organizations, setOrganizations] = useState(initialOrganizations);
   const [search, setSearch] = useState('');
-  const [busyOrgId, setBusyOrgId] = useState<string | null>(null);
-  const toast = useToast();
 
   const visibleOrganizations = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -71,38 +89,8 @@ export function BillingAdminClient({
     );
   }, [organizations, search]);
 
-  async function handlePlanChange(org: BillingOrgRow, nextPlan: OrgPlan) {
-    if (nextPlan === org.plan) return;
-    setBusyOrgId(org.id);
-    try {
-      // Assigning a plan here is how a trialing org "graduates" — there's no self-serve
-      // upgrade flow yet, so if we only patched `plan`, an org past its trialEndsAt would
-      // still show the trial-expired banner and stay blocked from platform actions (see
-      // isTrialExpired/assertOrgActionsAllowed in src/lib/admin/plan-limits.ts) even after
-      // an admin gave it a real plan. Flip status back to 'active' in the same request
-      // whenever the org is currently trialing. Suspended orgs are left alone —
-      // reactivating is a separate, explicit action (Organisations list kebab menu).
-      const body: { plan: OrgPlan; status?: 'active' } =
-        org.status === 'trial' ? { plan: nextPlan, status: 'active' } : { plan: nextPlan };
-      const response = await fetch(`/api/admin/organizations/${org.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        throw new Error(await readApiError(response, 'Could not change plan'));
-      }
-      setOrganizations((current) =>
-        current.map((row) =>
-          row.id === org.id ? { ...row, plan: nextPlan, status: body.status ?? row.status } : row,
-        ),
-      );
-      toast.success(`${org.name} moved to ${PLAN_LABELS[nextPlan]}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not change plan');
-    } finally {
-      setBusyOrgId(null);
-    }
+  function handleSaved(updated: BillingOrgRow) {
+    setOrganizations((current) => current.map((row) => (row.id === updated.id ? updated : row)));
   }
 
   return (
@@ -137,86 +125,209 @@ export function BillingAdminClient({
         </div>
       ) : (
         <div className="billing-org-grid">
-          {visibleOrganizations.map((org) => {
-            const bars = buildUsageBars(org.plan, org.usage);
-            const limits = PLAN_LIMITS[org.plan];
-            return (
-              <div key={org.id} className="card billing-org-card">
-                <div className="billing-org-card-header">
-                  <div>
-                    <Link href={`/admin/organisations/${org.id}`} className="admin-table-name-link">
-                      {org.name}
-                    </Link>
-                    <p className="users-page-subtitle">{org.subdomain}</p>
-                  </div>
-                  <span className={`badge ${STATUS_BADGE_CLASS[org.status]}`}>
-                    {org.status === 'trial'
-                      ? 'Trial'
-                      : org.status === 'suspended'
-                        ? 'Suspended'
-                        : 'Active'}
-                  </span>
-                </div>
-
-                <div className="billing-org-card-plan">
-                  <label className="billing-plan-label" htmlFor={`plan-${org.id}`}>
-                    Plan
-                  </label>
-                  <select
-                    id={`plan-${org.id}`}
-                    className="text-input"
-                    value={org.plan}
-                    disabled={busyOrgId === org.id}
-                    onChange={(event) => void handlePlanChange(org, event.target.value as OrgPlan)}
-                  >
-                    {PLAN_ORDER.map((plan) => (
-                      <option key={plan} value={plan}>
-                        {PLAN_LABELS[plan]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="billing-usage-bars">
-                  {bars.map((bar) => (
-                    <div key={bar.label} className="usage-bar">
-                      <div className="usage-bar-header">
-                        <span>{bar.label}</span>
-                        <span>{bar.formatted}</span>
-                      </div>
-                      <div className="usage-bar-track">
-                        <div
-                          className="usage-bar-fill"
-                          style={{ width: `${bar.percent ?? 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="billing-feature-pills">
-                  {PLAN_FEATURE_PILLS.map((feature) => (
-                    <span
-                      key={feature.key}
-                      className={`billing-feature-pill${limits[feature.key] ? ' billing-feature-pill--on' : ''}`}
-                    >
-                      {feature.label}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="billing-org-card-footer">
-                  {org.status === 'trial' ? (
-                    <span>Trial ends {formatDate(org.trialEndsAt)}</span>
-                  ) : (
-                    <span>Renews {formatDate(org.renewsAt)}</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {visibleOrganizations.map((org) => (
+            <BillingOrgCard key={org.id} org={org} onSaved={handleSaved} />
+          ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function BillingOrgCard({
+  org,
+  onSaved,
+}: {
+  org: BillingOrgRow;
+  onSaved: (updated: BillingOrgRow) => void;
+}) {
+  const toast = useToast();
+  const bars = buildUsageBars(org.plan, org.usage);
+  const limits = PLAN_LIMITS[org.plan];
+
+  // Draft plan/status/trial fields, separate from `org` (the committed, saved values shown
+  // in the header badge, usage bars, and footer) — same split as the Organisations detail
+  // page's "Plan & trial" panel, so nothing here takes effect until Save is pressed. This is
+  // also what lets a plan change and a trial start/extend/end happen as one atomic PATCH
+  // instead of two separate requests racing each other.
+  const [plan, setPlan] = useState<OrgPlan>(org.plan);
+  const [status, setStatus] = useState<OrgStatus>(org.status);
+  const [trialEndsAt, setTrialEndsAt] = useState(
+    org.status === 'trial' ? toDateInputValue(org.trialEndsAt) : '',
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isDirty = useMemo(() => {
+    const currentTrialEndsAt = org.status === 'trial' ? toDateInputValue(org.trialEndsAt) : '';
+    const nextTrialEndsAt = status === 'trial' ? trialEndsAt : '';
+    return plan !== org.plan || status !== org.status || nextTrialEndsAt !== currentTrialEndsAt;
+  }, [plan, status, trialEndsAt, org]);
+
+  function handleStatusChange(nextStatus: OrgStatus) {
+    setStatus(nextStatus);
+    if (nextStatus === 'trial' && !trialEndsAt) {
+      setTrialEndsAt(defaultTrialEndDate());
+    }
+  }
+
+  async function handleSave() {
+    setError(null);
+    if (status === 'trial' && !trialEndsAt) {
+      setError('Trial end date is required while status is Trial');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/admin/organizations/${org.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan,
+          status,
+          // Cleared the moment status isn't 'trial', same as the detail page — a stale date
+          // shouldn't linger once an org leaves trial (see isTrialExpired in plan-limits.ts).
+          trialEndsAt:
+            status === 'trial' ? new Date(`${trialEndsAt}T00:00:00`).toISOString() : null,
+        }),
+      });
+      if (!response.ok) {
+        setError(await readApiError(response, 'Could not save plan & trial settings'));
+        return;
+      }
+      const data: {
+        organization: {
+          plan: OrgPlan;
+          status: OrgStatus;
+          trialEndsAt: string | null;
+          renewsAt: string | null;
+        };
+      } = await response.json();
+      onSaved({
+        ...org,
+        plan: data.organization.plan,
+        status: data.organization.status,
+        trialEndsAt: data.organization.trialEndsAt,
+        renewsAt: data.organization.renewsAt,
+      });
+      toast.success(`${org.name} updated`);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="card billing-org-card">
+      <div className="billing-org-card-header">
+        <div>
+          <Link href={`/admin/organisations/${org.id}`} className="admin-table-name-link">
+            {org.name}
+          </Link>
+          <p className="users-page-subtitle">{org.subdomain}</p>
+        </div>
+        <span className={`badge ${STATUS_BADGE_CLASS[org.status]}`}>
+          {STATUS_LABELS[org.status]}
+        </span>
+      </div>
+
+      <div className="billing-org-card-form">
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="billing-org-card-fields-row">
+          <label className="admin-org-field">
+            <span>Plan</span>
+            <select
+              className="text-input"
+              value={plan}
+              disabled={isSaving}
+              onChange={(event) => setPlan(event.target.value as OrgPlan)}
+            >
+              {PLAN_ORDER.map((planOption) => (
+                <option key={planOption} value={planOption}>
+                  {PLAN_LABELS[planOption]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="admin-org-field">
+            <span>Status</span>
+            <select
+              className="text-input"
+              value={status}
+              disabled={isSaving}
+              onChange={(event) => handleStatusChange(event.target.value as OrgStatus)}
+            >
+              {(Object.keys(STATUS_LABELS) as OrgStatus[]).map((statusOption) => (
+                <option key={statusOption} value={statusOption}>
+                  {STATUS_LABELS[statusOption]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {status === 'trial' ? (
+          <label className="admin-org-field">
+            <span>Trial ends on</span>
+            <input
+              className="text-input"
+              type="date"
+              value={trialEndsAt}
+              disabled={isSaving}
+              onChange={(event) => setTrialEndsAt(event.target.value)}
+              required
+            />
+          </label>
+        ) : null}
+        <div className="billing-org-card-actions">
+          <button
+            type="button"
+            className="button button--dark button--small"
+            disabled={isSaving || !isDirty}
+            onClick={() => void handleSave()}
+          >
+            {isSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+
+      <div className="billing-usage-bars">
+        {bars.map((bar) => (
+          <div key={bar.label} className="usage-bar">
+            <div className="usage-bar-header">
+              <span>{bar.label}</span>
+              <span>{bar.formatted}</span>
+            </div>
+            <div className="usage-bar-track">
+              <div className="usage-bar-fill" style={{ width: `${bar.percent ?? 100}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="billing-feature-pills">
+        {PLAN_FEATURE_PILLS.map((feature) => (
+          <span
+            key={feature.key}
+            className={`billing-feature-pill${limits[feature.key] ? ' billing-feature-pill--on' : ''}`}
+          >
+            {feature.label}
+          </span>
+        ))}
+      </div>
+
+      <div className="billing-org-card-footer">
+        {org.status === 'trial' ? (
+          <span>Trial ends {formatDate(org.trialEndsAt)}</span>
+        ) : (
+          <span>Renews {formatDate(org.renewsAt)}</span>
+        )}
+      </div>
     </div>
   );
 }

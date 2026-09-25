@@ -1,9 +1,15 @@
 /* Caveat — handwriting-style font for the "Type signature" mode of the signature pad
-   (src/app/f/[slug]/signature-pad.tsx). Loaded here via @import rather than next/font in
-   layout.tsx, since this is the one component that needs it and pulling in a whole extra
-   next/font setup for a single field type wasn't worth it. @import must be the first
-   rule in the stylesheet — nothing else may precede it. */
-@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap");
+   (src/app/f/[slug]/signature-pad.tsx). Self-hosted @font-face rather than next/font in
+   layout.tsx, so this component's font dependency stays self-contained and canvas
+   fillText() can keep using the family name "Caveat" (hashed next/font names would
+   break document.fonts.load / fillText). */
+@font-face {
+  font-family: "Caveat";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/caveat-latin-600-normal.woff2") format("woff2");
+}
 
 /*
  * Design tokens — modern SaaS admin (dark sidebar + light workspace).
@@ -4104,61 +4110,186 @@ textarea.text-input {
   border-bottom: 1px solid var(--color-border);
 }
 
-.forms-toolbar .forms-search {
-  flex: 1 1 16rem;
-  max-width: 28rem;
+.forms-toolbar-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .forms-toolbar .button {
   margin-left: auto;
 }
 
-.forms-filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.forms-filter-chip {
+/* Search/sort/filter collapse into these square icon buttons instead of an always-visible
+   search box + filter-chip row — search opens .forms-search--inline in place of this button
+   (see forms-list-client.tsx), sort/filter open a DropdownMenu of .actions-menu-item's. */
+.forms-toolbar-icon-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.75rem;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex-shrink: 0;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.forms-toolbar-icon-btn:hover {
+  background: var(--color-surface-sunken);
   color: var(--color-text);
+}
+
+.forms-toolbar-icon-btn--active {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  background: var(--color-primary-soft);
+  color: #0d9f57;
+}
+
+.admin-shell[data-theme="dark"] .forms-toolbar-icon-btn--active {
+  color: #3dd975;
+}
+
+/* The inline search field that replaces the icon button once opened — same visual language
+   as .forms-search (used elsewhere for always-visible search boxes) but sized to sit among
+   the other toolbar icon buttons rather than stretching to fill the row. */
+.forms-search--inline {
+  flex: 0 1 16rem;
+  max-width: 16rem;
+  height: 2.35rem;
+  padding: 0 0.7rem;
+}
+
+.forms-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.forms-search-clear:hover {
+  color: var(--color-text);
+}
+
+.forms-view-toggle {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.forms-view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border: none;
+  border-radius: calc(var(--radius-md) - 0.2rem);
+  background: transparent;
+  color: var(--color-text-muted);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
 }
 
-.forms-filter-chip:hover {
-  background: var(--color-surface-sunken);
-}
-
-.forms-filter-chip--active {
-  background: var(--color-primary-soft);
-  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
-  color: #0d9f57;
-}
-
-/* Same brightening as .admin-table-name-link's dark override below — #0d9f57 (this app's
-   brand green) reads muddy against the dark theme's near-black surfaces, so dark mode
-   swaps in the lighter green already used for dark-theme "success" text elsewhere. */
-.admin-shell[data-theme="dark"] .forms-filter-chip--active {
-  color: #3dd975;
+.forms-view-toggle-btn--active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .forms-filter-chip-count {
   color: var(--color-text-muted);
   font-weight: 650;
   font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  padding-left: 0.5rem;
 }
 
-.forms-filter-chip--active .forms-filter-chip-count {
-  color: inherit;
-  opacity: 0.8;
+/* Pushes the current-direction ▲/▼ to the trailing edge of the sort dropdown's menu items —
+   scoped to this context since .table-sort-indicator's other use (table column headers,
+   forms-table above) sits inline right after the label with no such assumption. */
+.actions-menu-item .table-sort-indicator {
+  margin-left: auto;
+  padding-left: 0.5rem;
+}
+
+/* Grid view — card counterpart to a table row, same data/actions (see FormsGridCard in
+   forms-list-client.tsx), laid out for the same .admin-table-card wrapper the table sits
+   in, so it inherits that card's border/radius without its own outer chrome. */
+.forms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.forms-grid-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem;
+  cursor: pointer;
+}
+
+.forms-grid-card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.forms-grid-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.forms-grid-card-title {
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.forms-grid-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.forms-grid-card-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.forms-grid-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.forms-grid-card-actions .button--small {
+  text-decoration: none;
+}
+
+.forms-grid-empty {
+  grid-column: 1 / -1;
 }
 
 .forms-responses-link {
@@ -5061,114 +5192,220 @@ textarea.text-input {
   word-break: break-word;
 }
 
-/* /admin/billing — a card grid rather than a table since each org needs three usage
-   bars plus a plan picker, which don't fit a table row cleanly. */
-.billing-search-card {
-  padding: 1rem 1.25rem;
-  margin-bottom: 1rem;
+/* /admin/billing — full-width org cards matching organisation settings Billing. */
+.billing-page {
+  width: 100%;
+  max-width: none;
 }
 
-.billing-org-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
+.billing-page-search {
+  flex: 1 1 16rem;
+  max-width: 22rem;
+}
+
+.billing-org-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.billing-empty {
+  padding: 1.5rem 1.35rem;
+}
+
+.billing-empty p {
+  margin: 0;
+  color: var(--color-text-muted);
 }
 
 .billing-org-card {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
+  padding: 0;
 }
 
-.billing-org-card-header {
+.billing-org-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.billing-org-card-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.9rem;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
+  gap: 1rem;
+  padding: 1.15rem 1.35rem 1rem;
   background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0.9rem 0.9rem 0 0;
 }
 
-.billing-org-card-fields-row {
-  display: flex;
-  gap: 0.75rem;
+.billing-org-name {
+  font-size: 1.15rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  text-decoration: none;
 }
 
-.billing-org-card-fields-row .admin-org-field,
-.billing-org-card-form > .admin-org-field {
-  flex: 1;
+.billing-org-name:hover {
+  color: var(--color-primary-hover);
 }
 
-.billing-org-card-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.billing-usage-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.usage-bar-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
+.billing-org-subdomain {
+  margin: 0.2rem 0 0;
   color: var(--color-text-muted);
-  margin-bottom: 0.3rem;
+  font-size: 0.8125rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.usage-bar-track {
-  height: 0.4rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-sunken);
-  overflow: hidden;
+.billing-org-head-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
 }
 
-.usage-bar-fill {
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--color-primary);
+.billing-org-renewal {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
 }
 
-/* Qualitative plan perks (removeBranding/apiAccess/customDomain — see PLAN_LIMITS) that
-   don't reduce to a usage bar. Dim by default so the row reads as "off"; --on flips it to
-   match the primary usage-bar-fill color so a glance across cards shows which orgs have
-   which perks. */
-.billing-feature-pills {
+.billing-org-controls {
+  padding: 1.1rem 1.35rem 0.25rem;
+}
+
+.billing-org-error {
+  margin: 0 0 0.85rem;
+}
+
+.billing-org-control-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 1.25rem;
+}
+
+.billing-org-control {
+  display: flex;
+  flex-direction: column;
   gap: 0.4rem;
+  min-width: 0;
 }
 
-.billing-feature-pill {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.2rem 0.6rem;
+.billing-org-control-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.billing-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  /* Reset — this is a <fieldset> now (semantic replacement for the div[role=group] the
+     a11y linter flagged), and fieldset's UA defaults (border, padding, min-width:min-content)
+     would otherwise visibly change this from the div it used to be. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.billing-chip {
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.billing-chip:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
   background: var(--color-surface-sunken);
-  color: var(--color-text-subtle);
 }
 
-.billing-feature-pill--on {
-  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
-  color: var(--color-primary);
+.billing-chip--selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
 }
 
-.billing-org-card-footer {
-  font-size: 0.8rem;
-  color: var(--color-text-subtle);
-  border-top: 1px solid var(--color-border);
-  padding-top: 0.75rem;
+.billing-chip--trial.billing-chip--selected {
+  border-color: var(--color-lavender);
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft);
+}
+
+.billing-chip--suspended.billing-chip--selected {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  box-shadow: 0 0 0 3px var(--color-danger-soft);
+}
+
+.billing-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.billing-trial-input {
+  min-width: 10.5rem;
+}
+
+.billing-org-save {
+  margin-left: auto;
+}
+
+.billing-org-usage {
+  padding-top: 0.35rem;
+}
+
+.billing-org-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1.35rem 1.2rem;
+}
+
+.billing-org-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.billing-org-feature--on {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-primary-hover);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.billing-org-feature--off {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .billing-org-head {
+    flex-direction: column;
+  }
+
+  .billing-org-save {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .billing-org-save .button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .table-search-row .text-input {

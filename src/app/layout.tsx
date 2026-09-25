@@ -1,23 +1,38 @@
 import type { Metadata } from 'next';
-import { Inter, Poppins, Space_Grotesk } from 'next/font/google';
+import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
 import './globals.css';
 
-// Inter for body copy (was already named in the globals.css font stack but never
-// actually loaded, so it was silently falling back to system fonts). Poppins for
-// headings/section banners — a rounder, bolder geometric sans that reads closer to the
-// reference incident-report form the client wants to match, without touching body
-// copy legibility. Space Grotesk for landing display — sharper editorial weight.
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['600', '700', '800', '900'],
+// Self-hosted so compile/runtime never needs to reach Google Fonts (offline, air-gapped,
+// or DNS failures all used to 500 the layout). Inter for body copy, Poppins for
+// headings/section banners, Space Grotesk for landing display. CSS variables stay the
+// same as the previous next/font/google setup so globals.css does not need to change.
+const inter = localFont({
+  src: [
+    { path: './fonts/inter-latin-wght-normal.woff2', weight: '100 900', style: 'normal' },
+    { path: './fonts/inter-latin-wght-italic.woff2', weight: '100 900', style: 'italic' },
+  ],
+  variable: '--font-inter',
+  display: 'swap',
+});
+const poppins = localFont({
+  src: [
+    { path: './fonts/poppins-latin-600-normal.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/poppins-latin-700-normal.woff2', weight: '700', style: 'normal' },
+    { path: './fonts/poppins-latin-800-normal.woff2', weight: '800', style: 'normal' },
+    { path: './fonts/poppins-latin-900-normal.woff2', weight: '900', style: 'normal' },
+  ],
   variable: '--font-poppins',
   display: 'swap',
 });
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
+const spaceGrotesk = localFont({
+  src: [
+    {
+      path: './fonts/space-grotesk-latin-wght-normal.woff2',
+      weight: '300 700',
+      style: 'normal',
+    },
+  ],
   variable: '--font-display',
   display: 'swap',
 });

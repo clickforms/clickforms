@@ -11,10 +11,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const CANVAS_WIDTH = 600;
 const INK_COLOR = '#1f2a20';
-// Loaded via @font-face in globals.css rather than next/font in layout.tsx, so this
-// component's font dependency stays self-contained — canvas text needs the font to have
-// actually finished loading before fillText() is called (see the effect below), unlike
-// regular DOM text which repaints itself once a webfont arrives.
+// Loaded via self-hosted @font-face in globals.css rather than next/font in layout.tsx,
+// so this component's font dependency stays self-contained and fillText() can keep using
+// the family name "Caveat". Canvas text needs the font to have actually finished loading
+// before fillText() is called (see the effect below), unlike regular DOM text which
+// repaints itself once a webfont arrives.
 const SIGNATURE_FONT_FAMILY = 'Caveat';
 const SIGNATURE_CANVAS_FONT = `56px "${SIGNATURE_FONT_FAMILY}", cursive`;
 

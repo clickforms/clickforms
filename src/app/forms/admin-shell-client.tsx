@@ -86,6 +86,7 @@ export function AdminShellClient({
   // which have their own light-only design, are never affected by this.
   const [isDarkTheme, setIsDarkTheme] = useState(false);
   const pathname = usePathname();
+  const shellRef = useRef<HTMLDivElement>(null);
   // Account settings uses the light Personal Settings rail as its left column (see the
   // reference chrome). The dark app sidebar stays available from the header hamburger as
   // an overlay, rather than sitting beside that rail.
@@ -133,6 +134,44 @@ export function AdminShellClient({
     window.localStorage.setItem(COLLAPSE_STORAGE_KEY, '1');
   }, [pathname]);
 
+  // Keep the template preview overlay below the header and beside the sidebar, using
+  // the live chrome sizes so trial banners / collapsed rail / logo height stay aligned.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sidebarCollapsed/mobileNavOpen/trialExpired/pathname are intentional re-sync triggers (each can change the header/sidebar's rendered size) — their values are never read, only shellRef's live DOM measurements are
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    function syncChromeOffsets() {
+      // Re-read from the ref (rather than closing over the outer `shell` const) because
+      // TS's narrowing from the early-return above doesn't carry into this nested function
+      // declaration, even though `shell` itself can't have changed.
+      const el = shellRef.current;
+      if (!el) return;
+      const header = el.querySelector('.admin-header');
+      const sidebar = el.querySelector('.admin-sidebar');
+      const desktop = window.matchMedia('(min-width: 769px)').matches;
+      const top =
+        header instanceof HTMLElement
+          ? `${Math.round(header.getBoundingClientRect().bottom)}px`
+          : '0px';
+      const left =
+        desktop && sidebar instanceof HTMLElement
+          ? `${Math.round(sidebar.getBoundingClientRect().width)}px`
+          : '0px';
+      el.style.setProperty('--admin-chrome-top', top);
+      el.style.setProperty('--admin-chrome-left', left);
+    }
+
+    syncChromeOffsets();
+    const observer = new ResizeObserver(syncChromeOffsets);
+    observer.observe(shell);
+    window.addEventListener('resize', syncChromeOffsets);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', syncChromeOffsets);
+    };
+  }, [sidebarCollapsed, mobileNavOpen, trialExpired, pathname]);
+
   function toggleSidebar() {
     if (isAccountSettings) {
       setMobileNavOpen((prev) => !prev);
@@ -158,7 +197,7 @@ export function AdminShellClient({
 
   return (
     <ToastProvider>
-      <div className={shellClassName} data-theme={isDarkTheme ? 'dark' : 'light'}>
+      <div ref={shellRef} className={shellClassName} data-theme={isDarkTheme ? 'dark' : 'light'}>
         <AdminSidebar
           collapsed={isAccountSettings ? false : sidebarCollapsed}
           userRole={userRole}

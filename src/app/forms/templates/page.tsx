@@ -23,7 +23,16 @@ export default async function TemplatesGalleryPage() {
   const templates = await prisma.formTemplate.findMany({
     where: { status: 'published' },
     orderBy: { name: 'asc' },
-    select: { id: true, name: true, description: true, category: true, thumbnailStorageKey: true },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      industry: true,
+      category: true,
+      formType: true,
+      thumbnailStorageKey: true,
+      createdAt: true,
+    },
   });
 
   const galleryTemplates: GalleryTemplate[] = await Promise.all(
@@ -45,8 +54,11 @@ export default async function TemplatesGalleryPage() {
         id: template.id,
         name: template.name,
         description: template.description,
+        industry: template.industry,
         category: template.category,
+        formType: template.formType,
         thumbnailUrl,
+        createdAt: template.createdAt.toISOString(),
       };
     }),
   );

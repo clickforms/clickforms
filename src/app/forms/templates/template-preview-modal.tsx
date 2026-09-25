@@ -6,7 +6,9 @@ interface PreviewTemplate {
   id: string;
   name: string;
   description: string | null;
+  industry: string | null;
   category: string | null;
+  formType: string | null;
   thumbnailUrl: string | null;
 }
 
@@ -75,7 +77,11 @@ export function TemplatePreviewModal({
             />
           </div>
           <div className="canva-preview-meta">
-            <p className="canva-preview-kicker">{template.category || 'Template'}</p>
+            <p className="canva-preview-kicker">
+              {[template.industry, template.category, template.formType]
+                .filter(Boolean)
+                .join(' · ') || 'Template'}
+            </p>
             <h2 className="canva-preview-title" id="canva-preview-title">
               {template.name}
             </h2>

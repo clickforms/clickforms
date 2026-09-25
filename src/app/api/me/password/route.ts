@@ -1,11 +1,10 @@
-import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
 import { requireOrganizationId, requireSession } from '@/lib/session';
-import { passwordSchema } from '@/lib/users/password';
+import { hashPassword, passwordSchema, verifyPassword } from '@/lib/users/password';
 
 const changePasswordBodySchema = z
   .object({
@@ -34,12 +33,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw new InvalidRequestError('Account not found.');
     }
 
-    const currentValid = await bcrypt.compare(body.currentPassword, user.passwordHash);
+    const currentValid = await verifyPassword(body.currentPassword, user.passwordHash);
     if (!currentValid) {
       throw new InvalidRequestError('Current password is incorrect.');
     }
 
-    const passwordHash = await bcrypt.hash(body.newPassword, 12);
+    const passwordHash = await hashPassword(body.newPassword);
 
     if (!session.user.organizationId) {
       await prisma.user.update({

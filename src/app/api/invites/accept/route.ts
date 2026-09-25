@@ -1,10 +1,9 @@
-import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
-import { passwordSchema } from '@/lib/users/password';
+import { hashPassword, passwordSchema } from '@/lib/users/password';
 
 const acceptInviteBodySchema = z.object({
   token: z.string().min(1),
@@ -31,7 +30,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await hashPassword(password);
 
     const user = await withOrgContext(invite.organizationId, async (tx) => {
       const created = await tx.user.create({

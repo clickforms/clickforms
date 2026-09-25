@@ -1,9 +1,8 @@
-import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
-import { passwordSchema } from '@/lib/users/password';
+import { hashPassword, passwordSchema } from '@/lib/users/password';
 
 const acceptTeamInviteBodySchema = z.object({
   token: z.string().min(1),
@@ -34,7 +33,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw new InvalidRequestError('A platform admin with this email already exists.');
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await hashPassword(password);
 
     const user = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({

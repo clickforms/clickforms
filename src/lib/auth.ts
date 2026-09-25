@@ -10,10 +10,10 @@
 // `src/app/api/auth/[...nextauth]/route.ts` collapses into `export { GET, POST } from
 // '@/auth'`.
 
-import bcrypt from 'bcryptjs';
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma, withOrgContext } from '@/lib/db';
+import { hashPassword, needsRehash, verifyPassword } from '@/lib/users/password';
 
 /**
  * True only while `userId` has an active (leftAt: null) PlatformAdminOrgAccess row for
@@ -86,7 +86,7 @@ export const authOptions: NextAuthOptions = {
 
         const verifiedCandidates: typeof candidates = [];
         for (const candidate of candidates) {
-          if (await bcrypt.compare(credentials.password, candidate.passwordHash)) {
+          if (await verifyPassword(credentials.password, candidate.passwordHash)) {
             verifiedCandidates.push(candidate);
           }
         }
@@ -124,6 +124,25 @@ export const authOptions: NextAuthOptions = {
         // shell (admin-shell-client.tsx) shows a persistent banner for it. Suspension is
         // different: a platform admin can suspend without leaving `status` clean data to
         // display, so locking that one out at sign-in is still the right call.
+
+        // Opportunistic rehash: this account's hash predates the BCRYPT_COST speedup in
+        // src/lib/users/password.ts and is still sitting at the old, slower cost. The
+        // plaintext password is only ever available here, right after it's already been
+        // verified against the existing hash — never store or log it, just use it once to
+        // produce the replacement hash at the new cost. Best-effort: if this write fails
+        // for any reason, sign-in still succeeds on the existing (still valid, just slower)
+        // hash, and the same upgrade is simply retried on the account's next login.
+        if (needsRehash(user.passwordHash)) {
+          const upgradedHash = await hashPassword(credentials.password);
+          try {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { passwordHash: upgradedHash },
+            });
+          } catch {
+            // Non-fatal — see comment above.
+          }
+        }
 
         return {
           id: user.id,

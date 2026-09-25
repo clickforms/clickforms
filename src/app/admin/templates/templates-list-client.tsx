@@ -2,8 +2,9 @@
 
 import type { TemplateStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
-import { useMemo, useRef, useState } from 'react';
+import { type FormEvent, useMemo, useRef, useState } from 'react';
 import { NewTemplateModal } from '@/app/admin/templates/new-template-modal';
+import { TaxonomyField } from '@/app/admin/templates/taxonomy-field';
 import { DropdownMenu } from '@/components/dropdown-menu';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
@@ -113,6 +114,7 @@ function TemplateRowMenu({
   template,
   busy,
   onEdit,
+  onRecategorize,
   onPreview,
   onSetStatus,
   onDelete,
@@ -120,6 +122,7 @@ function TemplateRowMenu({
   template: TemplateRow;
   busy: boolean;
   onEdit: () => void;
+  onRecategorize: () => void;
   onPreview: () => void;
   onSetStatus: (status: TemplateStatus) => void;
   onDelete: () => void;
@@ -158,6 +161,19 @@ function TemplateRowMenu({
               }}
             >
               Edit
+            </button>
+          </li>
+          <li role="none">
+            <button
+              type="button"
+              role="menuitem"
+              className="actions-menu-item"
+              onClick={() => {
+                setOpen(false);
+                onRecategorize();
+              }}
+            >
+              Recategorize
             </button>
           </li>
           <li role="none">
@@ -250,6 +266,15 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
   const [busyId, setBusyId] = useState<string | null>(null);
   const [deletingTemplate, setDeletingTemplate] = useState<TemplateRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [recategorizing, setRecategorizing] = useState<TemplateRow | null>(null);
+  const [draftIndustry, setDraftIndustry] = useState('');
+  const [draftCategory, setDraftCategory] = useState('');
+  const [draftFormType, setDraftFormType] = useState('');
+  const [isRecategorizing, setIsRecategorizing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [isBulkActing, setIsBulkActing] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const statusCounts = useMemo(() => {
     const counts: Record<StatusFilter, number> = {
@@ -266,7 +291,7 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
 
   const visibleTemplates = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return templates.filter((template) => {
+    const filtered = templates.filter((template) => {
       if (statusFilter !== 'all' && template.status !== statusFilter) return false;
       if (!term) return true;
       return (
@@ -276,7 +301,37 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
         (template.formType ?? '').toLowerCase().includes(term)
       );
     });
-  }, [templates, search, statusFilter]);
+    return [...filtered].sort((a, b) => {
+      const delta = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      return sortDirection === 'asc' ? delta : -delta;
+    });
+  }, [templates, search, statusFilter, sortDirection]);
+
+  const allVisibleSelected =
+    visibleTemplates.length > 0 &&
+    visibleTemplates.every((template) => selectedIds.has(template.id));
+  const someVisibleSelected = visibleTemplates.some((template) => selectedIds.has(template.id));
+
+  function toggleSelectAllVisible() {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        for (const template of visibleTemplates) next.delete(template.id);
+      } else {
+        for (const template of visibleTemplates) next.add(template.id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // Suggestions for the New Template modal's three taxonomy fields — every distinct
   // value already used for that facet across the existing library.
@@ -323,6 +378,136 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
       toast.error(err instanceof Error ? err.message : 'Failed to delete template');
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  function openRecategorize(template: TemplateRow) {
+    setRecategorizing(template);
+    setDraftIndustry(template.industry ?? '');
+    setDraftCategory(template.category ?? '');
+    setDraftFormType(template.formType ?? '');
+  }
+
+  async function handleRecategorizeSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!recategorizing) return;
+    setIsRecategorizing(true);
+    try {
+      const response = await fetch(`/api/admin/form-templates/${recategorizing.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industry: draftIndustry.trim(),
+          category: draftCategory.trim(),
+          formType: draftFormType.trim(),
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response, 'Could not update categorisation'));
+      }
+      const { template: updated } = await response.json();
+      setTemplates((current) =>
+        current.map((row) =>
+          row.id === recategorizing.id
+            ? {
+                ...row,
+                industry: updated.industry,
+                category: updated.category,
+                formType: updated.formType,
+              }
+            : row,
+        ),
+      );
+      toast.success('Template recategorised');
+      setRecategorizing(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update categorisation');
+    } finally {
+      setIsRecategorizing(false);
+    }
+  }
+
+  /** Applies one status to every currently-selected template. Runs the PATCH calls in
+   * parallel (each is an independent row update, same as the per-row menu's onSetStatus)
+   * and reports how many failed rather than aborting the whole batch on one error. */
+  async function handleBulkSetStatus(status: TemplateStatus) {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setIsBulkActing(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const response = await fetch(`/api/admin/form-templates/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status }),
+            });
+            return { id, ok: response.ok };
+          } catch {
+            return { id, ok: false };
+          }
+        }),
+      );
+      const succeededIds = new Set(
+        results.filter((result) => result.ok).map((result) => result.id),
+      );
+      setTemplates((current) =>
+        current.map((row) => (succeededIds.has(row.id) ? { ...row, status } : row)),
+      );
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        for (const id of succeededIds) next.delete(id);
+        return next;
+      });
+      const failedCount = ids.length - succeededIds.size;
+      if (failedCount > 0) {
+        toast.error(
+          `${STATUS_LABELS[status]} applied to ${succeededIds.size}, but ${failedCount} failed`,
+        );
+      } else {
+        toast.success(
+          `${succeededIds.size} template${succeededIds.size === 1 ? '' : 's'} ${STATUS_LABELS[status].toLowerCase()}`,
+        );
+      }
+    } finally {
+      setIsBulkActing(false);
+    }
+  }
+
+  async function handleBulkDeleteConfirm() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setIsBulkActing(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const response = await fetch(`/api/admin/form-templates/${id}`, { method: 'DELETE' });
+            return { id, ok: response.ok };
+          } catch {
+            return { id, ok: false };
+          }
+        }),
+      );
+      const succeededIds = new Set(
+        results.filter((result) => result.ok).map((result) => result.id),
+      );
+      setTemplates((current) => current.filter((row) => !succeededIds.has(row.id)));
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        for (const id of succeededIds) next.delete(id);
+        return next;
+      });
+      const failedCount = ids.length - succeededIds.size;
+      if (failedCount > 0) {
+        toast.error(`Deleted ${succeededIds.size}, but ${failedCount} failed`);
+      } else {
+        toast.success(`${succeededIds.size} template${succeededIds.size === 1 ? '' : 's'} deleted`);
+      }
+      setBulkDeleting(false);
+    } finally {
+      setIsBulkActing(false);
     }
   }
 
@@ -399,6 +584,128 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
         </div>
       ) : null}
 
+      {recategorizing ? (
+        // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
+        <div
+          className="modal-overlay"
+          onMouseDown={() => !isRecategorizing && setRecategorizing(null)}
+        >
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recategorize-template-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h2 className="modal-title" id="recategorize-template-title">
+                Recategorize "{recategorizing.name}"
+              </h2>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setRecategorizing(null)}
+                aria-label="Close"
+                disabled={isRecategorizing}
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleRecategorizeSubmit}>
+              <div className="admin-template-fields">
+                <TaxonomyField
+                  label="Industry"
+                  placeholder="e.g. Healthcare"
+                  value={draftIndustry}
+                  onChange={setDraftIndustry}
+                  options={industryOptions}
+                  disabled={isRecategorizing}
+                />
+                <TaxonomyField
+                  label="Category"
+                  placeholder="e.g. NDIS, Childcare"
+                  value={draftCategory}
+                  onChange={setDraftCategory}
+                  options={categoryOptions}
+                  disabled={isRecategorizing}
+                />
+                <TaxonomyField
+                  label="Form type"
+                  placeholder="e.g. Incident & safety"
+                  value={draftFormType}
+                  onChange={setDraftFormType}
+                  options={formTypeOptions}
+                  disabled={isRecategorizing}
+                />
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => setRecategorizing(null)}
+                  disabled={isRecategorizing}
+                >
+                  Cancel
+                </button>
+                <button className="button" type="submit" disabled={isRecategorizing}>
+                  {isRecategorizing ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {bulkDeleting ? (
+        // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
+        <div className="modal-overlay" onMouseDown={() => !isBulkActing && setBulkDeleting(false)}>
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-delete-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h2 className="modal-title" id="bulk-delete-title">
+                Delete {selectedIds.size} template{selectedIds.size === 1 ? '' : 's'}?
+              </h2>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setBulkDeleting(false)}
+                aria-label="Close"
+                disabled={isBulkActing}
+              >
+                ×
+              </button>
+            </div>
+            <p className="modal-body-text">
+              This removes them from the template gallery. Forms organisations already created from
+              them are never affected — this only deletes the templates themselves.
+            </p>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => setBulkDeleting(false)}
+                disabled={isBulkActing}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="button button--danger"
+                onClick={() => void handleBulkDeleteConfirm()}
+                disabled={isBulkActing}
+              >
+                {isBulkActing ? 'Deleting…' : 'Delete templates'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {templates.length === 0 ? (
         <section className="admin-home-empty">
           <div>
@@ -439,21 +746,103 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                   className={`admin-orgs-chip${statusFilter === filter ? ' admin-orgs-chip--active' : ''}`}
                   onClick={() => setStatusFilter(filter)}
                 >
+                  <span className={`admin-orgs-chip-dot admin-orgs-chip-dot--${filter}`} />
                   {STATUS_FILTER_LABELS[filter]} {statusCounts[filter]}
                 </button>
               ))}
             </div>
           </div>
+
+          {selectedIds.size > 0 ? (
+            <div className="admin-orgs-bulk-bar">
+              <span className="admin-orgs-bulk-count">{selectedIds.size} selected</span>
+              <button
+                type="button"
+                className="button button--secondary"
+                disabled={isBulkActing}
+                onClick={() => void handleBulkSetStatus('published')}
+              >
+                Publish
+              </button>
+              <button
+                type="button"
+                className="button button--secondary"
+                disabled={isBulkActing}
+                onClick={() => void handleBulkSetStatus('archived')}
+              >
+                Archive
+              </button>
+              <button
+                type="button"
+                className="button button--ghost-danger"
+                disabled={isBulkActing}
+                onClick={() => setBulkDeleting(true)}
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                className="admin-orgs-bulk-clear"
+                disabled={isBulkActing}
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear
+              </button>
+            </div>
+          ) : null}
+
           <div className="admin-table-scroll">
             <table className="admin-orgs-table">
               <thead>
                 <tr>
+                  <th className="admin-orgs-table-check">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      disabled={visibleTemplates.length === 0}
+                      ref={(input) => {
+                        if (input) input.indeterminate = someVisibleSelected && !allVisibleSelected;
+                      }}
+                      onChange={toggleSelectAllVisible}
+                      aria-label="Select all templates"
+                    />
+                  </th>
                   <th>Template</th>
                   <th>Industry</th>
                   <th>Category</th>
                   <th>Form type</th>
                   <th>Status</th>
-                  <th>Updated</th>
+                  <th>
+                    <button
+                      type="button"
+                      className="table-sort-button"
+                      onClick={() =>
+                        setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))
+                      }
+                    >
+                      Updated
+                      <span className="table-sort-stack" aria-hidden="true">
+                        <span
+                          className={
+                            sortDirection === 'asc'
+                              ? 'table-sort-arrow table-sort-arrow--active'
+                              : 'table-sort-arrow'
+                          }
+                        >
+                          ▲
+                        </span>
+                        <span
+                          className={
+                            sortDirection === 'desc'
+                              ? 'table-sort-arrow table-sort-arrow--active'
+                              : 'table-sort-arrow'
+                          }
+                        >
+                          ▼
+                        </span>
+                      </span>
+                    </button>
+                  </th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -475,6 +864,19 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                         }
                       }}
                     >
+                      <td
+                        className="admin-orgs-table-check"
+                        data-label="Select"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(template.id)}
+                          onChange={() => toggleSelect(template.id)}
+                          aria-label={`Select ${template.name}`}
+                        />
+                      </td>
                       <td data-label="Template">
                         <span className="users-name-cell">
                           <span className="template-row-thumb" aria-hidden="true">
@@ -507,7 +909,8 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                         <TemplateRowMenu
                           template={template}
                           busy={busyId === template.id}
-                          onEdit={() => router.push(`/admin/templates/${template.id}/builder`)}
+                          onEdit={() => router.push(detailHref)}
+                          onRecategorize={() => openRecategorize(template)}
                           onPreview={() =>
                             window.open(
                               `/template-preview/${template.id}`,
@@ -524,7 +927,7 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                 })}
                 {visibleTemplates.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="admin-table-empty">
+                    <td colSpan={8} className="admin-table-empty">
                       No templates match that search.
                     </td>
                   </tr>

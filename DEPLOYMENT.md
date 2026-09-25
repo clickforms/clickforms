@@ -195,6 +195,19 @@ SSH session on the target box:
 
 ```bash
 mkdir -p /tmp/migrate
+
+# Always start from a clean copy. `docker cp` (like `mv`) silently nests SRC *inside*
+# DEST when DEST already exists as a directory, rather than replacing it — so on a box
+# that's already run migrations once before, skipping this rm and re-running `docker cp
+# clickforms-app:/app/prisma /tmp/migrate/prisma` produces /tmp/migrate/prisma/prisma
+# (or /tmp/migrate/prisma/<name-you-moved-in>), leaving the *old* prisma/migrations
+# untouched underneath and `migrate deploy` silently reading stale, already-applied
+# history as if it were current. This bit us for real on 2026-09-25: two migrations
+# looked "already applied" (no pending) purely because of this nesting, layered on top
+# of a separate stale-image bug (see the CI cache-from/cache-to note in
+# deploy-staging.yml). Only prisma/ needs to be wiped — node_modules/ below is still
+# safe to reuse.
+rm -rf /tmp/migrate/prisma
 docker cp clickforms-app:/app/prisma /tmp/migrate/prisma
 
 # Prisma 7's migrate deploy needs a config file, not just schema.prisma's datasource block.
@@ -221,7 +234,8 @@ docker run --rm -v /tmp/migrate:/app -w /app \
 ```
 
 `node_modules` installed with `--no-save` persists in the bind-mounted `/tmp/migrate` across
-separate `--rm` container runs, so subsequent migrations on the same box skip the reinstall.
+separate `--rm` container runs, so subsequent migrations on the same box skip the reinstall —
+the `rm -rf` above only targets `prisma/`, not the whole directory, to keep that benefit.
 `/tmp/migrate` is a durable scratch workspace — safe to reuse for ad-hoc scripts too (see §7).
 
 ## 7. Creating admin users / organizations

@@ -5,8 +5,9 @@ import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
 import { authOptions } from '@/lib/auth';
 import { prisma, withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
+import { publicFormShareMetadata } from '@/lib/forms/share-metadata';
 import { requireOrganizationId } from '@/lib/session';
-import { buildOrgFormUrl, getCurrentSubdomain, getOrganizationBySubdomain } from '@/lib/tenant';
+import { getCurrentSubdomain, getOrganizationBySubdomain } from '@/lib/tenant';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -39,20 +40,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     });
     if (!form) return {};
 
-    const title = organization.name;
-    if (!organization.logoStorageKey) {
-      return { title, description: '', openGraph: { title } };
-    }
-
-    const logoUrl = buildOrgFormUrl(subdomain, '/api/f/logo');
-    return {
-      title,
-      description: '',
-      // width/height must match SIDE in /api/f/logo/route.ts -- telling the crawler the
-      // image is square up front is what makes WhatsApp/etc. show it as a small icon next
-      // to the title instead of a large banner across the top of the card.
-      openGraph: { title, images: [{ url: logoUrl, width: 400, height: 400 }] },
-    };
+    return publicFormShareMetadata({
+      organizationName: organization.name,
+      subdomain,
+      hasLogo: Boolean(organization.logoStorageKey),
+    });
   } catch {
     return {};
   }

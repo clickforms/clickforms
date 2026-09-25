@@ -1,20 +1,14 @@
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { toErrorResponse } from '@/lib/api-errors';
+import { SHARE_LOGO_SIDE } from '@/lib/forms/share-metadata';
 import { getObjectBytes, isOrganizationLogoKey } from '@/lib/s3';
 import { getCurrentSubdomain, getOrganizationBySubdomain } from '@/lib/tenant';
 
-// Public, no-auth route: gives share-link previews (WhatsApp/iMessage/Slack unfurls, etc.)
-// a stable, non-expiring, square-cropped version of an org's uploaded logo, for use as
-// generateMetadata's openGraph.images (see src/app/f/[slug]/page.tsx and its preview
-// counterpart). Unlike every other image route in this app, this one can't just redirect
-// to a presigned URL of the raw file (the pattern in
-// /api/f/[slug]/fields/[fieldId]/image/route.ts) -- most uploaded logos are wide
-// wordmarks, and link-unfurlers (WhatsApp in particular) render a wide/landscape OG image
-// as a big banner across the top of the card, not the small square icon shown next to the
-// title (compare a Microsoft/Google link preview, which uses a square icon). Padding the
-// logo into a square fixes that: SIDE is a mnemonic for the square canvas size in px.
-const SIDE = 400;
+// Public, no-auth route: square-pads an org's uploaded logo for share-link unfurls
+// (see src/lib/forms/share-metadata.ts). Can't redirect to a presigned raw file — most
+// uploaded logos are wide wordmarks, and a landscape OG image is what WhatsApp renders
+// as a banner across the top of the card.
 
 export async function GET(): Promise<NextResponse> {
   try {
@@ -43,7 +37,10 @@ export async function GET(): Promise<NextResponse> {
     // on whatever background color the recipient's chat app happens to use.
     const square = await sharp(original)
       .flatten({ background: { r: 255, g: 255, b: 255 } })
-      .resize(SIDE, SIDE, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+      .resize(SHARE_LOGO_SIDE, SHARE_LOGO_SIDE, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255 },
+      })
       .png()
       .toBuffer();
 

@@ -89,8 +89,22 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ steps.image.outputs.image }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # No cache-from/cache-to: a build on 2026-09-25 pushed and deployed an image
+          # tagged with the correct current-commit sha (sha-99e4d4a) whose /app/prisma
+          # was nonetheless stuck at the 20260916000000_add_form_templates migration —
+          # two full days of newer, committed-and-tracked migrations (rename_org_plan_tiers,
+          # add_template_taxonomy_facets) were missing from the running container's actual
+          # files, even though `git show <that sha>:prisma/migrations` has them. The most
+          # likely explanation is a stale GHA-cache hit on the builder stage's `COPY . .`
+          # layer (see Dockerfile) reusing old file content under a cache key that didn't
+          # actually change. Given the app's own source of truth for what's in the database
+          # (Prisma's migration history) is being read from this same image, a caching bug
+          # here isn't a performance nit — it silently drifts the deployed schema out of
+          # sync with committed code. Cross-arch (arm64-on-amd64-via-QEMU) builds are already
+          # slow enough that shaving build time isn't worth re-introducing this risk; if
+          # build time becomes a real problem, reintroduce caching scoped to just the
+          # `deps` stage (keyed on yarn.lock, which changes far less often) rather than
+          # letting it anywhere near the stage that COPYs application source.
 
   deploy:
     needs: build-and-push

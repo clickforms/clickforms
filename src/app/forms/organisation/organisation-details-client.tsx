@@ -1000,7 +1000,9 @@ export function OrganisationDetailsClient({
                 {isChangingPlan
                   ? 'Updating…'
                   : selectedPlan === planInfo.plan
-                    ? 'Current plan'
+                    ? planInfo.status === 'trial'
+                      ? 'Subscribe'
+                      : 'Current plan'
                     : `Switch to ${PLAN_LABELS[selectedPlan]}`}
               </button>
             </div>

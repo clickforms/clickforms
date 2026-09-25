@@ -599,47 +599,92 @@ a {
 /* Trial-expired banner (AdminShellClient) — sits above the header on every /forms/* page
    for as long as isTrialExpired() is true. Warning tone, not error/danger: the org isn't
    suspended or broken, it just needs a plan. See src/lib/auth.ts for why this replaces a
-   sign-in block, and assertOrgActionsAllowed for what's actually enforced server-side. */
+   sign-in block, and assertOrgActionsAllowed for what's actually enforced server-side.
+   Redesigned per common SaaS trial-bar convention (Vercel/Linear/Stripe-style): the
+   *background* carries the warning tone, not every element on it — a same-hue pill button
+   plus a same-hue outlined "ghost" pill (the previous version) reads as one loud orange
+   block rather than "calm bar, one clear action". The primary CTA is instead the same
+   dark inverted-pill treatment used everywhere else in the app for a top-level action
+   (.share-panel-view-live, .builder-header-cta), and the secondary action drops its pill
+   entirely to stay a plain link — so there's exactly one thing shaped like a button. */
 .admin-trial-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
-  padding: 0.65rem 1.5rem;
+  padding: 0.55rem 1.5rem;
   background: var(--color-warning-soft);
   border-bottom: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
   flex-shrink: 0;
 }
 
+.admin-trial-banner-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Small fixed dot rather than a full icon glyph — enough to give the bar a scannable
+   anchor at a glance (the pattern most trial/warning bars use) without pulling in a new
+   icon just for this one spot. */
+.admin-trial-banner-dot {
+  flex-shrink: 0;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--color-warning);
+}
+
 .admin-trial-banner-text {
   color: var(--color-warning);
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   font-weight: 500;
+}
+
+.admin-trial-banner-text strong {
+  font-weight: 700;
 }
 
 .admin-trial-banner-actions {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 1rem;
   flex-shrink: 0;
 }
 
 .admin-trial-banner-link {
   display: inline-flex;
   align-items: center;
-  padding: 0.3rem 0.75rem;
+  padding: 0.35rem 0.85rem;
   border-radius: var(--radius-pill);
   font-size: 0.8rem;
   font-weight: 600;
-  background: var(--color-warning);
-  color: #fff;
+  background: var(--color-text);
+  color: var(--color-surface);
+  transition: background-color 0.12s ease;
+}
+
+.admin-trial-banner-link:hover {
+  background: #000;
+}
+
+.admin-shell[data-theme="dark"] .admin-trial-banner-link:hover {
+  background: var(--color-text-muted);
 }
 
 .admin-trial-banner-link--ghost {
+  padding: 0;
   background: transparent;
   color: var(--color-warning);
-  border: 1px solid color-mix(in srgb, var(--color-warning) 45%, transparent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.admin-trial-banner-link--ghost:hover {
+  color: var(--color-warning-hover);
 }
 
 .admin-header {
@@ -6471,15 +6516,52 @@ textarea.text-input {
   margin-right: 0.5rem;
 }
 
-/* Share dropdown — holds both "copy the link" and "open the live form", so the one
-   trigger covers what used to need a separate Copy link button and no way at all to
-   view the live (published) form instead of just the draft Preview. */
+/* Share popover — stays inside the viewport (DropdownMenu clamps + ResizeObserver)
+   and uses a fixed card width so compose/preview never grow off the right edge. */
 .share-panel {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  width: min(17.5rem, calc(100vw - 2rem));
-  padding: 0.75rem;
+  gap: 0.7rem;
+  width: min(22.5rem, calc(100vw - 1.5rem));
+  max-width: calc(100vw - 1.5rem);
+  padding: 0.9rem;
+  overflow-x: hidden;
+}
+
+.share-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.share-panel-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.share-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.share-panel-close:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
 }
 
 .share-panel-label {
@@ -6494,8 +6576,9 @@ textarea.text-input {
 .share-panel-url-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.5rem;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.4rem 0.4rem 0.4rem 0.7rem;
   background-color: var(--color-surface-sunken);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -6516,17 +6599,15 @@ textarea.text-input {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 1.6rem;
-  height: 1.6rem;
-  padding: 0;
+  height: 1.7rem;
+  padding: 0 0.65rem;
   background-color: var(--color-surface);
-  color: var(--color-text-muted);
+  color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
-  transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
 }
 
 .share-panel-copy:hover {
@@ -6540,59 +6621,56 @@ textarea.text-input {
   justify-content: center;
   gap: 0.4rem;
   padding: 0.5rem 0.6rem;
-  background-color: var(--color-text);
-  color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
   font-size: 0.8125rem;
   font-weight: 600;
   text-decoration: none;
-  transition: background-color 0.12s ease;
 }
 
 .share-panel-view-live:hover {
-  background-color: #000;
+  background: var(--color-surface-sunken);
 }
 
-/* Same inverted-pill family as .builder-header-cta (bg: var(--color-text), text:
-   var(--color-surface)) — in dark mode that base already reads as a light pill, so a
-   literal #000 hover would flatten it to black instead of just darkening it. */
 .admin-shell[data-theme="dark"] .share-panel-view-live:hover {
-  background-color: var(--color-text-muted);
-}
-
-/* "Send via email/SMS" flow — same share-panel, so it inherits .share-panel's base
-   padding/gap; this modifier just widens it once the send flow is showing, since the
-   compose/preview content needs more room than the plain copy-link row above. */
-.share-panel--sending {
-  width: min(22rem, calc(100vw - 2rem));
+  background-color: var(--color-surface-sunken);
 }
 
 .share-panel-send-row {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.45rem;
   padding-top: 0.35rem;
   border-top: 1px solid var(--color-border);
+}
+
+.share-panel-send-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
 }
 
 .share-panel-send-option {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.55rem;
-  background-color: transparent;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.55rem 0.5rem;
+  background-color: var(--color-surface-sunken);
   color: var(--color-text);
-  border: none;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 0.8125rem;
   font-weight: 600;
-  text-align: left;
   cursor: pointer;
-  transition: background-color 0.12s ease;
 }
 
 .share-panel-send-option:hover {
-  background-color: var(--color-surface-sunken);
+  background-color: var(--color-lavender-soft);
+  border-color: color-mix(in srgb, var(--color-lavender-strong) 35%, var(--color-border));
 }
 
 .share-panel-send-compose,
@@ -6600,6 +6678,7 @@ textarea.text-input {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
   padding-top: 0.35rem;
   border-top: 1px solid var(--color-border);
 }
@@ -6613,7 +6692,9 @@ textarea.text-input {
 }
 
 .share-panel-send-input {
-  padding: 0.5rem 0.6rem;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
   background-color: var(--color-surface);
   color: var(--color-text);
   border: 1px solid var(--color-border);
@@ -6627,29 +6708,30 @@ textarea.text-input {
 }
 
 .share-panel-send-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
 }
 
 .share-panel-send-back,
 .share-panel-send-primary {
-  padding: 0.4rem 0.7rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.12s ease;
 }
 
 .share-panel-send-back {
-  background-color: transparent;
+  background-color: var(--color-surface);
   color: var(--color-text-muted);
   border: 1px solid var(--color-border);
 }
 
 .share-panel-send-back:hover {
   background-color: var(--color-surface-sunken);
+  color: var(--color-text);
 }
 
 .share-panel-send-primary {
@@ -6691,6 +6773,7 @@ textarea.text-input {
   line-height: 1.5;
   color: var(--color-text-muted);
   white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 /* Chat-bubble mock for the SMS preview — familiar shape for "here's what a text looks

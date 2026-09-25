@@ -43,8 +43,12 @@ interface AdminShellClientProps {
 function TrialExpiredBanner() {
   return (
     <div className="admin-trial-banner" role="alert">
-      <span className="admin-trial-banner-text">
-        Your trial has ended. Live forms are offline and changes are paused until you subscribe.
+      <span className="admin-trial-banner-message">
+        <span className="admin-trial-banner-dot" aria-hidden="true" />
+        <span className="admin-trial-banner-text">
+          <strong>Your trial has ended.</strong> Live forms are offline and changes are paused until
+          you subscribe.
+        </span>
       </span>
       <span className="admin-trial-banner-actions">
         {/* /forms/organisation defaults to its Billing tab whenever plan.status !== 'active'
@@ -53,7 +57,7 @@ function TrialExpiredBanner() {
         <Link href="/forms/organisation" className="admin-trial-banner-link">
           Subscribe
         </Link>
-        <Link href="/contact" className="admin-trial-banner-link admin-trial-banner-link--ghost">
+        <Link href="/contact" className="admin-trial-banner-link--ghost">
           Contact us
         </Link>
       </span>

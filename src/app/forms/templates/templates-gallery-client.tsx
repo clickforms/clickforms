@@ -1,34 +1,40 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import type { GalleryTemplate } from '@/app/forms/templates/gallery-template';
 import { TemplatePreviewModal } from '@/app/forms/templates/template-preview-modal';
+import { DropdownMenu } from '@/components/dropdown-menu';
 import { useToast } from '@/components/toast';
 import { getErrorMessage, readApiError } from '@/lib/error-message';
+import type { LayoutStyle } from '@/lib/forms/schema';
 
-export interface GalleryTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-  industry: string | null;
-  category: string | null;
-  formType: string | null;
-  thumbnailUrl: string | null;
-  createdAt: string;
-}
+export type { GalleryTemplate };
 
-type SortOption = 'newest' | 'az';
-type FacetName = 'industry' | 'category' | 'formType';
+type SortOption = 'popular' | 'newest' | 'az';
+type LayoutFilter = 'all' | LayoutStyle;
 
 const UNCATEGORISED = 'Uncategorised';
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'popular', label: 'Popular' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'az', label: 'A–Z' },
+];
+const LAYOUT_OPTIONS: { value: LayoutFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'default', label: 'Classic' },
+  { value: 'table', label: 'Table' },
+];
 
-function facetValue(template: GalleryTemplate, facet: FacetName): string {
+function facetValue(
+  template: GalleryTemplate,
+  facet: 'industry' | 'category' | 'formType',
+): string {
   return template[facet]?.trim() || UNCATEGORISED;
 }
 
-/** How closely `template` matches `reference` for the preview modal's "More like this"
- * row — form type is the most specific facet so it's weighted highest, industry the
- * broadest so it's weighted lowest. A template must share at least one facet to qualify. */
+/** How closely `template` matches `reference` for the preview modal's related row —
+ * form type is the most specific facet so it's weighted highest, industry the broadest. */
 function relatedScore(template: GalleryTemplate, reference: GalleryTemplate): number {
   let score = 0;
   if (
@@ -54,27 +60,28 @@ function relatedScore(template: GalleryTemplate, reference: GalleryTemplate): nu
 
 function SearchIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M13 13l-2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M13 13l-2.5-2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
 
-function ChevronIcon({ open }: { open: boolean }) {
+function CloseIcon() {
   return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      fill="none"
-      aria-hidden="true"
-      className={`template-gallery-facet-chevron${open ? ' template-gallery-facet-chevron--open' : ''}`}
-    >
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BackIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
-        d="M3 4.5l3 3 3-3"
+        d="M10 3.5 5.5 8l4.5 4.5"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -82,52 +89,146 @@ function ChevronIcon({ open }: { open: boolean }) {
   );
 }
 
-/** One collapsible sidebar section of checkboxes with live counts — used for the
- * Industry / Category / Form type facets. Counts reflect every other active filter
- * (search + the other two facets) so picking a value here never zeroes out its own
- * sibling options. */
-function FacetSection({
-  title,
-  options,
-  selected,
-  onToggle,
-}: {
-  title: string;
-  options: { value: string; count: number }[];
-  selected: Set<string>;
-  onToggle: (value: string) => void;
-}) {
-  const [open, setOpen] = useState(true);
-  if (options.length === 0) return null;
-
+function TinyChevron({ open }: { open?: boolean }) {
   return (
-    <div className="template-gallery-facet">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden="true"
+      className={`template-gallery-chevron${open ? ' template-gallery-chevron--open' : ''}`}
+    >
+      <path
+        d="M3 4.5l3 3 3-3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PreviewEyeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path
+        d="M1.7 9s2.4-4.2 7.3-4.2S16.3 9 16.3 9s-2.4 4.2-7.3 4.2S1.7 9 1.7 9Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="9" cy="9" r="2.15" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+/** Live scaled form in the card window. CSS :hover on the article keeps the form
+ * panning for as long as the pointer is anywhere on the card. */
+function TemplateBrowseCard({
+  template,
+  isCreating,
+  onPreview,
+  onUse,
+}: {
+  template: GalleryTemplate;
+  isCreating: boolean;
+  onPreview: () => void;
+  onUse: () => void;
+}) {
+  return (
+    <article className="template-browse-card">
+      <div className="template-browse-card-art">
+        <span className="template-browse-card-viewport">
+          <iframe
+            className="template-browse-card-frame"
+            src={`/template-preview/${template.id}?embed=1&card=1`}
+            title={`Form preview of ${template.name}`}
+            tabIndex={-1}
+            loading="lazy"
+            aria-hidden="true"
+          />
+        </span>
+        <button
+          type="button"
+          className="template-browse-card-hit"
+          onClick={onPreview}
+          aria-label={`Preview ${template.name}`}
+        >
+          <span className="template-browse-card-preview-btn">
+            <PreviewEyeIcon />
+            Preview
+          </span>
+        </button>
+      </div>
+      <h2 className="template-browse-card-title">{template.name}</h2>
       <button
         type="button"
-        className="template-gallery-facet-header"
-        onClick={() => setOpen((current) => !current)}
-        aria-expanded={open}
+        className="template-browse-card-cta"
+        disabled={isCreating}
+        onClick={onUse}
       >
-        <span>{title}</span>
-        <ChevronIcon open={open} />
+        Use Template
       </button>
-      {open ? (
-        <ul className="template-gallery-facet-list">
+    </article>
+  );
+}
+
+function FacetSelect({
+  label,
+  valueLabel,
+  options,
+  onSelect,
+}: {
+  label: string;
+  valueLabel: string;
+  options: { value: string; label: string }[];
+  onSelect: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <div className="template-gallery-select">
+      <span className="template-gallery-select-label">{label}</span>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="template-gallery-select-value"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        {valueLabel}
+        <TinyChevron />
+      </button>
+      <DropdownMenu
+        open={open}
+        onOpenChange={setOpen}
+        triggerRef={triggerRef as RefObject<HTMLButtonElement | null>}
+        align="end"
+        panelClassName="actions-menu-panel template-gallery-select-panel"
+      >
+        {/* biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern */}
+        <ul role="menu">
           {options.map((option) => (
-            <li key={option.value}>
-              <label className="template-gallery-facet-option">
-                <input
-                  type="checkbox"
-                  checked={selected.has(option.value)}
-                  onChange={() => onToggle(option.value)}
-                />
-                <span className="template-gallery-facet-label">{option.value}</span>
-                <span className="template-gallery-facet-count">{option.count}</span>
-              </label>
+            <li role="none" key={option.value}>
+              <button
+                type="button"
+                role="menuitem"
+                className={`actions-menu-item${option.label === valueLabel ? ' actions-menu-item--success' : ''}`}
+                onClick={() => {
+                  onSelect(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
             </li>
           ))}
         </ul>
-      ) : null}
+      </DropdownMenu>
     </div>
   );
 }
@@ -136,10 +237,13 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
   const router = useRouter();
   const toast = useToast();
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [selectedIndustries, setSelectedIndustries] = useState<Set<string>>(new Set());
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [selectedFormTypes, setSelectedFormTypes] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<SortOption>('popular');
+  const [layoutFilter, setLayoutFilter] = useState<LayoutFilter>('all');
+  const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
+  const [selectedFormType, setSelectedFormType] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [typesOpen, setTypesOpen] = useState(true);
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
   const [previewingTemplate, setPreviewingTemplate] = useState<GalleryTemplate | null>(null);
   const [naming, setNaming] = useState<{ templateId?: string; suggestedName: string } | null>(null);
   const [formName, setFormName] = useState('');
@@ -155,13 +259,6 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [naming, isCreating]);
 
-  function toggleFacetValue(set: Set<string>, value: string): Set<string> {
-    const next = new Set(set);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
-    return next;
-  }
-
   const term = search.trim().toLowerCase();
   function matchesSearch(template: GalleryTemplate): boolean {
     if (!term) return true;
@@ -174,69 +271,76 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
     );
   }
 
-  function matchesFacets(template: GalleryTemplate, exclude?: FacetName): boolean {
-    const industryOk =
-      exclude === 'industry' ||
-      selectedIndustries.size === 0 ||
-      selectedIndustries.has(facetValue(template, 'industry'));
-    const categoryOk =
-      exclude === 'category' ||
-      selectedCategories.size === 0 ||
-      selectedCategories.has(facetValue(template, 'category'));
-    const formTypeOk =
-      exclude === 'formType' ||
-      selectedFormTypes.size === 0 ||
-      selectedFormTypes.has(facetValue(template, 'formType'));
-    return industryOk && categoryOk && formTypeOk;
+  function matchesLayout(template: GalleryTemplate): boolean {
+    return layoutFilter === 'all' || template.layoutStyle === layoutFilter;
   }
 
-  function buildFacetOptions(facet: FacetName) {
+  function matchesIndustry(template: GalleryTemplate): boolean {
+    return !selectedIndustry || facetValue(template, 'industry') === selectedIndustry;
+  }
+
+  function matchesType(template: GalleryTemplate): boolean {
+    if (!selectedFormType) return true;
+    if (facetValue(template, 'formType') !== selectedFormType) return false;
+    if (!selectedCategory) return true;
+    return facetValue(template, 'category') === selectedCategory;
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: matchesSearch/matchesLayout/matchesType close over search + layout + type each render
+  const industryOptions = useMemo(() => {
     const counts = new Map<string, number>();
     for (const template of templates) {
-      if (!matchesSearch(template) || !matchesFacets(template, facet)) continue;
-      const value = facetValue(template, facet);
+      if (!matchesSearch(template) || !matchesLayout(template) || !matchesType(template)) continue;
+      const value = facetValue(template, 'industry');
       counts.set(value, (counts.get(value) ?? 0) + 1);
     }
     return Array.from(counts.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([value, count]) => ({ value, count }));
-  }
+      .map(([value, count]) => ({ value, label: value, count }));
+  }, [templates, term, layoutFilter, selectedFormType, selectedCategory]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: buildFacetOptions is redefined every render (it closes over search + the other two facets) — listing it would defeat the memo; the primitives below are its real dependencies
-  const industryOptions = useMemo(
-    () => buildFacetOptions('industry'),
-    [templates, term, selectedCategories, selectedFormTypes],
-  );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: buildFacetOptions is redefined every render (it closes over search + the other two facets) — listing it would defeat the memo; the primitives below are its real dependencies
-  const categoryOptions = useMemo(
-    () => buildFacetOptions('category'),
-    [templates, term, selectedIndustries, selectedFormTypes],
-  );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: buildFacetOptions is redefined every render (it closes over search + the other two facets) — listing it would defeat the memo; the primitives below are its real dependencies
-  const formTypeOptions = useMemo(
-    () => buildFacetOptions('formType'),
-    [templates, term, selectedIndustries, selectedCategories],
-  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: matchesSearch/matchesLayout/matchesIndustry close over search + layout + industry each render
+  const typeTree = useMemo(() => {
+    const groups = new Map<string, { count: number; categories: Map<string, number> }>();
+    for (const template of templates) {
+      if (!matchesSearch(template) || !matchesLayout(template) || !matchesIndustry(template)) {
+        continue;
+      }
+      const type = facetValue(template, 'formType');
+      const category = facetValue(template, 'category');
+      const group = groups.get(type) ?? { count: 0, categories: new Map() };
+      group.count += 1;
+      group.categories.set(category, (group.categories.get(category) ?? 0) + 1);
+      groups.set(type, group);
+    }
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([formType, group]) => ({
+        formType,
+        count: group.count,
+        categories: Array.from(group.categories.entries())
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([value, count]) => ({ value, count })),
+      }));
+  }, [templates, term, layoutFilter, selectedIndustry]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: matchesSearch/matchesFacets are redefined every render (they close over search + facet selections) — listing them would defeat the memo; the primitives below are their real dependencies
+  // biome-ignore lint/correctness/useExhaustiveDependencies: matches* close over the filter primitives listed below
   const visibleTemplates = useMemo(() => {
     const filtered = templates.filter(
-      (template) => matchesSearch(template) && matchesFacets(template),
+      (template) =>
+        matchesSearch(template) &&
+        matchesLayout(template) &&
+        matchesIndustry(template) &&
+        matchesType(template),
     );
     return [...filtered].sort((a, b) => {
       if (sortBy === 'az') return a.name.localeCompare(b.name);
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (sortBy === 'newest') {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return 0;
     });
-  }, [templates, term, selectedIndustries, selectedCategories, selectedFormTypes, sortBy]);
-
-  const activeFilterCount =
-    selectedIndustries.size + selectedCategories.size + selectedFormTypes.size;
-
-  function clearFilters() {
-    setSelectedIndustries(new Set());
-    setSelectedCategories(new Set());
-    setSelectedFormTypes(new Set());
-  }
+  }, [templates, term, layoutFilter, selectedIndustry, selectedFormType, selectedCategory, sortBy]);
 
   const relatedTemplates = useMemo(() => {
     const current = previewingTemplate;
@@ -246,7 +350,7 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
       .map((template) => ({ template, score: relatedScore(template, current) }))
       .filter((entry) => entry.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 6)
+      .slice(0, 8)
       .map((entry) => entry.template);
   }, [templates, previewingTemplate]);
 
@@ -275,149 +379,220 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
     void createForm({ name: formName.trim(), templateId: naming.templateId });
   }
 
+  function goBack() {
+    router.push('/forms');
+  }
+
+  function selectFormType(formType: string) {
+    if (selectedFormType === formType && !selectedCategory) {
+      setSelectedFormType(null);
+      setSelectedCategory(null);
+      return;
+    }
+    setSelectedFormType(formType);
+    setSelectedCategory(null);
+  }
+
+  function selectCategory(formType: string, category: string) {
+    if (selectedFormType === formType && selectedCategory === category) {
+      setSelectedFormType(formType);
+      setSelectedCategory(null);
+      return;
+    }
+    setSelectedFormType(formType);
+    setSelectedCategory(category);
+  }
+
+  function toggleTypeExpanded(formType: string) {
+    setExpandedTypes((current) => {
+      const next = new Set(current);
+      if (next.has(formType)) next.delete(formType);
+      else next.add(formType);
+      return next;
+    });
+  }
+
+  const sortLabel = SORT_OPTIONS.find((option) => option.value === sortBy)?.label ?? 'Popular';
+  const layoutLabel =
+    LAYOUT_OPTIONS.find((option) => option.value === layoutFilter)?.label ?? 'All';
+  const industryLabel = selectedIndustry ?? 'All';
+
   return (
     <div className="template-gallery-page">
+      <button type="button" className="template-gallery-back" onClick={goBack}>
+        <BackIcon />
+        Back
+      </button>
+      <button type="button" className="template-gallery-close" onClick={goBack} aria-label="Close">
+        <CloseIcon />
+      </button>
+
       <header className="template-gallery-header">
         <h1 className="template-gallery-title">Choose a template</h1>
         <p className="template-gallery-lead">
-          Start blank, or customize a template built for your industry.
+          Explore ready-made templates to create a form in minutes or{' '}
+          <button
+            type="button"
+            className="template-gallery-scratch"
+            disabled={isCreating}
+            onClick={() => setNaming({ suggestedName: '' })}
+          >
+            create form from scratch
+          </button>
         </p>
-        <label className="template-gallery-search">
-          <SearchIcon />
-          <input
-            type="search"
-            placeholder="Search templates"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search templates"
-          />
-        </label>
       </header>
 
       <div className="template-gallery-shell">
         <aside className="template-gallery-sidebar">
-          <div className="template-gallery-facet">
-            <p className="template-gallery-facet-title">Sort by</p>
-            <ul className="template-gallery-facet-list">
-              <li>
-                <label className="template-gallery-facet-option template-gallery-facet-option--radio">
-                  <input
-                    type="radio"
-                    name="template-sort"
-                    checked={sortBy === 'newest'}
-                    onChange={() => setSortBy('newest')}
-                  />
-                  <span className="template-gallery-facet-label">Newest</span>
-                </label>
-              </li>
-              <li>
-                <label className="template-gallery-facet-option template-gallery-facet-option--radio">
-                  <input
-                    type="radio"
-                    name="template-sort"
-                    checked={sortBy === 'az'}
-                    onChange={() => setSortBy('az')}
-                  />
-                  <span className="template-gallery-facet-label">A–Z</span>
-                </label>
-              </li>
-            </ul>
-          </div>
-
-          <FacetSection
-            title="Industry"
-            options={industryOptions}
-            selected={selectedIndustries}
-            onToggle={(value) =>
-              setSelectedIndustries((current) => toggleFacetValue(current, value))
-            }
+          <FacetSelect
+            label="Sort by"
+            valueLabel={sortLabel}
+            options={SORT_OPTIONS}
+            onSelect={(value) => setSortBy(value as SortOption)}
           />
-          <FacetSection
-            title="Category"
-            options={categoryOptions}
-            selected={selectedCategories}
-            onToggle={(value) =>
-              setSelectedCategories((current) => toggleFacetValue(current, value))
-            }
+          <FacetSelect
+            label="Form layout"
+            valueLabel={layoutLabel}
+            options={LAYOUT_OPTIONS}
+            onSelect={(value) => setLayoutFilter(value as LayoutFilter)}
           />
-          <FacetSection
-            title="Form type"
-            options={formTypeOptions}
-            selected={selectedFormTypes}
-            onToggle={(value) =>
-              setSelectedFormTypes((current) => toggleFacetValue(current, value))
-            }
+          <FacetSelect
+            label="Industry"
+            valueLabel={industryLabel}
+            options={[
+              { value: '', label: 'All' },
+              ...industryOptions.map((option) => ({ value: option.value, label: option.value })),
+            ]}
+            onSelect={(value) => setSelectedIndustry(value || null)}
           />
 
-          {activeFilterCount > 0 ? (
-            <button type="button" className="template-gallery-clear" onClick={clearFilters}>
-              Clear filters ({activeFilterCount})
+          <div className="template-gallery-types">
+            <button
+              type="button"
+              className="template-gallery-types-header"
+              onClick={() => setTypesOpen((current) => !current)}
+              aria-expanded={typesOpen}
+            >
+              <span>Types</span>
+              <TinyChevron open={typesOpen} />
             </button>
-          ) : null}
+            {typesOpen ? (
+              <ul className="template-gallery-types-list">
+                {typeTree.map((group) => {
+                  const expandable = group.categories.some(
+                    (category) => category.value !== UNCATEGORISED,
+                  );
+                  const expanded = expandedTypes.has(group.formType);
+                  const typeActive =
+                    selectedFormType === group.formType && selectedCategory === null;
+                  return (
+                    <li key={group.formType}>
+                      <div
+                        className={`template-gallery-type-row${typeActive ? ' template-gallery-type-row--active' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className="template-gallery-type-name"
+                          onClick={() => selectFormType(group.formType)}
+                        >
+                          {group.formType}
+                        </button>
+                        {expandable ? (
+                          <button
+                            type="button"
+                            className="template-gallery-type-expand"
+                            aria-label={expanded ? 'Collapse' : 'Expand'}
+                            aria-expanded={expanded}
+                            onClick={() => toggleTypeExpanded(group.formType)}
+                          >
+                            <TinyChevron open={expanded} />
+                          </button>
+                        ) : (
+                          <span className="template-gallery-type-expand" />
+                        )}
+                        <span className="template-gallery-type-count">{group.count}</span>
+                      </div>
+                      {expandable && expanded ? (
+                        <ul className="template-gallery-type-children">
+                          {group.categories.map((category) => {
+                            const childActive =
+                              selectedFormType === group.formType &&
+                              selectedCategory === category.value;
+                            return (
+                              <li key={category.value}>
+                                <button
+                                  type="button"
+                                  className={`template-gallery-type-child${childActive ? ' template-gallery-type-child--active' : ''}`}
+                                  onClick={() => selectCategory(group.formType, category.value)}
+                                >
+                                  <span>{category.value}</span>
+                                  <span className="template-gallery-type-count">
+                                    {category.count}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+          </div>
         </aside>
 
-        <main className="template-gallery-main">
-          {visibleTemplates.length === 0 && (term || activeFilterCount > 0) ? (
+        <div className="template-gallery-main">
+          <form className="template-gallery-search" onSubmit={(event) => event.preventDefault()}>
+            <input
+              type="search"
+              placeholder="Search in all templates"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              aria-label="Search in all templates"
+            />
+            <button type="submit" className="template-gallery-search-btn" aria-label="Search">
+              <SearchIcon />
+            </button>
+          </form>
+
+          <div className="template-gallery-grid">
+            <button
+              type="button"
+              className="template-browse-card template-browse-card--scratch"
+              disabled={isCreating}
+              onClick={() => setNaming({ suggestedName: '' })}
+            >
+              <span className="template-browse-card-scratch-art" aria-hidden="true">
+                <span className="template-browse-card-scratch-plus">+</span>
+              </span>
+              <span className="template-browse-card-title">Start from scratch</span>
+              <span className="template-browse-card-scratch-copy">
+                A blank slate is all you need
+              </span>
+            </button>
+            {visibleTemplates.map((template) => (
+              <TemplateBrowseCard
+                key={template.id}
+                template={template}
+                isCreating={isCreating}
+                onPreview={() => setPreviewingTemplate(template)}
+                onUse={() => setNaming({ templateId: template.id, suggestedName: template.name })}
+              />
+            ))}
+          </div>
+          {visibleTemplates.length === 0 ? (
             <p className="template-gallery-empty">No templates match these filters.</p>
-          ) : (
-            <div className="template-gallery-grid">
-              <button
-                type="button"
-                className="template-browse-card template-browse-card--blank"
-                disabled={isCreating}
-                onClick={() => setNaming({ suggestedName: '' })}
-              >
-                <span className="template-browse-card-art">
-                  <span className="template-browse-card-blank-mark">+</span>
-                  <span>Create blank</span>
-                </span>
-              </button>
-              {visibleTemplates.map((template) => {
-                const facets = [template.industry, template.category, template.formType].filter(
-                  Boolean,
-                );
-                return (
-                  <div key={template.id} className="template-browse-card">
-                    <button
-                      type="button"
-                      className="template-browse-card-art"
-                      onClick={() => setPreviewingTemplate(template)}
-                    >
-                      {template.thumbnailUrl ? (
-                        // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
-                        <img src={template.thumbnailUrl} alt="" />
-                      ) : (
-                        <span className="template-browse-card-fallback">{template.name}</span>
-                      )}
-                    </button>
-                    <div className="template-browse-card-body">
-                      <p className="template-browse-card-title">{template.name}</p>
-                      {facets.length > 0 ? (
-                        <p className="template-browse-card-facets">{facets.join(' · ')}</p>
-                      ) : null}
-                    </div>
-                    <button
-                      type="button"
-                      className="button button--dark template-browse-card-cta"
-                      disabled={isCreating}
-                      onClick={() =>
-                        setNaming({ templateId: template.id, suggestedName: template.name })
-                      }
-                    >
-                      Use Template
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </main>
+          ) : null}
+        </div>
       </div>
 
       <TemplatePreviewModal
         open={previewingTemplate !== null}
         template={previewingTemplate}
         related={relatedTemplates}
+        catalog={visibleTemplates}
         isCreating={isCreating}
         locked={naming !== null}
         onClose={() => !isCreating && naming === null && setPreviewingTemplate(null)}
@@ -430,7 +605,7 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
         }}
         onSelectRelated={(template) => {
           if (naming) return;
-          setPreviewingTemplate(template as GalleryTemplate);
+          setPreviewingTemplate(template);
         }}
       />
 

@@ -1,12 +1,34 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
-import {
-  type GalleryTemplate,
-  TemplatesGalleryClient,
-} from '@/app/forms/templates/templates-gallery-client';
+import type { GalleryTemplate } from '@/app/forms/templates/gallery-template';
+import { TemplatesGalleryClient } from '@/app/forms/templates/templates-gallery-client';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { formSchemaSchema } from '@/lib/forms/schema';
 import { createPresignedDownloadUrl } from '@/lib/s3';
+
+const STRUCTURAL_FIELD_TYPES = new Set(['column_layout', 'section_break', 'divider', 'hidden']);
+
+function galleryExtras(
+  schemaJson: unknown,
+): Pick<GalleryTemplate, 'layoutStyle' | 'fieldCount' | 'fieldLabels'> {
+  const parsed = formSchemaSchema.safeParse(schemaJson);
+  if (!parsed.success) {
+    return { layoutStyle: 'default', fieldCount: 0, fieldLabels: [] };
+  }
+  const labels: string[] = [];
+  for (const field of Object.values(parsed.data.fields)) {
+    if (STRUCTURAL_FIELD_TYPES.has(field.type)) continue;
+    if ('label' in field && typeof field.label === 'string' && field.label.trim()) {
+      labels.push(field.label.trim());
+    }
+  }
+  return {
+    layoutStyle: parsed.data.branding.layoutStyle ?? 'default',
+    fieldCount: labels.length,
+    fieldLabels: labels.slice(0, 8),
+  };
+}
 
 /**
  * Published templates only — any authenticated org member can browse (the actual
@@ -32,6 +54,8 @@ export default async function TemplatesGalleryPage() {
       formType: true,
       thumbnailStorageKey: true,
       createdAt: true,
+      schema: true,
+      creator: { select: { name: true } },
     },
   });
 
@@ -50,6 +74,7 @@ export default async function TemplatesGalleryPage() {
           // gallery, just that template's preview image.
         }
       }
+      const extras = galleryExtras(template.schema);
       return {
         id: template.id,
         name: template.name,
@@ -59,6 +84,8 @@ export default async function TemplatesGalleryPage() {
         formType: template.formType,
         thumbnailUrl,
         createdAt: template.createdAt.toISOString(),
+        createdByName: template.creator.name?.trim() || 'Clickforms',
+        ...extras,
       };
     }),
   );

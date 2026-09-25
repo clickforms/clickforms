@@ -7,7 +7,7 @@ import { createEmptyFormSchema, type FormSchema, formSchemaSchema } from '@/lib/
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ embed?: string }>;
+  searchParams: Promise<{ embed?: string; card?: string }>;
 }
 
 /**
@@ -32,7 +32,9 @@ interface PageProps {
  */
 export default async function TemplatePreviewPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const embed = (await searchParams).embed === '1';
+  const { embed: embedParam, card: cardParam } = await searchParams;
+  const embed = embedParam === '1';
+  const card = embed && cardParam === '1';
 
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -62,7 +64,13 @@ export default async function TemplatePreviewPage({ params, searchParams }: Page
   );
 
   return (
-    <div className={embed ? 'public-form-layout form-preview-embed' : 'public-form-layout'}>
+    <div
+      className={
+        embed
+          ? `public-form-layout form-preview-embed${card ? ' form-preview-embed--card' : ''}`
+          : 'public-form-layout'
+      }
+    >
       {embed ? (
         renderer
       ) : (

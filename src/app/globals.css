@@ -631,37 +631,48 @@ a {
   color: var(--color-warning);
 }
 
+/* Poppins rather than the body font — same "headings/section banner" role it plays
+   everywhere else (.modal-title, .builder-header-cta) — so this reads as a deliberate
+   banner treatment instead of just another line of body copy. */
 .admin-trial-banner-text {
+  font-family: var(--font-poppins), var(--font-body);
   color: var(--color-warning);
   font-size: 0.8125rem;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.005em;
 }
 
 .admin-trial-banner-text strong {
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .admin-trial-banner-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.1rem;
   flex-shrink: 0;
 }
 
 .admin-trial-banner-link {
   display: inline-flex;
   align-items: center;
-  padding: 0.35rem 0.85rem;
+  padding: 0.4rem 1rem;
   border-radius: var(--radius-pill);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-family: var(--font-poppins), var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.005em;
   background: var(--color-text);
   color: var(--color-surface);
-  transition: background-color 0.12s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+  transition:
+    background-color 0.12s ease,
+    transform 0.12s ease;
 }
 
 .admin-trial-banner-link:hover {
   background: #000;
+  transform: translateY(-1px);
 }
 
 .admin-shell[data-theme="dark"] .admin-trial-banner-link:hover {
@@ -672,7 +683,9 @@ a {
   padding: 0;
   background: transparent;
   color: var(--color-warning);
-  font-weight: 600;
+  font-family: var(--font-poppins), var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 2px;
 }

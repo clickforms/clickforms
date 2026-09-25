@@ -21,7 +21,8 @@ export type EmailKind =
   | 'platform_admin_invite'
   | 'password_reset'
   | 'submission_notification'
-  | 'contact_form';
+  | 'contact_form'
+  | 'form_share';
 
 interface SendEmailParams {
   to: string;

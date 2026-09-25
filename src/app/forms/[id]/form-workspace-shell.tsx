@@ -15,6 +15,9 @@ interface FormWorkspaceShellProps {
    *  — used by FormTopNav's Share button, which lives here rather than per-tab since it's
    *  the same link regardless of which tab (Builder/Responses/Settings) is active. */
   publicUrl: string;
+  /** Display name of the signed-in builder — used only for the Share panel's
+   *  send-via-email/SMS preview text (see FormTopNav). */
+  senderName: string;
   children: ReactNode;
 }
 
@@ -25,6 +28,7 @@ export function FormWorkspaceShell({
   initialStatus,
   responseCount,
   publicUrl,
+  senderName,
   children,
 }: FormWorkspaceShellProps) {
   return (
@@ -36,6 +40,7 @@ export function FormWorkspaceShell({
           slug={slug}
           responseCount={responseCount}
           publicUrl={publicUrl}
+          senderName={senderName}
         />
         <div className="form-workspace-content">{children}</div>
       </div>

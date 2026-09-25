@@ -6560,6 +6560,163 @@ textarea.text-input {
   background-color: var(--color-text-muted);
 }
 
+/* "Send via email/SMS" flow — same share-panel, so it inherits .share-panel's base
+   padding/gap; this modifier just widens it once the send flow is showing, since the
+   compose/preview content needs more room than the plain copy-link row above. */
+.share-panel--sending {
+  width: min(22rem, calc(100vw - 2rem));
+}
+
+.share-panel-send-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.share-panel-send-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.55rem;
+  background-color: transparent;
+  color: var(--color-text);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.share-panel-send-option:hover {
+  background-color: var(--color-surface-sunken);
+}
+
+.share-panel-send-compose,
+.share-panel-send-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.share-panel-send-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.share-panel-send-input {
+  padding: 0.5rem 0.6rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+}
+
+.share-panel-send-input:focus-visible {
+  outline: 2px solid var(--color-lavender-strong);
+  outline-offset: 1px;
+}
+
+.share-panel-send-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.share-panel-send-back,
+.share-panel-send-primary {
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.share-panel-send-back {
+  background-color: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.share-panel-send-back:hover {
+  background-color: var(--color-surface-sunken);
+}
+
+.share-panel-send-primary {
+  background-color: var(--color-text);
+  color: var(--color-surface);
+  border: none;
+}
+
+.share-panel-send-primary:hover {
+  background-color: #000;
+}
+
+.share-panel-send-primary:disabled,
+.share-panel-send-back:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Compact mock of the actual email — subject line styled like an inbox row, body as
+   plain text (the same `text` fallback sendEmail() itself would use), not the full
+   branded HTML template, since the panel is far too narrow for that layout. */
+.share-panel-email-preview {
+  padding: 0.6rem 0.65rem;
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.share-panel-email-preview-subject {
+  margin: 0 0 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.share-panel-email-preview-body {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  white-space: pre-line;
+}
+
+/* Chat-bubble mock for the SMS preview — familiar shape for "here's what a text looks
+   like" without needing a full phone-frame illustration. */
+.share-panel-sms-preview {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.share-panel-sms-preview-bubble {
+  margin: 0;
+  max-width: 90%;
+  padding: 0.5rem 0.65rem;
+  background-color: var(--color-lavender-soft);
+  color: var(--color-text);
+  border-radius: 0.8rem 0.8rem 0.2rem 0.8rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.share-panel-send-recipient-line {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
 .builder-header .button--small {
   padding: 0.3rem 0.7rem;
   font-size: 0.75rem;

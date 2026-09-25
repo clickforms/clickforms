@@ -45,11 +45,14 @@ async function fetchOptionalParam(name) {
 }
 
 async function main() {
-  const [databaseUrl, sessionSecret, resendApiKey] = await Promise.all([
-    fetchParam('database-url'),
-    fetchParam('session-secret'),
-    fetchOptionalParam('resend-api-key'),
-  ]);
+  const [databaseUrl, sessionSecret, resendApiKey, messagemediaApiKey, messagemediaApiSecret] =
+    await Promise.all([
+      fetchParam('database-url'),
+      fetchParam('session-secret'),
+      fetchOptionalParam('resend-api-key'),
+      fetchOptionalParam('messagemedia-api-key'),
+      fetchOptionalParam('messagemedia-api-secret'),
+    ]);
   process.stdout.write(`export DATABASE_URL=${shellQuote(databaseUrl)}\n`);
   process.stdout.write(`export SESSION_SECRET=${shellQuote(sessionSecret)}\n`);
   if (resendApiKey) {
@@ -57,6 +60,18 @@ async function main() {
   } else {
     console.error(
       'resolve-secrets: no resend-api-key in SSM — emails will be logged to stdout instead of sent (see DEPLOYMENT.md §4)',
+    );
+  }
+  // Same optional treatment as resend-api-key above — src/lib/sms.ts already falls back
+  // to console-logging when these are unset, and both must be present together (it's one
+  // Basic Auth credential pair) or sendSms() falls back regardless, so there's no partial
+  // state to warn about beyond "SMS won't send yet".
+  if (messagemediaApiKey && messagemediaApiSecret) {
+    process.stdout.write(`export MESSAGEMEDIA_API_KEY=${shellQuote(messagemediaApiKey)}\n`);
+    process.stdout.write(`export MESSAGEMEDIA_API_SECRET=${shellQuote(messagemediaApiSecret)}\n`);
+  } else {
+    console.error(
+      'resolve-secrets: no messagemedia-api-key/secret in SSM — SMS sends will be logged to stdout instead of sent (see DEPLOYMENT.md "SMS (MessageMedia) setup")',
     );
   }
 }

@@ -142,6 +142,33 @@ export function contactFormEmail(params: {
   return { subject: `Contact form: ${params.concern} from ${params.fullName}`, html, text };
 }
 
+/** "Send via email" action in the live-form Share panel (POST /api/forms/[id]/share,
+ * src/app/forms/[id]/form-top-nav.tsx) — a builder sending the public link directly to
+ * a respondent, distinct from inviteEmail() above which is for adding a teammate to the
+ * org itself. `senderName` comes from the sending session server-side, never client
+ * input, so this can't be used to spoof a message as coming from someone else. */
+export function formShareEmail(params: {
+  senderName: string;
+  formName: string;
+  formUrl: string;
+}): RenderedEmail {
+  const { html, text } = renderEmailLayout({
+    preheader: `${params.senderName} sent you a form to complete: ${params.formName}.`,
+    heading: "You've been sent a form",
+    paragraphs: [
+      `<strong>${params.senderName}</strong> has sent you a form, <strong>${params.formName}</strong>, to complete.`,
+      'Click the button below to open it.',
+    ],
+    cta: { label: 'Open form', url: params.formUrl },
+  });
+
+  return {
+    subject: `${params.senderName} sent you a form to complete: ${params.formName}`,
+    html,
+    text,
+  };
+}
+
 function roleLabel(role: UserRole): string {
   switch (role) {
     case 'admin':

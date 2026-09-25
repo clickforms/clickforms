@@ -121,7 +121,8 @@ Three separate places, don't confuse them:
   `SSM_PARAM_PREFIX`, and which Caddyfile to mount.
 
 - **AWS SSM Parameter Store**, `SecureString`, under `/clickforms/<environment>/` — currently
-  `database-url`, `session-secret`, and `resend-api-key` (lowercase, hyphenated —
+  `database-url`, `session-secret`, `resend-api-key`, `messagemedia-api-key`, and
+  `messagemedia-api-secret` (lowercase, hyphenated —
   `entrypoint.sh` reads these exact names via `ssm-deps/resolve-secrets.cjs`, using the EC2
   instance role, no AWS keys). Resolved into the container's environment at container start,
   never baked into the image. `RESEND_FROM` and `CONTACT_EMAIL` aren't secrets — set them as
@@ -156,6 +157,30 @@ container's stdout instead of sending — the app keeps working (signup/invite/r
 still resolve, submission notifications still "send"), there's just no real delivery. Check
 the `email_log` table (`EmailLog` model) for a `dev_logged`/`failed`/`sent` history per
 attempt if delivery ever looks wrong after this is configured.
+
+### SMS (MessageMedia) setup
+
+One-time, per environment, for the live-form Share panel's "Send via SMS" action
+(`src/lib/sms.ts`):
+
+1. Create an account at [hub.messagemedia.com](https://hub.messagemedia.com/register) —
+   MessageMedia has rebranded to **Sinch Engage**, so the signup flow is under that name
+   now, but it's the same underlying Messages REST API.
+2. Create an API key + secret pair (this is HTTP Basic Auth, not a single bearer token —
+   the key is the username, the secret is the password) and store both in SSM:
+   ```
+   aws ssm put-parameter --name /clickforms/<env>/messagemedia-api-key --type SecureString --value <key>
+   aws ssm put-parameter --name /clickforms/<env>/messagemedia-api-secret --type SecureString --value <secret>
+   ```
+3. Optionally set `MESSAGEMEDIA_SENDER_ID` in `/opt/clickforms/.env` (a plain, non-secret
+   value, alongside `S3_BUCKET`/`DOMAIN`) if messages should show a name like
+   `"Clickforms"` instead of a shared/numeric sender. An alphanumeric sender ID in
+   Australia needs its own registration/approval with Sinch first — having API
+   credentials alone isn't enough to send under a custom name.
+
+Until this is done, `sendSms()` just logs every message to the container's stdout instead
+of sending, same dev-mode convention as `sendEmail()`. Check the `sms_log` table (`SmsLog`
+model) for a `dev_logged`/`failed`/`sent` history per attempt.
 
 ## 5. Day-to-day deploys
 

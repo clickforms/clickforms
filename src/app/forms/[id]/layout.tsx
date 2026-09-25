@@ -61,6 +61,12 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
   }
 
   const publicUrl = buildOrgFormUrl(organization.subdomain, `/f/${form.slug}`);
+  // For the Share panel's "send via email/SMS" preview only — the actual send
+  // (POST /api/forms/[id]/share) re-derives this from the session server-side rather
+  // than trusting anything the client sends back, so a stale/mismatched value here
+  // could only ever affect what the sender previews, never who a message claims to be
+  // from.
+  const senderName = session.user.name ?? session.user.email ?? 'You';
 
   return (
     <FormWorkspaceShell
@@ -70,6 +76,7 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
       initialStatus={form.status}
       responseCount={responseCount}
       publicUrl={publicUrl}
+      senderName={senderName}
     >
       {children}
     </FormWorkspaceShell>

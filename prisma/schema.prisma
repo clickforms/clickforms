@@ -197,6 +197,7 @@ model Organization {
   workflowSteps     WorkflowStep[]
   auditLogs         AuditLog[]
   emailLogs         EmailLog[]
+  smsLogs           SmsLog[]
   platformAdminOrgAccess PlatformAdminOrgAccess[]
 
   @@map("organizations")
@@ -601,6 +602,33 @@ model EmailLog {
   @@index([kind])
   @@index([createdAt])
   @@map("email_log")
+}
+
+// SMS counterpart to EmailLog above — same shape, same "always written through the
+// plain prisma client, no RLS policy" reasoning (sendSms() in src/lib/sms.ts is called
+// from the same mix of org-scoped and non-org-scoped contexts). Reuses EmailStatus
+// rather than defining an identical SmsStatus enum, since "sent / failed / dev_logged"
+// means the same thing regardless of channel.
+model SmsLog {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String?     @map("organization_id") @db.Uuid
+  toPhone        String      @map("to_phone")
+  // Machine-readable tag for which flow sent this — see the SmsKind union in
+  // src/lib/sms.ts, same plain-string convention as EmailLog.kind above.
+  kind   String
+  status EmailStatus
+  // MessageMedia's (Sinch Engage) message id on success — null on failure or dev-logged.
+  providerMessageId String? @map("provider_message_id")
+  // Best-effort provider error message on failure.
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([kind])
+  @@index([createdAt])
+  @@map("sms_log")
 }
 
 // Audit trail for a Clickforms platform admin temporarily attaching themselves to a

@@ -2,11 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { type MouseEvent, type ReactNode, useRef, useState } from 'react';
+import { type FormEvent, type MouseEvent, type ReactNode, useRef, useState } from 'react';
 import { useFormWorkspaceStatus } from '@/app/forms/[id]/form-workspace-context';
 import { DropdownMenu } from '@/components/dropdown-menu';
 import { LiveStatusBadge } from '@/components/live-status-badge';
 import { useToast } from '@/components/toast';
+import { formShareEmail } from '@/lib/emails/templates';
+import { readApiError } from '@/lib/error-message';
+import { formShareSms } from '@/lib/sms-templates';
 
 function BuilderIcon() {
   return (
@@ -120,6 +123,34 @@ function ShareLinkIcon() {
   );
 }
 
+function MailIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="2" y="3.5" width="12" height="9" rx="1.4" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M2.7 4.3 8 8.5l5.3-4.2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MessageIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M2.5 4.3A1.4 1.4 0 0 1 3.9 3h8.2a1.4 1.4 0 0 1 1.4 1.4v5.4a1.4 1.4 0 0 1-1.4 1.4H6.6l-2.9 2.1v-2.1H3.9a1.4 1.4 0 0 1-1.4-1.4V4.3Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ExternalLinkIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -149,7 +180,16 @@ interface FormTopNavProps {
   /** Absolute public URL on the org's subdomain — see FormWorkspaceShellProps for why
    *  this lives up here rather than being computed per-tab. */
   publicUrl: string;
+  /** Display name of the signed-in builder — used only for the send-via-email/SMS
+   *  preview text below; the actual send re-derives this from the session server-side. */
+  senderName: string;
 }
+
+type ShareSendChannel = 'email' | 'sms';
+type ShareSendStage = 'compose' | 'preview';
+
+const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
+const PHONE_PATTERN = /^\+?[1-9]\d{7,14}$/;
 
 interface NavItem {
   key: string;
@@ -160,13 +200,28 @@ interface NavItem {
   badge?: number;
 }
 
-export function FormTopNav({ formId, formName, slug, responseCount, publicUrl }: FormTopNavProps) {
+export function FormTopNav({
+  formId,
+  formName,
+  slug,
+  responseCount,
+  publicUrl,
+  senderName,
+}: FormTopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const toast = useToast();
   const { status, isLive, hasUnsavedChanges } = useFormWorkspaceStatus();
   const [shareOpen, setShareOpen] = useState(false);
   const shareTriggerRef = useRef<HTMLButtonElement>(null);
+
+  // Send-via-email/SMS flow, lives inside the same Share panel as the copy-link row
+  // above rather than a separate modal — see form-top-nav.tsx's doc comment on the
+  // trigger button for why Share already lives here.
+  const [sendChannel, setSendChannel] = useState<ShareSendChannel | null>(null);
+  const [sendStage, setSendStage] = useState<ShareSendStage>('compose');
+  const [recipient, setRecipient] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   async function handleCopyLink() {
     try {
@@ -176,6 +231,62 @@ export function FormTopNav({ formId, formName, slug, responseCount, publicUrl }:
       toast.error('Could not copy link — select and copy manually');
     }
   }
+
+  function resetSendState() {
+    setSendChannel(null);
+    setSendStage('compose');
+    setRecipient('');
+  }
+
+  function handleShareOpenChange(next: boolean) {
+    setShareOpen(next);
+    if (!next) resetSendState();
+  }
+
+  function handleStartSend(channel: ShareSendChannel) {
+    setSendChannel(channel);
+    setSendStage('compose');
+    setRecipient('');
+  }
+
+  const recipientIsValid =
+    sendChannel === 'email'
+      ? EMAIL_PATTERN.test(recipient.trim())
+      : PHONE_PATTERN.test(recipient.trim());
+
+  function handlePreviewSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!recipientIsValid) return;
+    setSendStage('preview');
+  }
+
+  async function handleSend() {
+    if (!sendChannel) return;
+    setIsSending(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel: sendChannel, recipient: recipient.trim() }),
+      });
+      if (!res.ok) {
+        toast.error(await readApiError(res, 'Could not send — please try again'));
+        return;
+      }
+      toast.success(sendChannel === 'email' ? 'Email sent' : 'Text message sent');
+      setShareOpen(false);
+      resetSendState();
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  const previewEmail =
+    sendChannel === 'email' ? formShareEmail({ senderName, formName, formUrl: publicUrl }) : null;
+  const previewSms =
+    sendChannel === 'sms' ? formShareSms({ senderName, formName, formUrl: publicUrl }) : null;
 
   const submissionDetailMatch = pathname.match(/\/forms\/[^/]+\/submissions\/([^/]+)$/);
   const submissionId = submissionDetailMatch?.[1] ?? null;
@@ -278,9 +389,9 @@ export function FormTopNav({ formId, formName, slug, responseCount, publicUrl }:
             </button>
             <DropdownMenu
               open={shareOpen}
-              onOpenChange={setShareOpen}
+              onOpenChange={handleShareOpenChange}
               triggerRef={shareTriggerRef}
-              panelClassName="actions-menu-panel share-panel"
+              panelClassName={`actions-menu-panel share-panel ${sendChannel ? 'share-panel--sending' : ''}`}
               align="end"
             >
               <p className="share-panel-label">Live link</p>
@@ -311,6 +422,92 @@ export function FormTopNav({ formId, formName, slug, responseCount, publicUrl }:
                 View live form
                 <ExternalLinkIcon />
               </a>
+
+              {sendChannel === null ? (
+                <div className="share-panel-send-row">
+                  <button
+                    type="button"
+                    className="share-panel-send-option"
+                    onClick={() => handleStartSend('email')}
+                  >
+                    <MailIcon />
+                    Send via email
+                  </button>
+                  <button
+                    type="button"
+                    className="share-panel-send-option"
+                    onClick={() => handleStartSend('sms')}
+                  >
+                    <MessageIcon />
+                    Send via SMS
+                  </button>
+                </div>
+              ) : sendStage === 'compose' ? (
+                <form className="share-panel-send-compose" onSubmit={handlePreviewSubmit}>
+                  <label className="share-panel-send-label" htmlFor="share-send-recipient">
+                    {sendChannel === 'email' ? "Recipient's email" : "Recipient's phone number"}
+                  </label>
+                  <input
+                    id="share-send-recipient"
+                    className="share-panel-send-input"
+                    type={sendChannel === 'email' ? 'email' : 'tel'}
+                    placeholder={sendChannel === 'email' ? 'name@example.com' : '+61491570156'}
+                    value={recipient}
+                    onChange={(event) => setRecipient(event.target.value)}
+                  />
+                  <div className="share-panel-send-actions">
+                    <button
+                      type="button"
+                      className="share-panel-send-back"
+                      onClick={() => setSendChannel(null)}
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      className="share-panel-send-primary"
+                      disabled={!recipientIsValid}
+                    >
+                      Preview
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="share-panel-send-preview">
+                  {previewEmail ? (
+                    <div className="share-panel-email-preview">
+                      <p className="share-panel-email-preview-subject">{previewEmail.subject}</p>
+                      <p className="share-panel-email-preview-body">{previewEmail.text}</p>
+                    </div>
+                  ) : null}
+                  {previewSms ? (
+                    <div className="share-panel-sms-preview">
+                      <p className="share-panel-sms-preview-bubble">{previewSms}</p>
+                    </div>
+                  ) : null}
+                  <p className="share-panel-send-recipient-line">
+                    Sending to <strong>{recipient.trim()}</strong>
+                  </p>
+                  <div className="share-panel-send-actions">
+                    <button
+                      type="button"
+                      className="share-panel-send-back"
+                      onClick={() => setSendStage('compose')}
+                      disabled={isSending}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="share-panel-send-primary"
+                      onClick={() => void handleSend()}
+                      disabled={isSending}
+                    >
+                      {isSending ? 'Sending…' : 'Send'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </DropdownMenu>
           </>
         ) : null}

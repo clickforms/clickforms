@@ -110,7 +110,7 @@ async function seedIncidentReportTemplate(fallbackUserId: string): Promise<void>
   if (existingTemplate) {
     await prisma.formTemplate.update({
       where: { id: existingTemplate.id },
-      data: { schema, industry: 'Healthcare', category: 'NDIS', formType: 'Incident & safety' },
+      data: { schema, industry: 'Healthcare', category: 'NDIS', formType: 'Safety and Incident' },
     });
     console.log(
       `Template "Incident report" already exists (${existingTemplate.id}) — schema refreshed`,
@@ -125,7 +125,7 @@ async function seedIncidentReportTemplate(fallbackUserId: string): Promise<void>
         'NDIS incident report with participant details, incident types, reviewer section, and stakeholder notifications.',
       industry: 'Healthcare',
       category: 'NDIS',
-      formType: 'Incident & safety',
+      formType: 'Safety and Incident',
       status: 'published',
       schema,
       createdBy,

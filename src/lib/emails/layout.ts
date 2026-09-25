@@ -21,6 +21,12 @@ export interface EmailLayoutParams {
   heading: string;
   /** Paragraphs of body copy, rendered in order — kept as an array so callers don't hand-write <p> tags. */
   paragraphs: string[];
+  /** A distinct bordered card (light background, lavender left-accent) rendered between
+   * `paragraphs` and the CTA — for content that reads as a message from a specific
+   * person rather than boilerplate copy (see formShareEmail's use of it for the
+   * builder's own note). Supports `<br />` line breaks; anything else must already be
+   * escaped by the caller. Omit for templates that don't need this distinction. */
+  messageCallout?: string;
   cta?: { label: string; url: string };
   /** Extra fine-print shown below the CTA in a muted, smaller font (e.g. "link expires in..."). */
   footnote?: string;
@@ -31,12 +37,26 @@ export function renderEmailLayout({
   preheader,
   heading,
   paragraphs,
+  messageCallout,
   cta,
   footnote,
 }: EmailLayoutParams): { html: string; text: string } {
   const bodyHtml = paragraphs
     .map((paragraph) => `<p style="${P_STYLE}">${paragraph}</p>`)
     .join('\n');
+
+  // Light card with a lavender left-accent border rather than the tinted footnote
+  // treatment below — that one means "system notice" (expiry, security), this one means
+  // "a person wrote this", so they're deliberately styled differently.
+  const messageCalloutHtml = messageCallout
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 2px 0 22px;">
+        <tr>
+          <td style="background-color: #f8fafc; border: 1px solid ${BORDER}; border-left: 3px solid ${LAVENDER}; border-radius: 8px; padding: 14px 18px; font-size: 14.5px; line-height: 1.6; color: ${TEXT_DARK};">
+            ${messageCallout}
+          </td>
+        </tr>
+      </table>`
+    : '';
 
   const ctaHtml = cta
     ? `
@@ -116,6 +136,7 @@ export function renderEmailLayout({
               <td style="padding: 28px 32px 32px;">
                 <h1 style="margin: 0 0 16px; font-size: 20px; font-weight: 700; color: ${TEXT_DARK};">${heading}</h1>
                 ${bodyHtml}
+                ${messageCalloutHtml}
                 ${ctaHtml}
                 ${footnoteHtml}
               </td>
@@ -139,7 +160,8 @@ export function renderEmailLayout({
     heading,
     '',
     ...paragraphs.map(stripHtml),
-    ...(cta ? ['', `${cta.label}: ${cta.url}`] : []),
+    ...(messageCallout ? [stripHtml(messageCallout), ''] : []),
+    ...(cta ? [`${cta.label}: ${cta.url}`] : []),
     ...(footnote ? ['', stripHtml(footnote)] : []),
   ];
 
@@ -148,10 +170,13 @@ export function renderEmailLayout({
 
 const P_STYLE = 'margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: #374151;';
 
-/** Best-effort HTML → plain text for the small set of tags these templates actually use (<strong>, <a>). */
+/** Best-effort HTML → plain text for the small set of tags these templates actually use
+ * (<strong>, <a>, <br />). <br /> becomes a real newline first so a multi-line
+ * messageCallout doesn't collapse onto one line once the rest of the tags are stripped. */
 function stripHtml(value: string): string {
   return value
     .replace(/<a href="([^"]+)">[^<]*<\/a>/g, '$1')
+    .replace(/<br\s*\/?>/g, '\n')
     .replace(/<\/?strong>/g, '')
     .replace(/<[^>]+>/g, '');
 }

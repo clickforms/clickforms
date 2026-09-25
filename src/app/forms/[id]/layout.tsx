@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { FormWorkspaceShell } from '@/app/forms/[id]/form-workspace-shell';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
-import { requireOrganizationId } from '@/lib/session';
+import { requireOrganizationId, userDisplayName } from '@/lib/session';
 import { buildOrgFormUrl } from '@/lib/tenant';
 import { canViewForm } from '@/lib/user-roles';
 
@@ -24,7 +24,7 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
   // Sequential, not Promise.all — all queries share one connection via withOrgContext's
   // transaction, and concurrent queries on a single `pg` client are deprecated (and will
   // error in pg@9.0).
-  const { form, responseCount, organization } = await withOrgContext(
+  const { form, responseCount, organization, sender } = await withOrgContext(
     session.user.organizationId,
     async (tx) => {
       const form = await tx.form.findFirst({
@@ -49,7 +49,11 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
         where: { id: requireOrganizationId(session) },
         select: { subdomain: true },
       });
-      return { form, responseCount, organization };
+      const sender = await tx.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true },
+      });
+      return { form, responseCount, organization, sender };
     },
   );
 
@@ -66,7 +70,7 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
   // than trusting anything the client sends back, so a stale/mismatched value here
   // could only ever affect what the sender previews, never who a message claims to be
   // from.
-  const senderName = session.user.name ?? session.user.email ?? 'You';
+  const senderName = userDisplayName(sender?.name);
 
   return (
     <FormWorkspaceShell

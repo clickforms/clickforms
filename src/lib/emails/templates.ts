@@ -142,51 +142,45 @@ export function contactFormEmail(params: {
   return { subject: `Contact form: ${params.concern} from ${params.fullName}`, html, text };
 }
 
-/** Plain-text default body for the "Send via email" modal's editable message box
- * (src/app/forms/[id]/form-top-nav.tsx) — kept in sync with formShareEmail()'s own
- * default paragraphs below (minus the <strong> tags, since the textarea edits plain
- * text). formShareEmail() compares the incoming message against this to decide whether
- * to render the richer bold-name default or the builder's own free-text version. */
+/** Plain-text default body for the Share modal's editable message box
+ * (src/app/forms/[id]/form-share-modal.tsx) — this is also what a builder sees prefilled
+ * there, and what actually gets sent if they never touch it. Written as a short,
+ * professional note (greeting, context, call to action) rather than a single terse
+ * sentence, since it's going out under the builder's name to an external respondent. */
 export function formShareEmailDefaultMessage(params: {
   senderName: string;
   formName: string;
 }): string {
-  return `${params.senderName} has sent you a form, ${params.formName}, to complete. Click the button below to open it.`;
+  return `Hello,\n\n${params.senderName} has invited you to complete the form "${params.formName}". Please click the button below to get started.`;
 }
 
 /** "Send via email" action in the live-form Share panel (POST /api/forms/[id]/share,
- * src/app/forms/[id]/form-top-nav.tsx) — a builder sending the public link directly to
- * a respondent, distinct from inviteEmail() above which is for adding a teammate to the
- * org itself. `senderName` comes from the sending session server-side, never client
+ * src/app/forms/[id]/form-share-modal.tsx) — a builder sending the public link directly
+ * to a respondent, distinct from inviteEmail() above which is for adding a teammate to
+ * the org itself. `senderName` comes from the sending session server-side, never client
  * input, so this can't be used to spoof a message as coming from someone else.
  *
- * `message` is the builder's own edit of the body text (see the modal's "Message" box) —
- * untrusted user input, so it's HTML-escaped before being interpolated. The CTA button
- * and its plain-URL fallback (rendered by renderEmailLayout regardless of `paragraphs`)
- * always carry the real link, so an edited message can never accidentally drop it. When
- * the message is empty or unchanged from formShareEmailDefaultMessage(), the original
- * bold-name two-line default is used instead of a plain escaped version of that same
- * text, so an untouched message still renders with its original formatting. */
+ * The message (the builder's own edit of the modal's "Message" box, or
+ * formShareEmailDefaultMessage() if they never touched it) renders in its own bordered
+ * callout card rather than as a plain paragraph — the same "personal note, separate from
+ * the boilerplate" treatment share emails from Dropbox/Google Drive use — so it reads as
+ * a message from the sender rather than another line of system copy. It's untrusted user
+ * input, so it's HTML-escaped before being interpolated. The CTA button and its
+ * plain-URL fallback (rendered by renderEmailLayout independently of the callout) always
+ * carry the real link, so an edited message can never accidentally drop it. */
 export function formShareEmail(params: {
   senderName: string;
   formName: string;
   formUrl: string;
   message?: string;
 }): RenderedEmail {
-  const trimmedMessage = params.message?.trim();
-  const defaultMessage = formShareEmailDefaultMessage(params);
-  const paragraphs =
-    !trimmedMessage || trimmedMessage === defaultMessage
-      ? [
-          `<strong>${params.senderName}</strong> has sent you a form, <strong>${params.formName}</strong>, to complete.`,
-          'Click the button below to open it.',
-        ]
-      : [escapeHtml(trimmedMessage).replace(/\n/g, '<br />')];
+  const finalMessage = params.message?.trim() || formShareEmailDefaultMessage(params);
 
   const { html, text } = renderEmailLayout({
     preheader: `${params.senderName} sent you a form to complete: ${params.formName}.`,
-    heading: "You've been sent a form",
-    paragraphs,
+    heading: "You've been invited to complete a form",
+    paragraphs: [],
+    messageCallout: escapeHtml(finalMessage).replace(/\n/g, '<br />'),
     cta: { label: 'Open form', url: params.formUrl },
   });
 

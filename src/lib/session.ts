@@ -77,3 +77,10 @@ export function requireOrganizationId(session: Session): string {
   }
   return session.user.organizationId;
 }
+
+/** Display name for outbound share copy. Never falls back to an email address. */
+export function userDisplayName(name: string | null | undefined, fallback = 'Someone'): string {
+  const trimmed = name?.trim();
+  if (trimmed && !trimmed.includes('@')) return trimmed;
+  return fallback;
+}

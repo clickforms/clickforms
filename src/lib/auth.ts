@@ -147,6 +147,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
+          name: user.name,
           organizationId: user.organizationId,
           role: user.role,
           isPlatformAdmin: user.isPlatformAdmin,
@@ -177,6 +178,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.userId = user.id;
+        token.name = user.name;
         token.organizationId = user.organizationId;
         token.role = user.role;
         token.isPlatformAdmin = user.isPlatformAdmin;
@@ -218,6 +220,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       session.user.id = token.userId;
+      session.user.name = typeof token.name === 'string' ? token.name : session.user.name;
       session.user.organizationId = token.organizationId;
       session.user.role = token.role;
       session.user.isPlatformAdmin = token.isPlatformAdmin;

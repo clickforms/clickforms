@@ -2,14 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from 'react';
+import { type MouseEvent, type ReactNode, useState } from 'react';
+import { FormShareModal } from '@/app/forms/[id]/form-share-modal';
 import { useFormWorkspaceStatus } from '@/app/forms/[id]/form-workspace-context';
-import { DropdownMenu } from '@/components/dropdown-menu';
 import { LiveStatusBadge } from '@/components/live-status-badge';
-import { useToast } from '@/components/toast';
-import { formShareEmail, formShareEmailDefaultMessage } from '@/lib/emails/templates';
-import { readApiError } from '@/lib/error-message';
-import { formShareSms, formShareSmsDefaultMessage } from '@/lib/sms-templates';
 
 function BuilderIcon() {
   return (
@@ -105,52 +101,6 @@ function PreviewIcon() {
   );
 }
 
-/* Same overlapping-squares glyph as field-card.tsx's CopyIcon and builder-client.tsx's
-   own copy icon, kept as a separate component here since those live in different files.
-   Used for both the trigger (per user's call — copy is the more familiar glyph here)
-   and the "Copy link" row inside the panel it opens. */
-function ShareLinkIcon() {
-  return (
-    <svg width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="6" y="6" width="8" height="8" rx="1.4" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M4 10.2V4.8A1.8 1.8 0 0 1 5.8 3h5.4"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function MailIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="2" y="3.5" width="12" height="9" rx="1.4" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M2.7 4.3 8 8.5l5.3-4.2"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function MessageIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M2.5 4.3A1.4 1.4 0 0 1 3.9 3h8.2a1.4 1.4 0 0 1 1.4 1.4v5.4a1.4 1.4 0 0 1-1.4 1.4H6.6l-2.9 2.1v-2.1H3.9a1.4 1.4 0 0 1-1.4-1.4V4.3Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function ExternalLinkIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -159,14 +109,33 @@ function ExternalLinkIcon() {
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
       <path
-        d="M9.5 2.5H13.5V6.5M13 3 8 8"
+        d="M9 3h4v4M7.5 8.5 13 3"
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ShareLinkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M8 9.25V2.75M8 2.75 5.6 5.15M8 2.75l2.4 2.4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.5 8.25v3.5A1.25 1.25 0 0 0 4.75 13h6.5A1.25 1.25 0 0 0 12.5 11.75v-3.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
       />
     </svg>
   );
@@ -180,15 +149,10 @@ interface FormTopNavProps {
   /** Absolute public URL on the org's subdomain — see FormWorkspaceShellProps for why
    *  this lives up here rather than being computed per-tab. */
   publicUrl: string;
-  /** Display name of the signed-in builder — used only for the send-via-email/SMS
-   *  preview text below; the actual send re-derives this from the session server-side. */
+  /** Display name of the signed-in builder — used only for the Share modal's send copy;
+   *  the actual send re-derives this from the session server-side. */
   senderName: string;
 }
-
-type ShareSendChannel = 'email' | 'sms';
-
-const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
-const PHONE_PATTERN = /^\+?[1-9]\d{7,14}$/;
 
 interface NavItem {
   key: string;
@@ -209,104 +173,8 @@ export function FormTopNav({
 }: FormTopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const toast = useToast();
   const { status, isLive, hasUnsavedChanges } = useFormWorkspaceStatus();
   const [shareOpen, setShareOpen] = useState(false);
-  const shareTriggerRef = useRef<HTMLButtonElement>(null);
-
-  // Email/SMS send opens a full modal (not the share popover) so the recipient field
-  // and message preview have room.
-  const [sendChannel, setSendChannel] = useState<ShareSendChannel | null>(null);
-  const [recipient, setRecipient] = useState('');
-  // Prefilled with the channel's default text on open (see handleStartSend) and freely
-  // editable from there — handleSend() posts whatever's here, and formShareEmail()/
-  // formShareSms() fall back to their own defaults if it's ever empty.
-  const [message, setMessage] = useState('');
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-
-  function resetSendState() {
-    setSendChannel(null);
-    setRecipient('');
-    setMessage('');
-    setPreviewOpen(false);
-  }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: resetSendState is a plain function redefined every render, not a stable useCallback — listing it would just resubscribe this effect on every keystroke for no behavioral difference.
-  useEffect(() => {
-    if (!sendChannel || isSending) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') resetSendState();
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sendChannel, isSending]);
-
-  async function handleCopyLink() {
-    try {
-      await navigator.clipboard.writeText(publicUrl);
-      toast.success('Live link copied to clipboard');
-    } catch {
-      toast.error('Could not copy link — select and copy manually');
-    }
-  }
-
-  function handleShareOpenChange(next: boolean) {
-    setShareOpen(next);
-  }
-
-  function handleStartSend(channel: ShareSendChannel) {
-    setShareOpen(false);
-    setSendChannel(channel);
-    setRecipient('');
-    setMessage(
-      channel === 'email'
-        ? formShareEmailDefaultMessage({ senderName, formName })
-        : formShareSmsDefaultMessage({ senderName, formName, formUrl: publicUrl }),
-    );
-    setPreviewOpen(false);
-  }
-
-  const recipientIsValid =
-    sendChannel === 'email'
-      ? EMAIL_PATTERN.test(recipient.trim())
-      : PHONE_PATTERN.test(recipient.trim());
-
-  async function handleSend() {
-    if (!sendChannel) return;
-    setIsSending(true);
-    try {
-      const res = await fetch(`/api/forms/${formId}/share`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          channel: sendChannel,
-          recipient: recipient.trim(),
-          message: message.trim(),
-        }),
-      });
-      if (!res.ok) {
-        toast.error(await readApiError(res, 'Could not send — please try again'));
-        return;
-      }
-      toast.success(sendChannel === 'email' ? 'Email sent' : 'Text message sent');
-      setShareOpen(false);
-      resetSendState();
-    } catch {
-      toast.error('Something went wrong. Please try again.');
-    } finally {
-      setIsSending(false);
-    }
-  }
-
-  const previewEmail =
-    sendChannel === 'email'
-      ? formShareEmail({ senderName, formName, formUrl: publicUrl, message })
-      : null;
-  const previewSms =
-    sendChannel === 'sms'
-      ? formShareSms({ senderName, formName, formUrl: publicUrl, message })
-      : null;
 
   const submissionDetailMatch = pathname.match(/\/forms\/[^/]+\/submissions\/([^/]+)$/);
   const submissionId = submissionDetailMatch?.[1] ?? null;
@@ -393,207 +261,37 @@ export function FormTopNav({
             {previewLabel}
           </Link>
           {isLive ? (
-            <>
-              {/* Lives here rather than per-tab since the live link is the same regardless
-                of which tab (Builder/Responses/Settings) is active — this also covers
-                "view the live form from here", so copying the link and opening it sit
-                together instead of needing a second control. */}
-              <button
-                ref={shareTriggerRef}
-                type="button"
-                className="form-top-nav-preview form-top-nav-share"
-                onClick={() => setShareOpen((value) => !value)}
-                aria-haspopup="true"
-              >
-                <ShareLinkIcon />
-                Share
-              </button>
-              <DropdownMenu
-                open={shareOpen}
-                onOpenChange={handleShareOpenChange}
-                triggerRef={shareTriggerRef}
-                panelClassName="actions-menu-panel share-panel"
-                align="end"
-              >
-                <div className="share-panel-head">
-                  <p className="share-panel-title">Share form</p>
-                  <button
-                    type="button"
-                    className="share-panel-close"
-                    onClick={() => handleShareOpenChange(false)}
-                    aria-label="Close share"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                      <path
-                        d="M3 3l8 8M11 3l-8 8"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                <p className="share-panel-label">Live link</p>
-                <div className="share-panel-url-row">
-                  <span className="share-panel-url" title={publicUrl}>
-                    {publicUrl}
-                  </span>
-                  <button
-                    type="button"
-                    className="share-panel-copy"
-                    onClick={() => void handleCopyLink()}
-                    aria-label="Copy live link"
-                  >
-                    Copy
-                  </button>
-                </div>
-                <a
-                  href={publicUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="share-panel-view-live"
-                >
-                  View live form
-                  <ExternalLinkIcon />
-                </a>
-
-                <div className="share-panel-send-row">
-                  <p className="share-panel-label">Send a copy</p>
-                  <div className="share-panel-send-choices">
-                    <button
-                      type="button"
-                      className="share-panel-send-option"
-                      onClick={() => handleStartSend('email')}
-                    >
-                      <MailIcon />
-                      Email
-                    </button>
-                    <button
-                      type="button"
-                      className="share-panel-send-option"
-                      onClick={() => handleStartSend('sms')}
-                    >
-                      <MessageIcon />
-                      SMS
-                    </button>
-                  </div>
-                </div>
-              </DropdownMenu>
-            </>
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="form-top-nav-preview"
+            >
+              <ExternalLinkIcon />
+              View live
+            </a>
+          ) : null}
+          {isLive ? (
+            <button
+              type="button"
+              className="form-top-nav-share"
+              onClick={() => setShareOpen(true)}
+              aria-haspopup="dialog"
+            >
+              <ShareLinkIcon />
+              Share
+            </button>
           ) : null}
         </div>
       </nav>
-      {sendChannel ? (
-        // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; Escape and Cancel are also wired up
-        <div
-          className="modal-overlay modal-overlay--stack"
-          onMouseDown={() => !isSending && resetSendState()}
-        >
-          <div
-            className="modal-card share-send-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="share-send-modal-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div className="modal-header">
-              <h2 className="modal-title" id="share-send-modal-title">
-                {sendChannel === 'email' ? 'Send via email' : 'Send via SMS'}
-              </h2>
-              <button
-                type="button"
-                className="modal-close"
-                onClick={resetSendState}
-                aria-label="Close"
-                disabled={isSending}
-              >
-                ×
-              </button>
-            </div>
-
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (recipientIsValid) void handleSend();
-              }}
-            >
-              <label className="share-send-field" htmlFor="share-send-recipient">
-                <span className="modal-section-label">
-                  {sendChannel === 'email' ? "Recipient's email" : "Recipient's phone number"}
-                </span>
-                <input
-                  id="share-send-recipient"
-                  className="text-input"
-                  type={sendChannel === 'email' ? 'email' : 'tel'}
-                  placeholder={sendChannel === 'email' ? 'name@example.com' : '+61491570156'}
-                  value={recipient}
-                  onChange={(event) => setRecipient(event.target.value)}
-                  // biome-ignore lint/a11y/noAutofocus: opening the modal is an explicit send action — the recipient field is what they came here to fill
-                  autoFocus
-                  disabled={isSending}
-                />
-              </label>
-
-              <div className="share-send-message-head">
-                <label className="modal-section-label" htmlFor="share-send-message">
-                  Message
-                </label>
-                <button
-                  type="button"
-                  className="share-send-preview-toggle"
-                  onClick={() => setPreviewOpen((value) => !value)}
-                  aria-expanded={previewOpen}
-                >
-                  <PreviewIcon />
-                  {previewOpen ? 'Hide preview' : 'Preview'}
-                </button>
-              </div>
-              <textarea
-                id="share-send-message"
-                className="text-input share-send-message-input"
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                rows={4}
-                maxLength={2000}
-                disabled={isSending}
-              />
-              {sendChannel === 'email' && previewEmail ? (
-                <p className="share-send-message-hint">
-                  The link is always included as a button below this message — editing it won't
-                  remove it.
-                </p>
-              ) : null}
-
-              {previewOpen && previewEmail ? (
-                <div className="share-panel-email-preview">
-                  <p className="share-panel-email-preview-subject">{previewEmail.subject}</p>
-                  <p className="share-panel-email-preview-body">{previewEmail.text}</p>
-                </div>
-              ) : null}
-              {previewOpen && previewSms ? (
-                <div className="share-panel-sms-preview">
-                  <p className="share-panel-sms-preview-bubble">{previewSms}</p>
-                </div>
-              ) : null}
-
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="button button--secondary"
-                  onClick={resetSendState}
-                  disabled={isSending}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="button" disabled={!recipientIsValid || isSending}>
-                  {isSending ? 'Sending…' : 'Send'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
+      <FormShareModal
+        open={shareOpen}
+        formId={formId}
+        formName={formName}
+        publicUrl={publicUrl}
+        senderName={senderName}
+        onClose={() => setShareOpen(false)}
+      />
     </>
   );
 }

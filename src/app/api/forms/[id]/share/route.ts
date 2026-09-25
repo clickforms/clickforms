@@ -6,7 +6,7 @@ import { withOrgContext } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { formShareEmail } from '@/lib/emails/templates';
 import { assertFormViewAccess } from '@/lib/form-access';
-import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
+import { requireOrganizationId, requireRole, requireSession, userDisplayName } from '@/lib/session';
 import { sendSms } from '@/lib/sms';
 import { formShareSms } from '@/lib/sms-templates';
 import { buildOrgFormUrl } from '@/lib/tenant';
@@ -25,9 +25,9 @@ interface RouteContext {
 const SHARE_RATE_LIMIT = 20;
 const SHARE_RATE_WINDOW_MS = 60 * 60 * 1000;
 
-// Builder-edited message text from the modal's "Message" box (see form-top-nav.tsx) —
+// Builder-edited message text from the modal's "Message" box (see form-share-modal.tsx) —
 // capped well under email/SMS provider limits; formShareEmail()/formShareSms() treat an
-// empty or unchanged-from-default value as "use the original default text".
+// empty value as "use the original default text".
 const shareMessageSchema = z.string().trim().max(2000).optional();
 
 const shareBodySchema = z.discriminatedUnion('channel', [
@@ -50,7 +50,7 @@ const shareBodySchema = z.discriminatedUnion('channel', [
 ]);
 
 /**
- * "Send via email/SMS" action in the live-form Share panel (src/app/forms/[id]/form-top-nav.tsx)
+ * "Send via email/SMS" action in the live-form Share panel (src/app/forms/[id]/form-share-modal.tsx)
  * — lets a builder push the public form link directly to a respondent's inbox or phone,
  * rather than only copy/pasting the link themselves. Sender name is always the calling
  * session's own name, never taken from the request body, so this can't be used to send
@@ -102,9 +102,14 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
           select: { subdomain: true },
         });
 
+        const sender = await tx.user.findUnique({
+          where: { id: session.user.id },
+          select: { name: true },
+        });
+
         return {
           formUrl: buildOrgFormUrl(organization.subdomain, `/f/${form.slug}`),
-          senderName: session.user.name ?? session.user.email ?? 'Someone',
+          senderName: userDisplayName(sender?.name),
           formName: form.name,
           organizationId,
         };

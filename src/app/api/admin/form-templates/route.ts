@@ -9,7 +9,9 @@ const TEMPLATE_LIST_SELECT = {
   id: true,
   name: true,
   description: true,
+  industry: true,
   category: true,
+  formType: true,
   status: true,
   thumbnailStorageKey: true,
   createdAt: true,
@@ -47,7 +49,9 @@ export async function GET(): Promise<NextResponse> {
 const createTemplateBodySchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
   description: z.string().trim().max(1000).optional(),
+  industry: z.string().trim().max(100).optional(),
   category: z.string().trim().max(100).optional(),
+  formType: z.string().trim().max(100).optional(),
 });
 
 /** Creates a new template shell (empty schema, draft status) and redirects the admin
@@ -63,7 +67,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       data: {
         name: body.name,
         description: body.description || null,
+        industry: body.industry || null,
         category: body.category || null,
+        formType: body.formType || null,
         schema: createEmptyFormSchema(),
         createdBy: session.user.id,
       },

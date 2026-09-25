@@ -19,18 +19,31 @@ export default async function TemplateSettingsPage({
   }
   const { id } = await params;
 
-  const template = await prisma.formTemplate.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      category: true,
-      status: true,
-      thumbnailStorageKey: true,
-    },
-  });
+  const [template, facetRows] = await Promise.all([
+    prisma.formTemplate.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        industry: true,
+        category: true,
+        formType: true,
+        status: true,
+        thumbnailStorageKey: true,
+      },
+    }),
+    // Suggestions for the three TaxonomyField inputs below — every distinct value
+    // already used for that facet across the whole library, not just this template.
+    prisma.formTemplate.findMany({
+      select: { industry: true, category: true, formType: true },
+    }),
+  ]);
   if (!template) notFound();
+
+  function distinctValues(rows: typeof facetRows, facet: 'industry' | 'category' | 'formType') {
+    return Array.from(new Set(rows.map((row) => row[facet]).filter(Boolean))).sort() as string[];
+  }
 
   let thumbnailUrl: string | null = null;
   if (template.thumbnailStorageKey) {
@@ -50,10 +63,19 @@ export default async function TemplateSettingsPage({
     id: template.id,
     name: template.name,
     description: template.description,
+    industry: template.industry,
     category: template.category,
+    formType: template.formType,
     status: template.status,
     thumbnailUrl,
   };
 
-  return <TemplateSettingsClient initialTemplate={initialTemplate} />;
+  return (
+    <TemplateSettingsClient
+      initialTemplate={initialTemplate}
+      industryOptions={distinctValues(facetRows, 'industry')}
+      categoryOptions={distinctValues(facetRows, 'category')}
+      formTypeOptions={distinctValues(facetRows, 'formType')}
+    />
+  );
 }

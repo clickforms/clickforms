@@ -22,7 +22,9 @@ export async function GET(): Promise<NextResponse> {
         id: true,
         name: true,
         description: true,
+        industry: true,
         category: true,
+        formType: true,
         thumbnailStorageKey: true,
       },
     });
@@ -46,7 +48,9 @@ export async function GET(): Promise<NextResponse> {
           id: template.id,
           name: template.name,
           description: template.description,
+          industry: template.industry,
           category: template.category,
+          formType: template.formType,
           thumbnailUrl,
         };
       }),

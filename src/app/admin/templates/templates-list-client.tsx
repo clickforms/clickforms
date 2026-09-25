@@ -12,11 +12,25 @@ export interface TemplateRow {
   id: string;
   name: string;
   description: string | null;
+  industry: string | null;
   category: string | null;
+  formType: string | null;
   status: TemplateStatus;
   thumbnailUrl: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Distinct, non-empty values already used for one facet across a set of templates —
+ * shared by the New Template modal and (via templates-list-client's own computation)
+ * this list's search. Sorted so the <datalist> reads predictably. */
+function distinctFacetValues(
+  templates: TemplateRow[],
+  facet: 'industry' | 'category' | 'formType',
+) {
+  return Array.from(
+    new Set(templates.map((template) => template[facet]).filter(Boolean)),
+  ).sort() as string[];
 }
 
 const STATUS_FILTERS = ['all', 'draft', 'published', 'archived'] as const;
@@ -257,10 +271,18 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
       if (!term) return true;
       return (
         template.name.toLowerCase().includes(term) ||
-        (template.category ?? '').toLowerCase().includes(term)
+        (template.industry ?? '').toLowerCase().includes(term) ||
+        (template.category ?? '').toLowerCase().includes(term) ||
+        (template.formType ?? '').toLowerCase().includes(term)
       );
     });
   }, [templates, search, statusFilter]);
+
+  // Suggestions for the New Template modal's three taxonomy fields — every distinct
+  // value already used for that facet across the existing library.
+  const industryOptions = useMemo(() => distinctFacetValues(templates, 'industry'), [templates]);
+  const categoryOptions = useMemo(() => distinctFacetValues(templates, 'category'), [templates]);
+  const formTypeOptions = useMemo(() => distinctFacetValues(templates, 'formType'), [templates]);
 
   async function handleSetStatus(template: TemplateRow, status: TemplateStatus) {
     setBusyId(template.id);
@@ -319,7 +341,13 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
         </button>
       </header>
 
-      <NewTemplateModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <NewTemplateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        industryOptions={industryOptions}
+        categoryOptions={categoryOptions}
+        formTypeOptions={formTypeOptions}
+      />
 
       {deletingTemplate ? (
         // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
@@ -421,7 +449,9 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
               <thead>
                 <tr>
                   <th>Template</th>
+                  <th>Industry</th>
                   <th>Category</th>
+                  <th>Form type</th>
                   <th>Status</th>
                   <th>Updated</th>
                   <th>Actions</th>
@@ -458,7 +488,9 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                           <span className="users-name-text">{template.name}</span>
                         </span>
                       </td>
+                      <td data-label="Industry">{template.industry || '—'}</td>
                       <td data-label="Category">{template.category || '—'}</td>
+                      <td data-label="Form type">{template.formType || '—'}</td>
                       <td data-label="Status">
                         <span className={`badge ${STATUS_BADGE_CLASS[template.status]}`}>
                           {STATUS_LABELS[template.status]}
@@ -492,7 +524,7 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                 })}
                 {visibleTemplates.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="admin-table-empty">
+                    <td colSpan={7} className="admin-table-empty">
                       No templates match that search.
                     </td>
                   </tr>

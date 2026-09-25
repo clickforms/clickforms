@@ -4,6 +4,7 @@ import type { TemplateStatus } from '@prisma/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type ChangeEvent, type FormEvent, useMemo, useState } from 'react';
+import { TaxonomyField } from '@/app/admin/templates/taxonomy-field';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
 
@@ -18,7 +19,9 @@ export interface TemplateDetail {
   id: string;
   name: string;
   description: string | null;
+  industry: string | null;
   category: string | null;
+  formType: string | null;
   status: TemplateStatus;
   thumbnailUrl: string | null;
 }
@@ -76,11 +79,23 @@ function PlaceholderThumbIcon() {
   );
 }
 
-export function TemplateSettingsClient({ initialTemplate }: { initialTemplate: TemplateDetail }) {
+export function TemplateSettingsClient({
+  initialTemplate,
+  industryOptions,
+  categoryOptions,
+  formTypeOptions,
+}: {
+  initialTemplate: TemplateDetail;
+  industryOptions: string[];
+  categoryOptions: string[];
+  formTypeOptions: string[];
+}) {
   const router = useRouter();
   const toast = useToast();
   const [name, setName] = useState(initialTemplate.name);
+  const [industry, setIndustry] = useState(initialTemplate.industry ?? '');
   const [category, setCategory] = useState(initialTemplate.category ?? '');
+  const [formType, setFormType] = useState(initialTemplate.formType ?? '');
   const [description, setDescription] = useState(initialTemplate.description ?? '');
   const [status, setStatus] = useState(initialTemplate.status);
   const [thumbnailUrl, setThumbnailUrl] = useState(initialTemplate.thumbnailUrl);
@@ -94,11 +109,13 @@ export function TemplateSettingsClient({ initialTemplate }: { initialTemplate: T
   const isDirty = useMemo(() => {
     return (
       name.trim() !== initialTemplate.name ||
+      industry.trim() !== (initialTemplate.industry ?? '') ||
       category.trim() !== (initialTemplate.category ?? '') ||
+      formType.trim() !== (initialTemplate.formType ?? '') ||
       description.trim() !== (initialTemplate.description ?? '') ||
       status !== initialTemplate.status
     );
-  }, [name, category, description, status, initialTemplate]);
+  }, [name, industry, category, formType, description, status, initialTemplate]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,7 +134,9 @@ export function TemplateSettingsClient({ initialTemplate }: { initialTemplate: T
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: trimmedName,
+          industry: industry.trim(),
           category: category.trim(),
+          formType: formType.trim(),
           description: description.trim(),
           status,
         }),
@@ -249,7 +268,7 @@ export function TemplateSettingsClient({ initialTemplate }: { initialTemplate: T
   }
 
   const galleryName = name.trim() || 'Untitled template';
-  const galleryCategory = category.trim();
+  const galleryFacets = [industry.trim(), category.trim(), formType.trim()].filter(Boolean);
 
   return (
     <div className="admin-template">
@@ -295,8 +314,10 @@ export function TemplateSettingsClient({ initialTemplate }: { initialTemplate: T
               </div>
               <div className="template-gallery-card-body">
                 <p className="template-gallery-card-title">{galleryName}</p>
-                {galleryCategory ? (
-                  <span className="template-gallery-card-category">{galleryCategory}</span>
+                {galleryFacets.length > 0 ? (
+                  <span className="template-gallery-card-category">
+                    {galleryFacets.join(' · ')}
+                  </span>
                 ) : (
                   <span className="template-gallery-card-category">Uncategorised</span>
                 )}
@@ -357,16 +378,30 @@ export function TemplateSettingsClient({ initialTemplate }: { initialTemplate: T
                   disabled={isSaving}
                 />
               </label>
-              <label className="admin-org-field">
-                <span>Category</span>
-                <input
-                  className="text-input"
-                  placeholder="e.g. Incident"
-                  value={category}
-                  onChange={(event) => setCategory(event.target.value)}
-                  disabled={isSaving}
-                />
-              </label>
+              <TaxonomyField
+                label="Industry"
+                placeholder="e.g. Healthcare"
+                value={industry}
+                onChange={setIndustry}
+                options={industryOptions}
+                disabled={isSaving}
+              />
+              <TaxonomyField
+                label="Category"
+                placeholder="e.g. NDIS, Childcare"
+                value={category}
+                onChange={setCategory}
+                options={categoryOptions}
+                disabled={isSaving}
+              />
+              <TaxonomyField
+                label="Form type"
+                placeholder="e.g. Incident & safety"
+                value={formType}
+                onChange={setFormType}
+                options={formTypeOptions}
+                disabled={isSaving}
+              />
               <label className="admin-org-field admin-template-field-wide">
                 <span>Description</span>
                 <textarea

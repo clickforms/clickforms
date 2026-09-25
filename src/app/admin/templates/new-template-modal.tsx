@@ -2,29 +2,44 @@
 
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useEffect, useState } from 'react';
+import { TaxonomyField } from '@/app/admin/templates/taxonomy-field';
 import { useToast } from '@/components/toast';
 import { getErrorMessage, readApiError } from '@/lib/error-message';
 
 interface NewTemplateModalProps {
   open: boolean;
   onClose: () => void;
+  industryOptions: string[];
+  categoryOptions: string[];
+  formTypeOptions: string[];
 }
 
 /** Creates a template shell (empty schema, draft) then jumps straight into its builder —
- * mirrors create-form-modal.tsx's "name it, then build it" flow. Category/description
- * are optional here since they're also editable later from the template's settings. */
-export function NewTemplateModal({ open, onClose }: NewTemplateModalProps) {
+ * mirrors create-form-modal.tsx's "name it, then build it" flow. Industry/category/
+ * form type/description are optional here since they're also editable later from the
+ * template's settings. */
+export function NewTemplateModal({
+  open,
+  onClose,
+  industryOptions,
+  categoryOptions,
+  formTypeOptions,
+}: NewTemplateModalProps) {
   const router = useRouter();
   const toast = useToast();
   const [name, setName] = useState('');
+  const [industry, setIndustry] = useState('');
   const [category, setCategory] = useState('');
+  const [formType, setFormType] = useState('');
   const [description, setDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setName('');
+    setIndustry('');
     setCategory('');
+    setFormType('');
     setDescription('');
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape' && !isCreating) onClose();
@@ -46,7 +61,9 @@ export function NewTemplateModal({ open, onClose }: NewTemplateModalProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
+          industry: industry.trim() || undefined,
           category: category.trim() || undefined,
+          formType: formType.trim() || undefined,
           description: description.trim() || undefined,
         }),
       });
@@ -99,16 +116,33 @@ export function NewTemplateModal({ open, onClose }: NewTemplateModalProps) {
               disabled={isCreating}
             />
           </label>
-          <label className="modal-name-field">
-            <span>Category (optional)</span>
-            <input
-              className="text-input"
-              placeholder="e.g. Incident & safety"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              disabled={isCreating}
-            />
-          </label>
+          <TaxonomyField
+            className="modal-name-field"
+            label="Industry (optional)"
+            placeholder="e.g. Healthcare"
+            value={industry}
+            onChange={setIndustry}
+            options={industryOptions}
+            disabled={isCreating}
+          />
+          <TaxonomyField
+            className="modal-name-field"
+            label="Category (optional)"
+            placeholder="e.g. NDIS, Childcare"
+            value={category}
+            onChange={setCategory}
+            options={categoryOptions}
+            disabled={isCreating}
+          />
+          <TaxonomyField
+            className="modal-name-field"
+            label="Form type (optional)"
+            placeholder="e.g. Incident & safety"
+            value={formType}
+            onChange={setFormType}
+            options={formTypeOptions}
+            disabled={isCreating}
+          />
           <label className="modal-name-field">
             <span>Description (optional)</span>
             <input

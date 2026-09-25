@@ -14,7 +14,9 @@ const TEMPLATE_DETAIL_SELECT = {
   id: true,
   name: true,
   description: true,
+  industry: true,
   category: true,
+  formType: true,
   status: true,
   schema: true,
   thumbnailStorageKey: true,
@@ -51,7 +53,9 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
 const patchTemplateBodySchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200).optional(),
   description: z.string().trim().max(1000).optional(),
+  industry: z.string().trim().max(100).optional(),
   category: z.string().trim().max(100).optional(),
+  formType: z.string().trim().max(100).optional(),
   status: z.enum(['draft', 'published', 'archived']).optional(),
   // No versioning here (unlike Form/FormVersion) — a template is a single row with one
   // current schema, since "using" it always produces a fresh, independent Form/
@@ -75,7 +79,9 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
       data: {
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.description !== undefined ? { description: body.description || null } : {}),
+        ...(body.industry !== undefined ? { industry: body.industry || null } : {}),
         ...(body.category !== undefined ? { category: body.category || null } : {}),
+        ...(body.formType !== undefined ? { formType: body.formType || null } : {}),
         ...(body.status !== undefined ? { status: body.status } : {}),
         ...(body.schema !== undefined ? { schema: body.schema } : {}),
       },

@@ -649,11 +649,17 @@ model FormTemplate {
   id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   description String?
-  // Free-text, admin-typed (not an enum) — see the design note in
-  // src/app/admin/templates: keeps adding a new category a content change, not a
-  // migration, while the library is still small enough that a rigid taxonomy would
-  // just get in the way.
+  // Three independent facets a template can be browsed/filtered by in the
+  // /forms/templates gallery sidebar (industry, e.g. "Healthcare"; category, e.g.
+  // "NDIS"/"Childcare" — typically a program or department within an industry; formType,
+  // e.g. "Incident & Safety"). All free-text and admin-typed (not enums) — same reasoning
+  // as the single `category` field this replaced: keeps adding a new value a content
+  // change, not a migration, while the library is still small enough that a rigid
+  // taxonomy would just get in the way. The admin template form suggests existing values
+  // per facet so naming converges without being locked to a fixed list.
+  industry    String?
   category    String?
+  formType    String?        @map("form_type")
   status      TemplateStatus @default(draft)
   // Same shape/validation (formSchemaSchema) as FormVersion.schema — see
   // src/lib/forms/schema.ts. Edited via src/app/admin/templates/[id]/builder, a

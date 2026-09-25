@@ -42,7 +42,7 @@ const STATUS_LABELS: Record<OrgStatus, string> = {
 };
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '';
   return new Date(iso).toLocaleDateString('en-AU', {
     day: 'numeric',
     month: 'short',
@@ -73,6 +73,20 @@ function SearchIcon() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3.5 8.5 6.5 11.5 12.5 5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function BillingAdminClient({
   initialOrganizations,
 }: {
@@ -94,18 +108,14 @@ export function BillingAdminClient({
   }
 
   return (
-    <div>
-      <div className="forms-list-header">
+    <div className="billing-page">
+      <header className="org-settings-header">
         <div>
-          <h1 className="settings-page-title">Billing &amp; plan limits</h1>
-          <p className="settings-page-lead">
-            Plan, usage against plan limits, and renewal date for every organisation.
-          </p>
+          <p className="settings-page-kicker">Platform</p>
+          <h1 className="org-settings-title">Billing</h1>
+          <p className="org-settings-lead">Plan, usage, and trial for every organisation.</p>
         </div>
-      </div>
-
-      <div className="card billing-search-card">
-        <label className="forms-search">
+        <label className="forms-search billing-page-search">
           <span className="forms-search-icon">
             <SearchIcon />
           </span>
@@ -117,14 +127,16 @@ export function BillingAdminClient({
             aria-label="Search organisations"
           />
         </label>
-      </div>
+      </header>
 
       {visibleOrganizations.length === 0 ? (
-        <div className="card empty-state">
-          <p>No organisations match &ldquo;{search}&rdquo;.</p>
+        <div className="org-panel billing-empty">
+          <p>
+            {search.trim() ? `No organisations match “${search.trim()}”.` : 'No organisations yet.'}
+          </p>
         </div>
       ) : (
-        <div className="billing-org-grid">
+        <div className="billing-org-list">
           {visibleOrganizations.map((org) => (
             <BillingOrgCard key={org.id} org={org} onSaved={handleSaved} />
           ))}
@@ -219,115 +231,138 @@ function BillingOrgCard({
     }
   }
 
+  const renewalLabel =
+    org.status === 'trial' && org.trialEndsAt
+      ? `Trial ends ${formatDate(org.trialEndsAt)}`
+      : org.renewsAt
+        ? `Renews ${formatDate(org.renewsAt)}`
+        : null;
+
   return (
-    <div className="card billing-org-card">
-      <div className="billing-org-card-header">
-        <div>
-          <Link href={`/admin/organisations/${org.id}`} className="admin-table-name-link">
+    <article className="org-panel billing-org-card">
+      <header className="billing-org-head">
+        <div className="billing-org-identity">
+          <Link href={`/admin/organisations/${org.id}`} className="billing-org-name">
             {org.name}
           </Link>
-          <p className="users-page-subtitle">{org.subdomain}</p>
+          <p className="billing-org-subdomain">{org.subdomain}</p>
         </div>
-        <span className={`badge ${STATUS_BADGE_CLASS[org.status]}`}>
-          {STATUS_LABELS[org.status]}
-        </span>
-      </div>
+        <div className="billing-org-head-meta">
+          {renewalLabel ? <span className="billing-org-renewal">{renewalLabel}</span> : null}
+          <span className={`badge ${STATUS_BADGE_CLASS[org.status]}`}>
+            {STATUS_LABELS[org.status]}
+          </span>
+        </div>
+      </header>
 
-      <div className="billing-org-card-form">
+      <div className="billing-org-controls">
         {error ? (
-          <p className="form-error" role="alert">
+          <p className="form-error billing-org-error" role="alert">
             {error}
           </p>
         ) : null}
-        <div className="billing-org-card-fields-row">
-          <label className="admin-org-field">
-            <span>Plan</span>
-            <select
-              className="text-input"
-              value={plan}
-              disabled={isSaving}
-              onChange={(event) => setPlan(event.target.value as OrgPlan)}
-            >
+
+        <div className="billing-org-control-row">
+          <div className="billing-org-control">
+            <span className="billing-org-control-label">Plan</span>
+            <fieldset className="billing-chip-row" aria-label="Plan">
               {PLAN_ORDER.map((planOption) => (
-                <option key={planOption} value={planOption}>
+                <button
+                  key={planOption}
+                  type="button"
+                  className={`billing-chip${plan === planOption ? ' billing-chip--selected' : ''}`}
+                  disabled={isSaving}
+                  aria-pressed={plan === planOption}
+                  onClick={() => setPlan(planOption)}
+                >
                   {PLAN_LABELS[planOption]}
-                </option>
+                </button>
               ))}
-            </select>
-          </label>
-          <label className="admin-org-field">
-            <span>Status</span>
-            <select
-              className="text-input"
-              value={status}
-              disabled={isSaving}
-              onChange={(event) => handleStatusChange(event.target.value as OrgStatus)}
-            >
-              {(Object.keys(STATUS_LABELS) as OrgStatus[]).map((statusOption) => (
-                <option key={statusOption} value={statusOption}>
-                  {STATUS_LABELS[statusOption]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {status === 'trial' ? (
-          <label className="admin-org-field">
-            <span>Trial ends on</span>
-            <input
-              className="text-input"
-              type="date"
-              value={trialEndsAt}
-              disabled={isSaving}
-              onChange={(event) => setTrialEndsAt(event.target.value)}
-              required
-            />
-          </label>
-        ) : null}
-        <div className="billing-org-card-actions">
-          <button
-            type="button"
-            className="button button--dark button--small"
-            disabled={isSaving || !isDirty}
-            onClick={() => void handleSave()}
-          >
-            {isSaving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </div>
-
-      <div className="billing-usage-bars">
-        {bars.map((bar) => (
-          <div key={bar.label} className="usage-bar">
-            <div className="usage-bar-header">
-              <span>{bar.label}</span>
-              <span>{bar.formatted}</span>
-            </div>
-            <div className="usage-bar-track">
-              <div className="usage-bar-fill" style={{ width: `${bar.percent ?? 100}%` }} />
-            </div>
+            </fieldset>
           </div>
-        ))}
+          <div className="billing-org-control">
+            <span className="billing-org-control-label">Status</span>
+            <fieldset className="billing-chip-row" aria-label="Status">
+              {(Object.keys(STATUS_LABELS) as OrgStatus[]).map((statusOption) => (
+                <button
+                  key={statusOption}
+                  type="button"
+                  className={`billing-chip${status === statusOption ? ` billing-chip--selected billing-chip--${statusOption}` : ''}`}
+                  disabled={isSaving}
+                  aria-pressed={status === statusOption}
+                  onClick={() => handleStatusChange(statusOption)}
+                >
+                  {STATUS_LABELS[statusOption]}
+                </button>
+              ))}
+            </fieldset>
+          </div>
+          {status === 'trial' ? (
+            <label className="billing-org-control">
+              <span className="billing-org-control-label">Trial ends</span>
+              <input
+                className="text-input org-input billing-trial-input"
+                type="date"
+                value={trialEndsAt}
+                disabled={isSaving}
+                onChange={(event) => setTrialEndsAt(event.target.value)}
+                required
+              />
+            </label>
+          ) : null}
+          <div className="billing-org-save">
+            <button
+              type="button"
+              className="button button--dark"
+              disabled={isSaving || !isDirty}
+              onClick={() => void handleSave()}
+            >
+              {isSaving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="billing-feature-pills">
-        {PLAN_FEATURE_PILLS.map((feature) => (
-          <span
-            key={feature.key}
-            className={`billing-feature-pill${limits[feature.key] ? ' billing-feature-pill--on' : ''}`}
-          >
-            {feature.label}
-          </span>
-        ))}
+      <div className="org-usage-grid billing-org-usage">
+        {bars.map((bar) => {
+          const overLimit = bar.limit !== null && bar.used > bar.limit;
+          return (
+            <div
+              key={bar.label}
+              className={`org-usage-card${overLimit ? ' org-usage-card--over' : ''}`}
+            >
+              <div className="org-usage-card-head">
+                <span>{bar.label}</span>
+                <strong>{bar.percent === null ? 'Unlimited' : `${bar.percent}%`}</strong>
+              </div>
+              <p className="org-usage-card-value">{bar.formatted}</p>
+              <div className="org-usage-track">
+                <div
+                  className={`org-usage-fill${overLimit ? ' org-usage-fill--over' : ''}`}
+                  style={{ width: `${bar.percent ?? 100}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="billing-org-card-footer">
-        {org.status === 'trial' ? (
-          <span>Trial ends {formatDate(org.trialEndsAt)}</span>
-        ) : (
-          <span>Renews {formatDate(org.renewsAt)}</span>
-        )}
-      </div>
-    </div>
+      <footer className="billing-org-footer">
+        <ul className="billing-org-features">
+          {PLAN_FEATURE_PILLS.map((feature) => {
+            const on = limits[feature.key];
+            return (
+              <li
+                key={feature.key}
+                className={on ? 'billing-org-feature--on' : 'billing-org-feature--off'}
+              >
+                {on ? <CheckIcon /> : null}
+                {feature.label}
+              </li>
+            );
+          })}
+        </ul>
+      </footer>
+    </article>
   );
 }

@@ -25,10 +25,16 @@ interface RouteContext {
 const SHARE_RATE_LIMIT = 20;
 const SHARE_RATE_WINDOW_MS = 60 * 60 * 1000;
 
+// Builder-edited message text from the modal's "Message" box (see form-top-nav.tsx) —
+// capped well under email/SMS provider limits; formShareEmail()/formShareSms() treat an
+// empty or unchanged-from-default value as "use the original default text".
+const shareMessageSchema = z.string().trim().max(2000).optional();
+
 const shareBodySchema = z.discriminatedUnion('channel', [
   z.object({
     channel: z.literal('email'),
     recipient: z.string().trim().email('Enter a valid email address'),
+    message: shareMessageSchema,
   }),
   z.object({
     channel: z.literal('sms'),
@@ -39,6 +45,7 @@ const shareBodySchema = z.discriminatedUnion('channel', [
       .string()
       .trim()
       .regex(/^\+?[1-9]\d{7,14}$/, 'Enter a valid phone number, e.g. +61491570156'),
+    message: shareMessageSchema,
   }),
 ]);
 
@@ -105,7 +112,12 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     );
 
     if (body.channel === 'email') {
-      const { subject, html, text } = formShareEmail({ senderName, formName, formUrl });
+      const { subject, html, text } = formShareEmail({
+        senderName,
+        formName,
+        formUrl,
+        message: body.message,
+      });
       await sendEmail({
         to: body.recipient,
         subject,
@@ -115,7 +127,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         organizationId,
       });
     } else {
-      const message = formShareSms({ senderName, formName, formUrl });
+      const message = formShareSms({ senderName, formName, formUrl, message: body.message });
       await sendSms({ to: body.recipient, message, kind: 'form_share', organizationId });
     }
 

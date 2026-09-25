@@ -6673,81 +6673,72 @@ textarea.text-input {
   border-color: color-mix(in srgb, var(--color-lavender-strong) 35%, var(--color-border));
 }
 
-.share-panel-send-compose,
-.share-panel-send-preview {
+.share-send-field {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  min-width: 0;
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--color-border);
+  gap: 0.35rem;
+  margin-bottom: 1.15rem;
 }
 
-.share-panel-send-label {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-text-subtle);
+.share-send-field .modal-section-label {
+  margin: 0;
 }
 
-.share-panel-send-input {
-  box-sizing: border-box;
+.share-send-field .text-input {
   width: 100%;
-  padding: 0.5rem 0.65rem;
-  background-color: var(--color-surface);
-  color: var(--color-text);
+}
+
+.share-send-modal .share-panel-email-preview,
+.share-send-modal .share-panel-sms-preview {
+  margin-bottom: 0.25rem;
+}
+
+.share-send-message-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.share-send-message-head .modal-section-label {
+  margin: 0;
+}
+
+/* Ghost pill, same visual weight as .share-panel-view-live's icon+label pairing —
+   secondary to Send/Cancel below, so it stays understated rather than looking like a
+   third competing action. */
+.share-send-preview-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  background-color: transparent;
+  color: var(--color-text-muted);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  font-size: 0.8125rem;
-}
-
-.share-panel-send-input:focus-visible {
-  outline: 2px solid var(--color-lavender-strong);
-  outline-offset: 1px;
-}
-
-.share-panel-send-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-}
-
-.share-panel-send-back,
-.share-panel-send-primary {
-  width: 100%;
-  padding: 0.5rem 0.6rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
 }
 
-.share-panel-send-back {
-  background-color: var(--color-surface);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-}
-
-.share-panel-send-back:hover {
+.share-send-preview-toggle:hover {
   background-color: var(--color-surface-sunken);
   color: var(--color-text);
 }
 
-.share-panel-send-primary {
-  background-color: var(--color-text);
-  color: var(--color-surface);
-  border: none;
+.share-send-message-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 4.5rem;
+  font-family: inherit;
 }
 
-.share-panel-send-primary:hover {
-  background-color: #000;
-}
-
-.share-panel-send-primary:disabled,
-.share-panel-send-back:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+.share-send-message-hint {
+  margin: 0.35rem 0 0.9rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
 }
 
 /* Compact mock of the actual email — subject line styled like an inbox row, body as

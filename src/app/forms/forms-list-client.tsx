@@ -64,7 +64,7 @@ const PAGE_SIZE = 10;
 
 function SearchIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
       <path d="M13 13l-2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
@@ -100,7 +100,7 @@ function CheckIcon() {
 
 function SortIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
         d="M4.5 2.5v10M4.5 2.5 2 5M4.5 2.5 7 5"
         stroke="currentColor"
@@ -120,7 +120,7 @@ function SortIcon() {
 
 function FilterIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
         d="M2 3.2h12L9.6 8v5l-3.2 1.4V8L2 3.2z"
         stroke="currentColor"
@@ -133,7 +133,7 @@ function FilterIcon() {
 
 function ListViewIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="2.6" cy="4" r="0.9" fill="currentColor" />
       <circle cx="2.6" cy="8" r="0.9" fill="currentColor" />
       <circle cx="2.6" cy="12" r="0.9" fill="currentColor" />
@@ -149,7 +149,7 @@ function ListViewIcon() {
 
 function GridViewIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
       <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
       <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
@@ -255,21 +255,14 @@ export function FormsListClient({
   const [isTransferring, setIsTransferring] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Toolbar: search/sort/filter collapse into icon buttons (search opens an inline field,
-  // sort/filter open a dropdown) rather than the always-visible search box + chip row, plus
-  // a List/Grid layout switch — the table itself is unchanged, Grid is an alternate card
-  // layout over the same filtered/sorted `visibleForms`/`pageForms` below.
+  // Toolbar: always-visible search, plus sort/filter icon buttons and a List/Grid
+  // switch — the table itself is unchanged, Grid is an alternate card layout over the
+  // same filtered/sorted `visibleForms`/`pageForms` below.
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const sortTriggerRef = useRef<HTMLButtonElement>(null);
   const filterTriggerRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (isSearchOpen) searchInputRef.current?.focus();
-  }, [isSearchOpen]);
 
   async function handleCopyLink(url: string) {
     try {
@@ -569,54 +562,31 @@ export function FormsListClient({
         <div className="card admin-table-card">
           <div className="forms-toolbar">
             <div className="forms-toolbar-icons">
-              {isSearchOpen ? (
-                <label className="forms-search forms-search--inline">
-                  <span className="forms-search-icon">
-                    <SearchIcon />
-                  </span>
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    placeholder="Search forms…"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key !== 'Escape') return;
-                      if (search) {
-                        setSearch('');
-                      } else {
-                        setIsSearchOpen(false);
-                      }
-                    }}
-                    onBlur={() => {
-                      if (!search) setIsSearchOpen(false);
-                    }}
-                    aria-label="Search forms"
-                  />
-                  {search ? (
-                    <button
-                      type="button"
-                      className="forms-search-clear"
-                      aria-label="Clear search"
-                      onClick={() => {
-                        setSearch('');
-                        setIsSearchOpen(false);
-                      }}
-                    >
-                      <CloseIcon />
-                    </button>
-                  ) : null}
-                </label>
-              ) : (
-                <button
-                  type="button"
-                  className="forms-toolbar-icon-btn"
-                  aria-label="Search forms"
-                  onClick={() => setIsSearchOpen(true)}
-                >
+              <label className="forms-search forms-search--inline">
+                <span className="forms-search-icon">
                   <SearchIcon />
-                </button>
-              )}
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search forms…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape' && search) setSearch('');
+                  }}
+                  aria-label="Search forms"
+                />
+                {search ? (
+                  <button
+                    type="button"
+                    className="forms-search-clear"
+                    aria-label="Clear search"
+                    onClick={() => setSearch('')}
+                  >
+                    <CloseIcon />
+                  </button>
+                ) : null}
+              </label>
 
               <button
                 ref={sortTriggerRef}
@@ -1058,6 +1028,7 @@ function FormsGridCard({
           <Link
             href={builderHref}
             className="admin-table-name-link forms-grid-card-title"
+            title={form.name}
             onClick={(event) => event.stopPropagation()}
           >
             {form.name}

@@ -47,8 +47,11 @@ function TrialExpiredBanner() {
         Your trial has ended. Live forms are offline and changes are paused until you subscribe.
       </span>
       <span className="admin-trial-banner-actions">
-        <Link href="/pricing" className="admin-trial-banner-link">
-          View plans
+        {/* /forms/organisation defaults to its Billing tab whenever plan.status !== 'active'
+            (see organisation-details-client.tsx), which covers this trial-ended state — so
+            no query param/deep-link is needed to land the org admin on the right tab. */}
+        <Link href="/forms/organisation" className="admin-trial-banner-link">
+          Subscribe
         </Link>
         <Link href="/contact" className="admin-trial-banner-link admin-trial-banner-link--ghost">
           Contact us

@@ -40,11 +40,41 @@ interface AdminShellClientProps {
   children: ReactNode;
 }
 
+function TrialWarningIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className="admin-trial-banner-icon"
+    >
+      <path
+        d="M8 2.3 14.5 13.5H1.5L8 2.3Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <line
+        x1="8"
+        y1="6.4"
+        x2="8"
+        y2="9.6"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="11.5" r="0.8" fill="currentColor" />
+    </svg>
+  );
+}
+
 function TrialExpiredBanner() {
   return (
     <div className="admin-trial-banner" role="alert">
       <span className="admin-trial-banner-message">
-        <span className="admin-trial-banner-dot" aria-hidden="true" />
+        <TrialWarningIcon />
         <span className="admin-trial-banner-text">
           <strong>Your trial has ended.</strong> Live forms are offline and changes are paused until
           you subscribe.

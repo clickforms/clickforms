@@ -626,15 +626,9 @@ a {
   min-width: 0;
 }
 
-/* Small fixed dot rather than a full icon glyph — enough to give the bar a scannable
-   anchor at a glance (the pattern most trial/warning bars use) without pulling in a new
-   icon just for this one spot. */
-.admin-trial-banner-dot {
+.admin-trial-banner-icon {
   flex-shrink: 0;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 50%;
-  background: var(--color-warning);
+  color: var(--color-warning);
 }
 
 .admin-trial-banner-text {

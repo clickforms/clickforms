@@ -17335,306 +17335,310 @@ textarea.form-field-input {
   color: var(--color-text);
 }
 
-.organisation-settings {
+/* Organisation workspace settings (/forms/organisation) — Linear/Vercel-style identity
+   header + setting rows (label left, control right) + billing as a summary + plan cards.
+   Usage over-limit colours still live on .usage-bar-value--over / .usage-bar-fill--over
+   for the admin billing page; org settings uses .org-usage-* equivalents below. */
+.admin-shell[data-theme="dark"] .org-panel,
+.admin-shell[data-theme="dark"] .org-savebar,
+.admin-shell[data-theme="dark"] .org-identity-logo {
+  box-shadow: none;
+}
+
+.org-settings {
   width: 100%;
   max-width: none;
 }
 
-.organisation-settings .settings-page-header {
-  margin-bottom: 1.15rem;
+.org-settings-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
-.organisation-settings .settings-page-title {
-  font-size: 1.85rem;
+.org-settings-title {
+  margin: 0;
+  font-size: 1.75rem;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
 }
 
-.organisation-settings .settings-page-lead {
-  max-width: none;
-  margin-top: 0.35rem;
-  font-size: 0.9rem;
+.org-settings-lead {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
 }
 
-.organisation-settings .contact-details-card {
-  margin-top: 0;
-  overflow: visible;
-  border-radius: 1.1rem;
-  border-color: var(--color-border);
-}
-
-.organisation-settings .contact-details-header {
-  gap: 0.75rem;
-  padding: 1.15rem 1.5rem 1rem;
-}
-
-.organisation-settings .contact-details-header-icon {
-  width: 2.35rem;
-  height: 2.35rem;
-  border-radius: 50%;
-  color: #12b76a;
-}
-
-.admin-shell[data-theme="dark"] .organisation-settings .contact-details-header-icon {
-  color: #3dd975;
-}
-
-.organisation-settings .contact-details-title {
-  font-size: 1rem;
-}
-
-.organisation-settings .contact-details-intro {
-  max-width: none;
-  font-size: 0.8125rem;
-}
-
-/* General/Billing tab switcher atop /forms/organisation (organisation-details-client.tsx)
-   — a segmented pill control rather than an underlined-tab pattern, since this page only
-   ever has these two sections and the pill/surface language already matches buttons and
-   badges elsewhere on the page. */
-.organisation-settings-tabs {
+.org-settings-tabs {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  padding: 0.25rem;
-  margin-bottom: 1.5rem;
-  background: var(--color-surface-sunken);
+  padding: 0.22rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-pill);
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
-.organisation-settings-tab {
+.org-settings-tab {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.45rem 1.15rem;
+  padding: 0.55rem 1.25rem;
   border: none;
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 650;
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
 }
 
-.organisation-settings-tab:hover {
+.org-settings-tab:hover {
   color: var(--color-text);
 }
 
-.organisation-settings-tab--active {
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+.org-settings-tab--active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+  box-shadow: none;
 }
 
-/* Flags the Billing tab when there's something to act on (trial/suspended) so it's
-   noticeable even while General is the active tab — same warning tone as the trial
-   banner in admin-shell-client.tsx, not tied to any specific status color. */
-.organisation-settings-tab-dot {
+.org-settings-tab-dot {
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 50%;
   background: var(--color-warning);
 }
 
-/* Plan & Billing card (Billing tab of /forms/organisation) — reuses .contact-details-card's
-   padding:0 shell (header/actions carry their own padding), so each section below carries
-   its own horizontal padding and a title + hairline divider from the section before it,
-   rather than the usage bars and feature pills running straight into each other. */
-.organisation-plan-heading {
-  display: flex;
-  flex-direction: column;
-}
-
-.organisation-plan-section {
-  padding: 1.15rem 1.5rem;
-}
-
-.organisation-plan-section + .organisation-plan-section {
-  border-top: 1px solid var(--color-border);
-}
-
-.organisation-plan-section-title {
-  margin: 0 0 0.85rem;
-  color: var(--color-text-subtle);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.organisation-plan-usage {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-/* Flags a resource that's over its plan's cap (e.g. an org with 3 users moved onto a
-   1-user plan) — usage-bar-fill alone caps its width at 100% and would otherwise show a
-   plain, reassuring-looking full green bar for what is actually an over-limit state. */
-.usage-bar-value--over {
-  color: var(--color-danger);
-  font-weight: 600;
-}
-
-.usage-bar-fill--over {
-  background: var(--color-danger);
-}
-
-.organisation-plan-feature-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.organisation-plan-feature {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 0.8125rem;
-  color: var(--color-text-subtle);
-}
-
-.organisation-plan-feature-icon {
-  display: inline-flex;
-  flex: 0 0 auto;
-  color: var(--color-text-subtle);
-}
-
-/* An included perk reads as a plain black checklist item, not another shade of pill —
-   the "off" rows stay muted so the page doesn't look broken when every pill on the
-   Standard plan happens to be off (that's the expected, correct state for that tier). */
-.organisation-plan-feature--on {
-  color: var(--color-text);
-  font-weight: 600;
-}
-
-.organisation-plan-feature--on .organisation-plan-feature-icon {
-  color: var(--color-primary);
-}
-
-/* Self-service "Change plan" section — the org's own admin picking a tier directly (see
-   handleChangePlan in organisation-details-client.tsx), rather than View plans/Contact us
-   being the only ways to act on this card. */
-.organisation-plan-switch-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.organisation-plan-switch-select {
-  max-width: 12rem;
-  border-radius: var(--radius-pill);
-}
-
-.organisation-plan-switch-warning {
-  margin: 0.75rem 0 0;
-  padding: 0.65rem 0.85rem;
-  background: var(--color-warning-soft);
-  border: 1px solid var(--color-warning-border);
-  border-radius: 0.6rem;
-  color: var(--color-warning);
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-
-.organisation-plan-links {
-  margin-top: 0.85rem;
-}
-
-.organisation-details-list {
-  border-top: none;
-}
-
-.organisation-settings .contact-details-row {
-  grid-template-columns: 10.5rem minmax(0, 1fr);
-  gap: 1.15rem;
-  align-items: center;
-  padding: 0.7rem 1.5rem;
-  border-top: none;
-}
-
-.organisation-settings .contact-details-row:has(.notification-toggle-row) {
+.org-settings-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
   align-items: start;
 }
 
-.organisation-settings .contact-details-row dt {
-  padding-top: 0;
-  font-size: 0.8125rem;
-  font-weight: 650;
+.org-settings-stack > .org-identity,
+.org-settings-stack > .org-banner,
+.org-settings-stack > .org-plan-summary,
+.org-settings-stack > .org-savebar,
+.org-settings-stack > .org-settings-error,
+.org-settings-stack > .org-panel--wide {
+  grid-column: 1 / -1;
 }
 
-.organisation-settings .contact-details-row:has(.notification-toggle-row) dt {
-  padding-top: 0.35rem;
-}
-
-.organisation-settings .contact-details-row dd {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.4rem;
-}
-
-.organisation-settings .contact-details-input {
-  width: 100%;
-  max-width: none;
-  padding: 0.55rem 0.95rem;
-  font-size: 0.875rem;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
-}
-
-.organisation-settings .contact-details-input:focus {
-  background-color: var(--color-surface);
-  border-color: var(--color-lavender);
-  box-shadow: 0 0 0 3px var(--color-lavender-soft);
-}
-
-.organisation-field-control {
-  position: relative;
-}
-
-.organisation-field-icon {
-  position: absolute;
-  top: 50%;
-  left: 0.85rem;
-  display: inline-flex;
-  color: var(--color-text-subtle);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.organisation-field-control .contact-details-input {
-  padding-left: 2.35rem;
-}
-
-.organisation-field-hint {
+.org-settings-error {
   margin: 0;
-  max-width: 42rem;
+}
+
+.org-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.9rem;
+  overflow: visible;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.org-panel-head {
+  padding: 1.1rem 1.35rem;
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0.9rem 0.9rem 0 0;
+}
+
+.org-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.org-panel-lead {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-muted);
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: var(--color-text-subtle);
 }
 
-.organisation-label-with-help {
-  display: inline-flex;
+.org-identity {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 1.5rem;
+  background: var(--color-surface);
+}
+
+.org-file-input {
+  display: none;
+}
+
+.org-identity-logo {
+  position: relative;
+  width: 6rem;
+  height: 6rem;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 1.15rem;
+  background: var(--color-surface-sunken);
+  color: inherit;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.org-identity-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--color-surface);
+}
+
+.org-identity-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.org-identity-logo-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.org-identity-logo:hover .org-identity-logo-overlay,
+.org-identity-logo:focus-visible .org-identity-logo-overlay {
+  opacity: 1;
+}
+
+.org-identity-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.org-identity-name-row {
+  display: flex;
   align-items: center;
   gap: 0.4rem;
 }
 
-.organisation-help {
-  position: relative;
-  display: inline-flex;
+.org-identity-name {
+  margin: 0.15rem 0 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
-.organisation-help-button {
+.org-identity-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  max-width: 100%;
+}
+
+.org-identity-url-text {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.org-icon-button:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.org-identity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.org-identity-hint {
+  margin: 0.7rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.org-rows {
+  border-top: none;
+}
+
+.org-row {
+  display: grid;
+  grid-template-columns: minmax(11rem, 16rem) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.1rem 1.35rem;
+}
+
+.org-row + .org-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.org-row-copy label,
+.org-row-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+.org-label-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.org-help {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.org-help-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -17644,74 +17648,397 @@ textarea.form-field-input {
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
   cursor: help;
 }
 
-.organisation-help-button:hover,
-.organisation-help-button:focus-visible {
-  color: var(--color-text);
+.org-help-button:hover,
+.org-help-button:focus-visible {
+  color: var(--color-lavender-strong);
 }
 
-.organisation-tooltip {
+.org-help-tooltip {
   position: absolute;
   top: calc(100% + 0.45rem);
-  left: 50%;
+  left: 0;
   z-index: 20;
-  width: 22rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.7rem;
+  width: 18rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.65rem;
   background: var(--color-surface);
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.06),
     0 12px 28px rgba(15, 23, 42, 0.12);
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font-size: 0.75rem;
-  font-weight: 400;
+  font-weight: 450;
   line-height: 1.5;
   text-align: left;
-  transform: translateX(-1.1rem);
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
   transition: opacity 0.12s ease;
 }
 
-.organisation-help:hover .organisation-tooltip,
-.organisation-help:focus-within .organisation-tooltip {
+.org-help:hover .org-help-tooltip,
+.org-help:focus-within .org-help-tooltip {
   opacity: 1;
   visibility: visible;
 }
 
-.organisation-settings .contact-details-actions {
-  justify-content: flex-end;
-  padding: 0.85rem 1.5rem 1rem;
-  background: var(--color-surface);
-  border-top: none;
+.org-row-copy p {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
 }
 
-.organisation-settings .contact-details-actions .button {
-  padding: 0.5rem 1.15rem;
+.org-row-control--end {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.org-input {
+  width: 100%;
+  max-width: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.55rem;
+  background: var(--color-surface);
+  padding: 0.6rem 0.9rem;
+  font-weight: 500;
+}
+
+.org-input:focus {
+  border-color: var(--color-primary-hover);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.org-readonly {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.55rem 0.45rem 0.9rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.55rem;
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.org-savebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.15rem;
+  padding: 0.95rem 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.9rem;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 12px 28px rgba(15, 23, 42, 0.1);
+}
+
+.org-savebar p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.org-savebar:not(.org-savebar--visible) p {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.org-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-warning-border);
+  border-radius: 0.9rem;
+  background: var(--color-warning-soft);
+}
+
+.org-banner--danger {
+  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface));
+}
+
+.org-banner-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.org-banner-body {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.org-plan-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.25rem 1.35rem;
+}
+
+.org-plan-kicker {
+  margin: 0 0 0.2rem;
+  color: var(--color-primary-hover);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.org-plan-summary-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.org-plan-name {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.org-plan-meta {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-muted);
   font-size: 0.8125rem;
 }
 
-/* The plan card's action row sits right after the "What's included" section above with no
-   other visual break, so — unlike the Logo/Details cards' action rows — it needs its own
-   divider to read as a distinct footer rather than the section content trailing off into
-   empty space. Same specificity as the rule above; placed after it so this wins. */
-.organisation-settings .organisation-plan-actions {
-  border-top: 1px solid var(--color-border);
+.org-plan-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.org-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  padding: 1.1rem 1.35rem 1.35rem;
+}
+
+.org-usage-card {
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+}
+
+.org-usage-card--over {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
+}
+
+.org-usage-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.org-usage-card-value {
+  margin: 0.4rem 0 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.org-usage-track {
+  height: 0.35rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+}
+
+.org-usage-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+}
+
+.org-usage-fill--over {
+  background: var(--color-danger);
+}
+
+.org-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  padding: 1.1rem 1.35rem 1rem;
+}
+
+.org-plan-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  padding: 1.05rem 1.1rem 1.15rem;
+  text-align: left;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.85rem;
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.org-plan-card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.org-plan-card--selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.org-plan-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.org-plan-card-name {
+  font-size: 0.9rem;
+  font-weight: 750;
+}
+
+.org-plan-card-badge {
+  padding: 0.12rem 0.45rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.org-plan-card-price {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.org-plan-card-period {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.org-plan-card-limits,
+.org-plan-card-features {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.org-plan-card-limits {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.org-plan-card-features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.org-plan-card-feature--on {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-primary-hover);
+}
+
+.org-plan-card-feature--off {
+  display: none;
+}
+
+.org-plan-warning {
+  margin: 0 1.35rem 0.85rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--color-warning-soft);
+  border: 1px solid var(--color-warning-border);
+  border-radius: 0.6rem;
+  color: var(--color-warning);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.org-plan-confirm {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1.35rem 1.2rem;
+}
+
+.usage-bar-value--over {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.usage-bar-fill--over {
+  background: var(--color-danger);
+}
+
+@media (max-width: 1100px) {
+  .org-usage-grid,
+  .org-plan-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 900px) {
-  .organisation-settings .contact-details-row {
-    grid-template-columns: 1fr;
-    gap: 0.4rem;
+  .org-settings-header {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .organisation-settings .contact-details-row dt {
-    padding-top: 0;
+  .org-settings-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .org-identity {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .org-row,
+  .org-plan-summary {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .org-row-control--end {
+    justify-content: flex-start;
+  }
+
+  .org-usage-grid,
+  .org-plan-grid {
+    grid-template-columns: 1fr;
   }
 }
 

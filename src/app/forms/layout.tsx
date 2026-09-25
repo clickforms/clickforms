@@ -38,7 +38,7 @@ export default async function FormsLayout({ children }: { children: ReactNode })
   // assertOrgActionsAllowed at the API layer regardless of whether this banner renders.
   const trialExpired = organization ? isTrialExpired(organization) : false;
 
-  // Regenerated on every page load, never stored — see the "Logo" card in
+  // Regenerated on every page load, never stored — see the identity header on
   // /forms/organisation (organisation-details-client.tsx) for how it's uploaded.
   let logoUrl: string | null = null;
   if (organization?.logoStorageKey) {

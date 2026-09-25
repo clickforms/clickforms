@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   type ChangeEvent,
   type FormEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -15,6 +16,7 @@ import { ImageCropEditor } from '@/app/forms/[id]/builder/image-crop-editor';
 import { useToast } from '@/components/toast';
 import {
   buildUsageBars,
+  formatBytes,
   PLAN_FEATURE_PILLS,
   PLAN_LABELS,
   PLAN_LIMITS,
@@ -29,6 +31,15 @@ import { isCroppableImage } from '@/lib/forms/crop-image';
  * duplication already done for MAX_UPLOAD_SIZE_BYTES in src/app/forms/files/files-client.tsx). */
 const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
 const LOGO_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
+
+/** Display-only prices matching src/components/landing/landing-pricing.tsx — no
+ * payment provider is wired, so these are orientation, not a charge. */
+const PLAN_PRICE: Record<OrgPlan, string> = {
+  standard: '$49',
+  business: '$129',
+  professional: '$219',
+  enterprise: 'Custom',
+};
 
 export interface OrganizationProfile {
   id: string;
@@ -55,6 +66,8 @@ export interface OrganizationPlanInfo {
 interface OrganisationDetailsClientProps {
   initialOrganization: OrganizationProfile;
   plan: OrganizationPlanInfo;
+  /** Absolute origin for this org's public subdomain, e.g. https://carecircle.clickforms.com.au */
+  publicOrigin: string;
 }
 
 const PLAN_STATUS_BADGE_CLASS: Record<OrgStatus, string> = {
@@ -101,14 +114,25 @@ function computeOverLimitLabels(targetPlan: OrgPlan, usage: PlanUsage): string[]
   return labels;
 }
 
-function InfoIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M8 7.2v3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <circle cx="8" cy="5.2" r="0.7" fill="currentColor" />
-    </svg>
-  );
+function orgInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return (parts[0]?.slice(0, 2) ?? '?').toUpperCase();
+  return `${parts[0]?.[0] ?? ''}${parts[parts.length - 1]?.[0] ?? ''}`.toUpperCase();
+}
+
+function planLimitLines(plan: OrgPlan): string[] {
+  const limits = PLAN_LIMITS[plan];
+  return [
+    limits.maxForms === null ? 'Unlimited forms' : `${limits.maxForms} forms`,
+    limits.maxUsers === null ? 'Unlimited users' : `${limits.maxUsers} users`,
+    limits.maxStorageBytes === null
+      ? 'Unlimited storage'
+      : `${formatBytes(limits.maxStorageBytes)} storage`,
+    limits.maxSubmissionsPerMonth === null
+      ? 'Unlimited submissions'
+      : `${limits.maxSubmissionsPerMonth.toLocaleString()} submissions / mo`,
+  ];
 }
 
 function CheckIcon() {
@@ -125,42 +149,51 @@ function CheckIcon() {
   );
 }
 
-function CrossIcon() {
+function InfoIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8 7.2v3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="8" cy="5.2" r="0.7" fill="currentColor" />
     </svg>
   );
 }
 
-function MailIcon() {
+function HelpTip({ id, label, children }: { id: string; label: string; children: ReactNode }) {
+  return (
+    <span className="org-help">
+      <button type="button" className="org-help-button" aria-describedby={id} aria-label={label}>
+        <InfoIcon />
+      </button>
+      <span id={id} role="tooltip" className="org-help-tooltip">
+        {children}
+      </span>
+    </span>
+  );
+}
+
+function CameraIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="2" y="3.5" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
       <path
-        d="M3 4.5 8 8.5 13 4.5"
+        d="M5.2 4.2 5.8 3.2h4.4l.6 1H13a1.2 1.2 0 0 1 1.2 1.2v6.2A1.2 1.2 0 0 1 13 12.8H3A1.2 1.2 0 0 1 1.8 11.6V5.4A1.2 1.2 0 0 1 3 4.2h2.2Z"
         stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
+        strokeWidth="1.3"
         strokeLinejoin="round"
       />
+      <circle cx="8" cy="8.3" r="2.1" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   );
 }
 
-function PhoneIcon() {
+function CopyIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.4" stroke="currentColor" strokeWidth="1.4" />
       <path
-        d="M5.2 2.8h2.1l.7 2.1-1.3 1.1a8.2 8.2 0 0 0 3.3 3.3l1.1-1.3 2.1.7v2.1c0 .6-.5 1.2-1.1 1.3-4.4.7-8.5-3.4-7.8-7.8.1-.6.7-1.1 1.3-1.1Z"
+        d="M10.5 5.5V3.9A1.4 1.4 0 0 0 9.1 2.5H3.9A1.4 1.4 0 0 0 2.5 3.9v5.2A1.4 1.4 0 0 0 3.9 10.5H5.5"
         stroke="currentColor"
         strokeWidth="1.4"
-        strokeLinejoin="round"
       />
     </svg>
   );
@@ -195,6 +228,7 @@ function Toggle({
 export function OrganisationDetailsClient({
   initialOrganization,
   plan,
+  publicOrigin,
 }: OrganisationDetailsClientProps) {
   const toast = useToast();
   // Defaults to Billing when there's something to act on (trial/suspended) so the
@@ -233,12 +267,33 @@ export function OrganisationDetailsClient({
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     Boolean(initialOrganization.notificationEmail),
   );
+  const [savedSnapshot, setSavedSnapshot] = useState({
+    name: initialOrganization.name,
+    abn: initialOrganization.abn ?? '',
+    contactName: initialOrganization.contactName ?? '',
+    contactEmail: initialOrganization.contactEmail ?? '',
+    contactPhone: initialOrganization.contactPhone ?? '',
+    notificationEmail: initialOrganization.notificationEmail ?? '',
+    notificationsEnabled: Boolean(initialOrganization.notificationEmail),
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cropSession, setCropSession] = useState<{
     imageSrc: string;
     fileName: string;
   } | null>(null);
+
+  const isDirty =
+    name.trim() !== savedSnapshot.name ||
+    abn.trim() !== savedSnapshot.abn ||
+    contactName.trim() !== savedSnapshot.contactName ||
+    contactEmail.trim() !== savedSnapshot.contactEmail ||
+    contactPhone.trim() !== savedSnapshot.contactPhone ||
+    notificationsEnabled !== savedSnapshot.notificationsEnabled ||
+    (notificationsEnabled && notificationEmail.trim() !== savedSnapshot.notificationEmail);
+
+  const publicHost =
+    (publicOrigin ?? '').replace(/^https?:\/\//, '') || initialOrganization.subdomain;
 
   useEffect(() => {
     return () => {
@@ -315,6 +370,15 @@ export function OrganisationDetailsClient({
         return;
       }
 
+      setSavedSnapshot({
+        name: trimmedName,
+        abn: abn.trim(),
+        contactName: contactName.trim(),
+        contactEmail: contactEmail.trim(),
+        contactPhone: contactPhone.trim(),
+        notificationEmail: notificationsEnabled ? notificationEmail.trim() : '',
+        notificationsEnabled,
+      });
       toast.success('Organisation details saved');
     } catch {
       setError('Something went wrong. Please try again.');
@@ -440,276 +504,115 @@ export function OrganisationDetailsClient({
     }
   }
 
+  async function copyPublicHost() {
+    try {
+      await navigator.clipboard.writeText(publicHost);
+      toast.success('Copied public URL');
+    } catch {
+      toast.error('Could not copy');
+    }
+  }
+
+  const trialDays = planInfo.trialEndsAt ? daysUntil(planInfo.trialEndsAt) : 0;
+
   return (
-    <div className="settings-page organisation-settings">
-      <div className="settings-page-header">
-        <h1 className="settings-page-title">Organisation settings</h1>
-        <p className="settings-page-lead">
-          Manage the details that identify your organisation across Clickforms.
-        </p>
-      </div>
-
-      <div
-        className="organisation-settings-tabs"
-        role="tablist"
-        aria-label="Organisation settings sections"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'general'}
-          className={`organisation-settings-tab${activeTab === 'general' ? ' organisation-settings-tab--active' : ''}`}
-          onClick={() => setActiveTab('general')}
-        >
-          General
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'billing'}
-          className={`organisation-settings-tab${activeTab === 'billing' ? ' organisation-settings-tab--active' : ''}`}
-          onClick={() => setActiveTab('billing')}
-        >
-          Billing
-          {planInfo.status !== 'active' ? (
-            <span className="organisation-settings-tab-dot" aria-hidden="true" />
-          ) : null}
-        </button>
-      </div>
-
-      {activeTab === 'billing' ? (
-        <div className="card contact-details-card organisation-plan-card">
-          <div className="contact-details-header">
-            <span className="contact-details-header-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <title>Plan</title>
-                <path
-                  d="M10 3 4 6.5v6L10 16l6-3.5v-6L10 3Z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-                <path d="M10 9.3v6.4" stroke="currentColor" strokeWidth="1.5" />
-                <path
-                  d="m4 6.5 6 2.8 6-2.8"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            <div className="organisation-plan-heading">
-              <div className="contact-details-title-row">
-                <h2 className="contact-details-title">{PLAN_LABELS[planInfo.plan]} plan</h2>
-                <span className={`badge ${PLAN_STATUS_BADGE_CLASS[planInfo.status]}`}>
-                  {planInfo.status === 'trial'
-                    ? 'Trial'
-                    : planInfo.status === 'suspended'
-                      ? 'Suspended'
-                      : 'Active'}
-                </span>
-              </div>
-              <p className="contact-details-intro">
-                {planInfo.status === 'trial' && planInfo.trialEndsAt ? (
-                  daysUntil(planInfo.trialEndsAt) > 0 ? (
-                    <>
-                      Your trial ends in {daysUntil(planInfo.trialEndsAt)} day
-                      {daysUntil(planInfo.trialEndsAt) === 1 ? '' : 's'} (
-                      {formatPlanDate(planInfo.trialEndsAt)}
-                      ). Pick a plan below before then to keep using Clickforms without
-                      interruption.
-                    </>
-                  ) : (
-                    <>
-                      Your trial ended on {formatPlanDate(planInfo.trialEndsAt)}. Pick a plan below
-                      to continue — sign-in is paused for this organisation until then.
-                    </>
-                  )
-                ) : planInfo.status === 'suspended' ? (
-                  'This organisation is suspended. Contact us to reactivate it.'
-                ) : planInfo.renewsAt ? (
-                  <>Renews {formatPlanDate(planInfo.renewsAt)}.</>
-                ) : (
-                  "Here's your current usage against this plan's limits."
-                )}
-              </p>
-            </div>
-          </div>
-
-          <div className="organisation-plan-section">
-            <h3 className="organisation-plan-section-title">Usage</h3>
-            <div className="organisation-plan-usage">
-              {buildUsageBars(planInfo.plan, planInfo.usage).map((bar) => {
-                const overLimit = bar.limit !== null && bar.used > bar.limit;
-                return (
-                  <div key={bar.label} className="usage-bar">
-                    <div className="usage-bar-header">
-                      <span>{bar.label}</span>
-                      <span className={overLimit ? 'usage-bar-value--over' : undefined}>
-                        {bar.formatted}
-                        {overLimit ? ' · Over limit' : ''}
-                      </span>
-                    </div>
-                    <div className="usage-bar-track">
-                      <div
-                        className={`usage-bar-fill${overLimit ? ' usage-bar-fill--over' : ''}`}
-                        style={{ width: `${bar.percent ?? 100}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="organisation-plan-section">
-            <h3 className="organisation-plan-section-title">What&apos;s included</h3>
-            <ul className="organisation-plan-feature-list">
-              {PLAN_FEATURE_PILLS.map((feature) => {
-                const on = PLAN_LIMITS[planInfo.plan][feature.key];
-                return (
-                  <li
-                    key={feature.key}
-                    className={`organisation-plan-feature${on ? ' organisation-plan-feature--on' : ''}`}
-                  >
-                    <span className="organisation-plan-feature-icon" aria-hidden="true">
-                      {on ? <CheckIcon /> : <CrossIcon />}
-                    </span>
-                    {feature.label}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          <div className="organisation-plan-section organisation-plan-switch">
-            <h3 className="organisation-plan-section-title">Change plan</h3>
-            {planChangeError ? (
-              <p className="form-error" role="alert">
-                {planChangeError}
-              </p>
-            ) : null}
-            <div className="organisation-plan-switch-row">
-              <select
-                className="text-input organisation-plan-switch-select"
-                value={selectedPlan}
-                onChange={(event) => setSelectedPlan(event.target.value as OrgPlan)}
-                disabled={isChangingPlan}
-                aria-label="Plan"
-              >
-                {PLAN_ORDER.map((planOption) => (
-                  <option key={planOption} value={planOption}>
-                    {PLAN_LABELS[planOption]}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="button button--dark"
-                disabled={
-                  isChangingPlan || (selectedPlan === planInfo.plan && planInfo.status !== 'trial')
-                }
-                onClick={() => void handleChangePlan()}
-              >
-                {isChangingPlan ? 'Updating…' : 'Change plan'}
-              </button>
-            </div>
-            {selectedPlan !== planInfo.plan && overLimitLabels.length > 0 ? (
-              <p className="organisation-plan-switch-warning">
-                Switching to {PLAN_LABELS[selectedPlan]} would put you over its limit on{' '}
-                {overLimitLabels.join(', ')}. Existing data is safe — you just won&apos;t be able to
-                add more there until you&apos;re back under the limit.
-              </p>
-            ) : null}
-            <p className="contact-details-intro organisation-plan-links">
-              <Link href="/pricing">Compare all plans</Link>
-              <span aria-hidden="true"> · </span>
-              Need something custom? <Link href="/contact">Contact us</Link>.
-            </p>
-          </div>
+    <div className="org-settings">
+      <header className="org-settings-header">
+        <div>
+          <p className="settings-page-kicker">Workspace</p>
+          <h1 className="org-settings-title">Organisation</h1>
+          <p className="org-settings-lead">
+            Identity, contact details, and the plan this workspace is on.
+          </p>
         </div>
-      ) : null}
+        <div
+          className="org-settings-tabs"
+          role="tablist"
+          aria-label="Organisation settings sections"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'general'}
+            className={`org-settings-tab${activeTab === 'general' ? ' org-settings-tab--active' : ''}`}
+            onClick={() => setActiveTab('general')}
+          >
+            General
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'billing'}
+            className={`org-settings-tab${activeTab === 'billing' ? ' org-settings-tab--active' : ''}`}
+            onClick={() => setActiveTab('billing')}
+          >
+            Billing
+            {planInfo.status !== 'active' ? (
+              <span className="org-settings-tab-dot" aria-hidden="true" />
+            ) : null}
+          </button>
+        </div>
+      </header>
 
       {activeTab === 'general' ? (
-        <>
-          <div className="card contact-details-card organisation-logo-card">
-            <div className="contact-details-header">
-              <span className="contact-details-header-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                  <title>Logo</title>
-                  <rect
-                    x="3"
-                    y="3"
-                    width="14"
-                    height="14"
-                    rx="3"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <circle cx="7.3" cy="7.5" r="1.3" stroke="currentColor" strokeWidth="1.4" />
-                  <path
-                    d="M3.8 14.5 8 10.3l2.6 2.6 2-2 3.6 3.6"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-              <div>
-                <div className="contact-details-title-row">
-                  <h2 className="contact-details-title">Logo</h2>
-                  <span className="contact-details-scope-badge">
-                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                      <title>Admins only</title>
-                      <rect
-                        x="4"
-                        y="7"
-                        width="8"
-                        height="6"
-                        rx="1"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                      />
-                      <path
-                        d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    Admins only
-                  </span>
-                </div>
-                <p className="contact-details-intro">
-                  Shown in the top bar in place of the default Clickforms mark. PNG, JPEG, WebP, or
-                  GIF — crop and rotate before upload. SVG uploads as-is. Up to{' '}
-                  {MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB.
-                </p>
-              </div>
-            </div>
+        <form id="org-general-form" className="org-settings-stack" onSubmit={handleSubmit}>
+          {error ? (
+            <p className="form-error org-settings-error" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-            <div className="organisation-logo-row">
-              <div className="organisation-logo-preview">
-                {logoUrl ? (
-                  // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
-                  <img src={logoUrl} alt="Organisation logo" />
-                ) : (
-                  <span className="organisation-logo-placeholder">No logo</span>
-                )}
+          <section className="org-panel org-identity">
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept={LOGO_ACCEPT}
+              className="org-file-input"
+              onChange={(event) => void handleLogoFileChange(event)}
+              disabled={isUploadingLogo || isRemovingLogo}
+            />
+            <button
+              type="button"
+              className="org-identity-logo"
+              disabled={isUploadingLogo || isRemovingLogo}
+              onClick={() => logoInputRef.current?.click()}
+              aria-label={logoUrl ? 'Replace organisation logo' : 'Upload organisation logo'}
+            >
+              {logoUrl ? (
+                // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
+                <img src={logoUrl} alt="" />
+              ) : (
+                <span className="org-identity-initials">{orgInitials(name || 'Organisation')}</span>
+              )}
+              <span className="org-identity-logo-overlay">
+                {isUploadingLogo ? '…' : <CameraIcon />}
+              </span>
+            </button>
+            <div className="org-identity-copy">
+              <div className="org-identity-name-row">
+                <h2 className="org-identity-name">{name.trim() || 'Untitled organisation'}</h2>
+                <HelpTip id="org-help-logo" label="About the organisation logo">
+                  PNG, JPEG, WebP, GIF, or SVG. Up to {MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB. Shown
+                  in the workspace and on share-link previews.
+                </HelpTip>
               </div>
-              <div className="organisation-logo-actions">
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept={LOGO_ACCEPT}
-                  className="organisation-logo-file-input"
-                  onChange={(event) => void handleLogoFileChange(event)}
-                  disabled={isUploadingLogo || isRemovingLogo}
-                />
+              <div className="org-identity-url">
+                <span className="org-identity-url-text" title={publicOrigin}>
+                  {publicHost}
+                </span>
                 <button
                   type="button"
-                  className="button button--secondary"
+                  className="org-icon-button"
+                  onClick={() => void copyPublicHost()}
+                  aria-label="Copy public URL"
+                >
+                  <CopyIcon />
+                </button>
+              </div>
+              <div className="org-identity-actions">
+                <button
+                  type="button"
+                  className="button button--secondary button--small"
                   disabled={isUploadingLogo || isRemovingLogo}
                   onClick={() => logoInputRef.current?.click()}
                 >
@@ -719,15 +622,15 @@ export function OrganisationDetailsClient({
                   <>
                     <button
                       type="button"
-                      className="button button--ghost"
+                      className="button button--ghost button--small"
                       disabled={isUploadingLogo || isRemovingLogo}
                       onClick={() => void handleEditExistingLogo()}
                     >
-                      Edit & crop
+                      Crop
                     </button>
                     <button
                       type="button"
-                      className="button button--ghost"
+                      className="button button--ghost button--small"
                       disabled={isUploadingLogo || isRemovingLogo}
                       onClick={() => void handleRemoveLogo()}
                     >
@@ -737,222 +640,384 @@ export function OrganisationDetailsClient({
                 ) : null}
               </div>
             </div>
-          </div>
+          </section>
 
-          {cropSession ? (
-            <ImageCropEditor
-              key={cropSession.imageSrc}
-              open
-              imageSrc={cropSession.imageSrc}
-              fileName={cropSession.fileName}
-              busy={isUploadingLogo}
-              onCancel={closeCropSession}
-              onApply={uploadLogo}
-            />
-          ) : null}
-
-          <div className="card contact-details-card">
-            <div className="contact-details-header">
-              <span className="contact-details-header-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                  <title>Organisation</title>
-                  <rect
-                    x="4"
-                    y="6.5"
-                    width="12"
-                    height="9.5"
-                    rx="1.2"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
+          <section className="org-panel">
+            <header className="org-panel-head">
+              <h2 className="org-panel-title">Profile</h2>
+            </header>
+            <div className="org-rows">
+              <div className="org-row">
+                <div className="org-row-copy">
+                  <label htmlFor="org-name">Organisation name</label>
+                </div>
+                <div className="org-row-control">
+                  <input
+                    id="org-name"
+                    className="text-input org-input"
+                    required
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    disabled={isSaving}
                   />
-                  <path
-                    d="M7.5 6.5V5.3c0-.66.54-1.2 1.2-1.2h2.6c.66 0 1.2.54 1.2 1.2v1.2"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                </div>
+              </div>
+              <div className="org-row">
+                <div className="org-row-copy">
+                  <label htmlFor="org-abn">ABN</label>
+                </div>
+                <div className="org-row-control">
+                  <input
+                    id="org-abn"
+                    className="text-input org-input"
+                    value={abn}
+                    onChange={(event) => setAbn(event.target.value)}
+                    placeholder="11 222 333 444"
+                    inputMode="numeric"
+                    disabled={isSaving}
                   />
-                  <path d="M4 10.5h12" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
-              </span>
-              <div>
-                <div className="contact-details-title-row">
-                  <h2 className="contact-details-title">Organisation details</h2>
-                  <span className="contact-details-scope-badge">
-                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                      <title>Admins only</title>
-                      <rect
-                        x="4"
-                        y="7"
-                        width="8"
-                        height="6"
-                        rx="1"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                      />
-                      <path
-                        d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    Admins only
-                  </span>
+                </div>
+              </div>
+              <div className="org-row">
+                <div className="org-row-copy">
+                  <span className="org-row-label">Public URL</span>
+                </div>
+                <div className="org-row-control">
+                  <div className="org-readonly">
+                    <span>{publicHost}</span>
+                    <button
+                      type="button"
+                      className="org-icon-button"
+                      onClick={() => void copyPublicHost()}
+                      aria-label="Copy public URL"
+                    >
+                      <CopyIcon />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
+          </section>
 
-            <form onSubmit={handleSubmit}>
-              {error ? (
-                <p className="form-error contact-details-error" role="alert">
-                  {error}
+          <section className="org-panel">
+            <header className="org-panel-head">
+              <h2 className="org-panel-title">Contact</h2>
+            </header>
+            <div className="org-rows">
+              <div className="org-row">
+                <div className="org-row-copy">
+                  <label htmlFor="org-contact-name">Contact person</label>
+                </div>
+                <div className="org-row-control">
+                  <input
+                    id="org-contact-name"
+                    className="text-input org-input"
+                    value={contactName}
+                    onChange={(event) => setContactName(event.target.value)}
+                    disabled={isSaving}
+                  />
+                </div>
+              </div>
+              <div className="org-row">
+                <div className="org-row-copy">
+                  <label htmlFor="org-contact-email">Contact email</label>
+                </div>
+                <div className="org-row-control">
+                  <input
+                    id="org-contact-email"
+                    className="text-input org-input"
+                    type="email"
+                    value={contactEmail}
+                    onChange={(event) => setContactEmail(event.target.value)}
+                    placeholder="contact@yourorg.com"
+                    disabled={isSaving}
+                  />
+                </div>
+              </div>
+              <div className="org-row">
+                <div className="org-row-copy">
+                  <label htmlFor="org-contact-phone">Contact phone</label>
+                </div>
+                <div className="org-row-control">
+                  <input
+                    id="org-contact-phone"
+                    className="text-input org-input"
+                    type="tel"
+                    value={contactPhone}
+                    onChange={(event) => setContactPhone(event.target.value)}
+                    placeholder="0400 000 000"
+                    disabled={isSaving}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="org-panel org-panel--wide">
+            <header className="org-panel-head">
+              <h2 className="org-panel-title">
+                Notifications
+                <HelpTip id="org-help-notifications" label="About notifications">
+                  Organisation-wide default when someone submits a form. Individual forms can still
+                  override this from their own Settings page.
+                </HelpTip>
+              </h2>
+            </header>
+            <div className="org-rows">
+              <div className="org-row org-row--toggle">
+                <div className="org-row-copy">
+                  <span className="org-row-label org-label-with-help">
+                    Email me new responses
+                    <HelpTip id="org-help-notify-toggle" label="About response emails">
+                      Sends a PDF copy of each submission to the address below.
+                    </HelpTip>
+                  </span>
+                </div>
+                <div className="org-row-control org-row-control--end">
+                  <Toggle
+                    checked={notificationsEnabled}
+                    onChange={setNotificationsEnabled}
+                    disabled={isSaving}
+                    label="Response notification email"
+                  />
+                </div>
+              </div>
+              {notificationsEnabled ? (
+                <div className="org-row">
+                  <div className="org-row-copy">
+                    <label htmlFor="org-notify-email">Notification email</label>
+                  </div>
+                  <div className="org-row-control">
+                    <input
+                      id="org-notify-email"
+                      className="text-input org-input"
+                      type="email"
+                      value={notificationEmail}
+                      onChange={(event) => setNotificationEmail(event.target.value)}
+                      placeholder="responses@yourorg.com"
+                      disabled={isSaving}
+                      required
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          <div className={`org-savebar${isDirty ? ' org-savebar--visible' : ''}`}>
+            <p>{isDirty ? 'You have unsaved changes' : 'All changes saved'}</p>
+            <button type="submit" className="button button--dark" disabled={isSaving || !isDirty}>
+              {isSaving ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {activeTab === 'billing' ? (
+        <div className="org-settings-stack">
+          {planInfo.status !== 'active' ? (
+            <div
+              className={`org-banner${planInfo.status === 'suspended' ? ' org-banner--danger' : ' org-banner--warning'}`}
+              role="status"
+            >
+              <div>
+                <p className="org-banner-title">
+                  {planInfo.status === 'trial'
+                    ? trialDays > 0
+                      ? `Trial ends in ${trialDays} day${trialDays === 1 ? '' : 's'}`
+                      : 'Trial ended'
+                    : 'Organisation suspended'}
+                </p>
+                <p className="org-banner-body">
+                  {planInfo.status === 'trial' && planInfo.trialEndsAt ? (
+                    trialDays > 0 ? (
+                      <>
+                        Pick a plan before {formatPlanDate(planInfo.trialEndsAt)} to keep using
+                        Clickforms without interruption.
+                      </>
+                    ) : (
+                      <>
+                        Your trial ended on {formatPlanDate(planInfo.trialEndsAt)}. Choose a plan
+                        below to continue — sign-in is paused until then.
+                      </>
+                    )
+                  ) : (
+                    'This organisation is suspended. Contact us to reactivate it.'
+                  )}
+                </p>
+              </div>
+              {planInfo.status === 'suspended' ? (
+                <Link href="/contact" className="button button--dark button--small">
+                  Contact us
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
+
+          <section className="org-panel org-plan-summary">
+            <div>
+              <p className="org-plan-kicker">Current plan</p>
+              <div className="org-plan-summary-title-row">
+                <h2 className="org-plan-name">{PLAN_LABELS[planInfo.plan]}</h2>
+                <span className={`badge ${PLAN_STATUS_BADGE_CLASS[planInfo.status]}`}>
+                  {planInfo.status === 'trial'
+                    ? 'Trial'
+                    : planInfo.status === 'suspended'
+                      ? 'Suspended'
+                      : 'Active'}
+                </span>
+              </div>
+              {planInfo.status === 'active' && planInfo.renewsAt ? (
+                <p className="org-plan-meta">Renews {formatPlanDate(planInfo.renewsAt)}</p>
+              ) : planInfo.status === 'trial' && planInfo.trialEndsAt ? (
+                <p className="org-plan-meta">
+                  Trial through {formatPlanDate(planInfo.trialEndsAt)}
                 </p>
               ) : null}
+            </div>
+            <div className="org-plan-summary-actions">
+              <Link href="/pricing" className="button button--secondary button--small">
+                Compare plans
+              </Link>
+              <Link href="/contact" className="button button--ghost button--small">
+                Contact us
+              </Link>
+            </div>
+          </section>
 
-              <dl className="contact-details-list organisation-details-list">
-                <div className="contact-details-row">
-                  <dt>Organisation name</dt>
-                  <dd>
-                    <input
-                      className="text-input contact-details-input"
-                      required
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      disabled={isSaving}
-                    />
-                  </dd>
-                </div>
-                <div className="contact-details-row">
-                  <dt>ABN</dt>
-                  <dd>
-                    <input
-                      className="text-input contact-details-input"
-                      value={abn}
-                      onChange={(event) => setAbn(event.target.value)}
-                      placeholder="11 222 333 444"
-                      inputMode="numeric"
-                      disabled={isSaving}
-                    />
-                  </dd>
-                </div>
-                <div className="contact-details-row">
-                  <dt>Contact person</dt>
-                  <dd>
-                    <input
-                      className="text-input contact-details-input"
-                      value={contactName}
-                      onChange={(event) => setContactName(event.target.value)}
-                      disabled={isSaving}
-                    />
-                  </dd>
-                </div>
-                <div className="contact-details-row">
-                  <dt>Contact email</dt>
-                  <dd>
-                    <div className="organisation-field-control">
-                      <span className="organisation-field-icon" aria-hidden="true">
-                        <MailIcon />
-                      </span>
-                      <input
-                        className="text-input contact-details-input"
-                        type="email"
-                        value={contactEmail}
-                        onChange={(event) => setContactEmail(event.target.value)}
-                        placeholder="contact@yourorg.com"
-                        disabled={isSaving}
+          <section className="org-panel org-panel--wide">
+            <header className="org-panel-head">
+              <h2 className="org-panel-title">
+                Usage
+                <HelpTip id="org-help-usage" label="About usage">
+                  This month against your current plan&apos;s limits.
+                </HelpTip>
+              </h2>
+            </header>
+            <div className="org-usage-grid">
+              {buildUsageBars(planInfo.plan, planInfo.usage).map((bar) => {
+                const overLimit = bar.limit !== null && bar.used > bar.limit;
+                return (
+                  <div
+                    key={bar.label}
+                    className={`org-usage-card${overLimit ? ' org-usage-card--over' : ''}`}
+                  >
+                    <div className="org-usage-card-head">
+                      <span>{bar.label}</span>
+                      <strong>{bar.percent === null ? 'Unlimited' : `${bar.percent}%`}</strong>
+                    </div>
+                    <p className="org-usage-card-value">{bar.formatted}</p>
+                    <div className="org-usage-track">
+                      <div
+                        className={`org-usage-fill${overLimit ? ' org-usage-fill--over' : ''}`}
+                        style={{ width: `${bar.percent ?? 100}%` }}
                       />
                     </div>
-                  </dd>
-                </div>
-                <div className="contact-details-row">
-                  <dt>Contact phone</dt>
-                  <dd>
-                    <div className="organisation-field-control">
-                      <span className="organisation-field-icon" aria-hidden="true">
-                        <PhoneIcon />
-                      </span>
-                      <input
-                        className="text-input contact-details-input"
-                        type="tel"
-                        value={contactPhone}
-                        onChange={(event) => setContactPhone(event.target.value)}
-                        placeholder="0400 000 000"
-                        disabled={isSaving}
-                      />
-                    </div>
-                  </dd>
-                </div>
-                <div className="contact-details-row">
-                  <dt>
-                    <span className="organisation-label-with-help">
-                      Notification email
-                      <span className="organisation-help">
-                        <button
-                          type="button"
-                          className="organisation-help-button"
-                          aria-describedby="notification-email-tooltip"
-                          aria-label="About notification email"
-                        >
-                          <InfoIcon />
-                        </button>
-                        <span
-                          id="notification-email-tooltip"
-                          role="tooltip"
-                          className="organisation-tooltip"
-                        >
-                          Sent to this address — with a PDF copy of the response attached — every
-                          time someone submits a response to any of your forms. This is just the
-                          organisation-wide default: any individual form can still send its own
-                          notifications to a different address, or turn them off entirely, from that
-                          form&apos;s own Settings page.
-                        </span>
-                      </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="org-panel org-panel--wide">
+            <header className="org-panel-head">
+              <h2 className="org-panel-title">
+                Change plan
+                <HelpTip id="org-help-change-plan" label="About changing plan">
+                  Select a tier, then confirm. Existing data is never deleted.
+                </HelpTip>
+              </h2>
+            </header>
+            {planChangeError ? (
+              <p className="form-error org-settings-error" role="alert">
+                {planChangeError}
+              </p>
+            ) : null}
+            <div className="org-plan-grid">
+              {PLAN_ORDER.map((planOption) => {
+                const current = planOption === planInfo.plan;
+                const selected = planOption === selectedPlan;
+                return (
+                  <button
+                    key={planOption}
+                    type="button"
+                    className={`org-plan-card${selected ? ' org-plan-card--selected' : ''}${current ? ' org-plan-card--current' : ''}`}
+                    onClick={() => setSelectedPlan(planOption)}
+                    disabled={isChangingPlan}
+                    aria-pressed={selected}
+                  >
+                    <span className="org-plan-card-top">
+                      <span className="org-plan-card-name">{PLAN_LABELS[planOption]}</span>
+                      {current ? <span className="org-plan-card-badge">Current</span> : null}
                     </span>
-                  </dt>
-                  <dd>
-                    <div className="notification-toggle-row">
-                      <Toggle
-                        checked={notificationsEnabled}
-                        onChange={setNotificationsEnabled}
-                        disabled={isSaving}
-                        label="Response notification email"
-                      />
-                      <span
-                        className={`notification-toggle-state${notificationsEnabled ? ' notification-toggle-state--on' : ''}`}
-                      >
-                        {notificationsEnabled ? 'On' : 'Off'}
-                      </span>
-                    </div>
+                    <span className="org-plan-card-price">
+                      {PLAN_PRICE[planOption]}
+                      {PLAN_PRICE[planOption] !== 'Custom' ? (
+                        <span className="org-plan-card-period"> / mo</span>
+                      ) : null}
+                    </span>
+                    <ul className="org-plan-card-limits">
+                      {planLimitLines(planOption).map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                    <ul className="org-plan-card-features">
+                      {PLAN_FEATURE_PILLS.map((feature) => {
+                        const on = PLAN_LIMITS[planOption][feature.key];
+                        return (
+                          <li
+                            key={feature.key}
+                            className={
+                              on ? 'org-plan-card-feature--on' : 'org-plan-card-feature--off'
+                            }
+                          >
+                            {on ? <CheckIcon /> : null}
+                            {feature.label}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedPlan !== planInfo.plan && overLimitLabels.length > 0 ? (
+              <p className="org-plan-warning">
+                Switching to {PLAN_LABELS[selectedPlan]} would put you over its limit on{' '}
+                {overLimitLabels.join(', ')}. Existing data is safe — you just won&apos;t be able to
+                add more there until you&apos;re back under the limit.
+              </p>
+            ) : null}
+            <div className="org-plan-confirm">
+              <button
+                type="button"
+                className="button button--dark"
+                disabled={
+                  isChangingPlan || (selectedPlan === planInfo.plan && planInfo.status !== 'trial')
+                }
+                onClick={() => void handleChangePlan()}
+              >
+                {isChangingPlan
+                  ? 'Updating…'
+                  : selectedPlan === planInfo.plan
+                    ? 'Current plan'
+                    : `Switch to ${PLAN_LABELS[selectedPlan]}`}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
-                    {notificationsEnabled ? (
-                      <div className="organisation-field-control">
-                        <span className="organisation-field-icon" aria-hidden="true">
-                          <MailIcon />
-                        </span>
-                        <input
-                          className="text-input contact-details-input"
-                          type="email"
-                          value={notificationEmail}
-                          onChange={(event) => setNotificationEmail(event.target.value)}
-                          placeholder="responses@yourorg.com"
-                          disabled={isSaving}
-                          required
-                        />
-                      </div>
-                    ) : null}
-                  </dd>
-                </div>
-              </dl>
-
-              <div className="contact-details-actions">
-                <button type="submit" className="button button--dark" disabled={isSaving}>
-                  {isSaving ? 'Saving…' : 'Save changes'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </>
+      {cropSession ? (
+        <ImageCropEditor
+          key={cropSession.imageSrc}
+          open
+          imageSrc={cropSession.imageSrc}
+          fileName={cropSession.fileName}
+          busy={isUploadingLogo}
+          onCancel={closeCropSession}
+          onApply={uploadLogo}
+        />
       ) : null}
     </div>
   );

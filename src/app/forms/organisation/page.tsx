@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createPresignedDownloadUrl } from '@/lib/s3';
 import { requireOrganizationId } from '@/lib/session';
+import { buildOrgOrigin } from '@/lib/tenant';
 import { canManageUsers } from '@/lib/user-roles';
 
 export default async function OrganisationSettingsPage() {
@@ -113,6 +114,7 @@ export default async function OrganisationSettingsPage() {
         renewsAt: organization.renewsAt?.toISOString() ?? null,
         usage,
       }}
+      publicOrigin={buildOrgOrigin(organization.subdomain)}
     />
   );
 }

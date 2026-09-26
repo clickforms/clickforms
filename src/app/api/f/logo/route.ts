@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { toErrorResponse } from '@/lib/api-errors';
@@ -5,10 +7,10 @@ import { SHARE_LOGO_SIDE } from '@/lib/forms/share-metadata';
 import { getObjectBytes, isOrganizationLogoKey } from '@/lib/s3';
 import { getCurrentSubdomain, getOrganizationBySubdomain } from '@/lib/tenant';
 
-// Public, no-auth route: square-pads an org's uploaded logo for share-link unfurls
-// (see src/lib/forms/share-metadata.ts). Can't redirect to a presigned raw file — most
-// uploaded logos are wide wordmarks, and a landscape OG image is what WhatsApp renders
-// as a banner across the top of the card.
+// Public, no-auth route: square-pads an org's uploaded logo for share-link unfurls,
+// falling back to Clickforms branding when the org has no usable logo. Can't redirect
+// to a presigned raw file — most logos are wide wordmarks, and a landscape OG image is
+// what WhatsApp renders as a banner across the top of the card.
 
 export async function GET(): Promise<NextResponse> {
   try {
@@ -18,20 +20,28 @@ export async function GET(): Promise<NextResponse> {
     }
 
     const organization = await getOrganizationBySubdomain(subdomain);
-    if (!organization?.logoStorageKey) {
+    if (!organization) {
       return NextResponse.json({ error: 'Logo not found.' }, { status: 404 });
     }
 
+    let original: Uint8Array | null = null;
     if (
-      !isOrganizationLogoKey({
+      organization.logoStorageKey &&
+      isOrganizationLogoKey({
         storageKey: organization.logoStorageKey,
         organizationId: organization.id,
       })
     ) {
-      return NextResponse.json({ error: 'Invalid logo reference.' }, { status: 404 });
+      try {
+        original = await getObjectBytes(organization.logoStorageKey);
+      } catch {
+        // A deleted/unreadable object should not remove the preview image entirely.
+        // Fall through to the Clickforms logo just like an org with no uploaded logo.
+      }
     }
 
-    const original = await getObjectBytes(organization.logoStorageKey);
+    original ??= await readFile(path.join(process.cwd(), 'public', 'brand', 'logo.png'));
+
     // 'contain' scales the whole logo down to fit inside the square without cropping any
     // of it, padding the rest with white -- a transparent PNG logo would otherwise render
     // on whatever background color the recipient's chat app happens to use.

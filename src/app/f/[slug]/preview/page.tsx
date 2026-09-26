@@ -43,7 +43,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return publicFormShareMetadata({
       organizationName: organization.name,
       subdomain,
-      hasLogo: Boolean(organization.logoStorageKey),
     });
   } catch {
     return {};

@@ -10,20 +10,10 @@ export const SHARE_LOGO_SIDE = 256;
 export function publicFormShareMetadata(options: {
   organizationName: string;
   subdomain: string;
-  hasLogo: boolean;
 }): Metadata {
   const title = options.organizationName;
-  if (!options.hasLogo) {
-    return {
-      title,
-      description: '',
-      twitter: { card: 'summary', title },
-      openGraph: { title, type: 'website' },
-    };
-  }
-
-  // `s=` is part of the URL so crawlers that already cached the previous 400px banner
-  // fetch this smaller thumbnail as a new image.
+  // This endpoint serves the organisation logo when present and a square-padded
+  // Clickforms logo otherwise, so every share card has the same compact thumbnail shape.
   const logoUrl = buildOrgFormUrl(options.subdomain, `/api/f/logo?s=${SHARE_LOGO_SIDE}`);
   const sizes = `${SHARE_LOGO_SIDE}x${SHARE_LOGO_SIDE}`;
 

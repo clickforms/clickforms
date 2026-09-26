@@ -31,7 +31,9 @@ async function main(): Promise<void> {
         passwordHash,
         isPlatformAdmin: true,
         role: 'admin',
-        name: ADMIN_NAME,
+        // This script may be rerun to reset local credentials. Do not replace a
+        // personalized staff name with the generic bootstrap label when that happens.
+        name: existingAdmin.name?.trim() || ADMIN_NAME,
         organizationId: null,
       },
     });

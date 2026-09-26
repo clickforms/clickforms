@@ -16,6 +16,12 @@ interface FormWorkspaceContextValue {
    *  reads this to warn before switching to Responses/Settings mid-edit. */
   hasUnsavedChanges: boolean;
   syncLiveState: (next: { isLive: boolean; hasUnsavedChanges: boolean }) => void;
+  editFormAction: (() => void) | null;
+  registerEditFormAction: (action: (() => void) | null) => void;
+  takeOfflineAction: (() => void) | null;
+  registerTakeOfflineAction: (action: (() => void) | null) => void;
+  publishFormAction: (() => void) | null;
+  registerPublishFormAction: (action: (() => void) | null) => void;
 }
 
 const FormWorkspaceContext = createContext<FormWorkspaceContextValue | null>(null);
@@ -29,6 +35,9 @@ export function FormWorkspaceProvider({
 }) {
   const [status, setStatusState] = useState(initialStatus);
   const [liveState, setLiveState] = useState({ isLive: false, hasUnsavedChanges: false });
+  const [editFormAction, setEditFormAction] = useState<(() => void) | null>(null);
+  const [takeOfflineAction, setTakeOfflineAction] = useState<(() => void) | null>(null);
+  const [publishFormAction, setPublishFormAction] = useState<(() => void) | null>(null);
 
   const setStatus = useCallback((next: FormStatus) => {
     setStatusState(next);
@@ -42,9 +51,43 @@ export function FormWorkspaceProvider({
     );
   }, []);
 
+  const registerEditFormAction = useCallback((action: (() => void) | null) => {
+    setEditFormAction(() => action);
+  }, []);
+
+  const registerTakeOfflineAction = useCallback((action: (() => void) | null) => {
+    setTakeOfflineAction(() => action);
+  }, []);
+
+  const registerPublishFormAction = useCallback((action: (() => void) | null) => {
+    setPublishFormAction(() => action);
+  }, []);
+
   const value = useMemo(
-    () => ({ status, setStatus, ...liveState, syncLiveState }),
-    [status, setStatus, liveState, syncLiveState],
+    () => ({
+      status,
+      setStatus,
+      ...liveState,
+      syncLiveState,
+      editFormAction,
+      registerEditFormAction,
+      takeOfflineAction,
+      registerTakeOfflineAction,
+      publishFormAction,
+      registerPublishFormAction,
+    }),
+    [
+      status,
+      setStatus,
+      liveState,
+      syncLiveState,
+      editFormAction,
+      registerEditFormAction,
+      takeOfflineAction,
+      registerTakeOfflineAction,
+      publishFormAction,
+      registerPublishFormAction,
+    ],
   );
 
   return <FormWorkspaceContext.Provider value={value}>{children}</FormWorkspaceContext.Provider>;

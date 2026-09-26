@@ -613,7 +613,7 @@ a {
   justify-content: center;
   flex-wrap: wrap;
   gap: 0.75rem;
-  padding: 0.55rem 1.5rem;
+  padding: 0.45rem 1.5rem;
   background: var(--color-warning-soft);
   border-bottom: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
   flex-shrink: 0;
@@ -1990,7 +1990,7 @@ a {
   justify-content: space-between;
   gap: 0.75rem;
   min-height: var(--form-top-nav-height);
-  padding: 0.35rem 1.5rem;
+  padding: 0.55rem 1.5rem;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-top: none;
@@ -2109,47 +2109,31 @@ a {
 .form-top-nav-end {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.65rem;
   flex-shrink: 0;
 }
 
-/* Black-outline pill, one step below the solid black/green buttons elsewhere — matches
-   the "Preview" control's own weight: present but not competing with Publish. */
-.form-top-nav-preview {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.85rem;
-  border-radius: var(--radius-pill);
-  border: 1.5px solid var(--color-text);
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background-color 0.12s ease;
+/* Preview, View live, Share and form controls live behind one compact launcher. */
+.form-top-nav-actions {
+  position: relative;
+  display: flex;
 }
 
-.form-top-nav-preview:hover {
-  background-color: var(--color-surface-sunken);
-}
-
-/* Filled dark pill — Google Docs / Figma treat Share as the header's primary action,
-   with Preview remaining the quieter outline control beside it. */
-.form-top-nav-share {
+.form-top-nav-actions-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.85rem;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 2.3rem;
+  padding: 0.4rem 1.05rem;
   border-radius: var(--radius-pill);
-  border: 1.5px solid #111;
-  background-color: #111;
-  color: #fff;
+  border: 1px solid #161d2b;
+  background: var(--color-surface);
+  color: #161d2b;
   font-family: var(--font-poppins), var(--font-body);
-  font-size: 0.8125rem;
+  font-size: 0.85rem;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
   cursor: pointer;
   transition:
@@ -2157,20 +2141,116 @@ a {
     border-color 0.12s ease;
 }
 
-.form-top-nav-share:hover {
-  background-color: #000;
-  border-color: #000;
+.form-top-nav-actions-trigger:hover,
+.form-top-nav-actions-trigger[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--color-lavender-strong) 55%, #161d2b);
+  background: color-mix(in srgb, var(--color-lavender-soft) 58%, var(--color-surface));
 }
 
-.admin-shell[data-theme="dark"] .form-top-nav-share {
-  background-color: var(--color-text);
-  border-color: var(--color-text);
-  color: var(--color-bg);
+.form-top-nav-actions-trigger:focus {
+  outline: none;
 }
 
-.admin-shell[data-theme="dark"] .form-top-nav-share:hover {
-  background-color: var(--color-text-muted);
-  border-color: var(--color-text-muted);
+.form-top-nav-actions-trigger:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-lavender-strong) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.form-top-nav-actions-trigger svg {
+  flex-shrink: 0;
+}
+
+.form-top-nav-actions-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 13.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.actions-menu-panel.form-top-nav-actions-panel {
+  min-width: 14.75rem;
+  padding: 0.55rem;
+  border-color: color-mix(in srgb, var(--color-lavender) 32%, var(--color-border));
+  border-radius: 0.9rem;
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.14),
+    0 3px 10px rgba(15, 23, 42, 0.08);
+  transform-origin: top right;
+  animation: form-actions-in 0.14s ease-out;
+}
+
+@keyframes form-actions-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.form-top-nav-actions-panel .form-top-nav-actions-menu .actions-menu-item {
+  gap: 0.7rem;
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.form-top-nav-actions-panel
+  .form-top-nav-actions-menu
+  .actions-menu-item:hover:not(.actions-menu-item--disabled) {
+  background: color-mix(in srgb, var(--color-lavender-soft) 62%, var(--color-surface));
+}
+
+.form-top-nav-actions-panel .actions-menu-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.55rem;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.form-top-nav-actions-panel .actions-menu-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.form-top-nav-actions-danger-row {
+  margin-top: 0.3rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.form-top-nav-actions-panel .actions-menu-item--danger .actions-menu-icon {
+  background: color-mix(in srgb, var(--color-danger) 9%, var(--color-surface));
+}
+
+.form-top-nav-actions-panel .actions-menu-item--success .actions-menu-icon {
+  background: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface));
+}
+
+.form-top-nav-actions-panel .actions-menu-item-hint {
+  margin-top: 0.08rem;
+  font-size: 0.68rem;
+}
+
+.form-top-nav-end .live-status {
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.form-top-nav-end .live-status-dot {
+  width: 0.45rem;
+  height: 0.45rem;
 }
 
 /* Dashboard — polished overview: quiet atmosphere, clear hierarchy, brand-only accent. */
@@ -6552,19 +6632,34 @@ textarea.text-input {
   margin-right: 0.5rem;
 }
 
-/* Share dialog — Google Docs / Figma pattern: one centered card, copy-link as the
-   primary action, send as a quieter second step. Flush header, 480px, no nested
-   popover or second modal. */
+/* Share dialog — Canva-style creative workspace, expressed in Clickforms colours. */
 .form-share-overlay {
-  background-color: rgba(24, 22, 38, 0.52);
+  background-color: rgba(18, 20, 28, 0.56);
+  backdrop-filter: blur(4px);
 }
 
 .modal-card.form-share-modal {
-  max-width: 30rem;
+  position: relative;
+  max-width: 52rem;
+  max-height: min(56rem, calc(100vh - 1.5rem));
   padding: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  border: 0;
+  border-radius: 1.125rem;
+  box-shadow:
+    0 32px 90px rgba(15, 23, 42, 0.3),
+    0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.modal-card.form-share-modal::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-primary) 0 42%, var(--color-lavender-strong) 42%);
 }
 
 .form-share-modal:focus {
@@ -6573,11 +6668,33 @@ textarea.text-input {
 
 .form-share-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.25rem 1.25rem 1rem;
+  flex-shrink: 0;
+  padding: 1.5rem 1.75rem 1.35rem;
   border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.form-share-head-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.form-share-head-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.8rem;
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-lavender) 72%, transparent);
 }
 
 .form-share-head-copy {
@@ -6587,15 +6704,15 @@ textarea.text-input {
 .form-share-title {
   margin: 0;
   font-family: var(--font-poppins), var(--font-body);
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 1.35rem;
+  font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.2;
   color: var(--color-text);
 }
 
 .form-share-subtitle {
-  margin: 0.2rem 0 0;
+  margin: 0.25rem 0 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6609,9 +6726,9 @@ textarea.text-input {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
-  margin-top: -0.1rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -6622,7 +6739,7 @@ textarea.text-input {
 
 .form-share-close:hover:not(:disabled) {
   background: var(--color-lavender-soft);
-  color: var(--color-text);
+  color: var(--color-lavender-strong);
 }
 
 .form-share-close:disabled {
@@ -6633,23 +6750,35 @@ textarea.text-input {
 .form-share-body {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.15rem 1.25rem 1.25rem;
+  gap: 1.15rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.35rem 1.5rem 1.5rem;
+  background: color-mix(in srgb, var(--color-lavender-soft) 22%, var(--color-bg));
 }
 
 .form-share-access {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.7rem 0.85rem;
-  background: var(--color-lavender-soft);
-  border-radius: 0.625rem;
+  display: grid;
+  grid-template-columns: minmax(14rem, 0.8fr) minmax(0, 1.35fr);
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.1rem 1.15rem;
+  background:
+    radial-gradient(
+      circle at 0 0,
+      color-mix(in srgb, var(--color-primary-soft) 72%, transparent),
+      transparent 38%
+    ),
+    var(--color-surface);
+  border: 0;
+  border-radius: 0.875rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .form-share-access-meta {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.75rem;
   min-width: 0;
 }
 
@@ -6658,11 +6787,12 @@ textarea.text-input {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 999px;
-  background: var(--color-surface);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--color-primary-soft);
   color: #15803d;
+  box-shadow: inset 0 0 0 1px var(--color-success-border);
 }
 
 .admin-shell[data-theme="dark"] .form-share-access-icon {
@@ -6671,10 +6801,18 @@ textarea.text-input {
 
 .form-share-access-title {
   margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--color-text);
+}
+
+.form-share-access-detail,
+.form-share-section-detail {
+  margin: 0.2rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
 }
 
 .form-share-url-field {
@@ -6682,10 +6820,10 @@ textarea.text-input {
   align-items: center;
   gap: 0.4rem;
   min-width: 0;
-  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.625rem;
+  padding: 0.3rem 0.3rem 0.3rem 0.9rem;
+  background: var(--color-surface-sunken);
+  border: 1px solid #161616;
+  border-radius: 0.7rem;
 }
 
 .form-share-url-field:focus-within {
@@ -6696,7 +6834,7 @@ textarea.text-input {
 .form-share-url {
   flex: 1;
   min-width: 0;
-  height: 2rem;
+  height: 2.15rem;
   padding: 0;
   border: 0;
   background: transparent;
@@ -6719,15 +6857,15 @@ textarea.text-input {
   justify-content: center;
   gap: 0.3rem;
   flex-shrink: 0;
-  height: 2rem;
-  min-width: 4.6rem;
-  padding: 0 0.8rem;
+  height: 2.3rem;
+  min-width: 5rem;
+  padding: 0 0.95rem;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: 0.55rem;
   background: #16a34a;
   color: #fff;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -6744,73 +6882,87 @@ textarea.text-input {
 .form-share-send-block {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
-  padding-top: 0.15rem;
-  border-top: 1px solid var(--color-border);
+  gap: 1.1rem;
+  padding: 1.25rem 1.25rem 1.15rem;
+  border: 0;
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.form-share-send-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
 }
 
 .form-share-section-label {
-  margin: 0.55rem 0 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--color-text);
 }
 
 .form-share-segment {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.2rem;
-  padding: 0.2rem;
-  background: var(--color-surface-sunken);
-  border-radius: 0.625rem;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
 }
 
 .form-share-segment-btn {
-  height: 1.95rem;
-  padding: 0 0.6rem;
-  border: 0;
-  border-radius: 0.45rem;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
+  min-width: 5.25rem;
+  min-height: 2.3rem;
+  padding: 0.4rem 1rem;
+  border: 2px solid #161d2b;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: #161d2b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease,
+    transform 0.12s ease;
 }
 
 .form-share-segment-btn:hover:not(.form-share-segment-btn--active) {
-  color: var(--color-text);
+  background: var(--color-surface-sunken);
+  transform: translateY(-1px);
 }
 
 .form-share-segment-btn--active {
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.08),
-    0 0 0 1px var(--color-border);
+  border-color: #161d2b;
+  background: #161d2b;
+  color: #fff;
 }
 
 .admin-shell[data-theme="dark"] .form-share-segment-btn--active {
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-bg);
 }
 
 .form-share-send {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 1rem;
 }
 
 .form-share-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .form-share-field > span {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-muted);
 }
 
@@ -6821,33 +6973,38 @@ textarea.text-input {
   gap: 0.5rem;
 }
 
-.form-share-field-head label {
+.form-share-field-head label,
+.form-share-field-head > span {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-muted);
 }
 
-/* Plain text+icon rather than a filled pill — this is a secondary, low-commitment
-   affordance next to the Message label, not another button competing with Send. */
 .form-share-preview-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 0.7rem;
-  font-weight: 600;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--color-lavender-soft);
+  color: var(--color-lavender-strong);
+  font-size: 0.72rem;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .form-share-preview-toggle:hover {
-  color: var(--color-lavender-strong);
+  border-color: var(--color-lavender);
+  background: color-mix(in srgb, var(--color-lavender-soft) 65%, var(--color-surface));
 }
 
 .form-share-field .text-input {
   width: 100%;
+  min-height: 2.65rem;
+  border-color: #161616;
+  border-radius: 0.7rem;
+  background: var(--color-surface);
 }
 
 .form-share-field .text-input:focus {
@@ -6855,98 +7012,208 @@ textarea.text-input {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-lavender) 45%, transparent);
 }
 
+.form-share-rich-editor {
+  border-radius: 0.75rem;
+}
+
+.form-share-rich-editor .rich-text-editor-wrap {
+  border-radius: 0.75rem;
+  border-color: #161616;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.form-share-rich-editor .rich-text-toolbar {
+  padding: 0.55rem;
+  background: color-mix(in srgb, var(--color-lavender-soft) 52%, var(--color-surface));
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.form-share-rich-editor .rich-text-toolbar-button--active {
+  color: var(--color-lavender-strong);
+  border-color: var(--color-lavender);
+  background: var(--color-surface);
+}
+
+.form-share-rich-editor:focus-within .rich-text-editor-wrap {
+  border-color: var(--color-lavender-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-lavender) 45%, transparent);
+}
+
+.form-share-rich-editor .rich-text-editor {
+  min-height: 9rem;
+}
+
 .form-share-message {
   resize: vertical;
-  min-height: 4.25rem;
+  min-height: 9rem;
   font-family: inherit;
   line-height: 1.45;
 }
 
 .form-share-hint {
-  margin: 0;
-  font-size: 0.7rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
   line-height: 1.4;
   color: var(--color-text-subtle);
 }
 
-/* Deliberately un-boxed — sits directly in the form's flow (a hairline divider comes
-   from the field spacing above, not another background/border) so the callout below is
-   the only bordered surface here. Mirrors the real send templates: for email, the same
-   light-card-with-lavender-accent treatment as formShareEmail()'s messageCallout in the
-   actual HTML email (src/lib/emails/layout.ts); the "Open form" line is styled as plain
-   text, not a button, since it's a mockup of the real CTA rather than a clickable one.
-   This is what will really be sent, not an approximation — same fallback logic as the
-   server (message.trim() || the default). */
+/* Email and SMS previews share a collapsible frame. The email body still renders the
+   exact provider HTML; the accordion only controls whether that faithful preview is
+   currently visible. */
 .form-share-preview {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #161616;
+  border-radius: 0.75rem;
+  background: var(--color-surface-sunken);
 }
 
-.form-share-preview-label {
-  margin: 0;
+.form-share-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 0;
+  background: var(--color-surface);
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
 }
 
-.form-share-preview-callout {
-  padding: 0.65rem 0.8rem;
-  background: var(--color-surface-sunken);
-  border-left: 2px solid var(--color-lavender-strong);
-  border-radius: 0.375rem;
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--color-text);
-  white-space: pre-line;
+.form-share-preview-head:hover {
+  background: color-mix(in srgb, var(--color-lavender-soft) 36%, var(--color-surface));
 }
 
-.form-share-preview-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  align-self: flex-start;
-  color: #15803d;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: default;
+.form-share-preview-head[aria-expanded="true"] {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.form-share-preview-summary {
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.form-share-preview-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.16s ease;
+}
+
+.form-share-preview-chevron--open {
+  transform: rotate(180deg);
+}
+
+.form-share-preview-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.form-share-email-preview-frame {
+  display: block;
+  width: 100%;
+  height: 38rem;
+  border: 0;
+  background: #eef1f6;
+  pointer-events: none;
 }
 
 .form-share-preview-bubble {
   align-self: flex-end;
-  margin: 0;
-  max-width: 85%;
-  padding: 0.55rem 0.75rem;
+  margin: 1rem;
+  max-width: min(72%, 28rem);
+  padding: 0.75rem 0.9rem;
   background: var(--color-lavender-soft);
   color: var(--color-text);
   border-radius: 0.8rem 0.8rem 0.2rem 0.8rem;
   font-size: 0.8125rem;
-  line-height: 1.45;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-lavender) 42%, transparent);
 }
 
 .form-share-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 0.75rem;
-  padding-top: 0.15rem;
-}
-
-.form-share-from {
-  margin: 0;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
+  margin: 0.15rem -1.25rem -1.15rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-lavender-soft) 30%, var(--color-surface));
 }
 
 .form-share-send-btn {
   flex-shrink: 0;
-  padding: 0.45rem 0.95rem;
-  font-size: 0.8125rem;
+  min-width: 8rem;
+  justify-content: center;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+}
+
+@media (max-width: 860px) {
+  .modal-card.form-share-modal {
+    max-width: 44rem;
+  }
+
+  .form-share-access {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .form-share-send-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .form-share-segment {
+    width: 100%;
+  }
+
+  .form-share-segment-btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 560px) {
+  .form-share-head {
+    padding-inline: 1.1rem;
+  }
+
+  .form-share-body {
+    padding: 1rem;
+  }
+
+  .form-share-send-block {
+    padding-inline: 1rem;
+  }
+
+  .form-share-footer {
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+  }
+}
+
+/* Keep the Share dialog completely flat; hierarchy comes from spacing, borders and
+   surface colour rather than elevation. */
+.modal-card.form-share-modal,
+.modal-card.form-share-modal * {
+  box-shadow: none;
 }
 
 .builder-header .button--small {
@@ -7338,6 +7605,228 @@ textarea.text-input {
   margin: 0;
   flex: 0 0 auto;
   min-height: calc(100% - 1rem);
+}
+
+/* Editing toolbar — independent Canva-style control groups instead of one oversized
+   capsule around unrelated controls. */
+.builder-header--editing {
+  top: 1rem;
+  right: 1.5rem;
+  gap: 0.6rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.builder-header--editing:not(.builder-header--closed) {
+  overflow: visible;
+}
+
+.builder-header--editing .builder-header-handle {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.8rem;
+  background: #fff;
+  color: var(--color-text-muted);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 7px 18px rgba(15, 23, 42, 0.09);
+}
+
+.builder-header--editing .builder-header-handle:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.builder-header--editing .page-switcher {
+  order: 1;
+  padding: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 7px 18px rgba(15, 23, 42, 0.09);
+}
+
+.builder-header--editing .page-switcher-trigger {
+  min-height: 2.25rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  box-shadow: none;
+}
+
+.builder-header--editing .page-switcher-trigger > svg:first-child {
+  color: var(--color-text-muted);
+}
+
+.builder-header--editing .page-switcher-trigger:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-text-muted) 42%, transparent);
+  outline-offset: 1px;
+}
+
+.builder-header--editing .page-switcher-step {
+  width: 1.85rem;
+  height: 1.85rem;
+}
+
+.builder-header--editing .builder-header-stage {
+  order: 3;
+  gap: 0.4rem;
+  margin-left: 0;
+  padding: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 7px 18px rgba(15, 23, 42, 0.09);
+}
+
+.builder-header--editing .builder-header-stage .button--ghost {
+  min-height: 2.2rem;
+  padding-inline: 0.9rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.builder-header--editing .builder-header-stage .button--ghost:hover {
+  background: var(--color-surface-sunken);
+}
+
+.builder-header--editing .builder-header-cta {
+  min-height: 2.2rem;
+  min-width: 4.8rem;
+  justify-content: center;
+  box-shadow: none;
+}
+
+.builder-header--editing .builder-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0.2rem 0 0.15rem;
+  padding: 0.25rem 0.1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+
+.builder-header--editing .builder-save-status::before {
+  content: "";
+  width: 0.42rem;
+  height: 0.42rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-text-subtle);
+}
+
+.builder-header--editing .builder-save-status--pending::before {
+  background: #d97706;
+}
+
+.builder-header--editing .builder-save-status--error::before {
+  background: var(--color-danger);
+}
+
+/* Locked Builder — a document-on-workspace composition inspired by Canva. The form is
+   the page, the neutral surround is the work area, and page navigation becomes a small
+   bottom dock. Editing mode does not receive these classes and keeps its existing UI. */
+.builder--viewing {
+  border: 0;
+  border-radius: 0;
+  background: #eef0f4;
+  box-shadow: none;
+}
+
+.builder--viewing .builder-workspace {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(139, 124, 246, 0.055), transparent 28rem), #eef0f4;
+}
+
+.builder--viewing .builder-canvas-column {
+  gap: 1rem;
+  padding: 5.5rem 2.5rem 4.5rem;
+  background: transparent;
+  scrollbar-gutter: stable;
+}
+
+.builder--viewing .builder-canvas-column .canvas {
+  max-width: 55rem;
+  min-height: calc(100% - 1.5rem);
+  padding: 2.75rem 3rem 6rem;
+  border: 1px solid #dfe2e8;
+  border-radius: 0.55rem;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 14px 34px rgba(38, 40, 58, 0.1);
+}
+
+.builder-header--viewing {
+  top: 1rem;
+  right: 50%;
+  bottom: auto;
+  z-index: 8;
+  max-width: min(42rem, calc(100% - 2rem));
+  transform: translateX(50%);
+  padding: 0.35rem 0.5rem;
+  border-color: rgba(17, 24, 39, 0.12);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 2px 5px rgba(15, 23, 42, 0.08),
+    0 12px 28px rgba(15, 23, 42, 0.13);
+  backdrop-filter: blur(12px);
+}
+
+.builder-header--viewing.builder-header--closed {
+  max-width: min(42rem, calc(100% - 2rem));
+  padding-right: 0.5rem;
+}
+
+.builder-header--viewing .builder-header-handle {
+  display: none;
+}
+
+.builder-header--viewing .page-switcher {
+  background: transparent;
+}
+
+.builder-header--viewing .page-switcher-trigger {
+  background: var(--color-lavender-soft);
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  .builder--viewing .builder-canvas-column {
+    padding: 4.75rem 1rem 4.5rem;
+  }
+
+  .builder--viewing .builder-canvas-column .canvas {
+    padding: 1.75rem 1.25rem 5rem;
+    border-radius: 0.45rem;
+  }
+
+  .builder-header--viewing {
+    top: 0.75rem;
+    bottom: auto;
+    max-width: calc(100% - 1.5rem);
+  }
+
+  .builder-header--viewing.builder-header--closed {
+    max-width: calc(100% - 1.5rem);
+  }
 }
 
 .builder-canvas-empty {
@@ -9333,6 +9822,10 @@ textarea.text-input {
   background-color: var(--color-lavender-soft);
 }
 
+.page-switcher-panel--editing .page-switcher-row--active {
+  background-color: var(--color-surface-sunken);
+}
+
 .page-switcher-row-label {
   display: flex;
   align-items: center;
@@ -9357,6 +9850,10 @@ textarea.text-input {
   font-weight: 700;
 }
 
+.page-switcher-panel--editing .page-switcher-row--active .page-switcher-row-label {
+  color: var(--color-text);
+}
+
 .page-switcher-row-index {
   display: inline-flex;
   align-items: center;
@@ -9374,6 +9871,10 @@ textarea.text-input {
 .page-switcher-row--active .page-switcher-row-index {
   background-color: var(--color-surface);
   color: var(--color-lavender-strong);
+}
+
+.page-switcher-panel--editing .page-switcher-row--active .page-switcher-row-index {
+  color: var(--color-text-muted);
 }
 
 .page-switcher-row-actions {

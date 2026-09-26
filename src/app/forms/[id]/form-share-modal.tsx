@@ -1,12 +1,19 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { RichTextEditor } from '@/app/forms/[id]/builder/rich-text-editor';
 import { useToast } from '@/components/toast';
 import { formShareEmail, formShareEmailDefaultMessage } from '@/lib/emails/templates';
 import { readApiError } from '@/lib/error-message';
 import { formShareSms, formShareSmsDefaultMessage } from '@/lib/sms-templates';
 
 type ShareChannel = 'email' | 'sms';
+
+// SMS sending isn't fully live yet (no MessageMedia credentials configured) — hide the
+// channel switcher and lock the modal to email-only until that's revisited. Nothing on
+// the backend was touched: formShareSms()/sendSms()/the API route's 'sms' branch all
+// still work, this just removes the UI entry point. Flip back to true to restore it.
+const SMS_SHARE_ENABLED = false;
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const PHONE_PATTERN = /^\+?[1-9]\d{7,14}$/;
@@ -39,30 +46,48 @@ function CheckIcon() {
   );
 }
 
-function EyeIcon() {
+function EditIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
-        d="M1.5 8s2.5-4 6.5-4 6.5 4 6.5 4-2.5 4-6.5 4-6.5-4-6.5-4Z"
+        d="m10.5 3.5 2 2M3 13l.6-2.8 7.8-7.8a1.4 1.4 0 0 1 2 2l-7.8 7.8L3 13Z"
         stroke="currentColor"
         strokeWidth="1.4"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="8" cy="8" r="1.75" stroke="currentColor" strokeWidth="1.4" />
     </svg>
   );
 }
 
-function ArrowIcon() {
+function ChevronIcon({ open }: { open: boolean }) {
   return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg
+      className={`form-share-preview-chevron${open ? ' form-share-preview-chevron--open' : ''}`}
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
-        d="M3.5 8h9M8.5 4l4 4-4 4"
+        d="m4.5 6 3.5 3.5L11.5 6"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="5" cy="10" r="2.25" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="15" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="15" cy="15" r="2.25" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m7 9 5.9-3M7 11l5.9 3" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   );
 }
@@ -89,7 +114,12 @@ export function FormShareModal({
   const [copied, setCopied] = useState(false);
   const [channel, setChannel] = useState<ShareChannel>('email');
   const [recipient, setRecipient] = useState('');
-  const [message, setMessage] = useState('');
+  // Tiptap reads its initial document during mount. Starting with the real email body
+  // avoids an empty first frame before the open/reset effect runs.
+  const [message, setMessage] = useState(() =>
+    formShareEmailDefaultMessage({ senderName, formName }),
+  );
+  const [editingMessage, setEditingMessage] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -105,6 +135,7 @@ export function FormShareModal({
     setChannel('email');
     setRecipient('');
     setMessage(formShareEmailDefaultMessage({ senderName, formName }));
+    setEditingMessage(false);
     setPreviewOpen(false);
     setIsSending(false);
     const previousOverflow = document.body.style.overflow;
@@ -151,13 +182,10 @@ export function FormShareModal({
     setChannel(next);
     setRecipient('');
     setMessage(defaultMessageFor(next));
+    setEditingMessage(false);
     setPreviewOpen(false);
   }
 
-  // What's shown in the callout/bubble below — mirrors the fallback each channel's send
-  // template applies server-side, so an untouched textarea previews the same thing that
-  // would actually go out.
-  const emailMessageBody = message.trim() || formShareEmailDefaultMessage({ senderName, formName });
   const previewEmail =
     channel === 'email'
       ? formShareEmail({ senderName, formName, formUrl: publicUrl, message })
@@ -182,7 +210,7 @@ export function FormShareModal({
         toast.error(await readApiError(res, 'Could not send — please try again'));
         return;
       }
-      toast.success(channel === 'email' ? 'Email sent' : 'Text message sent');
+      toast.success(channel === 'email' ? 'Email sent' : 'SMS sent');
       onClose();
     } catch {
       toast.error('Something went wrong. Please try again.');
@@ -204,11 +232,16 @@ export function FormShareModal({
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="form-share-head">
-          <div className="form-share-head-copy">
-            <h2 className="form-share-title" id="form-share-modal-title">
-              Share
-            </h2>
-            <p className="form-share-subtitle">{formName}</p>
+          <div className="form-share-head-identity">
+            <span className="form-share-head-icon">
+              <ShareIcon />
+            </span>
+            <div className="form-share-head-copy">
+              <h2 className="form-share-title" id="form-share-modal-title">
+                Share form
+              </h2>
+              <p className="form-share-subtitle">{formName}</p>
+            </div>
           </div>
           <button
             type="button"
@@ -234,9 +267,11 @@ export function FormShareModal({
               <span className="form-share-access-icon">
                 <GlobeIcon />
               </span>
-              <h3 className="form-share-access-title" id="form-share-access-label">
-                Anyone with the link can fill this out
-              </h3>
+              <div>
+                <h3 className="form-share-access-title" id="form-share-access-label">
+                  Public form link
+                </h3>
+              </div>
             </div>
 
             <div className="form-share-url-field">
@@ -267,28 +302,34 @@ export function FormShareModal({
           </section>
 
           <section className="form-share-send-block" aria-labelledby="form-share-send-label">
-            <h3 className="form-share-section-label" id="form-share-send-label">
-              Or send a copy
-            </h3>
-            <div className="form-share-segment" role="tablist" aria-label="Send method">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={channel === 'email'}
-                className={`form-share-segment-btn${channel === 'email' ? ' form-share-segment-btn--active' : ''}`}
-                onClick={() => handleChannelChange('email')}
-              >
-                Email
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={channel === 'sms'}
-                className={`form-share-segment-btn${channel === 'sms' ? ' form-share-segment-btn--active' : ''}`}
-                onClick={() => handleChannelChange('sms')}
-              >
-                Text
-              </button>
+            <div className="form-share-send-head">
+              <div>
+                <h3 className="form-share-section-label" id="form-share-send-label">
+                  Send directly
+                </h3>
+              </div>
+              {SMS_SHARE_ENABLED ? (
+                <div className="form-share-segment" role="tablist" aria-label="Send method">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={channel === 'email'}
+                    className={`form-share-segment-btn${channel === 'email' ? ' form-share-segment-btn--active' : ''}`}
+                    onClick={() => handleChannelChange('email')}
+                  >
+                    Email
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={channel === 'sms'}
+                    className={`form-share-segment-btn${channel === 'sms' ? ' form-share-segment-btn--active' : ''}`}
+                    onClick={() => handleChannelChange('sms')}
+                  >
+                    SMS
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <form
@@ -299,7 +340,7 @@ export function FormShareModal({
               }}
             >
               <label className="form-share-field" htmlFor="form-share-recipient">
-                <span>{channel === 'email' ? 'Email' : 'Phone number'}</span>
+                <span>{channel === 'email' ? 'Recipient email' : 'Recipient phone number'}</span>
                 <input
                   id="form-share-recipient"
                   className="text-input"
@@ -313,59 +354,98 @@ export function FormShareModal({
               </label>
               <div className="form-share-field">
                 <div className="form-share-field-head">
-                  <label htmlFor="form-share-message">Message</label>
+                  <span>Message</span>
                   <button
                     type="button"
                     className="form-share-preview-toggle"
-                    onClick={() => setPreviewOpen((value) => !value)}
-                    aria-expanded={previewOpen}
+                    onClick={() => setEditingMessage((value) => !value)}
+                    aria-pressed={editingMessage}
                   >
-                    <EyeIcon />
-                    {previewOpen ? 'Hide preview' : 'Preview'}
+                    {editingMessage ? <CheckIcon /> : <EditIcon />}
+                    {editingMessage ? 'Done editing' : 'Edit message'}
                   </button>
                 </div>
-                <textarea
-                  id="form-share-message"
-                  className="text-input form-share-message"
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  rows={3}
-                  maxLength={2000}
-                  disabled={isSending}
-                />
-                {!previewOpen ? (
+                {editingMessage ? (
+                  channel === 'email' ? (
+                    <div className="form-share-rich-editor">
+                      <RichTextEditor
+                        value={message}
+                        onChange={setMessage}
+                        disabled={isSending}
+                        fields={{}}
+                        excludeFieldId="share-email-message"
+                        ariaLabel="Email message"
+                      />
+                    </div>
+                  ) : (
+                    <textarea
+                      id="form-share-message"
+                      className="text-input form-share-message"
+                      value={message}
+                      onChange={(event) => setMessage(event.target.value)}
+                      rows={6}
+                      maxLength={2000}
+                      disabled={isSending}
+                    />
+                  )
+                ) : null}
+                {editingMessage ? (
                   <p className="form-share-hint">
                     {channel === 'email'
-                      ? 'The form link is added as a button under this message.'
+                      ? 'Formatting is preserved in the email. The form link is added as a button below.'
                       : 'Keep the link in the text so they can open the form.'}
                   </p>
                 ) : null}
               </div>
 
-              {previewOpen && channel === 'email' && previewEmail ? (
+              {!editingMessage && (previewEmail || previewSms) ? (
                 <div className="form-share-preview" aria-live="polite">
-                  <p className="form-share-preview-label">{previewEmail.subject}</p>
-                  <div className="form-share-preview-callout">{emailMessageBody}</div>
-                  <span className="form-share-preview-cta">
-                    Open form
-                    <ArrowIcon />
-                  </span>
+                  <button
+                    type="button"
+                    className="form-share-preview-head"
+                    onClick={() => setPreviewOpen((value) => !value)}
+                    aria-expanded={previewOpen}
+                  >
+                    <span>{channel === 'email' ? 'Email preview' : 'SMS preview'}</span>
+                    <span
+                      className="form-share-preview-summary"
+                      title={previewEmail?.subject ?? 'Text message'}
+                    >
+                      {previewEmail?.subject ?? 'Text message'}
+                    </span>
+                    <ChevronIcon open={previewOpen} />
+                  </button>
+                  {previewOpen ? (
+                    <div className="form-share-preview-content">
+                      {previewEmail ? (
+                        <iframe
+                          className="form-share-email-preview-frame"
+                          title="Exact email preview"
+                          srcDoc={previewEmail.html}
+                          sandbox="allow-same-origin"
+                          tabIndex={-1}
+                          onLoad={(event) => {
+                            const previewDocument = event.currentTarget.contentDocument;
+                            if (previewDocument) {
+                              event.currentTarget.style.height = `${previewDocument.documentElement.scrollHeight}px`;
+                            }
+                          }}
+                        />
+                      ) : (
+                        <p className="form-share-preview-bubble">{previewSms}</p>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-              {previewOpen && channel === 'sms' && previewSms ? (
-                <p className="form-share-preview-bubble" aria-live="polite">
-                  {previewSms}
-                </p>
               ) : null}
 
               <div className="form-share-footer">
-                <p className="form-share-from">Sending as {senderName}</p>
                 <button
                   type="submit"
                   className="button button--dark form-share-send-btn"
                   disabled={!recipientIsValid || isSending}
                 >
-                  {isSending ? 'Sending…' : channel === 'email' ? 'Send email' : 'Send text'}
+                  {isSending ? 'Sending…' : channel === 'email' ? 'Send email' : 'Send SMS'}
                 </button>
               </div>
             </form>

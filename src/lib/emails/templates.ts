@@ -142,7 +142,7 @@ export function contactFormEmail(params: {
   return { subject: `Contact form: ${params.concern} from ${params.fullName}`, html, text };
 }
 
-/** Plain-text default body for the Share modal's editable message box
+/** Rich-text default body for the Share modal's email editor
  * (src/app/forms/[id]/form-share-modal.tsx) — this is also what a builder sees prefilled
  * there, and what actually gets sent if they never touch it. Written as a short,
  * professional note (greeting, context, call to action) rather than a single terse
@@ -151,7 +151,7 @@ export function formShareEmailDefaultMessage(params: {
   senderName: string;
   formName: string;
 }): string {
-  return `Hello,\n\n${params.senderName} has invited you to complete the form "${params.formName}". Please click the button below to get started.`;
+  return `<p style="text-align: center">Hello,</p><p style="text-align: center">${escapeHtml(params.senderName)} has invited you to complete the form &quot;${escapeHtml(params.formName)}&quot;.</p><p style="text-align: center">Please click the button below to get started.</p>`;
 }
 
 /** "Send via email" action in the live-form Share panel (POST /api/forms/[id]/share,
@@ -161,26 +161,27 @@ export function formShareEmailDefaultMessage(params: {
  * input, so this can't be used to spoof a message as coming from someone else.
  *
  * The message (the builder's own edit of the modal's "Message" box, or
- * formShareEmailDefaultMessage() if they never touched it) renders in its own bordered
- * callout card rather than as a plain paragraph — the same "personal note, separate from
- * the boilerplate" treatment share emails from Dropbox/Google Drive use — so it reads as
- * a message from the sender rather than another line of system copy. It's untrusted user
- * input, so it's HTML-escaped before being interpolated. The CTA button and its
- * plain-URL fallback (rendered by renderEmailLayout independently of the callout) always
- * carry the real link, so an edited message can never accidentally drop it. */
+ * formShareEmailDefaultMessage() if they never touched it) renders as plain body copy.
+ * It's untrusted user input, so only allowlisted tags, attributes and CSS survive the
+ * server-side sanitizer below. The centered CTA rendered by
+ * renderEmailLayout always carries the real link, so an edited message can never
+ * accidentally drop it. */
 export function formShareEmail(params: {
   senderName: string;
   formName: string;
   formUrl: string;
   message?: string;
 }): RenderedEmail {
-  const finalMessage = params.message?.trim() || formShareEmailDefaultMessage(params);
+  const finalMessage = sanitizeEmailMessageHtml(
+    params.message?.trim() || formShareEmailDefaultMessage(params),
+  );
 
   const { html, text } = renderEmailLayout({
     preheader: `${params.senderName} sent you a form to complete: ${params.formName}.`,
     heading: "You've been invited to complete a form",
+    headingAlign: 'center',
     paragraphs: [],
-    messageCallout: escapeHtml(finalMessage).replace(/\n/g, '<br />'),
+    messageCallout: finalMessage,
     cta: { label: 'Open form', url: params.formUrl },
   });
 
@@ -189,6 +190,134 @@ export function formShareEmail(params: {
     html,
     text,
   };
+}
+
+const EMAIL_MESSAGE_TAGS = new Set([
+  'p',
+  'br',
+  'strong',
+  'b',
+  'em',
+  'i',
+  'u',
+  's',
+  'ul',
+  'ol',
+  'li',
+  'blockquote',
+  'a',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'span',
+  'mark',
+  'sup',
+  'sub',
+  'hr',
+  'pre',
+  'code',
+  'img',
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'th',
+  'td',
+]);
+
+function safeEmailStyle(rawAttributes: string): string {
+  const style = rawAttributes.match(/style\s*=\s*(["'])([\s\S]*?)\1/i)?.[2];
+  if (!style) return '';
+
+  const safeDeclarations: string[] = [];
+  for (const declaration of style.split(';')) {
+    const [rawProperty, ...rawValueParts] = declaration.split(':');
+    const property = rawProperty?.trim().toLowerCase();
+    const value = rawValueParts.join(':').trim();
+    if (!property || !value) continue;
+
+    if (property === 'text-align' && /^(left|center|right|justify)$/i.test(value)) {
+      safeDeclarations.push(`text-align: ${value.toLowerCase()}`);
+    } else if (
+      (property === 'color' || property === 'background-color') &&
+      /^(#[0-9a-f]{3,8}|rgba?\([\d\s,.%]+\)|transparent|inherit)$/i.test(value)
+    ) {
+      safeDeclarations.push(`${property}: ${value}`);
+    } else if (property === 'font-size' && /^(?:[8-9]|[1-4]\d)px$/i.test(value)) {
+      safeDeclarations.push(`font-size: ${value}`);
+    } else if (
+      property === 'font-family' &&
+      /^[a-z0-9\s"',.-]+$/i.test(value) &&
+      value.length <= 160
+    ) {
+      safeDeclarations.push(`font-family: ${value}`);
+    }
+  }
+
+  return safeDeclarations.length > 0 ? ` style="${escapeHtml(safeDeclarations.join('; '))}"` : '';
+}
+
+/** Preserve the Formatted Text editor's formatting while rejecting executable or
+ * arbitrary HTML. Callers can hit the share API directly, so the server cannot assume
+ * every string was produced by Tiptap. */
+function sanitizeEmailMessageHtml(value: string): string {
+  const withoutDangerousBlocks = value.replace(
+    /<(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\/\1>/gi,
+    '',
+  );
+
+  return withoutDangerousBlocks.replace(
+    /<\/?([a-z][a-z0-9]*)([^>]*)>/gi,
+    (tag, rawName: string, rawAttributes: string) => {
+      const name = rawName.toLowerCase();
+      if (!EMAIL_MESSAGE_TAGS.has(name)) return '';
+      if (tag.startsWith('</')) return `</${name}>`;
+      if (name === 'br') return '<br />';
+      if (name === 'hr') {
+        return `<hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 16px 0;" />`;
+      }
+
+      if (/^(p|h[1-6]|span|mark)$/.test(name)) {
+        return `<${name}${safeEmailStyle(rawAttributes)}>`;
+      }
+
+      if (name === 'a') {
+        const href = rawAttributes.match(/href\s*=\s*["']([^"']+)["']/i)?.[1];
+        if (!href || !/^(https?:|mailto:)/i.test(href)) return '<a>';
+        return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">`;
+      }
+
+      if (name === 'img') {
+        const src = rawAttributes.match(/src\s*=\s*["']([^"']+)["']/i)?.[1];
+        const alt = rawAttributes.match(/alt\s*=\s*["']([^"']*)["']/i)?.[1] ?? '';
+        if (!src || !/^https:\/\//i.test(src)) return '';
+        return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" style="display: block; max-width: 100%; height: auto; margin: 0 0 14px;" />`;
+      }
+
+      if (name === 'table') {
+        return '<table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border-collapse: collapse; margin: 0 0 16px;">';
+      }
+      if (name === 'th' || name === 'td') {
+        const colspan = rawAttributes.match(/colspan\s*=\s*["']?(\d{1,2})/i)?.[1];
+        const rowspan = rawAttributes.match(/rowspan\s*=\s*["']?(\d{1,2})/i)?.[1];
+        return `<${name}${colspan ? ` colspan="${colspan}"` : ''}${rowspan ? ` rowspan="${rowspan}"` : ''} style="border: 1px solid #cbd5e1; padding: 6px; text-align: left; vertical-align: top;">`;
+      }
+      if (name === 'pre') {
+        return '<pre style="margin: 0 0 16px; padding: 12px 16px; border-radius: 6px; background: #1e1e2e; color: #cdd6f4; overflow-x: auto;">';
+      }
+      if (name === 'code') {
+        return '<code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px;">';
+      }
+      if (name === 'blockquote') {
+        return '<blockquote style="margin: 0 0 16px; padding-left: 14px; border-left: 3px solid #cbd5e1; color: #6b7280;">';
+      }
+
+      return `<${name}>`;
+    },
+  );
 }
 
 function escapeHtml(value: string): string {

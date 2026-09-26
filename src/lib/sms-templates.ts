@@ -12,7 +12,7 @@ export function formShareSmsDefaultMessage(params: {
   formName: string;
   formUrl: string;
 }): string {
-  return `Hello, ${params.senderName} has invited you to complete the form "${params.formName}". Open here: ${params.formUrl}`;
+  return `Hello,\n\n${params.senderName} invited you to complete:\n${params.formName}\n\nOpen the form:\n${params.formUrl}`;
 }
 
 /** "Send via SMS" action in the live-form Share panel (POST /api/forms/[id]/share,

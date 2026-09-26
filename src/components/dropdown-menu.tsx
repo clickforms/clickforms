@@ -25,20 +25,22 @@ function computePanelStyle(
   const panelRect = panel.getBoundingClientRect();
   const gap = 6;
   const viewportPadding = 8;
+  const maxWidth = window.innerWidth - viewportPadding * 2;
+  const width = Math.min(panelRect.width, maxWidth);
 
-  let top = triggerRect.bottom + gap;
-  if (top + panelRect.height > window.innerHeight - viewportPadding) {
-    const aboveTop = triggerRect.top - panelRect.height - gap;
-    top = aboveTop >= viewportPadding ? aboveTop : viewportPadding;
-  }
+  const availableBelow = window.innerHeight - triggerRect.bottom - gap - viewportPadding;
+  const availableAbove = triggerRect.top - gap - viewportPadding;
+  const placeAbove = panelRect.height > availableBelow && availableAbove > availableBelow;
+  const maxHeight = Math.max(8, placeAbove ? availableAbove : availableBelow);
 
-  let left = align === 'end' ? triggerRect.right - panelRect.width : triggerRect.left;
-  left = Math.max(
-    viewportPadding,
-    Math.min(left, window.innerWidth - panelRect.width - viewportPadding),
-  );
+  const top = placeAbove
+    ? Math.max(viewportPadding, triggerRect.top - Math.min(panelRect.height, maxHeight) - gap)
+    : triggerRect.bottom + gap;
 
-  return { position: 'fixed', top, left };
+  let left = align === 'end' ? triggerRect.right - width : triggerRect.left;
+  left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
+
+  return { position: 'fixed', top, left, maxWidth, maxHeight };
 }
 
 interface DropdownMenuProps {
@@ -72,7 +74,17 @@ export function DropdownMenu({
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current || !panelRef.current) return;
-    setPanelStyle(computePanelStyle(triggerRef.current, panelRef.current, align));
+    const trigger = triggerRef.current;
+    const panel = panelRef.current;
+
+    function update() {
+      setPanelStyle(computePanelStyle(trigger, panel, align));
+    }
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(panel);
+    return () => observer.disconnect();
   }, [open, align, triggerRef]);
 
   useEffect(() => {

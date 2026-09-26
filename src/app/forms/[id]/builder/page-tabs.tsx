@@ -186,7 +186,7 @@ export function PageTabs({
         open={open}
         onOpenChange={setOpen}
         triggerRef={triggerRef}
-        panelClassName="actions-menu-panel page-switcher-panel"
+        panelClassName={`actions-menu-panel page-switcher-panel${canEdit ? ' page-switcher-panel--editing' : ''}`}
       >
         <ul className="page-switcher-list">
           {pages.map((page, index) => (

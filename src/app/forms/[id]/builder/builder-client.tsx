@@ -53,7 +53,6 @@ import {
   updateField,
 } from '@/app/forms/[id]/builder/schema-mutations';
 import { useFormWorkspaceStatus } from '@/app/forms/[id]/form-workspace-context';
-import { DropdownMenu } from '@/components/dropdown-menu';
 import { useToast } from '@/components/toast';
 import { extractApiError, getErrorMessage } from '@/lib/error-message';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
@@ -99,6 +98,20 @@ interface DragPayload {
   columnLayoutColumns?: ColumnCount;
 }
 
+const DEFAULT_PAGE_TITLE_PATTERN = /^Page \d+$/;
+
+function normalizeDefaultPageTitles(schema: FormSchema): FormSchema {
+  let changed = false;
+  const pages = schema.pages.map((page, index) => {
+    if (!DEFAULT_PAGE_TITLE_PATTERN.test(page.title)) return page;
+    const title = `Page ${index + 1}`;
+    if (page.title === title) return page;
+    changed = true;
+    return { ...page, title };
+  });
+  return changed ? { ...schema, pages } : schema;
+}
+
 function CloseIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -136,49 +149,10 @@ function ExpandIcon({ expanded }: { expanded: boolean }) {
   );
 }
 
-function ArrowRightIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M3 8h10M9 4l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function PlusIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
       <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function KebabIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="3.4" r="1.15" fill="currentColor" />
-      <circle cx="8" cy="8" r="1.15" fill="currentColor" />
-      <circle cx="8" cy="12.6" r="1.15" fill="currentColor" />
-    </svg>
-  );
-}
-
-function TakeOfflineIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M8 2.5v7M5 6.5 8 9.5l3-3"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M3 12.5h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }
@@ -204,33 +178,6 @@ function PanelToggleIcon({ open }: { open: boolean }) {
       {open ? null : (
         <rect x="3.15" y="3.65" width="2.5" height="8.7" rx="0.6" fill="currentColor" />
       )}
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M4 4l1 1M11 11l1 1M4 12l1-1M11 5l1-1"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function EditFormIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M10.5 2.5l3 3L5.5 13.5H2.5v-3L10.5 2.5z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
     </svg>
   );
 }
@@ -274,7 +221,14 @@ export function BuilderClient({
   canEdit,
 }: BuilderClientProps) {
   const toast = useToast();
-  const { status: formStatus, setStatus: setFormStatus, syncLiveState } = useFormWorkspaceStatus();
+  const {
+    status: formStatus,
+    setStatus: setFormStatus,
+    syncLiveState,
+    registerEditFormAction,
+    registerTakeOfflineAction,
+    registerPublishFormAction,
+  } = useFormWorkspaceStatus();
   const [schema, setSchema] = useState<FormSchema>(
     initialVersion?.schema ?? createEmptyFormSchema(),
   );
@@ -309,11 +263,9 @@ export function BuilderClient({
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   // Which panel the tabs at the top of .builder-palette show —
   // Fields (palette or the selected field's settings, today's behavior), Design
-  // (form-wide branding, previously only reachable via the "Form settings" modal below —
-  // that modal still exists too, for mobile where the palette is hidden), or Logic
-  // (conditional rules for whichever field is selected/being edited).
+  // (form-wide branding), or Logic (conditional rules for whichever field is
+  // selected/being edited).
   const [activeRailTab, setActiveRailTab] = useState<BuilderRailTab>('fields');
-  const [showFormSettings, setShowFormSettings] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
   const [fieldSettingsExpanded, setFieldSettingsExpanded] = useState(false);
@@ -322,8 +274,6 @@ export function BuilderClient({
   // reopened without permanently losing access to Approve/page navigation (Share now
   // lives in FormTopNav instead, so it isn't part of what this drawer hides).
   const [toolbarOpen, setToolbarOpen] = useState(true);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-  const moreMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [mockAnswers, setMockAnswers] = useState<FormAnswers>({});
   const [activeDrag, setActiveDrag] = useState<
     { source: 'palette'; label: string } | { source: 'canvas'; fieldId: string } | null
@@ -431,76 +381,83 @@ export function BuilderClient({
     }
   }, [schema, formId, setFormStatus, toast]);
 
-  function applyWorkflowResult(body: FormWorkflowResult) {
-    const nextStatus = body?.form?.status as FormStatus | undefined;
-    if (!nextStatus) {
-      throw new Error('Server did not return an updated form status');
-    }
-    setFormStatus(nextStatus);
-    setCurrentVersionId(body.form.currentVersionId ?? null);
-    if (body.version) {
-      setVersion({
-        id: body.version.id,
-        versionNumber: body.version.versionNumber,
-        publishedAt: body.version.publishedAt
-          ? new Date(body.version.publishedAt).toISOString()
-          : null,
-      });
-    }
-  }
+  const applyWorkflowResult = useCallback(
+    (body: FormWorkflowResult) => {
+      const nextStatus = body?.form?.status as FormStatus | undefined;
+      if (!nextStatus) {
+        throw new Error('Server did not return an updated form status');
+      }
+      setFormStatus(nextStatus);
+      setCurrentVersionId(body.form.currentVersionId ?? null);
+      if (body.version) {
+        setVersion({
+          id: body.version.id,
+          versionNumber: body.version.versionNumber,
+          publishedAt: body.version.publishedAt
+            ? new Date(body.version.publishedAt).toISOString()
+            : null,
+        });
+      }
+    },
+    [setFormStatus],
+  );
 
   // Workflow actions (publish/unpublish) only ever run while the canvas is locked
   // (!isEditing) — the toolbar only renders their buttons in that state — so there's
   // never unsaved schema state to flush first; schema === last-saved by construction.
-  async function runWorkflowAction(
-    action: FormWorkflowAction,
-    body?: Record<string, unknown>,
-  ): Promise<boolean> {
-    if (!canEdit || isWorkflowBusy) return false;
+  const runWorkflowAction = useCallback(
+    async (action: FormWorkflowAction, body?: Record<string, unknown>): Promise<boolean> => {
+      if (!canEdit || isWorkflowBusy) return false;
 
-    setIsWorkflowBusy(true);
-    try {
-      const result = await runFormWorkflow(formId, action, body);
-      applyWorkflowResult(result);
+      setIsWorkflowBusy(true);
+      try {
+        const result = await runFormWorkflow(formId, action, body);
+        applyWorkflowResult(result);
 
-      const messages: Record<FormWorkflowAction, string> = {
-        publish: `Published as v${result.version?.versionNumber ?? ''}`.trim(),
-        unpublish:
-          body?.intent === 'edit'
-            ? 'Form taken offline — you can edit it now'
-            : 'Form taken offline',
-      };
-      toast.success(messages[action] ?? 'Status updated');
-      return true;
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Something went wrong'));
-      return false;
-    } finally {
-      setIsWorkflowBusy(false);
-    }
-  }
+        const messages: Record<FormWorkflowAction, string> = {
+          publish: `Published as v${result.version?.versionNumber ?? ''}`.trim(),
+          unpublish:
+            body?.intent === 'edit'
+              ? 'Form taken offline — you can edit it now'
+              : 'Form taken offline',
+        };
+        toast.success(messages[action] ?? 'Status updated');
+        return true;
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Something went wrong'));
+        return false;
+      } finally {
+        setIsWorkflowBusy(false);
+      }
+    },
+    [applyWorkflowResult, canEdit, formId, isWorkflowBusy, toast],
+  );
 
-  async function handleWorkflowAction() {
-    const step = getWorkflowStepForStatus(formStatus);
-    if (!step || !canRunWorkflow) return;
-    await runWorkflowAction(step.action);
-  }
-
-  async function handleTakeOffline() {
-    await runWorkflowAction('unpublish');
-  }
+  const handleTakeOffline = useCallback(() => {
+    void runWorkflowAction('unpublish');
+  }, [runWorkflowAction]);
 
   /** Clicking "Edit": a live form must be taken offline first (confirmed via the modal
    *  below), a form that's already offline just unlocks the canvas immediately — there's
    *  no live version at risk, so no confirmation is needed. */
-  function handleEditClick() {
-    if (!canEdit) return;
+  const handleEditClick = useCallback(() => {
+    if (!canEdit || isWorkflowBusy) return;
     if (isLive) {
       setShowEditConfirm(true);
       return;
     }
     setIsEditing(true);
-  }
+  }, [canEdit, isLive, isWorkflowBusy]);
+
+  useEffect(() => {
+    registerEditFormAction(canEdit && !isEditing ? handleEditClick : null);
+    return () => registerEditFormAction(null);
+  }, [canEdit, handleEditClick, isEditing, registerEditFormAction]);
+
+  useEffect(() => {
+    registerTakeOfflineAction(canEdit && isLive && !isEditing ? handleTakeOffline : null);
+    return () => registerTakeOfflineAction(null);
+  }, [canEdit, handleTakeOffline, isEditing, isLive, registerTakeOfflineAction]);
 
   async function handleConfirmEditForm() {
     setShowEditConfirm(false);
@@ -660,15 +617,17 @@ export function BuilderClient({
   function handleAddPage() {
     if (!canEditCanvas) return;
     const id = crypto.randomUUID();
-    const page: FormPage = { id, title: `Page ${schema.pages.length + 1}`, fields: [] };
-    setSchema((prev) => addPage(prev, page));
+    setSchema((prev) => {
+      const page: FormPage = { id, title: `Page ${prev.pages.length + 1}`, fields: [] };
+      return normalizeDefaultPageTitles(addPage(prev, page));
+    });
     setActivePageId(id);
     setSelectedFieldId(null);
   }
 
   function handleRemovePage(pageId: string) {
     if (!canEditCanvas || schema.pages.length <= 1) return;
-    setSchema((prev) => removePage(prev, pageId));
+    setSchema((prev) => normalizeDefaultPageTitles(removePage(prev, pageId)));
     if (activePageId === pageId) {
       const remaining = schema.pages.filter((page) => page.id !== pageId);
       const next = remaining[0];
@@ -691,7 +650,7 @@ export function BuilderClient({
 
     const ids = schema.pages.map((page) => page.id);
     const moved = arrayMove(ids, index, targetIndex);
-    setSchema((prev) => reorderPages(prev, moved));
+    setSchema((prev) => normalizeDefaultPageTitles(reorderPages(prev, moved)));
   }
 
   function handleSelectPage(pageId: string) {
@@ -802,12 +761,30 @@ export function BuilderClient({
   // Publish button) stuck on-screen even though the save succeeded. Plain recomputation
   // on every render is cheap enough for a form schema and always correct.
   const hasUnsavedChanges = JSON.stringify(schema) !== lastSavedSchemaJsonRef.current;
-  const workflowStep = getWorkflowStepForStatus(formStatus);
+  const workflowAction = getWorkflowStepForStatus(formStatus)?.action ?? null;
   // Belt-and-suspenders: the Publish button is only ever rendered while !isEditing, at
   // which point hasUnsavedChanges is always false by construction — but disabling on it
   // too means Publish can never fire against a stale/dirty schema even if that invariant
   // is ever broken.
-  const canRunWorkflow = workflowStep !== null && formStatus === 'draft' && !hasUnsavedChanges;
+  const canRunWorkflow = workflowAction !== null && formStatus === 'draft' && !hasUnsavedChanges;
+
+  useEffect(() => {
+    if (!workflowAction || !canRunWorkflow || isEditing || isWorkflowBusy) {
+      registerPublishFormAction(null);
+      return () => registerPublishFormAction(null);
+    }
+    registerPublishFormAction(() => {
+      void runWorkflowAction(workflowAction);
+    });
+    return () => registerPublishFormAction(null);
+  }, [
+    canRunWorkflow,
+    isEditing,
+    isWorkflowBusy,
+    registerPublishFormAction,
+    runWorkflowAction,
+    workflowAction,
+  ]);
 
   // FormTopNav renders the Live/Draft badge (it lives in the shared top row, outside
   // this component's tree), so push the value it needs up into context whenever it
@@ -837,7 +814,9 @@ export function BuilderClient({
           gray background rather than inside the white bordered card, so the space to its
           left reads as background, not part of the card, and the card itself starts
           right at the top instead of being pushed down by this row. */}
-      <header className={`builder-header ${toolbarOpen ? '' : 'builder-header--closed'}`}>
+      <header
+        className={`builder-header ${canEditCanvas ? 'builder-header--editing' : 'builder-header--viewing'} ${toolbarOpen ? '' : 'builder-header--closed'}`}
+      >
         <button
           type="button"
           className="builder-header-handle"
@@ -850,11 +829,6 @@ export function BuilderClient({
         {!canEdit ? <span className="builder-readonly-badge">Read-only</span> : null}
         {canEdit ? (
           <>
-            <SaveStatusBadge
-              status={saveStatus}
-              hasUnsavedChanges={hasUnsavedChanges}
-              error={saveError}
-            />
             <PageTabs
               pages={schema.pages}
               activePageId={activePage?.id ?? ''}
@@ -865,75 +839,15 @@ export function BuilderClient({
               onRenamePage={handleRenamePage}
               onMovePage={handleMovePage}
             />
-            {/* Just the kebab now — Share moved up to FormTopNav, next to Preview, since
-                the live link is the same regardless of which tab is active rather than
-                being a builder-specific concern. */}
-            <div className="builder-header-utility">
-              <button
-                ref={moreMenuTriggerRef}
-                type="button"
-                className="button button--ghost button--small builder-header-kebab"
-                onClick={() => setMoreMenuOpen((value) => !value)}
-                aria-haspopup="true"
-                aria-label="More actions"
-              >
-                <KebabIcon />
-              </button>
-              <DropdownMenu
-                open={moreMenuOpen}
-                onOpenChange={setMoreMenuOpen}
-                triggerRef={moreMenuTriggerRef}
-                align="end"
-              >
-                <ul className="builder-more-menu-list">
-                  <li>
-                    <button
-                      type="button"
-                      className="actions-menu-item"
-                      onClick={() => {
-                        setMoreMenuOpen(false);
-                        setShowFormSettings(true);
-                      }}
-                    >
-                      <span className="actions-menu-icon">
-                        <SettingsIcon />
-                      </span>
-                      Form settings
-                    </button>
-                  </li>
-                  {isLive ? (
-                    <li>
-                      <button
-                        type="button"
-                        className="actions-menu-item actions-menu-item--danger"
-                        onClick={() => {
-                          setMoreMenuOpen(false);
-                          void handleTakeOffline();
-                        }}
-                        disabled={isWorkflowBusy}
-                      >
-                        <span className="actions-menu-icon">
-                          <TakeOfflineIcon />
-                        </span>
-                        <span className="actions-menu-item-text">
-                          {isWorkflowBusy ? 'Taking offline…' : 'Take offline'}
-                          <span className="actions-menu-item-hint">
-                            Stops the public link from working
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  ) : null}
-                </ul>
-              </DropdownMenu>
-            </div>
-            {/* Two distinct modes, never blended: locked (view) shows Edit + Publish side
-                by side — the canvas is read-only either way, so both are always safe to
-                offer together; editing shows Save + Cancel instead, and nothing else,
-                since that's the only thing to do until the session ends one way or the
-                other. */}
+            {/* Locked-mode actions live in the shared Actions menu above. This toolbar
+                only owns Save/Cancel for an active editing session. */}
             {isEditing ? (
               <div className="builder-header-stage">
+                <SaveStatusBadge
+                  status={saveStatus}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                  error={saveError}
+                />
                 <button
                   type="button"
                   className="button button--ghost button--small"
@@ -951,46 +865,12 @@ export function BuilderClient({
                   {isSaveBusy ? 'Saving…' : hasUnsavedChanges ? 'Save' : 'Done'}
                 </button>
               </div>
-            ) : (
-              <div className="builder-header-stage">
-                <span className="builder-edit-tooltip-wrap">
-                  <button
-                    type="button"
-                    className="button builder-header-cta"
-                    onClick={handleEditClick}
-                    disabled={isWorkflowBusy}
-                  >
-                    <EditFormIcon />
-                    Edit
-                  </button>
-                  {isLive ? (
-                    <span className="builder-edit-tooltip" role="tooltip">
-                      Takes the form offline so you can edit it
-                    </span>
-                  ) : null}
-                </span>
-                {workflowStep ? (
-                  <button
-                    type="button"
-                    className={
-                      canRunWorkflow
-                        ? 'button builder-header-cta builder-header-cta--publish'
-                        : 'button button--ghost button--small'
-                    }
-                    onClick={() => void handleWorkflowAction()}
-                    disabled={isWorkflowBusy || !canRunWorkflow}
-                  >
-                    {isWorkflowBusy ? workflowStep.busyLabel : workflowStep.label}
-                    {!isWorkflowBusy && canRunWorkflow ? <ArrowRightIcon /> : null}
-                  </button>
-                ) : null}
-              </div>
-            )}
+            ) : null}
           </>
         ) : null}
       </header>
 
-      <div className="builder">
+      <div className={`builder ${!canEditCanvas ? 'builder--viewing' : ''}`}>
         <DndContext
           id="form-builder-dnd"
           sensors={sensors}
@@ -1340,40 +1220,6 @@ export function BuilderClient({
                   handleAddColumnLayout(columns);
                   setShowMobilePalette(false);
                 }}
-              />
-            </div>
-          </div>
-        ) : null}
-
-        {showFormSettings ? (
-          // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
-          <div className="modal-overlay" onMouseDown={() => setShowFormSettings(false)}>
-            <div
-              className="modal-card"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="form-settings-modal-title"
-              onMouseDown={(event) => event.stopPropagation()}
-            >
-              <div className="modal-header">
-                <h2 className="modal-title" id="form-settings-modal-title">
-                  Form settings
-                </h2>
-                <div className="modal-header-actions">
-                  <button
-                    type="button"
-                    className="modal-close"
-                    onClick={() => setShowFormSettings(false)}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-              <DesignSettingsPanel
-                branding={schema.branding}
-                canEdit={canEditCanvas}
-                onUpdateBranding={handleUpdateBranding}
               />
             </div>
           </div>

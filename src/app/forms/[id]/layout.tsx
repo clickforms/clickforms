@@ -49,6 +49,9 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
         where: { id: requireOrganizationId(session) },
         select: { subdomain: true },
       });
+      // The staff-view session JWT can predate name support and therefore have no
+      // session.user.name. The authenticated user ID remains authoritative, so read the
+      // current profile name instead of degrading the preview to "Someone".
       const sender = await tx.user.findUnique({
         where: { id: session.user.id },
         select: { name: true },
@@ -70,7 +73,7 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
   // than trusting anything the client sends back, so a stale/mismatched value here
   // could only ever affect what the sender previews, never who a message claims to be
   // from.
-  const senderName = userDisplayName(sender?.name);
+  const senderName = userDisplayName(sender?.name ?? session.user.name);
 
   return (
     <FormWorkspaceShell

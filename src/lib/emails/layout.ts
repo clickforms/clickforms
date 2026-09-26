@@ -14,18 +14,17 @@ const TEXT_DARK = '#111827';
 const TEXT_MUTED = '#6b7280';
 const BORDER = '#e2e8f0';
 const BG = '#eef1f6';
+const BRAND_LOGO_URL = 'https://clickforms.com.au/brand/logo.png';
 
 export interface EmailLayoutParams {
   /** Short summary shown in inbox previews before the email is opened. */
   preheader: string;
   heading: string;
+  headingAlign?: 'left' | 'center';
   /** Paragraphs of body copy, rendered in order — kept as an array so callers don't hand-write <p> tags. */
   paragraphs: string[];
-  /** A distinct bordered card (light background, lavender left-accent) rendered between
-   * `paragraphs` and the CTA — for content that reads as a message from a specific
-   * person rather than boilerplate copy (see formShareEmail's use of it for the
-   * builder's own note). Supports `<br />` line breaks; anything else must already be
-   * escaped by the caller. Omit for templates that don't need this distinction. */
+  /** A sender-authored message rendered plainly between `paragraphs` and the CTA.
+   * Supports `<br />` line breaks; anything else must already be escaped by the caller. */
   messageCallout?: string;
   cta?: { label: string; url: string };
   /** Extra fine-print shown below the CTA in a muted, smaller font (e.g. "link expires in..."). */
@@ -36,6 +35,7 @@ export interface EmailLayoutParams {
 export function renderEmailLayout({
   preheader,
   heading,
+  headingAlign = 'left',
   paragraphs,
   messageCallout,
   cta,
@@ -45,34 +45,29 @@ export function renderEmailLayout({
     .map((paragraph) => `<p style="${P_STYLE}">${paragraph}</p>`)
     .join('\n');
 
-  // Light card with a lavender left-accent border rather than the tinted footnote
-  // treatment below — that one means "system notice" (expiry, security), this one means
-  // "a person wrote this", so they're deliberately styled differently.
   const messageCalloutHtml = messageCallout
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 2px 0 22px;">
-        <tr>
-          <td style="background-color: #f8fafc; border: 1px solid ${BORDER}; border-left: 3px solid ${LAVENDER}; border-radius: 8px; padding: 14px 18px; font-size: 14.5px; line-height: 1.6; color: ${TEXT_DARK};">
-            ${messageCallout}
-          </td>
-        </tr>
-      </table>`
+    ? `<div style="margin: 2px 0 22px; font-size: 15px; line-height: 1.6; color: ${TEXT_DARK};">
+        ${messageCallout}
+      </div>`
     : '';
 
   const ctaHtml = cta
     ? `
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
         <tr>
-          <td style="border-radius: 8px; background-color: ${BRAND_GREEN_DARK};">
-            <a href="${cta.url}" style="display: inline-block; padding: 12px 26px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">
-              ${cta.label}
-            </a>
+          <td align="center">
+            <table role="presentation" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="border-radius: 8px; background-color: ${BRAND_GREEN_DARK};">
+                  <a href="${cta.url}" style="display: inline-block; padding: 12px 28px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">
+                    ${cta.label}
+                  </a>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
-      </table>
-      <p style="${P_STYLE} font-size: 13px; color: ${TEXT_MUTED};">
-        Or paste this link into your browser:<br />
-        <a href="${cta.url}" style="color: ${BRAND_GREEN_DARK}; word-break: break-all;">${cta.url}</a>
-      </p>`
+      </table>`
     : '';
 
   // A tinted callout rather than plain muted text — the lavender brand accent gives
@@ -112,29 +107,18 @@ export function renderEmailLayout({
               </td>
             </tr>
             <tr>
-              <td style="padding: 24px 32px 8px; border-bottom: 1px solid ${BORDER};">
-                <table role="presentation" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding-right: 8px; vertical-align: middle;">
-                      <table role="presentation" width="28" height="28" cellpadding="0" cellspacing="0" style="background-color: ${BRAND_GREEN_DARK}; border-radius: 7px;">
-                        <tr>
-                          <td align="center" style="padding: 6px 5px;">
-                            <div style="height: 2px; background: #fff; border-radius: 1px; margin: 0 0 3px;"></div>
-                            <div style="height: 2px; width: 60%; background: #fff; border-radius: 1px; margin: 0 0 3px;"></div>
-                            <div style="height: 2px; background: #fff; border-radius: 1px;"></div>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                    <td style="font-size: 16px; font-weight: 700; color: ${TEXT_DARK};">Clickforms</td>
-                  </tr>
-                </table>
-                <div style="height: 12px;"></div>
+              <td style="padding: 24px 32px; border-bottom: 1px solid ${BORDER};">
+                <img
+                  src="${BRAND_LOGO_URL}"
+                  width="120"
+                  alt="Clickforms"
+                  style="display: block; width: 120px; height: auto; border: 0;"
+                />
               </td>
             </tr>
             <tr>
               <td style="padding: 28px 32px 32px;">
-                <h1 style="margin: 0 0 16px; font-size: 20px; font-weight: 700; color: ${TEXT_DARK};">${heading}</h1>
+                <h1 style="margin: 0 0 16px; font-size: 20px; font-weight: 700; color: ${TEXT_DARK}; text-align: ${headingAlign};">${heading}</h1>
                 ${bodyHtml}
                 ${messageCalloutHtml}
                 ${ctaHtml}
@@ -146,7 +130,9 @@ export function renderEmailLayout({
             <tr>
               <td align="center" style="font-size: 12px; line-height: 1.6; color: ${TEXT_MUTED};">
                 <strong style="color: ${TEXT_DARK};">Clickforms</strong> &middot; Forms, built for your team<br />
-                This is an automated message from Clickforms.
+                <span style="font-size: 11px; color: #9ca3af;">
+                  This email was sent using Clickforms. If you weren't expecting it, you can safely ignore it.
+                </span>
               </td>
             </tr>
           </table>
@@ -177,6 +163,9 @@ function stripHtml(value: string): string {
   return value
     .replace(/<a href="([^"]+)">[^<]*<\/a>/g, '$1')
     .replace(/<br\s*\/?>/g, '\n')
+    .replace(/<\/(?:p|div|h[1-6]|blockquote)>/g, '\n')
+    .replace(/<li[^>]*>/g, '• ')
+    .replace(/<\/li>/g, '\n')
     .replace(/<\/?strong>/g, '')
     .replace(/<[^>]+>/g, '');
 }

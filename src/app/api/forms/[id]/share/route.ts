@@ -25,16 +25,13 @@ interface RouteContext {
 const SHARE_RATE_LIMIT = 20;
 const SHARE_RATE_WINDOW_MS = 60 * 60 * 1000;
 
-// Builder-edited message text from the modal's "Message" box (see form-share-modal.tsx) —
-// capped well under email/SMS provider limits; formShareEmail()/formShareSms() treat an
-// empty value as "use the original default text".
-const shareMessageSchema = z.string().trim().max(2000).optional();
-
 const shareBodySchema = z.discriminatedUnion('channel', [
   z.object({
     channel: z.literal('email'),
     recipient: z.string().trim().email('Enter a valid email address'),
-    message: shareMessageSchema,
+    // Email uses the restricted rich-text editor; the template sanitizes its HTML again
+    // server-side before rendering it.
+    message: z.string().trim().max(50_000).optional(),
   }),
   z.object({
     channel: z.literal('sms'),
@@ -45,7 +42,7 @@ const shareBodySchema = z.discriminatedUnion('channel', [
       .string()
       .trim()
       .regex(/^\+?[1-9]\d{7,14}$/, 'Enter a valid phone number, e.g. +61491570156'),
-    message: shareMessageSchema,
+    message: z.string().trim().max(2000).optional(),
   }),
 ]);
 
@@ -67,7 +64,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     // it resolves (below), same as POST /api/users' invite email — sendEmail()/sendSms()
     // are network calls to an external provider and shouldn't run while an RLS
     // transaction is held open.
-    const { formUrl, senderName, formName, organizationId } = await withOrgContext(
+    const { formUrl, formName, organizationId, sender } = await withOrgContext(
       session.user.organizationId,
       async (tx) => {
         const organizationId = requireOrganizationId(session);
@@ -101,7 +98,6 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
           where: { id: organizationId },
           select: { subdomain: true },
         });
-
         const sender = await tx.user.findUnique({
           where: { id: session.user.id },
           select: { name: true },
@@ -109,12 +105,13 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
 
         return {
           formUrl: buildOrgFormUrl(organization.subdomain, `/f/${form.slug}`),
-          senderName: userDisplayName(sender?.name),
           formName: form.name,
           organizationId,
+          sender,
         };
       },
     );
+    const senderName = userDisplayName(sender?.name ?? session.user.name);
 
     if (body.channel === 'email') {
       const { subject, html, text } = formShareEmail({

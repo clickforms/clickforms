@@ -66,6 +66,7 @@ interface RichTextEditorProps {
   disabled?: boolean;
   fields: Record<string, FormField>;
   excludeFieldId: string;
+  ariaLabel?: string;
 }
 
 type Popover =
@@ -403,6 +404,7 @@ export function RichTextEditor({
   disabled,
   fields,
   excludeFieldId,
+  ariaLabel = 'Formatted text',
 }: RichTextEditorProps) {
   const lastEmittedRef = useRef<string>(value);
   const [openPopover, setOpenPopover] = useState<Popover>(null);
@@ -426,7 +428,7 @@ export function RichTextEditor({
       editable: !disabled,
       content: value,
       editorProps: {
-        attributes: { class: 'rich-text-editor' },
+        attributes: { class: 'rich-text-editor', 'aria-label': ariaLabel },
       },
       extensions: [
         StarterKit.configure({

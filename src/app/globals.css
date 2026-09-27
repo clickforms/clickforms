@@ -8052,8 +8052,38 @@ textarea.text-input {
   color: var(--color-primary);
 }
 
+/* .field-palette (and everything under it — .palette-search, .palette-group-label,
+ * .palette-item, etc.) only ever reads --builder-text/--builder-muted/--builder-subtle/
+ * --builder-panel-elevated/--builder-panel-border/--builder-accent, never a plain color.
+ * Those custom properties are declared on .builder (see the "Form builder" section
+ * above) for the dark desktop sidebar it normally lives in. This mobile modal is a
+ * *sibling* of .builder in the DOM (see the comment on .builder-header in
+ * builder-client.tsx), not a descendant, so none of those custom properties are in
+ * scope here — every rule that reads one falls back to inherit/transparent, which is
+ * why the panel rendered as a blank white box with only the (hardcoded-hex) field-type
+ * icon swatches visibly colored. Redefining the same custom property names here, scoped
+ * to this card, lets the exact same field-palette markup/CSS pick up light-mode colors
+ * instead of forking a second copy of every rule. */
 .builder-mobile-palette-card {
   padding: 1.1rem 1rem 1.25rem;
+  --builder-panel: var(--color-surface);
+  --builder-panel-elevated: var(--color-surface-sunken);
+  --builder-panel-border: var(--color-border);
+  --builder-text: var(--color-text);
+  --builder-muted: var(--color-text-muted);
+  --builder-subtle: var(--color-text-subtle);
+  --builder-accent: var(--color-primary);
+}
+
+/* The base .palette-search/.palette-item hover states use hardcoded rgba(255,255,255,…)
+ * overlays, tuned for the dark sidebar — nearly invisible against this card's white
+ * background, so they get their own light-mode hover colors here too. */
+.builder-mobile-palette-card .palette-search:hover {
+  border-color: var(--color-border-strong);
+}
+
+.builder-mobile-palette-card .palette-item:hover {
+  background-color: var(--color-surface-sunken);
 }
 
 /* .modal-header's sticky offset (see its own comment) is negative-margined to match

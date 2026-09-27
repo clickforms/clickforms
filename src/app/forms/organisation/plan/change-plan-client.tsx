@@ -141,7 +141,7 @@ export function ChangePlanClient({ planInfo: initialPlanInfo }: ChangePlanClient
         <div>
           <Link href="/forms/organisation?tab=billing" className="org-plan-back-link">
             <BackArrowIcon />
-            Organisation
+            Billing
           </Link>
           <h1 className="org-settings-title">Change plan</h1>
           <p className="org-settings-lead">

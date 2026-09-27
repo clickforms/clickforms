@@ -6162,6 +6162,20 @@ textarea.text-input {
   color: var(--color-primary);
 }
 
+/* Hidden by default (i.e. on desktop) — the accordion toggle column (forms-list-client.tsx
+ * / submissions-list-client.tsx) only exists to expand/collapse a row on the narrow,
+ * stacked-card layout below. Every one of that button's actual styles lives inside the
+ * @media (max-width: 768px) block below, scoped there because the button only makes
+ * sense once rows are stacked — but with no rule hiding the column at wider widths, the
+ * <th>/<td> rendered on every viewport regardless, and the <button> inside had no CSS
+ * applied to it at all above 768px, so it fell back to the browser's bare default button
+ * chrome: a plain bordered rectangle with a caret, which read as a stray, broken dropdown
+ * sitting between Status and Created by on desktop. The media query below re-enables it. */
+.forms-row-toggle-cell,
+.submissions-row-toggle-cell {
+  display: none;
+}
+
 /* Below tablet width, tables stack each row into a labeled card instead of scrolling
    horizontally — data-label on each <td> (set inline by the components above) supplies
    the row label via ::before. */

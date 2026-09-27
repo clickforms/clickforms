@@ -344,6 +344,109 @@ export function UsersClient({
         </div>
       ) : null}
 
+      <div className="users-mobile-list">
+        {users.length === 0 && pendingInvites.length === 0 ? (
+          <p className="users-mobile-empty">No users found.</p>
+        ) : null}
+        {users.map((user) => {
+          const isSelf = user.id === currentUserId;
+          return (
+            <article className="users-mobile-card" key={user.id}>
+              <div className="users-mobile-card-header">
+                <span className="admin-table-avatar" aria-hidden="true">
+                  {getInitials(user.name, user.email)}
+                </span>
+                <div className="users-mobile-identity">
+                  <div className="users-mobile-name-row">
+                    <h2>{user.name ?? 'Unnamed user'}</h2>
+                    {isSelf ? <span className="badge badge--neutral">You</span> : null}
+                  </div>
+                  <p>{user.email}</p>
+                </div>
+                <UserRowMenu
+                  items={[
+                    {
+                      label: 'Edit',
+                      icon: <EditIcon />,
+                      onSelect: () => setEditingUser(user),
+                    },
+                    ...(!isSelf
+                      ? [
+                          {
+                            label: 'Remove',
+                            icon: <DeleteIcon />,
+                            danger: true,
+                            onSelect: () => setRemovingUser(user),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              </div>
+              <div className="users-mobile-role-row">
+                <span className="users-role-pill">{formatUserRole(user.role)}</span>
+                <span className="users-mobile-created">
+                  Joined {new Date(user.createdAt).toLocaleDateString('en-GB')}
+                </span>
+              </div>
+              <dl className="users-mobile-stats">
+                <div>
+                  <dt>Forms owned</dt>
+                  <dd>{user.formsOwned}</dd>
+                </div>
+                <div>
+                  <dt>Assigned</dt>
+                  <dd>{user.assignedForms}</dd>
+                </div>
+                <div>
+                  <dt>2FA</dt>
+                  <dd>Off</dd>
+                </div>
+              </dl>
+            </article>
+          );
+        })}
+        {pendingInvites.map((invite) => (
+          <article className="users-mobile-card users-mobile-card--pending" key={invite.id}>
+            <div className="users-mobile-card-header">
+              <span className="admin-table-avatar" aria-hidden="true">
+                {getInitials(invite.name, invite.email)}
+              </span>
+              <div className="users-mobile-identity">
+                <div className="users-mobile-name-row">
+                  <h2>{invite.name ?? 'Invited user'}</h2>
+                  <span className="badge badge--draft">Pending</span>
+                </div>
+                <p>{invite.email}</p>
+              </div>
+              <UserRowMenu
+                items={[
+                  {
+                    label: 'Resend invite',
+                    icon: <CopyLinkIcon />,
+                    disabled: busyInviteId === invite.id,
+                    onSelect: () => void handleCopyInviteLink(invite.id),
+                  },
+                  {
+                    label: 'Revoke',
+                    icon: <RevokeIcon />,
+                    danger: true,
+                    disabled: busyInviteId === invite.id,
+                    onSelect: () => void handleRevokeInvite(invite.id),
+                  },
+                ]}
+              />
+            </div>
+            <div className="users-mobile-role-row">
+              <span className="users-role-pill">{formatUserRole(invite.role)}</span>
+              <span className="users-mobile-created">
+                Invited {new Date(invite.createdAt).toLocaleDateString('en-GB')}
+              </span>
+            </div>
+          </article>
+        ))}
+      </div>
+
       <div className="card users-table-card">
         <div className="admin-table-scroll">
           <table className="users-table">
@@ -383,17 +486,19 @@ export function UsersClient({
                             ) : null}
                           </span>
                         </td>
-                        <td>{user.email}</td>
-                        <td>
+                        <td data-label="Email">{user.email}</td>
+                        <td data-label="Role">
                           <span className="users-role-pill">{formatUserRole(user.role)}</span>
                         </td>
-                        <td>{user.formsOwned}</td>
-                        <td>{user.assignedForms}</td>
-                        <td>
+                        <td data-label="Forms owned">{user.formsOwned}</td>
+                        <td data-label="Assigned">{user.assignedForms}</td>
+                        <td data-label="2FA">
                           <span className="users-2fa-pill">Off</span>
                         </td>
-                        <td>{new Date(user.createdAt).toLocaleDateString('en-GB')}</td>
-                        <td>
+                        <td data-label="Created">
+                          {new Date(user.createdAt).toLocaleDateString('en-GB')}
+                        </td>
+                        <td className="users-actions-cell">
                           <UserRowMenu
                             items={[
                               {
@@ -419,17 +524,28 @@ export function UsersClient({
                   })}
                   {pendingInvites.map((invite) => (
                     <tr key={invite.id} className="users-table-row--pending">
-                      <td>{invite.name ?? '—'}</td>
-                      <td>{invite.email}</td>
                       <td>
+                        <span className="users-name-cell">
+                          <span className="admin-table-avatar" aria-hidden="true">
+                            {getInitials(invite.name, invite.email)}
+                          </span>
+                          <span className="users-name-text">{invite.name ?? 'Invited user'}</span>
+                        </span>
+                      </td>
+                      <td data-label="Email">{invite.email}</td>
+                      <td data-label="Role">
                         <span className="users-role-pill">{formatUserRole(invite.role)}</span>{' '}
                         <span className="badge badge--draft">Pending invite</span>
                       </td>
-                      <td>—</td>
-                      <td>—</td>
-                      <td className="users-table-muted">—</td>
-                      <td>{new Date(invite.createdAt).toLocaleDateString('en-GB')}</td>
-                      <td>
+                      <td data-label="Forms owned">—</td>
+                      <td data-label="Assigned">—</td>
+                      <td data-label="2FA" className="users-table-muted">
+                        —
+                      </td>
+                      <td data-label="Created">
+                        {new Date(invite.createdAt).toLocaleDateString('en-GB')}
+                      </td>
+                      <td className="users-actions-cell">
                         <UserRowMenu
                           items={[
                             {

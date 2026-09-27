@@ -5137,6 +5137,29 @@ textarea.text-input {
   cursor: not-allowed;
 }
 
+/* Mobile: search takes its own full-width row (flex: 1 1 100% forces the wrap); the
+ * date-range trigger and match-count badge (both also inside .submissions-toolbar-filters
+ * now, see submissions-list-client.tsx) share the row below it, date-range on the left
+ * and the badge pinned right via its own existing margin-left: auto — same pattern as
+ * the Forms list toolbar. Placed directly after these selectors' own base rules above
+ * (not folded into an earlier, shared media-query block) so it can't end up silently
+ * overridden by a later declaration — see "BUILDER MOBILE OVERRIDES" elsewhere in this
+ * file for why that specific mistake matters. */
+@media (max-width: 640px) {
+  .submissions-toolbar {
+    padding: 0.85rem 1rem;
+  }
+
+  .submissions-toolbar-filters {
+    row-gap: 0.5rem;
+  }
+
+  .submissions-search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
 /* Small-caps column headers + right-aligned Actions column, so the table reads like a
    dashboard grid rather than the plainer left-aligned .admin-table default used on the
    forms list. Weight/color match .forms-table-static-header's bold-but-muted treatment
@@ -6205,6 +6228,73 @@ textarea.text-input {
   }
 
   .forms-row--expanded .forms-row-toggle {
+    transform: rotate(180deg);
+  }
+
+  /* Accordion — scoped to .submissions-table, same convention as .forms-table above.
+   * Collapsed by default: only Submitted at + Status + the toggle chevron show; IP
+   * address and the row's action buttons (preview/status menu) stay hidden until
+   * expanded. setExpandedSubmissionId in submissions-list-client.tsx (single id, not a
+   * Set) collapses whichever other row was open. */
+  .submissions-table
+    tr:not(.submissions-row--expanded)
+    td:not([data-label="Submitted at"]):not([data-label="Status"]):not(
+      .submissions-row-toggle-cell
+    ) {
+    display: none;
+  }
+
+  .submissions-table tr:not(.submissions-row--expanded) {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+  }
+
+  .submissions-table tr:not(.submissions-row--expanded) td {
+    padding: 0;
+    border-bottom: none;
+  }
+
+  .submissions-table tr:not(.submissions-row--expanded) td[data-label="Submitted at"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  .submissions-table tr:not(.submissions-row--expanded) td[data-label="Status"] {
+    justify-content: flex-start;
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .submissions-table tr:not(.submissions-row--expanded) td[data-label="Submitted at"]::before,
+  .submissions-table tr:not(.submissions-row--expanded) td[data-label="Status"]::before {
+    display: none;
+  }
+
+  /* Extra specificity, same reason as .admin-table td.forms-row-toggle-cell above. */
+  .admin-table td.submissions-row-toggle-cell {
+    justify-content: center;
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .submissions-row-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-surface-sunken);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+
+  .submissions-row--expanded .submissions-row-toggle {
     transform: rotate(180deg);
   }
 }

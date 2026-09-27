@@ -157,6 +157,22 @@ function ChevronRightIcon() {
   );
 }
 
+/** Mobile-only row-expander chevron — same convention as the Forms list's own accordion
+ *  toggle (forms-list-client.tsx's ChevronDownIcon). */
+function ChevronDownIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="m4.5 6 3.5 3.5L11.5 6"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const SUBMISSION_STATUS_BADGE: Record<
   SubmissionStatus,
   {
@@ -226,6 +242,10 @@ export function SubmissionsListClient({
   });
   const [page, setPage] = useState(1);
   const [filtersReady, setFiltersReady] = useState(false);
+  // Mobile only (the stacked-card table layout below 768px) — which single row's IP
+  // address/actions are expanded. A plain id rather than a Set, same as the Forms list's
+  // own accordion (forms-list-client.tsx): opening one row collapses whichever was open.
+  const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
   const toast = useToast();
   const router = useRouter();
   const skipPageReset = useRef(true);
@@ -396,6 +416,10 @@ export function SubmissionsListClient({
     <>
       <div className="card admin-table-card">
         <div className="submissions-toolbar">
+          {/* Count badge lives in this same row as the date picker (not a separate row of
+              its own) specifically so the mobile layout below 640px — search forced onto
+              its own full-width line, date picker + count badge sharing the line under it
+              — falls out of plain flex-wrap without extra markup. */}
           <div className="submissions-toolbar-filters">
             <label className="submissions-search">
               <span className="submissions-search-icon">
@@ -410,11 +434,11 @@ export function SubmissionsListClient({
               />
             </label>
             <SubmissionsDateRangePicker value={dateRange} onChange={setDateRange} />
+            <span className="submissions-count-badge">
+              {filteredSubmissions.length} of {submissions.length}{' '}
+              {submissions.length === 1 ? 'response' : 'responses'}
+            </span>
           </div>
-          <span className="submissions-count-badge">
-            {filteredSubmissions.length} of {submissions.length}{' '}
-            {submissions.length === 1 ? 'response' : 'responses'}
-          </span>
         </div>
 
         <div className="admin-table-scroll">
@@ -423,6 +447,7 @@ export function SubmissionsListClient({
               <tr>
                 <th>Submitted at</th>
                 <th>Status</th>
+                <th className="submissions-row-toggle-cell" />
                 <th>IP address</th>
                 <th aria-label="Actions" />
               </tr>
@@ -432,11 +457,12 @@ export function SubmissionsListClient({
                 const badge = SUBMISSION_STATUS_BADGE[submission.status];
                 const StatusIcon = badge.icon;
                 const detailHref = `/forms/${formId}/submissions/${submission.id}`;
+                const isExpanded = expandedSubmissionId === submission.id;
                 return (
                   // biome-ignore lint/a11y/useSemanticElements: must stay a <tr> for correct table semantics — role="button" + tabIndex + onKeyDown supply the missing button affordance instead of nesting a real <button> around table cells
                   <tr
                     key={submission.id}
-                    className={`${badge.accentClassName} submissions-row--clickable`}
+                    className={`${badge.accentClassName} submissions-row--clickable${isExpanded ? ' submissions-row--expanded' : ''}`}
                     role="button"
                     tabIndex={0}
                     onClick={() => router.push(detailHref)}
@@ -460,6 +486,26 @@ export function SubmissionsListClient({
                         {StatusIcon ? <StatusIcon /> : null}
                         {badge.label}
                       </span>
+                    </td>
+                    {/* Mobile-only accordion toggle — no data-label, so it's invisible on
+                        desktop and, on mobile, sits in the always-visible summary next to
+                        Submitted at/Status rather than hidden with the fields it expands.
+                        Same pattern as forms-list-client.tsx's own toggle cell. */}
+                    <td className="submissions-row-toggle-cell">
+                      <button
+                        type="button"
+                        className="submissions-row-toggle"
+                        aria-label={isExpanded ? 'Show fewer details' : 'Show more details'}
+                        aria-expanded={isExpanded}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setExpandedSubmissionId((current) =>
+                            current === submission.id ? null : submission.id,
+                          );
+                        }}
+                      >
+                        <ChevronDownIcon />
+                      </button>
                     </td>
                     <td data-label="IP address" className="submissions-ip">
                       {submission.ipAddress ?? '—'}
@@ -503,7 +549,7 @@ export function SubmissionsListClient({
               })}
               {pageSubmissions.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="admin-table-empty">
+                  <td colSpan={5} className="admin-table-empty">
                     No responses match your search or date filter.
                   </td>
                 </tr>

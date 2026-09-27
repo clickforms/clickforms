@@ -1370,7 +1370,10 @@ a {
   width: min(24rem, 100%);
   margin-top: 0.4rem;
   padding: 0.45rem 0.85rem;
-  font-size: 0.8125rem;
+  /* 16px, not 0.8125rem (13px) — iOS Safari/Chrome for Android auto-zoom the page when a
+     focused text input computes to under 16px (see the .form-renderer .text-input comment
+     for the full explanation); this field is reachable from the mobile Form settings modal. */
+  font-size: 1rem;
   border-radius: var(--radius-pill);
 }
 
@@ -3224,7 +3227,8 @@ a {
   border: 0;
   background: transparent;
   color: var(--color-text);
-  font-size: 0.9rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   outline: none;
 }
 
@@ -4571,7 +4575,11 @@ a {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   padding: 0.55rem 0.95rem;
-  font-size: 0.875rem;
+  /* 16px, not 0.875rem (14px) — this is the base class behind most text fields across the
+     app (settings, login/signup, builder field previews, etc.), so leaving it under 16px
+     meant iOS Safari/Chrome for Android auto-zoomed on focus almost everywhere except the
+     public form renderer (which already overrides this, see .form-renderer .text-input). */
+  font-size: 1rem;
   font-family: inherit;
   background-color: var(--color-surface);
   color: var(--color-text);
@@ -5367,7 +5375,8 @@ textarea.text-input {
   border: none;
   outline: none;
   background: none;
-  font-size: 0.875rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   color: var(--color-text);
 }
 
@@ -6182,7 +6191,8 @@ textarea.text-input {
   border: none;
   outline: none;
   background: none;
-  font-size: 0.875rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   color: var(--color-text);
 }
 
@@ -8829,7 +8839,9 @@ textarea.text-input {
   background: none;
   border: none;
   outline: none;
-  font-size: 0.8125rem;
+  /* 16px — reachable from the mobile builder's "Add Element" drawer; see the
+     .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   font-weight: 500;
   color: var(--builder-text);
 }
@@ -10719,7 +10731,10 @@ textarea.text-input {
 
 .page-tab-rename-input {
   padding: 0.2rem 0.4rem;
-  font-size: 0.75rem;
+  /* 16px, not 0.75rem (12px) — this re-shrinks the .text-input base rule's 16px back
+     down since it's an equal-specificity class declared later; see the .form-renderer
+     .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   width: 100%;
 }
 
@@ -11152,7 +11167,10 @@ textarea.text-input {
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  font-size: 0.8125rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below
+     16px. These settings-page fields would otherwise re-shrink .text-input's own 16px
+     back down to 13px, since this selector has equal specificity and comes later. */
+  font-size: 1rem;
 }
 
 .settings-label {
@@ -12288,7 +12306,10 @@ textarea.text-input {
    * "#rrggbb" value. */
   min-width: 5.5rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.8125rem;
+  /* 16px, not 0.8125rem (13px) — see the .form-renderer .text-input comment on
+     iOS/Android auto-zoom below 16px; this hex field is reachable from the mobile
+     Design panel's color picker. */
+  font-size: 1rem;
   letter-spacing: 0.02em;
   box-sizing: border-box;
 }
@@ -15120,7 +15141,8 @@ textarea.form-field-input {
   background: #fff;
   border: 1px solid #d9dce8;
   border-radius: 0.7rem;
-  font-size: 0.875rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
 }
 
 .landing-widget-input strong {
@@ -16026,7 +16048,8 @@ textarea.form-field-input {
   width: 100%;
   padding: 0.95rem 1.1rem;
   font: inherit;
-  font-size: 0.9375rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   color: var(--landing-ink);
   background: #fff;
   border: 1px solid var(--color-border);
@@ -17523,7 +17546,8 @@ textarea.form-field-input {
 .text-input.login-field-input {
   width: 100%;
   padding: 0.7rem 0.95rem;
-  font-size: 0.875rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   background-color: var(--color-surface);
   border-radius: var(--radius-pill);
   border-color: var(--color-border);
@@ -17876,7 +17900,8 @@ textarea.form-field-input {
 .text-input.signup-field-input {
   width: 100%;
   padding: 0.7rem 0.95rem;
-  font-size: 0.875rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   background-color: var(--color-surface);
   border-radius: var(--radius-pill);
   border-color: var(--color-border);
@@ -18259,7 +18284,8 @@ textarea.form-field-input {
   border: 0;
   background: transparent;
   color: var(--color-text);
-  font-size: 0.95rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   outline: none;
 }
 
@@ -18830,7 +18856,9 @@ textarea.form-field-input {
   border: 0;
   background: transparent;
   color: var(--color-text);
-  font-size: 0.975rem;
+  /* 16px, not 0.975rem (15.6px) — see the .form-renderer .text-input comment on
+     iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   outline: none;
 }
 
@@ -19206,7 +19234,8 @@ textarea.form-field-input {
   border: 0;
   background: none;
   color: var(--color-text);
-  font-size: 0.875rem;
+  /* 16px — see the .form-renderer .text-input comment on iOS/Android auto-zoom below 16px. */
+  font-size: 1rem;
   outline: none;
 }
 

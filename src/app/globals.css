@@ -8064,8 +8064,19 @@ textarea.text-input {
  * icon swatches visibly colored. Redefining the same custom property names here, scoped
  * to this card, lets the exact same field-palette markup/CSS pick up light-mode colors
  * instead of forking a second copy of every rule. */
+/* Deliberately NOT using .modal-header's usual sticky + negative-margin trick here
+ * (see that rule's own comment) — this card instead pins the close button with a plain
+ * flex column: header as a non-shrinking flex item, content in its own scrolling
+ * .builder-mobile-palette-body below. Sticky-within-a-padded-scroll-container is finicky
+ * across mobile browsers (iOS Safari in particular can fail to keep a sticky element
+ * pinned once its containing block's effective height shifts, e.g. from the dynamic
+ * address bar), and a plain flex layout can't have that class of bug — the header is
+ * simply never part of the scrolling content in the first place. */
 .builder-mobile-palette-card {
+  display: flex;
+  flex-direction: column;
   padding: 1.1rem 1rem 1.25rem;
+  overflow: hidden;
   --builder-panel: var(--color-surface);
   --builder-panel-elevated: var(--color-surface-sunken);
   --builder-panel-border: var(--color-border);
@@ -8073,6 +8084,26 @@ textarea.text-input {
   --builder-muted: var(--color-text-muted);
   --builder-subtle: var(--color-text-subtle);
   --builder-accent: var(--color-primary);
+}
+
+.builder-mobile-palette-card .modal-header {
+  position: static;
+  flex-shrink: 0;
+  margin: -1.1rem -1rem 1rem;
+  padding: 1.1rem 1rem 1rem;
+}
+
+/* The scrollable part of the card — everything below the always-visible header
+ * (FieldPalette / DesignSettingsPanel / ConditionalLogicEditor). flex: 1 + min-height: 0
+ * is what lets this shrink and scroll internally instead of the card growing past the
+ * viewport (min-height: 0 overrides the flex item default of min-height: auto, which
+ * would otherwise let this box refuse to shrink below its content's natural height). */
+.builder-mobile-palette-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -1rem;
+  padding: 0 1rem;
 }
 
 /* The base .palette-search/.palette-item hover states use hardcoded rgba(255,255,255,…)

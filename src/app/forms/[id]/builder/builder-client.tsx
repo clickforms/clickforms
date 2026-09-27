@@ -1264,16 +1264,18 @@ export function BuilderClient({
                   </button>
                 </div>
               </div>
-              <FieldPalette
-                onAddField={(type) => {
-                  handleAddField(type);
-                  setMobileRailPanel(null);
-                }}
-                onAddColumnLayout={(columns) => {
-                  handleAddColumnLayout(columns);
-                  setMobileRailPanel(null);
-                }}
-              />
+              <div className="builder-mobile-palette-body">
+                <FieldPalette
+                  onAddField={(type) => {
+                    handleAddField(type);
+                    setMobileRailPanel(null);
+                  }}
+                  onAddColumnLayout={(columns) => {
+                    handleAddColumnLayout(columns);
+                    setMobileRailPanel(null);
+                  }}
+                />
+              </div>
             </div>
           </div>
         ) : null}
@@ -1306,12 +1308,14 @@ export function BuilderClient({
                   </button>
                 </div>
               </div>
-              <div className="settings-panel">
-                <DesignSettingsPanel
-                  branding={schema.branding}
-                  canEdit={canEditCanvas}
-                  onUpdateBranding={handleUpdateBranding}
-                />
+              <div className="builder-mobile-palette-body">
+                <div className="settings-panel">
+                  <DesignSettingsPanel
+                    branding={schema.branding}
+                    canEdit={canEditCanvas}
+                    onUpdateBranding={handleUpdateBranding}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -1345,26 +1349,28 @@ export function BuilderClient({
                   </button>
                 </div>
               </div>
-              {logicField ? (
-                <div className="settings-panel">
-                  <ConditionalLogicEditor
-                    schema={schema}
-                    field={logicField}
-                    canEdit={canEditCanvas}
-                    onSetRule={handleSetConditionalRule}
-                    onClearRule={() => handleClearConditionalRule(logicField.id)}
-                  />
-                </div>
-              ) : (
-                <div className="settings-panel settings-panel--empty">
-                  <div className="settings-panel-empty-state">
-                    <p className="settings-panel-empty-title">No field selected</p>
-                    <p className="settings-panel-empty">
-                      Tap a field on the canvas to add conditional logic to it.
-                    </p>
+              <div className="builder-mobile-palette-body">
+                {logicField ? (
+                  <div className="settings-panel">
+                    <ConditionalLogicEditor
+                      schema={schema}
+                      field={logicField}
+                      canEdit={canEditCanvas}
+                      onSetRule={handleSetConditionalRule}
+                      onClearRule={() => handleClearConditionalRule(logicField.id)}
+                    />
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="settings-panel settings-panel--empty">
+                    <div className="settings-panel-empty-state">
+                      <p className="settings-panel-empty-title">No field selected</p>
+                      <p className="settings-panel-empty">
+                        Tap a field on the canvas to add conditional logic to it.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ) : null}

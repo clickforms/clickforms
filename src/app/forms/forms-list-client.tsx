@@ -186,6 +186,22 @@ function ChevronRightIcon() {
   );
 }
 
+/** Mobile-only row-expander chevron — rotates via .forms-row-toggle--open rather than a
+ *  second icon component, same convention as PageTabs' own expand/collapse chevrons. */
+function ChevronDownIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="m4.5 6 3.5 3.5L11.5 6"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 // "Moses Buta" -> "MB", single-word names fall back to their first two letters.
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -254,6 +270,11 @@ export function FormsListClient({
   const [transferringForm, setTransferringForm] = useState<FormSummary | null>(null);
   const [isTransferring, setIsTransferring] = useState(false);
   const [page, setPage] = useState(1);
+  // Mobile only (the stacked-card table layout below 768px, see .admin-table's responsive
+  // rules) — which single row's extra fields are expanded. A plain id rather than a Set
+  // since only one row is ever open at a time: opening a new one collapses whatever was
+  // open before, so a long list doesn't turn into a full page of scrolling.
+  const [expandedFormId, setExpandedFormId] = useState<string | null>(null);
 
   // Toolbar: always-visible search, plus sort/filter icon buttons and a List/Grid
   // switch — the table itself is unchanged, Grid is an alternate card layout over the
@@ -559,393 +580,424 @@ export function FormsListClient({
           ) : null}
         </div>
       ) : (
-        <div className="card admin-table-card">
-          <div className="forms-toolbar">
-            <div className="forms-toolbar-icons">
-              <label className="forms-search forms-search--inline">
-                <span className="forms-search-icon">
-                  <SearchIcon />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search forms…"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Escape' && search) setSearch('');
-                  }}
-                  aria-label="Search forms"
-                />
-                {search ? (
-                  <button
-                    type="button"
-                    className="forms-search-clear"
-                    aria-label="Clear search"
-                    onClick={() => setSearch('')}
-                  >
-                    <CloseIcon />
-                  </button>
-                ) : null}
-              </label>
-
-              <button
-                ref={sortTriggerRef}
-                type="button"
-                className="forms-toolbar-icon-btn"
-                aria-label="Sort forms"
-                aria-haspopup="menu"
-                onClick={() => setIsSortMenuOpen((current) => !current)}
-              >
-                <SortIcon />
-              </button>
-              <DropdownMenu
-                open={isSortMenuOpen}
-                onOpenChange={setIsSortMenuOpen}
-                triggerRef={sortTriggerRef}
-                align="start"
-              >
-                {/* biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern, matches DropdownMenu's usage elsewhere in the app */}
-                <ul role="menu">
-                  {COLUMNS.map((column) => (
-                    <li role="none" key={column.key}>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="actions-menu-item"
-                        onClick={() => {
-                          toggleSort(column.key);
-                          setIsSortMenuOpen(false);
-                        }}
-                      >
-                        <span className="actions-menu-icon actions-menu-check">
-                          {sortColumn === column.key ? <CheckIcon /> : null}
-                        </span>
-                        <span className="actions-menu-item-text">{column.label}</span>
-                        {sortColumn === column.key ? (
-                          <span className="table-sort-indicator">
-                            {sortDirection === 'asc' ? '▲' : '▼'}
-                          </span>
-                        ) : null}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </DropdownMenu>
-
-              <button
-                ref={filterTriggerRef}
-                type="button"
-                className={`forms-toolbar-icon-btn${statusFilter !== 'all' ? ' forms-toolbar-icon-btn--active' : ''}`}
-                aria-label="Filter forms"
-                aria-haspopup="menu"
-                onClick={() => setIsFilterMenuOpen((current) => !current)}
-              >
-                <FilterIcon />
-              </button>
-              <DropdownMenu
-                open={isFilterMenuOpen}
-                onOpenChange={setIsFilterMenuOpen}
-                triggerRef={filterTriggerRef}
-                align="start"
-              >
-                {/* biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern, matches DropdownMenu's usage elsewhere in the app */}
-                <ul role="menu">
-                  {STATUS_FILTERS.map((filter) => (
-                    <li role="none" key={filter.key}>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="actions-menu-item"
-                        onClick={() => {
-                          setStatusFilter(filter.key);
-                          setIsFilterMenuOpen(false);
-                        }}
-                      >
-                        <span className="actions-menu-icon actions-menu-check">
-                          {statusFilter === filter.key ? <CheckIcon /> : null}
-                        </span>
-                        <span className="actions-menu-item-text">{filter.label}</span>
-                        <span className="forms-filter-chip-count">{filterCounts[filter.key]}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </DropdownMenu>
-
-              <div className="forms-view-toggle" role="tablist" aria-label="Layout">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={viewMode === 'list'}
-                  className={`forms-view-toggle-btn${viewMode === 'list' ? ' forms-view-toggle-btn--active' : ''}`}
-                  onClick={() => setViewMode('list')}
-                >
-                  <ListViewIcon />
-                  List
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={viewMode === 'grid'}
-                  className={`forms-view-toggle-btn${viewMode === 'grid' ? ' forms-view-toggle-btn--active' : ''}`}
-                  onClick={() => setViewMode('grid')}
-                >
-                  <GridViewIcon />
-                  Grid
-                </button>
-              </div>
-            </div>
-            {canEdit ? (
-              <Link href="/forms/templates" className="button button--dark">
-                + New form
-              </Link>
-            ) : null}
-          </div>
-          {viewMode === 'grid' ? (
-            <div className="forms-grid">
-              {pageForms.map((form) => (
-                <FormsGridCard
-                  key={form.id}
-                  form={form}
-                  canEdit={canEdit}
-                  renamingId={renamingId}
-                  renameValue={renameValue}
-                  onRenameValueChange={setRenameValue}
-                  onRenameSubmit={() => handleRename(form.id)}
-                  onRenameCancel={() => setRenamingId(null)}
-                  onNavigate={() => router.push(`/forms/${form.id}/builder`)}
-                  onCopyLink={() => void handleCopyLink(form.publicUrl)}
-                  onWorkflow={(action) => handleWorkflow(form, action)}
-                  onRename={() => {
-                    setRenamingId(form.id);
-                    setRenameValue(form.name);
-                  }}
-                  onDuplicate={() => handleDuplicate(form)}
-                  onToggleArchive={() => handleToggleArchive(form)}
-                  onDelete={() => setDeletingForm(form)}
-                  onTogglePrivate={() => handleTogglePrivate(form)}
-                  onTransfer={() => setTransferringForm(form)}
-                />
-              ))}
-              {visibleForms.length === 0 ? (
-                <div className="admin-table-empty forms-grid-empty">
-                  {search.trim()
-                    ? `No forms match "${search.trim()}".`
-                    : 'No forms in this filter.'}
-                </div>
+        <>
+          <div className="card forms-toolbar-card">
+            <div className="forms-toolbar">
+              {canEdit ? (
+                <Link href="/forms/templates" className="button button--dark forms-toolbar-new-btn">
+                  + New form
+                </Link>
               ) : null}
-            </div>
-          ) : (
-            <div className="admin-table-scroll">
-              <table className="admin-table forms-table">
-                <thead>
-                  <tr>
+              <div className="forms-toolbar-icons">
+                <label className="forms-search forms-search--inline">
+                  <span className="forms-search-icon">
+                    <SearchIcon />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search forms…"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape' && search) setSearch('');
+                    }}
+                    aria-label="Search forms"
+                  />
+                  {search ? (
+                    <button
+                      type="button"
+                      className="forms-search-clear"
+                      aria-label="Clear search"
+                      onClick={() => setSearch('')}
+                    >
+                      <CloseIcon />
+                    </button>
+                  ) : null}
+                </label>
+
+                <button
+                  ref={sortTriggerRef}
+                  type="button"
+                  className="forms-toolbar-icon-btn"
+                  aria-label="Sort forms"
+                  aria-haspopup="menu"
+                  onClick={() => setIsSortMenuOpen((current) => !current)}
+                >
+                  <SortIcon />
+                </button>
+                <DropdownMenu
+                  open={isSortMenuOpen}
+                  onOpenChange={setIsSortMenuOpen}
+                  triggerRef={sortTriggerRef}
+                  align="start"
+                >
+                  {/* biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern, matches DropdownMenu's usage elsewhere in the app */}
+                  <ul role="menu">
                     {COLUMNS.map((column) => (
-                      <th key={column.key}>
+                      <li role="none" key={column.key}>
                         <button
                           type="button"
-                          className="table-sort-button"
-                          onClick={() => toggleSort(column.key)}
+                          role="menuitem"
+                          className="actions-menu-item"
+                          onClick={() => {
+                            toggleSort(column.key);
+                            setIsSortMenuOpen(false);
+                          }}
                         >
-                          {column.label}
+                          <span className="actions-menu-icon actions-menu-check">
+                            {sortColumn === column.key ? <CheckIcon /> : null}
+                          </span>
+                          <span className="actions-menu-item-text">{column.label}</span>
                           {sortColumn === column.key ? (
                             <span className="table-sort-indicator">
                               {sortDirection === 'asc' ? '▲' : '▼'}
                             </span>
                           ) : null}
                         </button>
-                      </th>
+                      </li>
                     ))}
-                    <th className="forms-table-static-header">Created by</th>
-                    <th className="forms-table-static-header">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageForms.map((form) => {
-                    const isLive = isFormLive(form);
-                    const builderHref = `/forms/${form.id}/builder`;
-                    const responsesHref = `/forms/${form.id}/submissions`;
-                    const updatedLabel = formatRelativeTime(form.updatedAt);
-                    return (
-                      // biome-ignore lint/a11y/useSemanticElements: must stay a <tr> for correct table semantics — role="button" + tabIndex + onKeyDown supply the missing button affordance instead of nesting a real <button> around table cells
-                      <tr
-                        key={form.id}
-                        className="forms-row--clickable"
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => router.push(builderHref)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            router.push(builderHref);
-                          }
-                        }}
-                      >
-                        <td
-                          data-label="Form name"
-                          onClick={(event) => event.stopPropagation()}
-                          onKeyDown={(event) => event.stopPropagation()}
-                        >
-                          {renamingId === form.id ? (
-                            <input
-                              className="text-input"
-                              value={renameValue}
-                              // biome-ignore lint/a11y/noAutofocus: user just clicked "rename" — focusing the field they're about to type into is the expected behavior
-                              autoFocus
-                              onChange={(event) => setRenameValue(event.target.value)}
-                              onBlur={() => handleRename(form.id)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') handleRename(form.id);
-                                if (event.key === 'Escape') setRenamingId(null);
-                              }}
-                            />
-                          ) : (
-                            <Link href={builderHref} className="admin-table-name-link">
-                              {form.name}
-                            </Link>
-                          )}
-                        </td>
-                        <td
-                          data-label="Created"
-                          title={new Date(form.createdAt).toLocaleString('en-AU')}
-                        >
-                          {formatShortDate(form.createdAt)}
-                        </td>
-                        <td
-                          data-label="Last updated"
-                          title={new Date(form.updatedAt).toLocaleString('en-AU')}
-                        >
-                          {updatedLabel}
-                        </td>
-                        <td
-                          data-label="Responses"
-                          onClick={(event) => event.stopPropagation()}
-                          onKeyDown={(event) => event.stopPropagation()}
-                        >
-                          <Link href={responsesHref} className="forms-responses-link">
-                            {form.responseCount}
-                          </Link>
-                        </td>
-                        <td data-label="Status">
-                          <LiveStatusBadge status={form.status} isLive={isLive} />
-                        </td>
-                        <td data-label="Created by">
-                          <span className="admin-table-creator">
-                            <span className="admin-table-avatar" aria-hidden="true">
-                              {getInitials(form.createdByName)}
-                            </span>
-                            {form.createdByName}
-                          </span>
-                          {form.isPrivate ? (
-                            <span className="badge badge--neutral admin-table-private-badge">
-                              Private
-                            </span>
-                          ) : null}
-                        </td>
-                        <td
-                          data-label="Actions"
-                          onClick={(event) => event.stopPropagation()}
-                          onKeyDown={(event) => event.stopPropagation()}
-                        >
-                          <div className="forms-row-actions">
-                            {canEdit && form.status === 'archived' ? (
-                              <button
-                                type="button"
-                                className="button button--small button--ghost"
-                                onClick={() => void handleToggleArchive(form)}
-                              >
-                                Restore
-                              </button>
-                            ) : canEdit && !isLive && form.status !== 'archived' ? (
-                              <button
-                                type="button"
-                                className="button button--small button--success"
-                                onClick={() => void handleWorkflow(form, 'publish')}
-                              >
-                                Publish
-                              </button>
-                            ) : isLive ? (
-                              <button
-                                type="button"
-                                className="button button--small button--ghost"
-                                onClick={() => void handleCopyLink(form.publicUrl)}
-                              >
-                                Share
-                              </button>
-                            ) : (
-                              <Link
-                                href={builderHref}
-                                className="button button--small button--ghost"
-                              >
-                                {canEdit ? 'Edit' : 'View'}
-                              </Link>
-                            )}
-                            <FormActionsMenu
-                              formId={form.id}
-                              formUrl={form.publicUrl}
-                              status={form.status}
-                              isLive={isLive}
-                              canEdit={canEdit}
-                              onRename={() => {
-                                setRenamingId(form.id);
-                                setRenameValue(form.name);
-                              }}
-                              onDuplicate={() => handleDuplicate(form)}
-                              onToggleArchive={() => handleToggleArchive(form)}
-                              onWorkflow={(action) => handleWorkflow(form, action)}
-                              onDelete={() => setDeletingForm(form)}
-                              isPrivate={form.isPrivate}
-                              isOwnForm={form.isOwnForm}
-                              onTogglePrivate={() => handleTogglePrivate(form)}
-                              onTransfer={() => setTransferringForm(form)}
-                              onCopyLink={() => void handleCopyLink(form.publicUrl)}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {visibleForms.length === 0 ? (
-                    <tr>
-                      <td colSpan={COLUMNS.length + 2} className="admin-table-empty">
-                        {search.trim()
-                          ? `No forms match “${search.trim()}”.`
-                          : 'No forms in this filter.'}
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </ul>
+                </DropdownMenu>
 
-          <div className="forms-pagination">
-            <span>
-              {visibleForms.length} {visibleForms.length === 1 ? 'form' : 'forms'} · Page{' '}
-              {currentPage} of {totalPages}
-            </span>
-            <div className="forms-pagination-controls">
-              <button
-                type="button"
-                className="forms-pagination-button"
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
-                disabled={currentPage <= 1}
-                aria-label="Previous page"
-              >
-                <ChevronLeftIcon />
-              </button>
-              <button
-                type="button"
-                className="forms-pagination-button"
-                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                disabled={currentPage >= totalPages}
-                aria-label="Next page"
-              >
-                <ChevronRightIcon />
-              </button>
+                <button
+                  ref={filterTriggerRef}
+                  type="button"
+                  className={`forms-toolbar-icon-btn${statusFilter !== 'all' ? ' forms-toolbar-icon-btn--active' : ''}`}
+                  aria-label="Filter forms"
+                  aria-haspopup="menu"
+                  onClick={() => setIsFilterMenuOpen((current) => !current)}
+                >
+                  <FilterIcon />
+                </button>
+                <DropdownMenu
+                  open={isFilterMenuOpen}
+                  onOpenChange={setIsFilterMenuOpen}
+                  triggerRef={filterTriggerRef}
+                  align="start"
+                >
+                  {/* biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern, matches DropdownMenu's usage elsewhere in the app */}
+                  <ul role="menu">
+                    {STATUS_FILTERS.map((filter) => (
+                      <li role="none" key={filter.key}>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="actions-menu-item"
+                          onClick={() => {
+                            setStatusFilter(filter.key);
+                            setIsFilterMenuOpen(false);
+                          }}
+                        >
+                          <span className="actions-menu-icon actions-menu-check">
+                            {statusFilter === filter.key ? <CheckIcon /> : null}
+                          </span>
+                          <span className="actions-menu-item-text">{filter.label}</span>
+                          <span className="forms-filter-chip-count">
+                            {filterCounts[filter.key]}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </DropdownMenu>
+
+                <div className="forms-view-toggle" role="tablist" aria-label="Layout">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === 'list'}
+                    className={`forms-view-toggle-btn${viewMode === 'list' ? ' forms-view-toggle-btn--active' : ''}`}
+                    onClick={() => setViewMode('list')}
+                  >
+                    <ListViewIcon />
+                    <span className="forms-view-toggle-label">List</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === 'grid'}
+                    className={`forms-view-toggle-btn${viewMode === 'grid' ? ' forms-view-toggle-btn--active' : ''}`}
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <GridViewIcon />
+                    <span className="forms-view-toggle-label">Grid</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+          <div className="card admin-table-card">
+            {viewMode === 'grid' ? (
+              <div className="forms-grid">
+                {pageForms.map((form) => (
+                  <FormsGridCard
+                    key={form.id}
+                    form={form}
+                    canEdit={canEdit}
+                    renamingId={renamingId}
+                    renameValue={renameValue}
+                    onRenameValueChange={setRenameValue}
+                    onRenameSubmit={() => handleRename(form.id)}
+                    onRenameCancel={() => setRenamingId(null)}
+                    onNavigate={() => router.push(`/forms/${form.id}/builder`)}
+                    onCopyLink={() => void handleCopyLink(form.publicUrl)}
+                    onWorkflow={(action) => handleWorkflow(form, action)}
+                    onRename={() => {
+                      setRenamingId(form.id);
+                      setRenameValue(form.name);
+                    }}
+                    onDuplicate={() => handleDuplicate(form)}
+                    onToggleArchive={() => handleToggleArchive(form)}
+                    onDelete={() => setDeletingForm(form)}
+                    onTogglePrivate={() => handleTogglePrivate(form)}
+                    onTransfer={() => setTransferringForm(form)}
+                  />
+                ))}
+                {visibleForms.length === 0 ? (
+                  <div className="admin-table-empty forms-grid-empty">
+                    {search.trim()
+                      ? `No forms match "${search.trim()}".`
+                      : 'No forms in this filter.'}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="admin-table-scroll">
+                <table className="admin-table forms-table">
+                  <thead>
+                    <tr>
+                      {COLUMNS.map((column) => (
+                        <th key={column.key}>
+                          <button
+                            type="button"
+                            className="table-sort-button"
+                            onClick={() => toggleSort(column.key)}
+                          >
+                            {column.label}
+                            {sortColumn === column.key ? (
+                              <span className="table-sort-indicator">
+                                {sortDirection === 'asc' ? '▲' : '▼'}
+                              </span>
+                            ) : null}
+                          </button>
+                        </th>
+                      ))}
+                      <th className="forms-row-toggle-cell" />
+                      <th className="forms-table-static-header">Created by</th>
+                      <th className="forms-table-static-header">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageForms.map((form) => {
+                      const isLive = isFormLive(form);
+                      const builderHref = `/forms/${form.id}/builder`;
+                      const responsesHref = `/forms/${form.id}/submissions`;
+                      const updatedLabel = formatRelativeTime(form.updatedAt);
+                      return (
+                        // biome-ignore lint/a11y/useSemanticElements: must stay a <tr> for correct table semantics — role="button" + tabIndex + onKeyDown supply the missing button affordance instead of nesting a real <button> around table cells
+                        <tr
+                          key={form.id}
+                          className={`forms-row--clickable${expandedFormId === form.id ? ' forms-row--expanded' : ''}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => router.push(builderHref)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              router.push(builderHref);
+                            }
+                          }}
+                        >
+                          <td
+                            data-label="Form name"
+                            onClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            {renamingId === form.id ? (
+                              <input
+                                className="text-input"
+                                value={renameValue}
+                                // biome-ignore lint/a11y/noAutofocus: user just clicked "rename" — focusing the field they're about to type into is the expected behavior
+                                autoFocus
+                                onChange={(event) => setRenameValue(event.target.value)}
+                                onBlur={() => handleRename(form.id)}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter') handleRename(form.id);
+                                  if (event.key === 'Escape') setRenamingId(null);
+                                }}
+                              />
+                            ) : (
+                              <Link href={builderHref} className="admin-table-name-link">
+                                {form.name}
+                              </Link>
+                            )}
+                          </td>
+                          <td
+                            data-label="Created"
+                            title={new Date(form.createdAt).toLocaleString('en-AU')}
+                          >
+                            {formatShortDate(form.createdAt)}
+                          </td>
+                          <td
+                            data-label="Last updated"
+                            title={new Date(form.updatedAt).toLocaleString('en-AU')}
+                          >
+                            {updatedLabel}
+                          </td>
+                          <td
+                            data-label="Responses"
+                            onClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            <Link href={responsesHref} className="forms-responses-link">
+                              {form.responseCount}
+                            </Link>
+                          </td>
+                          <td data-label="Status">
+                            <LiveStatusBadge status={form.status} isLive={isLive} />
+                          </td>
+                          {/* Mobile-only accordion toggle — no data-label, so it's invisible on
+                           * desktop (where the responsive stacking CSS never applies) and, on
+                           * mobile, sits in the always-visible summary alongside name/status
+                           * rather than hidden away with the fields it expands. */}
+                          <td className="forms-row-toggle-cell">
+                            <button
+                              type="button"
+                              className="forms-row-toggle"
+                              aria-label={
+                                expandedFormId === form.id
+                                  ? 'Show fewer details'
+                                  : 'Show more details'
+                              }
+                              aria-expanded={expandedFormId === form.id}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setExpandedFormId((current) =>
+                                  current === form.id ? null : form.id,
+                                );
+                              }}
+                            >
+                              <ChevronDownIcon />
+                            </button>
+                          </td>
+                          <td data-label="Created by">
+                            <span className="admin-table-creator">
+                              <span className="admin-table-avatar" aria-hidden="true">
+                                {getInitials(form.createdByName)}
+                              </span>
+                              {form.createdByName}
+                            </span>
+                            {form.isPrivate ? (
+                              <span className="badge badge--neutral admin-table-private-badge">
+                                Private
+                              </span>
+                            ) : null}
+                          </td>
+                          <td
+                            data-label="Actions"
+                            onClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            <div className="forms-row-actions">
+                              {canEdit && form.status === 'archived' ? (
+                                <button
+                                  type="button"
+                                  className="button button--small button--ghost"
+                                  onClick={() => void handleToggleArchive(form)}
+                                >
+                                  Restore
+                                </button>
+                              ) : canEdit && !isLive && form.status !== 'archived' ? (
+                                <button
+                                  type="button"
+                                  className="button button--small button--success"
+                                  onClick={() => void handleWorkflow(form, 'publish')}
+                                >
+                                  Publish
+                                </button>
+                              ) : isLive ? (
+                                <button
+                                  type="button"
+                                  className="button button--small button--ghost"
+                                  onClick={() => void handleCopyLink(form.publicUrl)}
+                                >
+                                  Share
+                                </button>
+                              ) : (
+                                <Link
+                                  href={builderHref}
+                                  className="button button--small button--ghost"
+                                >
+                                  {canEdit ? 'Edit' : 'View'}
+                                </Link>
+                              )}
+                              <FormActionsMenu
+                                formId={form.id}
+                                formUrl={form.publicUrl}
+                                status={form.status}
+                                isLive={isLive}
+                                canEdit={canEdit}
+                                onRename={() => {
+                                  setRenamingId(form.id);
+                                  setRenameValue(form.name);
+                                }}
+                                onDuplicate={() => handleDuplicate(form)}
+                                onToggleArchive={() => handleToggleArchive(form)}
+                                onWorkflow={(action) => handleWorkflow(form, action)}
+                                onDelete={() => setDeletingForm(form)}
+                                isPrivate={form.isPrivate}
+                                isOwnForm={form.isOwnForm}
+                                onTogglePrivate={() => handleTogglePrivate(form)}
+                                onTransfer={() => setTransferringForm(form)}
+                                onCopyLink={() => void handleCopyLink(form.publicUrl)}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {visibleForms.length === 0 ? (
+                      <tr>
+                        <td colSpan={COLUMNS.length + 3} className="admin-table-empty">
+                          {search.trim()
+                            ? `No forms match “${search.trim()}”.`
+                            : 'No forms in this filter.'}
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="forms-pagination">
+              <span>
+                {visibleForms.length} {visibleForms.length === 1 ? 'form' : 'forms'} · Page{' '}
+                {currentPage} of {totalPages}
+              </span>
+              <div className="forms-pagination-controls">
+                <button
+                  type="button"
+                  className="forms-pagination-button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={currentPage <= 1}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <button
+                  type="button"
+                  className="forms-pagination-button"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={currentPage >= totalPages}
+                  aria-label="Next page"
+                >
+                  <ChevronRightIcon />
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

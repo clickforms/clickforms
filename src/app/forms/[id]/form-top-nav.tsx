@@ -235,6 +235,7 @@ export function FormTopNav({
     editFormAction,
     takeOfflineAction,
     publishFormAction,
+    editToolbar,
   } = useFormWorkspaceStatus();
   const [shareOpen, setShareOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -316,6 +317,35 @@ export function FormTopNav({
         <div className="form-top-nav-end">
           <LiveStatusBadge status={status} isLive={isLive} />
           <div className="form-top-nav-actions">
+            {/* Mobile-only mirror of .builder-header-stage's Cancel/Save-or-Done pair (see
+                builder-client.tsx's registerEditToolbar effect) — the desktop toolbar row
+                that normally hosts those buttons is hidden below 900px, so this renders them
+                here instead, right next to Actions, via opposite CSS media queries so the
+                two copies never show at once. */}
+            {editToolbar ? (
+              <div className="form-top-nav-edit-toolbar">
+                <button
+                  type="button"
+                  className="button button--ghost button--small"
+                  onClick={editToolbar.onCancel}
+                  disabled={editToolbar.isSaveBusy}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="button builder-header-cta button--small"
+                  onClick={editToolbar.onSave}
+                  disabled={editToolbar.isSaveBusy}
+                >
+                  {editToolbar.isSaveBusy
+                    ? 'Saving…'
+                    : editToolbar.hasUnsavedChanges
+                      ? 'Save'
+                      : 'Done'}
+                </button>
+              </div>
+            ) : null}
             <button
               ref={actionsTriggerRef}
               type="button"

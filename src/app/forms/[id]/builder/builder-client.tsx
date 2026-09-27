@@ -16,7 +16,12 @@ import { arrayMove } from '@dnd-kit/sortable';
 import type { FormStatus } from '@prisma/client';
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BuilderPanelScroll } from '@/app/forms/[id]/builder/builder-panel-scroll';
-import { BuilderRail, type BuilderRailTab } from '@/app/forms/[id]/builder/builder-rail';
+import {
+  BuilderRail,
+  type BuilderRailTab,
+  DesignIcon,
+  LogicIcon,
+} from '@/app/forms/[id]/builder/builder-rail';
 import { CANVAS_DROPPABLE_ID, Canvas } from '@/app/forms/[id]/builder/canvas';
 import { ConditionalLogicEditor } from '@/app/forms/[id]/builder/conditional-logic-editor';
 import { ConditionalPreviewBar } from '@/app/forms/[id]/builder/conditional-preview-bar';
@@ -228,6 +233,7 @@ export function BuilderClient({
     registerEditFormAction,
     registerTakeOfflineAction,
     registerPublishFormAction,
+    registerEditToolbar,
   } = useFormWorkspaceStatus();
   const [schema, setSchema] = useState<FormSchema>(
     initialVersion?.schema ?? createEmptyFormSchema(),
@@ -267,7 +273,11 @@ export function BuilderClient({
   // selected/being edited).
   const [activeRailTab, setActiveRailTab] = useState<BuilderRailTab>('fields');
   const [showEditConfirm, setShowEditConfirm] = useState(false);
-  const [showMobilePalette, setShowMobilePalette] = useState(false);
+  // Which panel the mobile bottom tab bar (Add Element / Design / Logic — see
+  // .builder-mobile-tabbar below) has open as a modal, if any. Reuses BuilderRailTab
+  // since it's the exact same three panels the desktop rail switches between; only the
+  // presentation differs (modal vs. in-place aside).
+  const [mobileRailPanel, setMobileRailPanel] = useState<BuilderRailTab | null>(null);
   const [fieldSettingsExpanded, setFieldSettingsExpanded] = useState(false);
   // Drawer state for the floating page-selector/actions box (.builder-header) — slides
   // off to the right when collapsed, leaving just its handle tab visible so it can be
@@ -786,6 +796,25 @@ export function BuilderClient({
     workflowAction,
   ]);
 
+  // Mirrors .builder-header-stage's own Cancel/Save-or-Done pair below into
+  // FormWorkspaceContext so FormTopNav can render an equivalent pair next to its Actions
+  // button on mobile (see form-top-nav.tsx) — the two never render at once, gated by
+  // opposite CSS media queries, so this is a second render target, not duplicated state.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleCancelEditing/handleSaveAndClose are plain functions redefined every render, not stable useCallbacks — listing them would resubscribe (and re-render the shared context) on every keystroke in the canvas for no behavioral difference. isEditing/hasUnsavedChanges/isSaveBusy already cover every case this toolbar's rendering actually needs to react to.
+  useEffect(() => {
+    if (!isEditing) {
+      registerEditToolbar(null);
+      return () => registerEditToolbar(null);
+    }
+    registerEditToolbar({
+      hasUnsavedChanges,
+      isSaveBusy,
+      onCancel: handleCancelEditing,
+      onSave: () => void handleSaveAndClose(),
+    });
+    return () => registerEditToolbar(null);
+  }, [isEditing, hasUnsavedChanges, isSaveBusy, registerEditToolbar]);
+
   // FormTopNav renders the Live/Draft badge (it lives in the shared top row, outside
   // this component's tree), so push the value it needs up into context whenever it
   // changes rather than duplicating the badge here too. It also needs hasUnsavedChanges,
@@ -829,16 +858,23 @@ export function BuilderClient({
         {!canEdit ? <span className="builder-readonly-badge">Read-only</span> : null}
         {canEdit ? (
           <>
-            <PageTabs
-              pages={schema.pages}
-              activePageId={activePage?.id ?? ''}
-              canEdit={canEditCanvas}
-              onSelectPage={handleSelectPage}
-              onAddPage={handleAddPage}
-              onRemovePage={handleRemovePage}
-              onRenamePage={handleRenamePage}
-              onMovePage={handleMovePage}
-            />
+            {/* Wrapper is a no-op on desktop (display: contents — PageTabs stays a plain
+                flex item of .builder-header). Below 900px it becomes the full-width row
+                that centers the page pill at the top of the canvas, now that Cancel/Done
+                and Actions have moved into the shared top nav instead of sharing this
+                row (see .builder-header-page-row in globals.css). */}
+            <div className="builder-header-page-row">
+              <PageTabs
+                pages={schema.pages}
+                activePageId={activePage?.id ?? ''}
+                canEdit={canEditCanvas}
+                onSelectPage={handleSelectPage}
+                onAddPage={handleAddPage}
+                onRemovePage={handleRemovePage}
+                onRenamePage={handleRenamePage}
+                onMovePage={handleMovePage}
+              />
+            </div>
             {/* Locked-mode actions live in the shared Actions menu above. This toolbar
                 only owns Save/Cancel for an active editing session. */}
             {isEditing ? (
@@ -1033,19 +1069,36 @@ export function BuilderClient({
             </div>
 
             {canEditCanvas ? (
-              <div className="builder-mobile-add">
-                {activePage && activePage.fields.length === 0 ? (
-                  <span className="builder-mobile-add-hint">Tap to add a field</span>
-                ) : null}
+              // Mobile-only replacement for the desktop .builder-palette rail (hidden
+              // below 900px) — same three destinations (Fields/Design/Logic), each
+              // opening as its own modal instead of an in-place aside since there's no
+              // room for a persistent sidebar at phone widths.
+              <nav className="builder-mobile-tabbar" aria-label="Builder panels">
                 <button
                   type="button"
-                  className="builder-mobile-add-fab"
-                  onClick={() => setShowMobilePalette(true)}
-                  aria-label="Add a field"
+                  className="builder-mobile-tabbar-btn"
+                  onClick={() => setMobileRailPanel('fields')}
                 >
                   <PlusIcon />
+                  Add Element
                 </button>
-              </div>
+                <button
+                  type="button"
+                  className="builder-mobile-tabbar-btn"
+                  onClick={() => setMobileRailPanel('design')}
+                >
+                  <DesignIcon />
+                  Design
+                </button>
+                <button
+                  type="button"
+                  className="builder-mobile-tabbar-btn"
+                  onClick={() => setMobileRailPanel('logic')}
+                >
+                  <LogicIcon />
+                  Logic
+                </button>
+              </nav>
             ) : null}
           </div>
 
@@ -1186,9 +1239,9 @@ export function BuilderClient({
           </div>
         ) : null}
 
-        {showMobilePalette ? (
+        {mobileRailPanel === 'fields' ? (
           // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
-          <div className="modal-overlay" onMouseDown={() => setShowMobilePalette(false)}>
+          <div className="modal-overlay" onMouseDown={() => setMobileRailPanel(null)}>
             <div
               className="modal-card builder-mobile-palette-card"
               role="dialog"
@@ -1204,7 +1257,7 @@ export function BuilderClient({
                   <button
                     type="button"
                     className="modal-close"
-                    onClick={() => setShowMobilePalette(false)}
+                    onClick={() => setMobileRailPanel(null)}
                     aria-label="Close"
                   >
                     ×
@@ -1214,13 +1267,104 @@ export function BuilderClient({
               <FieldPalette
                 onAddField={(type) => {
                   handleAddField(type);
-                  setShowMobilePalette(false);
+                  setMobileRailPanel(null);
                 }}
                 onAddColumnLayout={(columns) => {
                   handleAddColumnLayout(columns);
-                  setShowMobilePalette(false);
+                  setMobileRailPanel(null);
                 }}
               />
+            </div>
+          </div>
+        ) : null}
+
+        {mobileRailPanel === 'design' ? (
+          // Same content as the desktop rail's Design panel (see the .builder-palette
+          // aside above) — just presented as a modal since there's no persistent sidebar
+          // at this width.
+          // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
+          <div className="modal-overlay" onMouseDown={() => setMobileRailPanel(null)}>
+            <div
+              className="modal-card builder-mobile-palette-card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="mobile-design-modal-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h2 className="modal-title" id="mobile-design-modal-title">
+                  Design
+                </h2>
+                <div className="modal-header-actions">
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={() => setMobileRailPanel(null)}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <div className="settings-panel">
+                <DesignSettingsPanel
+                  branding={schema.branding}
+                  canEdit={canEditCanvas}
+                  onUpdateBranding={handleUpdateBranding}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {mobileRailPanel === 'logic' ? (
+          // Same content as the desktop rail's Logic panel — scoped to whichever field
+          // is selected/being edited (logicField, defined above), with the same
+          // no-field-selected empty state.
+          // biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-dismiss backdrop; the modal has a keyboard-reachable Close button
+          <div className="modal-overlay" onMouseDown={() => setMobileRailPanel(null)}>
+            <div
+              className="modal-card builder-mobile-palette-card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="mobile-logic-modal-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h2 className="modal-title" id="mobile-logic-modal-title">
+                  {logicField ? `Logic — ${logicField.label || 'Untitled field'}` : 'Logic'}
+                </h2>
+                <div className="modal-header-actions">
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={() => setMobileRailPanel(null)}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              {logicField ? (
+                <div className="settings-panel">
+                  <ConditionalLogicEditor
+                    schema={schema}
+                    field={logicField}
+                    canEdit={canEditCanvas}
+                    onSetRule={handleSetConditionalRule}
+                    onClearRule={() => handleClearConditionalRule(logicField.id)}
+                  />
+                </div>
+              ) : (
+                <div className="settings-panel settings-panel--empty">
+                  <div className="settings-panel-empty-state">
+                    <p className="settings-panel-empty-title">No field selected</p>
+                    <p className="settings-panel-empty">
+                      Tap a field on the canvas to add conditional logic to it.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : null}

@@ -20,7 +20,9 @@ function FieldsIcon() {
   );
 }
 
-function DesignIcon() {
+// Exported so the mobile bottom tab bar (builder-client.tsx) can reuse the exact same
+// glyphs for its own Design/Logic buttons instead of the desktop-only rail here.
+export function DesignIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
       <path
@@ -37,7 +39,7 @@ function DesignIcon() {
   );
 }
 
-function LogicIcon() {
+export function LogicIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
       <path

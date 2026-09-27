@@ -2121,6 +2121,17 @@ a {
 .form-top-nav-actions {
   position: relative;
   display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Hidden on desktop — .builder-header-stage (rendered inside the builder toolbar itself)
+   is the one visible copy there. Shown instead of it below 900px; see the media query
+   further down where .builder-header-stage is hidden as this turns on. */
+.form-top-nav-edit-toolbar {
+  display: none;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .form-top-nav-actions-trigger {
@@ -3994,6 +4005,29 @@ a {
     font-size: 0.75rem;
   }
 
+  /* .form-top-nav-edit-toolbar (next to Actions) takes over for this below 900px —
+     see form-top-nav.tsx's editToolbar consumer. Only PageTabs (a sibling, not part of
+     this group) stays visible in .builder-header at this width. */
+  .builder-header-stage {
+    display: none;
+  }
+
+  .form-top-nav-edit-toolbar {
+    display: flex;
+  }
+
+  /* Page selector gets its own centered row at the top of the canvas, ahead of the
+     collapse handle — the one control worth calling out now that Cancel/Done/Actions
+     have moved to the top nav. width: 100% forces the wrap onto its own line (a plain
+     flex item, order: -1 puts it first); justify-content: center then centers the pill
+     itself within that full-width line without stretching the pill's own background. */
+  .builder-header-page-row {
+    display: flex;
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+
   .builder-workspace,
   .builder-workspace--readonly {
     display: flex;
@@ -4006,13 +4040,13 @@ a {
     max-width: none;
   }
 
-  /* Replaced by the floating FAB (.builder-mobile-add) below — a persistent sidebar
+  /* Replaced by the bottom tab bar (.builder-mobile-tabbar) below — a persistent sidebar
      doesn't fit next to a one-column canvas on a phone-width screen. */
   .builder-palette {
     display: none;
   }
 
-  .builder-mobile-add {
+  .builder-mobile-tabbar {
     display: flex;
   }
 
@@ -4027,16 +4061,25 @@ a {
   .builder-workspace--readonly .builder-canvas-column {
     width: 100%;
     max-width: none;
-    padding: 1.25rem 1rem 5rem;
+    padding: 1rem 0.85rem 5rem;
   }
 
   /* Six-odd controls (save status, page selector, Share, kebab, Publish) don't fit one
      pill-shaped row at phone widths — wrap rather than overflow, which would otherwise
-     get clipped by .admin-main's overflow-x guard. */
+     get clipped by .admin-main's overflow-x guard. Gap/padding shrunk too — with
+     Cancel/Done/Actions moved out to the top nav, this floating chip now only has the
+     handle and the centered page row to hold, so it doesn't need as much breathing room. */
   .builder-header {
     flex-wrap: wrap;
-    row-gap: 0.4rem;
+    gap: 0.35rem;
+    row-gap: 0.35rem;
+    padding: 0.35rem 0.5rem;
     border-radius: var(--radius-md);
+  }
+
+  .builder-header-handle {
+    width: 1.6rem;
+    height: 1.6rem;
   }
 
   /* Prev/next arrows give way to the dropdown alone once space is tight — every page
@@ -4046,8 +4089,23 @@ a {
     display: none;
   }
 
+  .page-switcher {
+    padding: 0.15rem;
+    gap: 0.05rem;
+  }
+
+  .page-switcher-step {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  .page-switcher-trigger {
+    padding: 0.22rem 0.5rem;
+  }
+
   .page-switcher-trigger-label {
     max-width: 9rem;
+    font-size: 0.8rem;
   }
 
   .page-switcher-trigger-count {
@@ -4057,25 +4115,24 @@ a {
   }
 
   .canvas {
-    padding: 1.35rem 1.1rem 5rem;
+    padding: 1.1rem 0.9rem 5rem;
   }
 }
 
-/* Phones — the 900px rules above already hide the palette in favor of the mobile FAB;
-   this tightens spacing further and shrinks the field-settings modal so both fit narrow
-   screens without horizontal scrolling or clipped content. */
+/* Phones — the 900px rules above already hide the palette in favor of the mobile bottom
+   tab bar; this tightens spacing further and shrinks the field-settings modal so both
+   fit narrow screens without horizontal scrolling or clipped content. */
 @media (max-width: 640px) {
   .builder-canvas-column {
     padding: 1rem 0.75rem 5rem;
   }
 
-  .builder-mobile-add {
-    right: 0.85rem;
-    bottom: 0.85rem;
+  .builder-mobile-tabbar-btn {
+    font-size: 0.625rem;
   }
 
   .builder-header {
-    padding: 0.4rem 0.55rem;
+    padding: 0.3rem 0.45rem;
   }
 
   .page-tab-rename-input {
@@ -4142,8 +4199,13 @@ a {
     display: flex;
   }
 
+  /* The org name (h1) plus the logo/wordmark brand link next to it was too much for a
+   * phone-width header — combined with the hamburger and the right-side actions, the
+   * name got truncated to one or two letters before running out of room. Below 768px
+   * just show the logo/wordmark; the org name is still the page's <title> and visible
+   * once the sidebar (which names the org at its top) is opened. */
   .admin-header-title {
-    font-size: 1.2rem;
+    display: none;
   }
 }
 
@@ -4324,11 +4386,22 @@ textarea.text-input {
 }
 
 .forms-list-page .admin-table-card,
+.forms-list-page .forms-toolbar-card,
 .forms-list-page .empty-state {
   width: 100%;
   max-width: none;
   margin-top: 0;
   border-radius: 1rem;
+}
+
+/* Toolbar (search/sort/filter/view-toggle + "+ New form") lives in its own card, sitting
+ * above the table/grid card with a normal gap between them — separate cards rather than
+ * one shared card mainly so the "+ New form" button can be reordered above the icon row
+ * on mobile (see the max-width: 640px block below) via a plain flex `order` swap, without
+ * needing that button to physically move outside the table card's own box. */
+.forms-toolbar-card {
+  margin-bottom: 1.25rem;
+  padding: 0;
 }
 
 .forms-list-page .admin-table {
@@ -4350,19 +4423,20 @@ textarea.text-input {
   flex-wrap: wrap;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .forms-toolbar-icons {
   display: flex;
   align-items: center;
   flex: 1;
+  flex-wrap: wrap;
   min-width: 0;
   gap: 0.4rem;
 }
 
-.forms-toolbar .button {
+.forms-toolbar-new-btn {
   margin-left: auto;
+  order: 2;
 }
 
 /* Search/sort/filter collapse into these square icon buttons instead of an always-visible
@@ -4469,6 +4543,43 @@ textarea.text-input {
 .actions-menu-item .table-sort-indicator {
   margin-left: auto;
   padding-left: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  /* The search field, sort/filter icon buttons, and List/Grid toggle used to share one
+   * row with the "+ New form" button — on a phone that's 5+ controls fighting for one
+   * ~350px-wide line, so the trailing controls got squeezed to the point of clipping.
+   * Stacked instead: "+ New form" gets its own full-width row up top (order swap below),
+   * then search alone on the next row, then sort/filter/view-toggle together on a third
+   * row where they finally have room to sit comfortably rather than being crushed against
+   * the search box. */
+  .forms-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.85rem 1rem;
+  }
+
+  .forms-toolbar-new-btn {
+    order: 0;
+    margin-left: 0;
+    width: 100%;
+    text-align: center;
+  }
+
+  .forms-toolbar-icons {
+    order: 1;
+    flex-wrap: wrap;
+  }
+
+  /* flex-basis: 100% forces this to take its own line — everything after it
+   * (sort/filter/view-toggle) wraps onto a second line together, where they finally have
+   * room instead of fighting the search box for the same row. */
+  .forms-search--inline {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
 }
 
 /* Grid view — equal-height tiles inside the same .admin-table-card the table uses.
@@ -6160,6 +6271,77 @@ textarea.text-input {
     letter-spacing: 0.04em;
     text-align: left;
   }
+
+  /* Accordion — scoped to .forms-table (not the shared .admin-table stacking rules above,
+   * which several other list pages also use) since only the Forms list asked for this.
+   * Collapsed by default: only Form name + Status + the toggle chevron show, so a long
+   * forms list doesn't turn into a full page of scrolling per row. Opening one row (via
+   * setExpandedFormId in forms-list-client.tsx, single id not a Set) collapses whichever
+   * other row was open, rather than letting several stay expanded at once. */
+  .forms-table
+    tr:not(.forms-row--expanded)
+    td:not([data-label="Form name"]):not([data-label="Status"]):not(.forms-row-toggle-cell) {
+    display: none;
+  }
+
+  .forms-table tr:not(.forms-row--expanded) {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+  }
+
+  .forms-table tr:not(.forms-row--expanded) td {
+    padding: 0;
+    border-bottom: none;
+  }
+
+  .forms-table tr:not(.forms-row--expanded) td[data-label="Form name"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  /* Status also needs its own width: auto — same reason as the toggle cell above, the
+   * shared .admin-table td rule's width: 100% would otherwise force each of these three
+   * summary cells onto its own line despite the row being flex-wrap. */
+  .forms-table tr:not(.forms-row--expanded) td[data-label="Status"] {
+    justify-content: flex-start;
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .forms-table tr:not(.forms-row--expanded) td[data-label="Form name"]::before,
+  .forms-table tr:not(.forms-row--expanded) td[data-label="Status"]::before {
+    display: none;
+  }
+
+  /* Extra specificity (two classes) needed to beat the shared .admin-table td rule's own
+   * width: 100% above — a plain .forms-row-toggle-cell selector loses that fight since
+   * .admin-table td (class + type) outranks a single class selector. */
+  .admin-table td.forms-row-toggle-cell {
+    justify-content: center;
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .forms-row-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-surface-sunken);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+
+  .forms-row--expanded .forms-row-toggle {
+    transform: rotate(180deg);
+  }
 }
 
 @media (max-width: 420px) {
@@ -7843,48 +8025,53 @@ textarea.text-input {
   border-radius: var(--radius-md);
 }
 
-/* Mobile-only "add a field" affordance — replaces the persistent .builder-palette
-   sidebar (hidden below 900px, see the media query) with a floating FAB that opens the
-   same FieldPalette in a modal. Hidden by default; the 900px media query turns it on. */
-.builder-mobile-add {
+/* Mobile-only bottom tab bar — replaces the persistent .builder-palette sidebar (hidden
+   below 900px, see the media query) with three buttons (Add Element / Design / Logic)
+   fixed to the bottom of the screen, each opening its matching panel as a modal (see
+   mobileRailPanel in builder-client.tsx) instead of an in-place aside. Hidden by
+   default; the 900px media query turns it on. */
+.builder-mobile-tabbar {
   display: none;
   position: fixed;
-  right: 1.1rem;
-  bottom: 1.1rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 20;
-  align-items: center;
-  gap: 0.6rem;
+  align-items: stretch;
+  justify-content: space-around;
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+  padding: 0.3rem 0.4rem calc(0.3rem + env(safe-area-inset-bottom, 0px));
 }
 
-.builder-mobile-add-hint {
-  padding: 0.45rem 0.85rem;
-  background-color: var(--color-text);
-  color: var(--color-surface);
-  border-radius: var(--radius-pill);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
-}
-
-.builder-mobile-add-fab {
-  display: inline-flex;
+.builder-mobile-tabbar-btn {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 3.25rem;
-  height: 3.25rem;
-  flex-shrink: 0;
-  background-color: var(--color-primary);
-  color: #fff;
+  gap: 0.2rem;
+  flex: 1;
+  padding: 0.35rem 0.25rem;
+  background: none;
   border: none;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.25);
-  transition: background-color 0.12s ease;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
 }
 
-.builder-mobile-add-fab:hover {
-  background-color: var(--color-primary-hover);
+.builder-mobile-tabbar-btn:hover {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.builder-mobile-tabbar-btn svg {
+  color: var(--color-primary);
 }
 
 .builder-mobile-palette-card {
@@ -9717,6 +9904,13 @@ textarea.text-input {
    together" when the backdrop already does. The dropdown panel reuses
    .actions-menu-panel/.actions-menu-item's visual language via
    page-switcher-panel/page-switcher-list below. */
+/* No-op on desktop — display: contents keeps PageTabs a direct flex item of
+   .builder-header, same as before this wrapper existed. Only takes over layout below
+   900px; see the media query further down. */
+.builder-header-page-row {
+  display: contents;
+}
+
 .page-switcher {
   display: flex;
   align-items: center;

@@ -22,6 +22,20 @@ interface FormWorkspaceContextValue {
   registerTakeOfflineAction: (action: (() => void) | null) => void;
   publishFormAction: (() => void) | null;
   registerPublishFormAction: (action: (() => void) | null) => void;
+  /** The builder's Cancel/Save-or-Done pair while an edit session is active — rendered a
+   *  second time in FormTopNav (mobile only, next to the Actions button; see
+   *  .builder-header-stage's own desktop rendering in builder-client.tsx, hidden on
+   *  mobile via CSS so the two never show at once) so a phone-width header doesn't need
+   *  a second full-width toolbar row underneath it just for these two buttons. */
+  editToolbar: EditToolbarState | null;
+  registerEditToolbar: (toolbar: EditToolbarState | null) => void;
+}
+
+export interface EditToolbarState {
+  hasUnsavedChanges: boolean;
+  isSaveBusy: boolean;
+  onCancel: () => void;
+  onSave: () => void;
 }
 
 const FormWorkspaceContext = createContext<FormWorkspaceContextValue | null>(null);
@@ -38,6 +52,7 @@ export function FormWorkspaceProvider({
   const [editFormAction, setEditFormAction] = useState<(() => void) | null>(null);
   const [takeOfflineAction, setTakeOfflineAction] = useState<(() => void) | null>(null);
   const [publishFormAction, setPublishFormAction] = useState<(() => void) | null>(null);
+  const [editToolbar, setEditToolbar] = useState<EditToolbarState | null>(null);
 
   const setStatus = useCallback((next: FormStatus) => {
     setStatusState(next);
@@ -63,6 +78,10 @@ export function FormWorkspaceProvider({
     setPublishFormAction(() => action);
   }, []);
 
+  const registerEditToolbar = useCallback((toolbar: EditToolbarState | null) => {
+    setEditToolbar(toolbar);
+  }, []);
+
   const value = useMemo(
     () => ({
       status,
@@ -75,6 +94,8 @@ export function FormWorkspaceProvider({
       registerTakeOfflineAction,
       publishFormAction,
       registerPublishFormAction,
+      editToolbar,
+      registerEditToolbar,
     }),
     [
       status,
@@ -87,6 +108,8 @@ export function FormWorkspaceProvider({
       registerTakeOfflineAction,
       publishFormAction,
       registerPublishFormAction,
+      editToolbar,
+      registerEditToolbar,
     ],
   );
 

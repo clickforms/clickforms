@@ -6256,13 +6256,69 @@ textarea.text-input {
     width: auto;
   }
 
+  /* Once expanded, .forms-table tr:not(.forms-row--expanded) above no longer applies —
+   * the row falls back to the shared .admin-table tr's plain display: block, so every
+   * <td> (including this one) stacks as its own full-width row again. Since the toggle
+   * cell sits between Status and Created by in the markup (see the biome-ignore comment
+   * in forms-list-client.tsx), that meant the chevron jumped out of the summary line and
+   * landed alone, centered, in an otherwise-blank row in the middle of the expanded
+   * card — exactly the "awkward place" this fixes. Re-applying display: flex + order to
+   * the expanded row keeps Form name/Status/the toggle together as one line always, with
+   * every other field pushed below it via flex-basis: 100% (forcing its own wrap) and a
+   * higher order value (so it renders after the summary line regardless of where it
+   * falls in the actual DOM order). */
+  .forms-table tr.forms-row--expanded {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+  }
+
+  .forms-table tr.forms-row--expanded td {
+    padding: 0.35rem 0;
+  }
+
+  .forms-table tr.forms-row--expanded td[data-label="Form name"] {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  .forms-table tr.forms-row--expanded td[data-label="Status"] {
+    order: 2;
+    justify-content: flex-start;
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .forms-table tr.forms-row--expanded td.forms-row-toggle-cell {
+    order: 3;
+  }
+
+  .forms-table tr.forms-row--expanded td[data-label="Form name"]::before,
+  .forms-table tr.forms-row--expanded td[data-label="Status"]::before {
+    display: none;
+  }
+
+  .forms-table
+    tr.forms-row--expanded
+    td:not([data-label="Form name"]):not([data-label="Status"]):not(.forms-row-toggle-cell) {
+    order: 4;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  /* border added for visibility — the plain --color-surface-sunken fill alone read as
+   * almost invisible against this card's white background, easy to miss as a tappable
+   * control at all. */
   .forms-row-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 1.75rem;
     height: 1.75rem;
-    border: none;
+    border: 1px solid var(--color-border);
     border-radius: 50%;
     background: var(--color-surface-sunken);
     color: var(--color-text-muted);
@@ -6323,13 +6379,61 @@ textarea.text-input {
     width: auto;
   }
 
+  /* Same fix as .forms-table tr.forms-row--expanded above, same reason: once expanded,
+   * the toggle cell (between Status and IP address in the markup) otherwise fell out of
+   * the summary line and landed alone in the middle of the card. */
+  .submissions-table tr.submissions-row--expanded {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+  }
+
+  .submissions-table tr.submissions-row--expanded td {
+    padding: 0.35rem 0;
+  }
+
+  .submissions-table tr.submissions-row--expanded td[data-label="Submitted at"] {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  .submissions-table tr.submissions-row--expanded td[data-label="Status"] {
+    order: 2;
+    justify-content: flex-start;
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .submissions-table tr.submissions-row--expanded td.submissions-row-toggle-cell {
+    order: 3;
+  }
+
+  .submissions-table tr.submissions-row--expanded td[data-label="Submitted at"]::before,
+  .submissions-table tr.submissions-row--expanded td[data-label="Status"]::before {
+    display: none;
+  }
+
+  .submissions-table
+    tr.submissions-row--expanded
+    td:not([data-label="Submitted at"]):not([data-label="Status"]):not(
+      .submissions-row-toggle-cell
+    ) {
+    order: 4;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  /* border added for visibility, same reason as .forms-row-toggle above. */
   .submissions-row-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 1.75rem;
     height: 1.75rem;
-    border: none;
+    border: 1px solid var(--color-border);
     border-radius: 50%;
     background: var(--color-surface-sunken);
     color: var(--color-text-muted);

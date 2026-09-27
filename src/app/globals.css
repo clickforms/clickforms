@@ -4637,9 +4637,18 @@ textarea.text-input {
   overflow: hidden;
 }
 
+/* Not sticky here — .modal-card--preview scrolls internally (the iframe/live-preview
+ * wrapper below, not the card itself, see .submission-preview-frame-wrap), so
+ * .modal-header's usual sticky offset (meant for .modal-card's own overflow-y: auto)
+ * would just misalign this one: cancelled back to sitting normally inside the card's
+ * own padding. */
 .modal-card--preview .modal-header {
+  position: static;
   flex-shrink: 0;
-  margin-bottom: 1rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  background: none;
+  border-radius: 0;
 }
 
 .modal-card--preview .modal-footer {
@@ -4680,11 +4689,25 @@ textarea.text-input {
   padding: 0;
 }
 
+/* Sticky, not just top-of-flow — .modal-card scrolls its own content (overflow-y: auto
+ * above) rather than growing past the viewport, and a long form (the mobile Design
+ * panel's Typography/Layout/Submit-button settings, say) can scroll the close button
+ * right out of view otherwise. The negative margin + matching padding pulls this to the
+ * card's own edges (undoing .modal-card's padding just for this row) so the sticky
+ * background spans full width and the rounded top corners still land in the right place;
+ * `top: -1.5rem` cancels that same padding on the scroll axis so it pins flush against
+ * the card's top edge instead of leaving a gap once scrolled. */
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
+  position: sticky;
+  top: -1.5rem;
+  z-index: 1;
+  margin: -1.5rem -1.5rem 1.25rem;
+  padding: 1.5rem 1.5rem 1rem;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .modal-title {
@@ -8033,6 +8056,16 @@ textarea.text-input {
   padding: 1.1rem 1rem 1.25rem;
 }
 
+/* .modal-header's sticky offset (see its own comment) is negative-margined to match
+ * .modal-card's 1.5rem padding — this card uses its own smaller padding instead, so the
+ * offset needs its own matching override or the sticky header ends up misaligned
+ * (a gap above it, or the rounded corners landing in the wrong place). */
+.builder-mobile-palette-card .modal-header {
+  top: -1.1rem;
+  margin: -1.1rem -1rem 1.25rem;
+  padding: 1.1rem 1rem 1rem;
+}
+
 .builder-mobile-palette-card .field-palette {
   border: none;
   box-shadow: none;
@@ -10067,18 +10100,6 @@ textarea.text-input {
     display: flex;
   }
 
-  /* Page selector gets its own centered row at the top of the canvas, ahead of the
-     collapse handle — the one control worth calling out now that Cancel/Done/Actions
-     have moved to the top nav. width: 100% forces the wrap onto its own line (a plain
-     flex item, order: -1 puts it first); justify-content: center then centers the pill
-     itself within that full-width line without stretching the pill's own background. */
-  .builder-header-page-row {
-    display: flex;
-    order: -1;
-    width: 100%;
-    justify-content: center;
-  }
-
   .builder-workspace,
   .builder-workspace--readonly {
     display: flex;
@@ -10115,15 +10136,18 @@ textarea.text-input {
     padding: 1rem 0.85rem 5rem;
   }
 
-  /* Six-odd controls (save status, page selector, Share, kebab, Publish) don't fit one
-     pill-shaped row at phone widths — wrap rather than overflow, which would otherwise
-     get clipped by .admin-main's overflow-x guard. Gap/padding shrunk too — with
-     Cancel/Done/Actions moved out to the top nav, this floating chip now only has the
-     handle and the centered page row to hold, so it doesn't need as much breathing room. */
+  /* With Cancel/Done/Actions moved out to the top nav, this floating chip now only ever
+     holds two things — the collapse handle and the page selector — so it no longer needs
+     to wrap or hug the right edge. Re-anchored to the horizontal center (left: 50% +
+     transform, not left+right together, so the box keeps shrink-to-fit sizing and the
+     .builder-header--closed max-width transition still animates correctly) so the page
+     selector reads as centered above the canvas with the handle sitting naturally next
+     to it, rather than the handle wrapping onto an orphaned second line by itself. */
   .builder-header {
-    flex-wrap: wrap;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
     gap: 0.35rem;
-    row-gap: 0.35rem;
     padding: 0.35rem 0.5rem;
     border-radius: var(--radius-md);
   }

@@ -13955,6 +13955,34 @@ textarea.form-field-input {
   margin-left: auto;
 }
 
+/* Narrow phones (see .landing-nav-inner's own mobile padding above) have just enough
+ * room for the brand mark plus two pill buttons if those buttons tighten up a bit —
+ * without this, "Get started" wraps onto two lines instead (white-space: nowrap on
+ * .landing-btn stops the wrap, but does nothing about the cramped space that caused it
+ * in the first place). Scoped to the nav specifically so .landing-btn--sm's other users
+ * (Help, Product/services) keep their normal size. */
+@media (max-width: 420px) {
+  .landing-nav-inner {
+    gap: 0.5rem;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .landing-nav-actions {
+    gap: 0.4rem;
+  }
+
+  .landing-nav-actions .landing-btn--sm {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.8125rem;
+    gap: 0.35rem;
+  }
+
+  .landing-nav-actions .landing-btn--sm svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+}
+
 .landing-nav-link[data-active] {
   background: var(--landing-soft);
   color: var(--landing-ink);
@@ -14019,6 +14047,11 @@ textarea.form-field-input {
   border-radius: 999px;
   font-family: inherit;
   font-weight: 600;
+  /* A pill button squeezed for space (the nav's "Get started" on narrow phones, see the
+   * mobile .landing-nav-actions override below) would otherwise wrap its label onto a
+   * second line, which reads as broken rather than just tight. Better to make room than
+   * let a button's own text wrap. */
+  white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
   transition:

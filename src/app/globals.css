@@ -1875,6 +1875,17 @@ a {
   width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
+  /* scrollbar-gutter: stable — without this, whether a page's content is tall enough to
+   * actually need this scrollbar changes its available width: a scrolling page has that
+   * width narrowed by the scrollbar itself (reserved on the right only), a short page
+   * doesn't, so identically-padded content looks off-center on one and fine on the
+   * other. This is exactly what made Organisation → General (five stacked panels, tall
+   * enough to scroll on mobile) look uncentered next to Billing (shorter, often fits
+   * without scrolling) even though they share the exact same .org-settings/.org-panel
+   * markup and CSS — nothing about General's own layout was actually wrong. Reserving
+   * the gutter unconditionally makes every page's available width the same regardless of
+   * whether its own content happens to trigger a scrollbar. */
+  scrollbar-gutter: stable;
 }
 
 /* The builder page manages its own internal scrolling (independent palette/canvas

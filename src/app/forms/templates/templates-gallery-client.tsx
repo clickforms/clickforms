@@ -163,13 +163,16 @@ function TemplateBrowseCard({
         </button>
       </div>
       <h2 className="template-browse-card-title">{template.name}</h2>
+      <p className="template-browse-card-meta">
+        {[template.industry, template.formType].filter(Boolean).join(' · ') || 'Uncategorised'}
+      </p>
       <button
         type="button"
         className="template-browse-card-cta"
         disabled={isCreating}
         onClick={onUse}
       >
-        Use Template
+        Use template
       </button>
     </article>
   );
@@ -545,16 +548,16 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
 
         <div className="template-gallery-main">
           <form className="template-gallery-search" onSubmit={(event) => event.preventDefault()}>
+            <span className="template-gallery-search-icon" aria-hidden="true">
+              <SearchIcon />
+            </span>
             <input
               type="search"
-              placeholder="Search in all templates"
+              placeholder="Search all templates"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              aria-label="Search in all templates"
+              aria-label="Search all templates"
             />
-            <button type="submit" className="template-gallery-search-btn" aria-label="Search">
-              <SearchIcon />
-            </button>
           </form>
 
           <div className="template-gallery-grid">
@@ -568,9 +571,8 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
                 <span className="template-browse-card-scratch-plus">+</span>
               </span>
               <span className="template-browse-card-title">Start from scratch</span>
-              <span className="template-browse-card-scratch-copy">
-                A blank slate is all you need
-              </span>
+              <span className="template-browse-card-meta">A blank form, ready to design</span>
+              <span className="template-browse-card-cta">Start blank</span>
             </button>
             {visibleTemplates.map((template) => (
               <TemplateBrowseCard

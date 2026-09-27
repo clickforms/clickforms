@@ -4584,6 +4584,15 @@ textarea.text-input {
    styled with this project's warm cream/pill language. Only "Blank form" is wired up;
    "Use template" and "Send existing form" are shown as disabled previews of features
    this app doesn't have yet, rather than pretending they work. */
+/* z-index: 1000, not 100 — .admin-header (the app's top bar: hamburger/logo/avatar) sits
+ * at z-index: 110 with position: relative, which still wins stacking order against any
+ * *other* positioned element with a lower z-index regardless of position: fixed vs.
+ * relative. At the old z-index: 100 this overlay's top edge — and everything in it,
+ * including a modal-card's own header/close button — rendered *underneath* the top bar
+ * instead of over it, on every modal on every page, any time the centered card's top
+ * edge landed within the header's height. Matches the same high z-index other full-
+ * screen overlays in this file already use for the same reason (.template-detail-
+ * overlay: 1000, .toast-viewport: 9999) — .modal-overlay was the outlier. */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -4592,11 +4601,11 @@ textarea.text-input {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  z-index: 100;
+  z-index: 1000;
 }
 
 .modal-overlay--stack {
-  z-index: 110;
+  z-index: 1010;
 }
 
 /* The "Edit field" modal is now redundant on desktop — .builder-palette swaps in

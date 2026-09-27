@@ -2,28 +2,19 @@
 
 import type { OrgPlan, OrgStatus } from '@prisma/client';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   type ChangeEvent,
   type FormEvent,
   type ReactNode,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
 import { ImageCropEditor } from '@/app/forms/[id]/builder/image-crop-editor';
 import { useToast } from '@/components/toast';
-import {
-  buildUsageBars,
-  formatBytes,
-  PLAN_FEATURE_PILLS,
-  PLAN_LABELS,
-  PLAN_LIMITS,
-  PLAN_ORDER,
-  PLAN_PRICING,
-  type PlanUsage,
-} from '@/lib/admin/plan-limits';
+import { buildUsageBars, PLAN_LABELS, type PlanUsage } from '@/lib/admin/plan-limits';
 import { getErrorMessage, readApiError } from '@/lib/error-message';
 import { isCroppableImage } from '@/lib/forms/crop-image';
 
@@ -87,62 +78,11 @@ function daysUntil(iso: string): number {
   return Math.round((targetUtc - todayUtc) / (24 * 60 * 60 * 1000));
 }
 
-/** Which of the four usage bars would already be over `targetPlan`'s cap given current
- * usage — advisory only, shown as a warning before a self-service plan switch (see
- * handleChangePlan): the switch itself is never blocked by this, since an org that's
- * over-limit from an admin-assigned downgrade is already a normal, supported state
- * (see assertOrgActionsAllowed's siblings in plan-enforcement.ts, which only stop the
- * *next* create/invite/upload, not existing data). */
-function computeOverLimitLabels(targetPlan: OrgPlan, usage: PlanUsage): string[] {
-  const limits = PLAN_LIMITS[targetPlan];
-  const labels: string[] = [];
-  if (limits.maxForms !== null && usage.forms > limits.maxForms) labels.push('Forms');
-  if (limits.maxUsers !== null && usage.users > limits.maxUsers) labels.push('Users');
-  if (limits.maxStorageBytes !== null && usage.storageBytes > limits.maxStorageBytes) {
-    labels.push('Storage');
-  }
-  if (
-    limits.maxSubmissionsPerMonth !== null &&
-    usage.submissionsThisMonth > limits.maxSubmissionsPerMonth
-  ) {
-    labels.push('Submissions this month');
-  }
-  return labels;
-}
-
 function orgInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
   if (parts.length === 1) return (parts[0]?.slice(0, 2) ?? '?').toUpperCase();
   return `${parts[0]?.[0] ?? ''}${parts[parts.length - 1]?.[0] ?? ''}`.toUpperCase();
-}
-
-function planLimitLines(plan: OrgPlan): string[] {
-  const limits = PLAN_LIMITS[plan];
-  return [
-    limits.maxForms === null ? 'Unlimited forms' : `${limits.maxForms} forms`,
-    limits.maxUsers === null ? 'Unlimited users' : `${limits.maxUsers} users`,
-    limits.maxStorageBytes === null
-      ? 'Unlimited storage'
-      : `${formatBytes(limits.maxStorageBytes)} storage`,
-    limits.maxSubmissionsPerMonth === null
-      ? 'Unlimited submissions'
-      : `${limits.maxSubmissionsPerMonth.toLocaleString()} submissions / mo`,
-  ];
-}
-
-function CheckIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M3.5 8.5 6.5 11.5 12.5 5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 function InfoIcon() {
@@ -227,28 +167,21 @@ export function OrganisationDetailsClient({
   publicOrigin,
 }: OrganisationDetailsClientProps) {
   const toast = useToast();
+  const searchParams = useSearchParams();
   // Defaults to Billing when there's something to act on (trial/suspended) so the
   // organisation's own admin lands straight on the thing that needs attention, rather
-  // than General's identity fields they weren't looking for.
+  // than General's identity fields they weren't looking for. ?tab=billing overrides
+  // that default explicitly — used when redirecting back from /forms/organisation/plan
+  // after a switch, since the switch may have just graduated the org from 'trial' to
+  // 'active', which would otherwise silently default back to General on return.
   const [activeTab, setActiveTab] = useState<'general' | 'billing'>(
-    plan.status === 'active' ? 'general' : 'billing',
+    searchParams.get('tab') === 'billing' || plan.status !== 'active' ? 'billing' : 'general',
   );
-  // Local copy of the plan prop — handleChangePlan below updates this in place (plan +
-  // status, since picking a plan also graduates a trialing org to 'active') without a
-  // full page reload. Usage counts aren't refetched since a plan switch never changes
-  // them, only the caps they're checked against.
-  const [planInfo, setPlanInfo] = useState(plan);
-  const [selectedPlan, setSelectedPlan] = useState<OrgPlan>(plan.plan);
-  const [isChangingPlan, setIsChangingPlan] = useState(false);
-  const [planChangeError, setPlanChangeError] = useState<string | null>(null);
-  // Preview-only — doesn't affect which plan gets saved, just which of the two prices
-  // PLAN_PRICING has for each tier is shown on the cards below (mirrors the public
-  // /pricing page's toggle, see landing-pricing.tsx).
-  const [billingAnnual, setBillingAnnual] = useState(true);
-  const overLimitLabels = useMemo(
-    () => computeOverLimitLabels(selectedPlan, planInfo.usage),
-    [selectedPlan, planInfo.usage],
-  );
+  // Actually changing plans now happens on its own page (/forms/organisation/plan —
+  // see ChangePlanClient), which re-fetches fresh org data from the server on the way
+  // back rather than patching this state in place, so `plan` no longer needs to be
+  // local state here.
+  const planInfo = plan;
   const [logoUrl, setLogoUrl] = useState(initialOrganization.logoUrl);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isRemovingLogo, setIsRemovingLogo] = useState(false);
@@ -307,32 +240,6 @@ export function OrganisationDetailsClient({
       return null;
     });
   }, []);
-
-  async function handleChangePlan() {
-    setPlanChangeError(null);
-    setIsChangingPlan(true);
-    try {
-      const res = await fetch('/api/organization/plan', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: selectedPlan }),
-      });
-      if (!res.ok) {
-        setPlanChangeError(await readApiError(res, 'Could not change plan'));
-        return;
-      }
-      const data: {
-        plan: Pick<OrganizationPlanInfo, 'plan' | 'status' | 'trialEndsAt' | 'renewsAt'>;
-      } = await res.json();
-      setPlanInfo((prev) => ({ ...prev, ...data.plan }));
-      setSelectedPlan(data.plan.plan);
-      toast.success(`Switched to the ${PLAN_LABELS[data.plan.plan]} plan`);
-    } catch {
-      setPlanChangeError('Something went wrong. Please try again.');
-    } finally {
-      setIsChangingPlan(false);
-    }
-  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -881,6 +788,18 @@ export function OrganisationDetailsClient({
               <Link href="/pricing" className="button button--secondary button--small">
                 Compare plans
               </Link>
+              {/* Deliberately a separate page (/forms/organisation/plan) rather than the
+               * grid of every tier's price sitting inline here — a subscribed org that
+               * checks this page regularly (to see usage, say) would otherwise be shown
+               * cheaper/other plans on every visit even when they're not looking to
+               * switch, which nudges toward downgrading rather than just informing. This
+               * button is the deliberate "I want to change plan" action instead. */}
+              <Link
+                href="/forms/organisation/plan"
+                className={`button button--small ${planInfo.status === 'active' ? 'button--secondary' : 'button--dark'}`}
+              >
+                {planInfo.status === 'trial' ? 'Choose a plan' : 'Change plan'}
+              </Link>
               <Link href="/contact" className="button button--ghost button--small">
                 Contact us
               </Link>
@@ -918,126 +837,6 @@ export function OrganisationDetailsClient({
                   </div>
                 );
               })}
-            </div>
-          </section>
-
-          <section className="org-panel org-panel--wide">
-            <header className="org-panel-head">
-              <h2 className="org-panel-title">
-                Change plan
-                <HelpTip id="org-help-change-plan" label="About changing plan">
-                  Select a tier, then confirm. Existing data is never deleted.
-                </HelpTip>
-              </h2>
-              <div className="org-plan-toggle">
-                <button
-                  type="button"
-                  className="org-plan-toggle-btn"
-                  data-active={!billingAnnual || undefined}
-                  onClick={() => setBillingAnnual(false)}
-                >
-                  Monthly
-                </button>
-                <button
-                  type="button"
-                  className="org-plan-toggle-btn"
-                  data-active={billingAnnual || undefined}
-                  onClick={() => setBillingAnnual(true)}
-                >
-                  Annual
-                  <span className="org-plan-toggle-save">Save ~15%</span>
-                </button>
-              </div>
-            </header>
-            {planChangeError ? (
-              <p className="form-error org-settings-error" role="alert">
-                {planChangeError}
-              </p>
-            ) : null}
-            <div className="org-plan-grid">
-              {PLAN_ORDER.map((planOption) => {
-                const current = planOption === planInfo.plan;
-                const selected = planOption === selectedPlan;
-                const price = billingAnnual
-                  ? PLAN_PRICING[planOption].annual
-                  : PLAN_PRICING[planOption].monthly;
-                return (
-                  <button
-                    key={planOption}
-                    type="button"
-                    className={`org-plan-card${selected ? ' org-plan-card--selected' : ''}${current ? ' org-plan-card--current' : ''}`}
-                    onClick={() => setSelectedPlan(planOption)}
-                    disabled={isChangingPlan}
-                    aria-pressed={selected}
-                  >
-                    <span className="org-plan-card-top">
-                      <span className="org-plan-card-name">{PLAN_LABELS[planOption]}</span>
-                      {current ? <span className="org-plan-card-badge">Current</span> : null}
-                    </span>
-                    <span className="org-plan-card-price">
-                      {price === null ? (
-                        'Custom'
-                      ) : (
-                        <>
-                          ${price}
-                          <span className="org-plan-card-period"> / mo</span>
-                        </>
-                      )}
-                    </span>
-                    {price !== null ? (
-                      <p className="org-plan-card-billing-note">
-                        {billingAnnual ? 'billed annually' : 'billed monthly'}
-                      </p>
-                    ) : null}
-                    <ul className="org-plan-card-limits">
-                      {planLimitLines(planOption).map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
-                    </ul>
-                    <ul className="org-plan-card-features">
-                      {PLAN_FEATURE_PILLS.map((feature) => {
-                        const on = PLAN_LIMITS[planOption][feature.key];
-                        return (
-                          <li
-                            key={feature.key}
-                            className={
-                              on ? 'org-plan-card-feature--on' : 'org-plan-card-feature--off'
-                            }
-                          >
-                            {on ? <CheckIcon /> : null}
-                            {feature.label}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </button>
-                );
-              })}
-            </div>
-            {selectedPlan !== planInfo.plan && overLimitLabels.length > 0 ? (
-              <p className="org-plan-warning">
-                Switching to {PLAN_LABELS[selectedPlan]} would put you over its limit on{' '}
-                {overLimitLabels.join(', ')}. Existing data is safe — you just won&apos;t be able to
-                add more there until you&apos;re back under the limit.
-              </p>
-            ) : null}
-            <div className="org-plan-confirm">
-              <button
-                type="button"
-                className="button button--dark"
-                disabled={
-                  isChangingPlan || (selectedPlan === planInfo.plan && planInfo.status !== 'trial')
-                }
-                onClick={() => void handleChangePlan()}
-              >
-                {isChangingPlan
-                  ? 'Updating…'
-                  : selectedPlan === planInfo.plan
-                    ? planInfo.status === 'trial'
-                      ? 'Subscribe'
-                      : 'Current plan'
-                    : `Switch to ${PLAN_LABELS[selectedPlan]}`}
-              </button>
             </div>
           </section>
         </div>

@@ -20838,6 +20838,25 @@ textarea.form-field-input {
   line-height: 1.5;
 }
 
+/* Standalone /forms/organisation/plan page (change-plan-client.tsx) — sits above the
+ * page's own h1 in place of the usual "Workspace" kicker, since this page's only job is
+ * to get the visitor back to Organisation once they're done. */
+.org-plan-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.6rem;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.org-plan-back-link:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
 .org-settings-tabs {
   display: inline-flex;
   align-items: center;

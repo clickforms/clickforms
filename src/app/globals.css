@@ -4004,154 +4004,19 @@ a {
     padding: 0.3rem 0.55rem;
     font-size: 0.75rem;
   }
-
-  /* .form-top-nav-edit-toolbar (next to Actions) takes over for this below 900px —
-     see form-top-nav.tsx's editToolbar consumer. Only PageTabs (a sibling, not part of
-     this group) stays visible in .builder-header at this width. */
-  .builder-header-stage {
-    display: none;
-  }
-
-  .form-top-nav-edit-toolbar {
-    display: flex;
-  }
-
-  /* Page selector gets its own centered row at the top of the canvas, ahead of the
-     collapse handle — the one control worth calling out now that Cancel/Done/Actions
-     have moved to the top nav. width: 100% forces the wrap onto its own line (a plain
-     flex item, order: -1 puts it first); justify-content: center then centers the pill
-     itself within that full-width line without stretching the pill's own background. */
-  .builder-header-page-row {
-    display: flex;
-    order: -1;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .builder-workspace,
-  .builder-workspace--readonly {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .builder {
-    max-width: none;
-  }
-
-  /* Replaced by the bottom tab bar (.builder-mobile-tabbar) below — a persistent sidebar
-     doesn't fit next to a one-column canvas on a phone-width screen. */
-  .builder-palette {
-    display: none;
-  }
-
-  .builder-mobile-tabbar {
-    display: flex;
-  }
-
-  /* .builder-palette (and its in-place field-settings swap) is hidden above, so the
-     centered "Edit field" modal becomes the only way to reach field settings at this
-     width — turn it back on to match. */
-  .modal-overlay--mobile-only {
-    display: flex;
-  }
-
-  .builder-canvas-column,
-  .builder-workspace--readonly .builder-canvas-column {
-    width: 100%;
-    max-width: none;
-    padding: 1rem 0.85rem 5rem;
-  }
-
-  /* Six-odd controls (save status, page selector, Share, kebab, Publish) don't fit one
-     pill-shaped row at phone widths — wrap rather than overflow, which would otherwise
-     get clipped by .admin-main's overflow-x guard. Gap/padding shrunk too — with
-     Cancel/Done/Actions moved out to the top nav, this floating chip now only has the
-     handle and the centered page row to hold, so it doesn't need as much breathing room. */
-  .builder-header {
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    row-gap: 0.35rem;
-    padding: 0.35rem 0.5rem;
-    border-radius: var(--radius-md);
-  }
-
-  .builder-header-handle {
-    width: 1.6rem;
-    height: 1.6rem;
-  }
-
-  /* Prev/next arrows give way to the dropdown alone once space is tight — every page
-     is still reachable from the panel it opens. Add page (also a .page-switcher-step)
-     stays visible; it has no other way to reach the same action. */
-  .page-switcher-step:not(.page-switcher-add) {
-    display: none;
-  }
-
-  .page-switcher {
-    padding: 0.15rem;
-    gap: 0.05rem;
-  }
-
-  .page-switcher-step {
-    width: 1.4rem;
-    height: 1.4rem;
-  }
-
-  .page-switcher-trigger {
-    padding: 0.22rem 0.5rem;
-  }
-
-  .page-switcher-trigger-label {
-    max-width: 9rem;
-    font-size: 0.8rem;
-  }
-
-  .page-switcher-trigger-count {
-    display: inline;
-    color: var(--color-text-subtle);
-    font-weight: 500;
-  }
-
-  .canvas {
-    padding: 1.1rem 0.9rem 5rem;
-  }
 }
 
-/* Phones — the 900px rules above already hide the palette in favor of the mobile bottom
-   tab bar; this tightens spacing further and shrinks the field-settings modal so both
-   fit narrow screens without horizontal scrolling or clipped content. */
-@media (max-width: 640px) {
-  .builder-canvas-column {
-    padding: 1rem 0.75rem 5rem;
-  }
-
-  .builder-mobile-tabbar-btn {
-    font-size: 0.625rem;
-  }
-
-  .builder-header {
-    padding: 0.3rem 0.45rem;
-  }
-
-  .page-tab-rename-input {
-    width: 7rem;
-  }
-
-  .modal-overlay {
-    padding: 0.75rem;
-  }
-
-  .modal-card {
-    padding: 1.1rem;
-    max-height: calc(100vh - 1.5rem);
-  }
-
-  .modal-title {
-    font-size: 1.0625rem;
-  }
-}
+/* NOTE: the builder-specific mobile overrides that used to live in this early
+   @media (max-width: 900px)/(max-width: 640px) pair were moved down to just after their
+   own unconditional base rules (search "BUILDER MOBILE OVERRIDES" further down this
+   file, near .page-tab-rename-input). Every one of them shared a selector with a later,
+   equal-specificity base declaration (.builder-palette, .builder-header, .canvas,
+   .page-switcher and friends, .modal-overlay/.modal-card/.modal-title, etc.) — CSS
+   breaks ties between equal-specificity rules by source order, not by which @media
+   block "sounds" more specific, so sitting *before* those base rules meant the base's
+   later declaration silently won on every conflicting property and these overrides did
+   nothing at any width. Moving them after fixes that without resorting to !important or
+   inflating specificity with extra ancestor classes. */
 
 @media (max-width: 768px) {
   /* Below 768px the sidebar stops being a desktop rail and becomes a slide-in overlay,
@@ -10087,6 +9952,166 @@ textarea.text-input {
   padding: 0.2rem 0.4rem;
   font-size: 0.75rem;
   width: 100%;
+}
+
+/* BUILDER MOBILE OVERRIDES — relocated here (see the note left in their old spot,
+   right after .form-top-nav-tab's mobile rule) so every selector below sits *after*
+   its own unconditional base declaration in the cascade. All of them share a selector
+   with a same-specificity base rule (.builder-palette, .builder-header, .canvas,
+   .page-switcher-trigger-label, .modal-card, etc.), and CSS resolves an equal-specificity
+   tie by source order alone — a @media block earlier in the file loses to a plain,
+   always-applies rule later in the file even though the media condition is the "more
+   specific" one conceptually. This is what was silently breaking every one of these:
+   the mobile palette never actually hid, the bottom tab bar never actually showed, the
+   page selector never actually centered, and the header/canvas padding never actually
+   shrank, regardless of viewport width. */
+@media (max-width: 900px) {
+  /* .form-top-nav-edit-toolbar (next to Actions) takes over for this below 900px —
+     see form-top-nav.tsx's editToolbar consumer. Only PageTabs (a sibling, not part of
+     this group) stays visible in .builder-header at this width. */
+  .builder-header-stage {
+    display: none;
+  }
+
+  .form-top-nav-edit-toolbar {
+    display: flex;
+  }
+
+  /* Page selector gets its own centered row at the top of the canvas, ahead of the
+     collapse handle — the one control worth calling out now that Cancel/Done/Actions
+     have moved to the top nav. width: 100% forces the wrap onto its own line (a plain
+     flex item, order: -1 puts it first); justify-content: center then centers the pill
+     itself within that full-width line without stretching the pill's own background. */
+  .builder-header-page-row {
+    display: flex;
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .builder-workspace,
+  .builder-workspace--readonly {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .builder {
+    max-width: none;
+  }
+
+  /* Replaced by the bottom tab bar (.builder-mobile-tabbar) below — a persistent sidebar
+     doesn't fit next to a one-column canvas on a phone-width screen. */
+  .builder-palette {
+    display: none;
+  }
+
+  .builder-mobile-tabbar {
+    display: flex;
+  }
+
+  /* .builder-palette (and its in-place field-settings swap) is hidden above, so the
+     centered "Edit field" modal becomes the only way to reach field settings at this
+     width — turn it back on to match. */
+  .modal-overlay--mobile-only {
+    display: flex;
+  }
+
+  .builder-canvas-column,
+  .builder-workspace--readonly .builder-canvas-column {
+    width: 100%;
+    max-width: none;
+    padding: 1rem 0.85rem 5rem;
+  }
+
+  /* Six-odd controls (save status, page selector, Share, kebab, Publish) don't fit one
+     pill-shaped row at phone widths — wrap rather than overflow, which would otherwise
+     get clipped by .admin-main's overflow-x guard. Gap/padding shrunk too — with
+     Cancel/Done/Actions moved out to the top nav, this floating chip now only has the
+     handle and the centered page row to hold, so it doesn't need as much breathing room. */
+  .builder-header {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    row-gap: 0.35rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--radius-md);
+  }
+
+  .builder-header-handle {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  /* Prev/next arrows give way to the dropdown alone once space is tight — every page
+     is still reachable from the panel it opens. Add page (also a .page-switcher-step)
+     stays visible; it has no other way to reach the same action. */
+  .page-switcher-step:not(.page-switcher-add) {
+    display: none;
+  }
+
+  .page-switcher {
+    padding: 0.15rem;
+    gap: 0.05rem;
+  }
+
+  .page-switcher-step {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  .page-switcher-trigger {
+    padding: 0.22rem 0.5rem;
+  }
+
+  .page-switcher-trigger-label {
+    max-width: 9rem;
+    font-size: 0.8rem;
+  }
+
+  .page-switcher-trigger-count {
+    display: inline;
+    color: var(--color-text-subtle);
+    font-weight: 500;
+  }
+
+  .canvas {
+    padding: 1.1rem 0.9rem 5rem;
+  }
+}
+
+/* Phones — the 900px rules above already hide the palette in favor of the mobile bottom
+   tab bar; this tightens spacing further and shrinks the field-settings modal so both
+   fit narrow screens without horizontal scrolling or clipped content. */
+@media (max-width: 640px) {
+  .builder-canvas-column {
+    padding: 1rem 0.75rem 5rem;
+  }
+
+  .builder-mobile-tabbar-btn {
+    font-size: 0.625rem;
+  }
+
+  .builder-header {
+    padding: 0.3rem 0.45rem;
+  }
+
+  .page-tab-rename-input {
+    width: 7rem;
+  }
+
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+
+  .modal-card {
+    padding: 1.1rem;
+    max-height: calc(100vh - 1.5rem);
+  }
+
+  .modal-title {
+    font-size: 1.0625rem;
+  }
 }
 
 .page-tab-move,

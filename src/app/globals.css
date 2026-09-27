@@ -20427,6 +20427,14 @@ textarea.form-field-input {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
+  width: 100%;
+  min-width: 0;
+}
+
+.org-settings-stack > * {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .org-settings-stack > .org-identity,
@@ -21030,7 +21038,7 @@ textarea.form-field-input {
   }
 
   .org-settings-stack {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   /* align-items: stretch (not the flex default's opposite, flex-start) — .org-identity-copy
@@ -21044,6 +21052,10 @@ textarea.form-field-input {
   .org-identity {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .org-identity-copy {
+    width: 100%;
   }
 
   .org-row,

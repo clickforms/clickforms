@@ -1298,7 +1298,11 @@ a {
   box-shadow: none;
 }
 
-.form-settings-choice input {
+/* Visually hides only the native radio (a custom .form-settings-choice-radio span
+ * renders the checked state instead) — scoped to [type="radio"] specifically so this
+ * doesn't also swallow the "Custom address" option's nested email <input>, which needs
+ * to stay visible and clickable. */
+.form-settings-choice input[type="radio"] {
   position: absolute;
   opacity: 0;
   pointer-events: none;

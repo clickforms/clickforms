@@ -1246,36 +1246,24 @@ export function BuilderClient({
               className="modal-card builder-mobile-palette-card"
               role="dialog"
               aria-modal="true"
-              aria-labelledby="mobile-palette-modal-title"
+              aria-label="Add a field"
               onMouseDown={(event) => event.stopPropagation()}
             >
-              <div className="modal-header">
-                <h2 className="modal-title" id="mobile-palette-modal-title">
-                  Add a field
-                </h2>
-                <div className="modal-header-actions">
-                  <button
-                    type="button"
-                    className="modal-close"
-                    onClick={() => setMobileRailPanel(null)}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-              <div className="builder-mobile-palette-body">
-                <FieldPalette
-                  onAddField={(type) => {
-                    handleAddField(type);
-                    setMobileRailPanel(null);
-                  }}
-                  onAddColumnLayout={(columns) => {
-                    handleAddColumnLayout(columns);
-                    setMobileRailPanel(null);
-                  }}
-                />
-              </div>
+              {/* No separate "Add a field" modal-header here — FieldPalette renders its
+                  own "Form fields" title row with the close button on its far right (see
+                  field-palette.tsx's onClose prop), so there's only ever one header row,
+                  not two stacked on top of each other. */}
+              <FieldPalette
+                onAddField={(type) => {
+                  handleAddField(type);
+                  setMobileRailPanel(null);
+                }}
+                onAddColumnLayout={(columns) => {
+                  handleAddColumnLayout(columns);
+                  setMobileRailPanel(null);
+                }}
+                onClose={() => setMobileRailPanel(null)}
+              />
             </div>
           </div>
         ) : null}

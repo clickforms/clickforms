@@ -964,9 +964,16 @@ function paletteIconTone(type: FieldType): string {
 export function FieldPalette({
   onAddField,
   onAddColumnLayout,
+  onClose,
 }: {
   onAddField: (type: FieldType) => void;
   onAddColumnLayout: (columns: ColumnCount) => void;
+  /** Only passed by the mobile "Add Element" modal (builder-client.tsx) — the desktop
+   * sidebar instance has nothing to close, so it stays undefined there and no close
+   * button renders. Putting the close button in this component's own title row (rather
+   * than a separate modal-header wrapper above it) means it can never end up on a row
+   * that scrolls out of view before this component's own title does. */
+  onClose?: () => void;
 }) {
   const [search, setSearch] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -1025,50 +1032,68 @@ export function FieldPalette({
 
   return (
     <div className="field-palette">
-      <h2 className="field-palette-title">Form fields</h2>
-      <label className="palette-search">
-        <span className="palette-search-icon">
-          <SearchIcon />
-        </span>
-        <input
-          type="text"
-          placeholder="Search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-      </label>
-      <div className="palette-groups">
-        {filteredGroups.map((group) => {
-          const collapsed = !query && collapsedGroups[group.label] === true;
-          return (
-            <div key={group.label} className="palette-group">
-              <button
-                type="button"
-                className="palette-group-toggle"
-                onClick={() =>
-                  setCollapsedGroups((prev) => ({ ...prev, [group.label]: !prev[group.label] }))
-                }
-                aria-expanded={!collapsed}
-              >
-                <span className="palette-group-label">{group.label}</span>
-                <ChevronIcon open={!collapsed} />
-              </button>
-              {collapsed ? null : (
-                <div className="palette-list">
-                  {group.types.map((type) => (
-                    <PaletteButton key={type} type={type} onAdd={onAddField} />
-                  ))}
-                  {group.columnCounts.map((columns) => (
-                    <ColumnLayoutButton key={columns} columns={columns} onAdd={onAddColumnLayout} />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {filteredGroups.length === 0 ? (
-          <p className="palette-empty">No fields match &ldquo;{search}&rdquo;.</p>
+      <div className="field-palette-header">
+        <h2 className="field-palette-title">Form fields</h2>
+        {onClose ? (
+          <button
+            type="button"
+            className="modal-close field-palette-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            ×
+          </button>
         ) : null}
+      </div>
+      <div className="field-palette-body">
+        <label className="palette-search">
+          <span className="palette-search-icon">
+            <SearchIcon />
+          </span>
+          <input
+            type="text"
+            placeholder="Search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </label>
+        <div className="palette-groups">
+          {filteredGroups.map((group) => {
+            const collapsed = !query && collapsedGroups[group.label] === true;
+            return (
+              <div key={group.label} className="palette-group">
+                <button
+                  type="button"
+                  className="palette-group-toggle"
+                  onClick={() =>
+                    setCollapsedGroups((prev) => ({ ...prev, [group.label]: !prev[group.label] }))
+                  }
+                  aria-expanded={!collapsed}
+                >
+                  <span className="palette-group-label">{group.label}</span>
+                  <ChevronIcon open={!collapsed} />
+                </button>
+                {collapsed ? null : (
+                  <div className="palette-list">
+                    {group.types.map((type) => (
+                      <PaletteButton key={type} type={type} onAdd={onAddField} />
+                    ))}
+                    {group.columnCounts.map((columns) => (
+                      <ColumnLayoutButton
+                        key={columns}
+                        columns={columns}
+                        onAdd={onAddColumnLayout}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {filteredGroups.length === 0 ? (
+            <p className="palette-empty">No fields match &ldquo;{search}&rdquo;.</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

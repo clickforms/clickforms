@@ -8117,20 +8117,32 @@ textarea.text-input {
   background-color: var(--color-surface-sunken);
 }
 
-/* .modal-header's sticky offset (see its own comment) is negative-margined to match
- * .modal-card's 1.5rem padding — this card uses its own smaller padding instead, so the
- * offset needs its own matching override or the sticky header ends up misaligned
- * (a gap above it, or the rounded corners landing in the wrong place). */
-.builder-mobile-palette-card .modal-header {
-  top: -1.1rem;
-  margin: -1.1rem -1rem 1.25rem;
-  padding: 1.1rem 1rem 1rem;
-}
-
+/* This is the FieldPalette's own header/body split (see field-palette.tsx +
+ * .field-palette-header/.field-palette-body) taking over from the .modal-header +
+ * .builder-mobile-palette-body pattern the Design/Logic modals use above — the "Add
+ * Element" modal has no separate "Add a field" title bar at all anymore, just
+ * FieldPalette's own "Form fields" row with its close button on the right. Same flex
+ * column reasoning as .builder-mobile-palette-card itself: header a non-shrinking flex
+ * item, body the one thing that scrolls, so the close button can never end up on a row
+ * that scrolls out of view. */
 .builder-mobile-palette-card .field-palette {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   border: none;
   box-shadow: none;
   padding: 0;
+}
+
+.builder-mobile-palette-card .field-palette-header {
+  flex-shrink: 0;
+}
+
+.builder-mobile-palette-card .field-palette-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .builder-save-status {
@@ -8196,8 +8208,21 @@ textarea.text-input {
   height: fit-content;
 }
 
-.field-palette-title {
+/* Title row, and (only in the mobile modal — onClose is undefined on the desktop
+ * sidebar instance) its close button on the far right. Kept as this component's own
+ * title row rather than a separate modal-header wrapper above it, specifically so the
+ * close button can never end up on a row that scrolls away before this one does — see
+ * .builder-mobile-palette-card .field-palette below for how that's enforced. */
+.field-palette-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   margin: 0 0 0.85rem;
+}
+
+.field-palette-title {
+  margin: 0;
   padding: 0 0.15rem;
   font-family: var(--font-poppins), var(--font-body);
   font-size: 0.9375rem;
@@ -8205,6 +8230,10 @@ textarea.text-input {
   letter-spacing: -0.01em;
   text-transform: none;
   color: var(--builder-text);
+}
+
+.field-palette-close {
+  flex-shrink: 0;
 }
 
 /* Matches .forms-search: white pill, grey border, lavender focus. */

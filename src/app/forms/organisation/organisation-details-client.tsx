@@ -785,23 +785,14 @@ export function OrganisationDetailsClient({
               ) : null}
             </div>
             <div className="org-plan-summary-actions">
-              <Link href="/pricing" className="button button--secondary button--small">
-                Compare plans
-              </Link>
               {/* Deliberately a separate page (/forms/organisation/plan) rather than the
                * grid of every tier's price sitting inline here — a subscribed org that
                * checks this page regularly (to see usage, say) would otherwise be shown
                * cheaper/other plans on every visit even when they're not looking to
                * switch, which nudges toward downgrading rather than just informing. This
                * button is the deliberate "I want to change plan" action instead. */}
-              <Link
-                href="/forms/organisation/plan"
-                className={`button button--small ${planInfo.status === 'active' ? 'button--secondary' : 'button--dark'}`}
-              >
+              <Link href="/forms/organisation/plan" className="button button--dark button--small">
                 {planInfo.status === 'trial' ? 'Choose a plan' : 'Change plan'}
-              </Link>
-              <Link href="/contact" className="button button--ghost button--small">
-                Contact us
               </Link>
             </div>
           </section>

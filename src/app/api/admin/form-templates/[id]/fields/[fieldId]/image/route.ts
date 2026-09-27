@@ -41,13 +41,23 @@ async function getTemplateField(templateId: string, fieldId: string) {
 export async function GET(_request: Request, { params }: RouteContext): Promise<NextResponse> {
   try {
     const session = await requireSession();
-    requirePlatformAdmin(session);
     const { id, fieldId } = await params;
 
     const result = await getTemplateField(id, fieldId);
     const storageKey = result?.field.imageStorageKey;
     if (!result || !storageKey) {
       return NextResponse.json({ error: 'This field has no uploaded image.' }, { status: 404 });
+    }
+
+    // Reading a published template's field image needs to work for any signed-in user,
+    // not just platform admins — this route also backs the read-only template preview
+    // (src/app/template-preview/[id]/page.tsx) opened from the org-side "Choose a
+    // template" gallery (template-preview-modal.tsx's iframe), which any org user can
+    // reach. Only an unpublished (draft/archived) template — visible solely through the
+    // admin template builder — still requires platform admin, matching the exact status
+    // gate the preview page itself already uses.
+    if (result.template.status !== 'published') {
+      requirePlatformAdmin(session);
     }
 
     if (

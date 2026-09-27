@@ -6,9 +6,13 @@
  * route for why it exists) renders a draft through this same public renderer, so it needs
  * `preferFormId: true` to resolve field images against the draft instead of 404ing.
  *
- * `templateId` is a third, separate case: the platform-admin template builder (see
- * template-builder-client.tsx), where the field lives on a FormTemplate rather than a
- * Form. Checked first since a template context never also has a real formId/slug. */
+ * `templateId` is a third, separate case: the field lives on a FormTemplate rather than a
+ * Form. Checked first since a template context never also has a real formId/slug. Two
+ * different callers hit this: the platform-admin template builder (any status) and the
+ * read-only /template-preview/[id] route any signed-in org user reaches from the
+ * "Choose a template" gallery (published only) — the route itself
+ * (api/admin/form-templates/[id]/fields/[fieldId]/image) enforces that published/draft
+ * split on GET, so it's safe for this function to hand out the same URL to both. */
 export function getFieldImageSrc(params: {
   fieldId: string;
   formId?: string;

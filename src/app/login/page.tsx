@@ -87,9 +87,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             ))}
           </ul>
 
-          <p className="signup-aside-footnote">
-            <Link href="/">← Back to home</Link>
-          </p>
+          <Link href="/" className="signup-aside-home">
+            <span aria-hidden="true">←</span>
+            Back to home
+          </Link>
         </aside>
 
         <section className="signup-panel" aria-labelledby="login-panel-title">

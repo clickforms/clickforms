@@ -9,12 +9,12 @@ import type { OrgPlan, OrgStatus } from '@prisma/client';
 // them from here would drag that whole server-only chain into the client bundle.
 
 /**
- * Hardcoded plan tiers for the /admin billing page and the public /pricing page (see
- * src/components/landing/landing-pricing.tsx — keep the two in sync by hand, there's no
- * shared source of truth yet). No payment provider is wired up — these are the caps
- * platform admins reference when deciding whether an org needs to be upgraded, not an
- * enforced quota (nothing currently blocks a form/user/submission from being created past
- * its plan's limit — see the pending enforcement work).
+ * Hardcoded plan tiers referenced across the admin billing surfaces and the public
+ * /pricing page. No payment provider is wired up — these are the caps platform admins
+ * reference when deciding whether an org needs to be upgraded, not an enforced quota
+ * (nothing currently blocks a form/user/submission from being created past its plan's
+ * limit — see the pending enforcement work). See PLAN_PRICING below for the matching
+ * dollar amounts, now a single shared source rather than hand-duplicated per page.
  * `null` means unlimited.
  */
 export interface PlanLimits {
@@ -83,6 +83,24 @@ export const PLAN_ORDER = [
   'professional',
   'enterprise',
 ] as const satisfies readonly OrgPlan[];
+
+/** AUD per month, display-only — no payment provider is wired up, so these numbers are
+ * orientation, not a charge. Single source of truth for the public /pricing page
+ * (src/components/landing/landing-pricing.tsx) and the in-app Organisation > Billing
+ * "Change plan" cards (src/app/forms/organisation/organisation-details-client.tsx), so
+ * the two can no longer drift out of sync with each other the way they previously did.
+ * `null` means "custom" (Enterprise) — no number is shown, just a "Contact us" CTA. */
+export interface PlanPricing {
+  monthly: number | null;
+  annual: number | null;
+}
+
+export const PLAN_PRICING: Record<OrgPlan, PlanPricing> = {
+  standard: { monthly: 82, annual: 72 },
+  business: { monthly: 129, annual: 109 },
+  professional: { monthly: 219, annual: 185 },
+  enterprise: { monthly: null, annual: null },
+};
 
 /** The qualitative perks in PlanLimits that don't reduce to a usage bar — shared between
  * the platform-admin /admin/billing org cards and the org-facing Organisation settings

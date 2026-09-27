@@ -21,6 +21,7 @@ import {
   PLAN_LABELS,
   PLAN_LIMITS,
   PLAN_ORDER,
+  PLAN_PRICING,
   type PlanUsage,
 } from '@/lib/admin/plan-limits';
 import { getErrorMessage, readApiError } from '@/lib/error-message';
@@ -31,15 +32,6 @@ import { isCroppableImage } from '@/lib/forms/crop-image';
  * duplication already done for MAX_UPLOAD_SIZE_BYTES in src/app/forms/files/files-client.tsx). */
 const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
 const LOGO_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
-
-/** Display-only prices matching src/components/landing/landing-pricing.tsx — no
- * payment provider is wired, so these are orientation, not a charge. */
-const PLAN_PRICE: Record<OrgPlan, string> = {
-  standard: '$49',
-  business: '$129',
-  professional: '$219',
-  enterprise: 'Custom',
-};
 
 export interface OrganizationProfile {
   id: string;
@@ -77,18 +69,22 @@ const PLAN_STATUS_BADGE_CLASS: Record<OrgStatus, string> = {
 };
 
 function formatPlanDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-AU', {
+  return new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString('en-AU', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   });
 }
 
-/** Whole days remaining until `iso`, floored at 0 rather than going negative — an already-
- * expired trial is shown as its own distinct message (see the render below), not "-2 days". */
+/** Calendar days from today to `iso`, using the date portion only so a trial set for
+ * today is "0" (ends today) rather than "1" from leftover hours until midnight. */
 function daysUntil(iso: string): number {
-  const diffMs = new Date(iso).getTime() - Date.now();
-  return Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+  const now = new Date();
+  const [year, month, day] = iso.slice(0, 10).split('-').map(Number);
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const targetUtc = Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
+  return Math.round((targetUtc - todayUtc) / (24 * 60 * 60 * 1000));
 }
 
 /** Which of the four usage bars would already be over `targetPlan`'s cap given current
@@ -245,6 +241,10 @@ export function OrganisationDetailsClient({
   const [selectedPlan, setSelectedPlan] = useState<OrgPlan>(plan.plan);
   const [isChangingPlan, setIsChangingPlan] = useState(false);
   const [planChangeError, setPlanChangeError] = useState<string | null>(null);
+  // Preview-only — doesn't affect which plan gets saved, just which of the two prices
+  // PLAN_PRICING has for each tier is shown on the cards below (mirrors the public
+  // /pricing page's toggle, see landing-pricing.tsx).
+  const [billingAnnual, setBillingAnnual] = useState(true);
   const overLimitLabels = useMemo(
     () => computeOverLimitLabels(selectedPlan, planInfo.usage),
     [selectedPlan, planInfo.usage],
@@ -825,12 +825,14 @@ export function OrganisationDetailsClient({
                   {planInfo.status === 'trial'
                     ? trialDays > 0
                       ? `Trial ends in ${trialDays} day${trialDays === 1 ? '' : 's'}`
-                      : 'Trial ended'
+                      : trialDays === 0
+                        ? 'Trial ends today'
+                        : 'Trial ended'
                     : 'Organisation suspended'}
                 </p>
                 <p className="org-banner-body">
                   {planInfo.status === 'trial' && planInfo.trialEndsAt ? (
-                    trialDays > 0 ? (
+                    trialDays >= 0 ? (
                       <>
                         Pick a plan before {formatPlanDate(planInfo.trialEndsAt)} to keep using
                         Clickforms without interruption.
@@ -927,6 +929,25 @@ export function OrganisationDetailsClient({
                   Select a tier, then confirm. Existing data is never deleted.
                 </HelpTip>
               </h2>
+              <div className="org-plan-toggle">
+                <button
+                  type="button"
+                  className="org-plan-toggle-btn"
+                  data-active={!billingAnnual || undefined}
+                  onClick={() => setBillingAnnual(false)}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  className="org-plan-toggle-btn"
+                  data-active={billingAnnual || undefined}
+                  onClick={() => setBillingAnnual(true)}
+                >
+                  Annual
+                  <span className="org-plan-toggle-save">Save ~15%</span>
+                </button>
+              </div>
             </header>
             {planChangeError ? (
               <p className="form-error org-settings-error" role="alert">
@@ -937,6 +958,9 @@ export function OrganisationDetailsClient({
               {PLAN_ORDER.map((planOption) => {
                 const current = planOption === planInfo.plan;
                 const selected = planOption === selectedPlan;
+                const price = billingAnnual
+                  ? PLAN_PRICING[planOption].annual
+                  : PLAN_PRICING[planOption].monthly;
                 return (
                   <button
                     key={planOption}
@@ -951,11 +975,20 @@ export function OrganisationDetailsClient({
                       {current ? <span className="org-plan-card-badge">Current</span> : null}
                     </span>
                     <span className="org-plan-card-price">
-                      {PLAN_PRICE[planOption]}
-                      {PLAN_PRICE[planOption] !== 'Custom' ? (
-                        <span className="org-plan-card-period"> / mo</span>
-                      ) : null}
+                      {price === null ? (
+                        'Custom'
+                      ) : (
+                        <>
+                          ${price}
+                          <span className="org-plan-card-period"> / mo</span>
+                        </>
+                      )}
                     </span>
+                    {price !== null ? (
+                      <p className="org-plan-card-billing-note">
+                        {billingAnnual ? 'billed annually' : 'billed monthly'}
+                      </p>
+                    ) : null}
                     <ul className="org-plan-card-limits">
                       {planLimitLines(planOption).map((line) => (
                         <li key={line}>{line}</li>

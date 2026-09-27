@@ -1,16 +1,15 @@
 'use client';
 
+import type { OrgPlan } from '@prisma/client';
 import Link from 'next/link';
 import { useState } from 'react';
 import { CheckIcon, StarIcon } from '@/components/landing/landing-icons';
+import { PLAN_PRICING } from '@/lib/admin/plan-limits';
 
 interface PricingTier {
-  id: string;
+  id: OrgPlan;
   name: string;
   description: string;
-  /** AUD per month. null means "custom" (Enterprise) — no number is shown. */
-  monthly: number | null;
-  annual: number | null;
   badge?: string;
   limits: readonly string[];
   features: readonly string[];
@@ -18,13 +17,14 @@ interface PricingTier {
   ctaHref: string;
 }
 
+// Dollar amounts live in PLAN_PRICING (src/lib/admin/plan-limits.ts) — the single shared
+// source with the Organisation > Billing "Change plan" cards — so only the copy/limits
+// that are unique to the marketing page stay here.
 const TIERS: readonly PricingTier[] = [
   {
     id: 'standard',
     name: 'Standard',
     description: 'A single admin getting intake and consent off paper.',
-    monthly: 49,
-    annual: 42,
     limits: ['10 forms', '1 user', '500 MB storage', '1,000 submissions / month'],
     features: ['Signatures & file uploads', 'Conditional logic', 'PDF exports', 'Email support'],
     ctaLabel: 'Start free trial',
@@ -34,8 +34,6 @@ const TIERS: readonly PricingTier[] = [
     id: 'business',
     name: 'Business',
     description: 'A growing team running intake across multiple programs.',
-    monthly: 129,
-    annual: 109,
     badge: 'Most popular',
     limits: ['50 forms', '15 users', '10 GB storage', '10,000 submissions / month'],
     features: [
@@ -51,8 +49,6 @@ const TIERS: readonly PricingTier[] = [
     id: 'professional',
     name: 'Professional',
     description: 'Multiple departments, one shared workspace.',
-    monthly: 219,
-    annual: 185,
     limits: ['Unlimited forms', '50 users', '50 GB storage', '30,000 submissions / month'],
     features: ['Everything in Business', 'Custom domain', 'Priority email support'],
     ctaLabel: 'Start free trial',
@@ -62,8 +58,6 @@ const TIERS: readonly PricingTier[] = [
     id: 'enterprise',
     name: 'Enterprise',
     description: 'Custom compliance, infrastructure, or contract needs.',
-    monthly: null,
-    annual: null,
     limits: ['Unlimited forms', 'Unlimited users', 'Unlimited storage', 'Unlimited submissions'],
     features: [
       'Everything in Professional',
@@ -106,7 +100,7 @@ export function LandingPricing() {
 
         <div className="landing-pricing-grid">
           {TIERS.map((tier) => {
-            const price = annual ? tier.annual : tier.monthly;
+            const price = annual ? PLAN_PRICING[tier.id].annual : PLAN_PRICING[tier.id].monthly;
             return (
               <div
                 key={tier.id}

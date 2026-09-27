@@ -34,7 +34,15 @@ export default async function AdminIndexPage() {
     prisma.organization.findMany({
       orderBy: { createdAt: 'desc' },
       take: 10,
-      select: { id: true, name: true, subdomain: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        subdomain: true,
+        plan: true,
+        status: true,
+        trialEndsAt: true,
+        createdAt: true,
+      },
     }),
     // Cross-org, most-recent-first — same "plain prisma client, no single org to scope
     // by" exception as the rest of /admin (see src/lib/db.ts withOrgContext doc comment).
@@ -83,6 +91,9 @@ export default async function AdminIndexPage() {
         id: org.id,
         name: org.name,
         subdomain: org.subdomain,
+        plan: org.plan,
+        status: org.status,
+        trialEndsAt: org.trialEndsAt?.toISOString() ?? null,
         createdAt: org.createdAt.toISOString(),
         userCount: userCountByOrg.get(org.id) ?? 0,
         formCount: formCountByOrg.get(org.id) ?? 0,

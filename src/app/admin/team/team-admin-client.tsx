@@ -1,11 +1,109 @@
 'use client';
 
 import type { PlatformAdminRole } from '@prisma/client';
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { InviteTeamMemberModal } from '@/app/admin/team/invite-team-member-modal';
+import { DropdownMenu } from '@/components/dropdown-menu';
 import { useToast } from '@/components/toast';
 import { PLATFORM_ADMIN_ROLE_LABELS } from '@/lib/admin/platform-admin-roles';
 import { readApiError } from '@/lib/error-message';
+
+const TEAM_FILTERS = ['all', 'super_admin', 'support', 'pending'] as const;
+type TeamFilter = (typeof TEAM_FILTERS)[number];
+
+const TEAM_FILTER_LABELS: Record<TeamFilter, string> = {
+  all: 'All',
+  super_admin: 'Super admins',
+  support: 'Support',
+  pending: 'Pending',
+};
+
+function getInitials(name: string | null, email: string): string {
+  const source = name?.trim() || email;
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : (parts[0]?.[1] ?? '');
+  return `${first}${last}`.toUpperCase();
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function PlusIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="3.25" r="1.15" fill="currentColor" />
+      <circle cx="8" cy="8" r="1.15" fill="currentColor" />
+      <circle cx="8" cy="12.75" r="1.15" fill="currentColor" />
+    </svg>
+  );
+}
+
+function TeamRowMenu({
+  label,
+  busy,
+  items,
+}: {
+  label: string;
+  busy: boolean;
+  items: { label: string; danger?: boolean; onSelect: () => void }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <div className="actions-menu">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="admin-orgs-more"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Actions for ${label}`}
+        disabled={busy}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <MoreIcon />
+      </button>
+      <DropdownMenu open={open} onOpenChange={setOpen} triggerRef={triggerRef} align="end">
+        {/* biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern, matches DropdownMenu's usage elsewhere in the app */}
+        <ul role="menu">
+          {items.map((item) => (
+            <li key={item.label} role="none">
+              <button
+                type="button"
+                role="menuitem"
+                className={
+                  item.danger ? 'actions-menu-item actions-menu-item--danger' : 'actions-menu-item'
+                }
+                onClick={() => {
+                  setOpen(false);
+                  item.onSelect();
+                }}
+              >
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </DropdownMenu>
+    </div>
+  );
+}
 
 export interface PlatformAdminRow {
   id: string;
@@ -33,11 +131,38 @@ export function TeamAdminClient({
   initialPendingInvites: PendingTeamInvite[];
 }) {
   const toast = useToast();
-  const [admins] = useState(initialAdmins);
+  const [admins, setAdmins] = useState(initialAdmins);
   const [pendingInvites, setPendingInvites] = useState(initialPendingInvites);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [busyInviteId, setBusyInviteId] = useState<string | null>(null);
+  const [busyAdminId, setBusyAdminId] = useState<string | null>(null);
+  const [teamFilter, setTeamFilter] = useState<TeamFilter>('all');
+
+  const filterCounts = useMemo(() => {
+    const counts: Record<TeamFilter, number> = {
+      all: admins.length + pendingInvites.length,
+      super_admin: 0,
+      support: 0,
+      pending: pendingInvites.length,
+    };
+    for (const admin of admins) {
+      if (admin.role === 'super_admin') counts.super_admin += 1;
+      if (admin.role === 'support') counts.support += 1;
+    }
+    return counts;
+  }, [admins, pendingInvites]);
+
+  const visibleAdmins = useMemo(() => {
+    if (teamFilter === 'pending') return [];
+    if (teamFilter === 'all') return admins;
+    return admins.filter((admin) => admin.role === teamFilter);
+  }, [admins, teamFilter]);
+
+  const visibleInvites = useMemo(() => {
+    if (teamFilter === 'super_admin' || teamFilter === 'support') return [];
+    return pendingInvites;
+  }, [pendingInvites, teamFilter]);
 
   async function copyInviteLink(url: string, options?: { alsoResent?: boolean }) {
     try {
@@ -70,6 +195,24 @@ export function TeamAdminClient({
     }
   }
 
+  async function handleRemoveAdmin(admin: PlatformAdminRow) {
+    if (admin.isSelf) return;
+    setBusyAdminId(admin.id);
+    try {
+      const res = await fetch(`/api/admin/team/${admin.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        toast.error(await readApiError(res, 'Could not remove team member'));
+        return;
+      }
+      setAdmins((current) => current.filter((row) => row.id !== admin.id));
+      toast.success(`${admin.name ?? admin.email} removed from the team`);
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setBusyAdminId(null);
+    }
+  }
+
   async function handleRevokeInvite(inviteId: string) {
     setBusyInviteId(inviteId);
     try {
@@ -88,20 +231,45 @@ export function TeamAdminClient({
   }
 
   return (
-    <div className="settings-page">
-      <header className="settings-page-header">
-        <div className="users-page-header">
-          <div>
-            <h1 className="settings-page-title">Team</h1>
-            <p className="settings-page-lead">
-              Clickforms staff who can access /admin across every organisation.
-            </p>
-          </div>
-          <button type="button" className="button" onClick={() => setInviteModalOpen(true)}>
-            Invite platform admin
-          </button>
+    <div className="admin-orgs admin-orgs-directory admin-users-directory">
+      <header className="admin-orgs-header">
+        <div>
+          <h1 className="admin-orgs-title">Team</h1>
+          <p className="admin-orgs-lead">
+            Clickforms staff who can access admin across every organisation.
+          </p>
         </div>
+        <button
+          type="button"
+          className="button button--dark"
+          onClick={() => setInviteModalOpen(true)}
+        >
+          <PlusIcon /> Invite platform admin
+        </button>
       </header>
+
+      {admins.length + pendingInvites.length > 0 ? (
+        <section className="admin-orgs-directory-stats" aria-label="Team snapshot">
+          {TEAM_FILTERS.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              className={`admin-orgs-directory-stat${
+                teamFilter === filter ? ' admin-orgs-directory-stat--active' : ''
+              }${filter === 'pending' && filterCounts.pending > 0 ? ' admin-orgs-directory-stat--alert' : ''}`}
+              onClick={() => setTeamFilter(filter)}
+            >
+              <span className="admin-orgs-directory-stat-value">{filterCounts[filter]}</span>
+              <span className="admin-orgs-directory-stat-label">
+                {TEAM_FILTER_LABELS[filter]}
+                {filter === 'pending' && filterCounts.pending > 0 ? (
+                  <span className="admin-orgs-directory-stat-note">Needs review</span>
+                ) : null}
+              </span>
+            </button>
+          ))}
+        </section>
+      ) : null}
 
       {inviteLink ? (
         <div className="card users-invite-banner">
@@ -134,73 +302,125 @@ export function TeamAdminClient({
         </div>
       ) : null}
 
-      <div className="card users-table-card">
-        <table className="users-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Permission level</th>
-              <th>Joined</th>
-              <th aria-label="Actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {admins.length === 0 && pendingInvites.length === 0 ? (
+      <div className="card admin-orgs-card">
+        <div className="admin-table-scroll">
+          <table className="admin-orgs-table">
+            <thead>
               <tr>
-                <td colSpan={5} className="users-table-empty">
-                  No platform admins yet.
-                </td>
+                <th>Member</th>
+                <th>Permission</th>
+                <th>Joined</th>
+                <th>Actions</th>
               </tr>
-            ) : (
-              <>
-                {admins.map((admin) => (
-                  <tr key={admin.id}>
-                    <td>
-                      {admin.name ?? '—'}{' '}
-                      {admin.isSelf ? <span className="badge badge--neutral">You</span> : null}
-                    </td>
-                    <td>{admin.email}</td>
-                    <td>{PLATFORM_ADMIN_ROLE_LABELS[admin.role]}</td>
-                    <td>{new Date(admin.createdAt).toLocaleDateString('en-AU')}</td>
-                    <td />
-                  </tr>
-                ))}
-                {pendingInvites.map((invite) => (
-                  <tr key={invite.id} className="users-table-row--pending">
-                    <td>{invite.name ?? '—'}</td>
-                    <td>{invite.email}</td>
-                    <td>
-                      {PLATFORM_ADMIN_ROLE_LABELS[invite.role]}{' '}
-                      <span className="badge badge--draft">Pending invite</span>
-                    </td>
-                    <td>{new Date(invite.createdAt).toLocaleDateString('en-AU')}</td>
-                    <td>
-                      <div className="users-row-actions">
-                        <button
-                          type="button"
-                          className="button button--ghost button--small"
-                          disabled={busyInviteId === invite.id}
-                          onClick={() => void handleCopyInviteLink(invite.id)}
-                        >
-                          Resend invite
-                        </button>
-                        <button
-                          type="button"
-                          className="button button--ghost button--small users-row-action--danger"
-                          disabled={busyInviteId === invite.id}
-                          onClick={() => void handleRevokeInvite(invite.id)}
-                        >
-                          Revoke
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {visibleAdmins.length === 0 && visibleInvites.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="admin-table-empty">
+                    {admins.length + pendingInvites.length === 0
+                      ? 'No platform admins yet.'
+                      : 'No team members match that filter.'}
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {visibleAdmins.map((admin) => (
+                    <tr key={admin.id}>
+                      <td data-label="Member">
+                        <span className="admin-orgs-directory-identity">
+                          <span className="admin-orgs-directory-mark" aria-hidden="true">
+                            {getInitials(admin.name, admin.email)}
+                          </span>
+                          <span className="admin-orgs-directory-copy">
+                            <span className="admin-home-org-name-row">
+                              <span className="admin-orgs-name">
+                                {admin.name ?? 'Unnamed admin'}
+                              </span>
+                              {admin.isSelf ? (
+                                <span className="badge badge--neutral">You</span>
+                              ) : null}
+                            </span>
+                            <span className="admin-orgs-directory-subdomain">{admin.email}</span>
+                          </span>
+                        </span>
+                      </td>
+                      <td data-label="Permission">
+                        <span className="users-role-pill">
+                          {PLATFORM_ADMIN_ROLE_LABELS[admin.role]}
+                        </span>
+                      </td>
+                      <td data-label="Joined">{formatDate(admin.createdAt)}</td>
+                      <td data-label="Actions">
+                        {admin.isSelf ? (
+                          <span className="admin-templates-facet-empty">—</span>
+                        ) : (
+                          <TeamRowMenu
+                            label={admin.name ?? admin.email}
+                            busy={busyAdminId === admin.id}
+                            items={[
+                              {
+                                label: 'Remove from team',
+                                danger: true,
+                                onSelect: () => void handleRemoveAdmin(admin),
+                              },
+                            ]}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {visibleInvites.map((invite) => (
+                    <tr key={invite.id} className="users-table-row--pending">
+                      <td data-label="Member">
+                        <span className="admin-orgs-directory-identity">
+                          <span className="admin-orgs-directory-mark" aria-hidden="true">
+                            {getInitials(invite.name, invite.email)}
+                          </span>
+                          <span className="admin-orgs-directory-copy">
+                            <span className="admin-orgs-name">
+                              {invite.name ?? 'Invited admin'}
+                            </span>
+                            <span className="admin-orgs-directory-subdomain">{invite.email}</span>
+                          </span>
+                        </span>
+                      </td>
+                      <td data-label="Permission">
+                        <span className="users-role-pill">
+                          {PLATFORM_ADMIN_ROLE_LABELS[invite.role]}
+                        </span>{' '}
+                        <span className="badge badge--draft">Pending</span>
+                      </td>
+                      <td data-label="Joined">Invited {formatDate(invite.createdAt)}</td>
+                      <td data-label="Actions">
+                        <TeamRowMenu
+                          label={invite.name ?? invite.email}
+                          busy={busyInviteId === invite.id}
+                          items={[
+                            {
+                              label: 'Resend invite',
+                              onSelect: () => void handleCopyInviteLink(invite.id),
+                            },
+                            {
+                              label: 'Revoke invite',
+                              danger: true,
+                              onSelect: () => void handleRevokeInvite(invite.id),
+                            },
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="admin-orgs-footer">
+          <span>
+            {visibleAdmins.length + visibleInvites.length}{' '}
+            {visibleAdmins.length + visibleInvites.length === 1 ? 'member' : 'members'}
+          </span>
+        </div>
       </div>
 
       <InviteTeamMemberModal

@@ -124,16 +124,51 @@ function formatDate(iso: string): string {
   });
 }
 
+function formatTrialDate(iso: string): string {
+  return new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function getTrialNotice(trialEndsAt: string | null, status: OrgStatus) {
+  if (status !== 'trial' || !trialEndsAt) return null;
+
+  const now = new Date();
+  const trialDate = trialEndsAt.slice(0, 10).split('-').map(Number);
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const trialUtc = Date.UTC(trialDate[0] ?? 0, (trialDate[1] ?? 1) - 1, trialDate[2] ?? 1);
+  const daysRemaining = Math.round((trialUtc - todayUtc) / (24 * 60 * 60 * 1000));
+
+  if (daysRemaining < 0) {
+    return {
+      tone: 'expired',
+      title: 'Trial expired',
+      message: `This trial expired on ${formatTrialDate(trialEndsAt)}. Extend it or change the organisation’s status to Active.`,
+    } as const;
+  }
+
+  if (daysRemaining <= 7) {
+    return {
+      tone: 'warning',
+      title: daysRemaining === 0 ? 'Trial expires today' : `Trial expires in ${daysRemaining} days`,
+      message: `The trial ends on ${formatTrialDate(trialEndsAt)}. Review the plan now to avoid interrupting access.`,
+    } as const;
+  }
+
+  return null;
+}
+
 function OrgOverflowMenu({
   status,
   toggling,
   onToggleStatus,
-  onDelete,
 }: {
   status: OrgStatus;
   toggling: boolean;
   onToggleStatus: () => void;
-  onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -166,22 +201,6 @@ function OrgOverflowMenu({
               }}
             >
               {status === 'suspended' ? 'Reactivate organisation' : 'Suspend organisation'}
-            </button>
-          </li>
-          <li role="none">
-            <hr className="actions-menu-divider" />
-          </li>
-          <li role="none">
-            <button
-              type="button"
-              role="menuitem"
-              className="actions-menu-item actions-menu-item--danger"
-              onClick={() => {
-                setOpen(false);
-                onDelete();
-              }}
-            >
-              Delete organisation
             </button>
           </li>
         </ul>
@@ -306,6 +325,10 @@ function OrganisationDetailInner({
       nextTrialEndsAt !== currentTrialEndsAt
     );
   }, [plan, status, trialEndsAt, organization]);
+  const trialNotice = useMemo(
+    () => getTrialNotice(organization.trialEndsAt, organization.status),
+    [organization.trialEndsAt, organization.status],
+  );
 
   function handleStatusChange(nextStatus: OrgStatus) {
     setStatus(nextStatus);
@@ -486,7 +509,7 @@ function OrganisationDetailInner({
           // Cleared the moment status isn't 'trial' — see the AdminOrgProfile.trialEndsAt
           // comment above for why a stale date shouldn't linger once an org leaves trial.
           trialEndsAt:
-            status === 'trial' ? new Date(`${trialEndsAt}T00:00:00`).toISOString() : null,
+            status === 'trial' ? new Date(`${trialEndsAt}T23:59:59.999`).toISOString() : null,
         }),
       });
 
@@ -612,7 +635,6 @@ function OrganisationDetailInner({
             status={organization.status}
             toggling={isTogglingStatus}
             onToggleStatus={() => void handleToggleStatus()}
-            onDelete={() => setDeleteOpen(true)}
           />
         </div>
       </header>
@@ -628,6 +650,24 @@ function OrganisationDetailInner({
         </p>
       ) : null}
 
+      {trialNotice ? (
+        <aside
+          className={`admin-org-trial-alert admin-org-trial-alert--${trialNotice.tone}`}
+          aria-label="Trial expiry warning"
+        >
+          <span className="admin-org-trial-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <div>
+            <p className="admin-org-trial-alert-title">{trialNotice.title}</p>
+            <p className="admin-org-trial-alert-copy">{trialNotice.message}</p>
+          </div>
+          <a className="button button--secondary" href="#admin-org-plan">
+            Review trial
+          </a>
+        </aside>
+      ) : null}
+
       <section className="admin-org-stats" aria-label="Organisation snapshot">
         {stats.map((stat) => (
           <div key={stat.label} className="admin-org-stat">
@@ -637,186 +677,190 @@ function OrganisationDetailInner({
         ))}
       </section>
 
-      <section className="admin-org-panel">
-        <div className="admin-org-panel-header">
-          <div>
-            <h2 className="admin-org-panel-title">Plan &amp; trial</h2>
-            <p className="admin-org-panel-copy">
-              Assign a plan, or put this organisation on a trial with a custom end date — for a new
-              trial, extending one, or moving an existing paid org onto one without disturbing
-              anything else.
-            </p>
-          </div>
-        </div>
-
-        <form className="admin-org-form" onSubmit={handleSavePlan}>
-          {planError ? (
-            <p className="form-error" role="alert">
-              {planError}
-            </p>
-          ) : null}
-
-          <div className="admin-org-fields">
-            <label className="admin-org-field">
-              <span>Plan</span>
-              <select
-                className="text-input"
-                value={plan}
-                onChange={(event) => setPlan(event.target.value as OrgPlan)}
-                disabled={isSavingPlan}
-              >
-                {PLAN_ORDER.map((planOption) => (
-                  <option key={planOption} value={planOption}>
-                    {PLAN_LABELS[planOption]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="admin-org-field">
-              <span>Status</span>
-              <select
-                className="text-input"
-                value={status}
-                onChange={(event) => handleStatusChange(event.target.value as OrgStatus)}
-                disabled={isSavingPlan}
-              >
-                {(Object.keys(STATUS_LABELS) as OrgStatus[]).map((statusOption) => (
-                  <option key={statusOption} value={statusOption}>
-                    {STATUS_LABELS[statusOption]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="admin-org-field">
-              <span>Trial ends on</span>
-              <input
-                className="text-input"
-                type="date"
-                value={trialEndsAt}
-                onChange={(event) => setTrialEndsAt(event.target.value)}
-                disabled={isSavingPlan || status !== 'trial'}
-                required={status === 'trial'}
-              />
-            </label>
+      <div className="admin-org-main-grid">
+        <section id="admin-org-plan" className="admin-org-panel admin-org-panel--plan">
+          <div className="admin-org-panel-header">
+            <div>
+              <h2 className="admin-org-panel-title">Plan &amp; trial</h2>
+              <p className="admin-org-panel-copy">
+                Assign a plan, or put this organisation on a trial with a custom end date — for a
+                new trial, extending one, or moving an existing paid org onto one without disturbing
+                anything else.
+              </p>
+            </div>
           </div>
 
-          <div className="admin-org-form-actions">
+          <form className="admin-org-form" onSubmit={handleSavePlan}>
+            {planError ? (
+              <p className="form-error" role="alert">
+                {planError}
+              </p>
+            ) : null}
+
+            <div className="admin-org-fields">
+              <label className="admin-org-field">
+                <span>Plan</span>
+                <select
+                  className="text-input"
+                  value={plan}
+                  onChange={(event) => setPlan(event.target.value as OrgPlan)}
+                  disabled={isSavingPlan}
+                >
+                  {PLAN_ORDER.map((planOption) => (
+                    <option key={planOption} value={planOption}>
+                      {PLAN_LABELS[planOption]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="admin-org-field">
+                <span>Status</span>
+                <select
+                  className="text-input"
+                  value={status}
+                  onChange={(event) => handleStatusChange(event.target.value as OrgStatus)}
+                  disabled={isSavingPlan}
+                >
+                  {(Object.keys(STATUS_LABELS) as OrgStatus[]).map((statusOption) => (
+                    <option key={statusOption} value={statusOption}>
+                      {STATUS_LABELS[statusOption]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="admin-org-field">
+                <span>Trial ends on</span>
+                <input
+                  className="text-input"
+                  type="date"
+                  value={trialEndsAt}
+                  onChange={(event) => setTrialEndsAt(event.target.value)}
+                  disabled={isSavingPlan || status !== 'trial'}
+                  required={status === 'trial'}
+                />
+              </label>
+            </div>
+
+            <div className="admin-org-form-actions">
+              <button
+                type="submit"
+                className="button button--dark"
+                disabled={isSavingPlan || !isPlanDirty}
+              >
+                {isSavingPlan ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section className="admin-org-panel admin-org-panel--people">
+          <div className="admin-org-panel-header">
+            <div>
+              <h2 className="admin-org-panel-title">People</h2>
+              <p className="admin-org-panel-copy">Members and outstanding invites.</p>
+            </div>
             <button
-              type="submit"
+              type="button"
               className="button button--dark"
-              disabled={isSavingPlan || !isPlanDirty}
+              onClick={() => setInviteModalOpen(true)}
             >
-              {isSavingPlan ? 'Saving…' : 'Save changes'}
+              <PlusIcon /> Invite user
             </button>
           </div>
-        </form>
-      </section>
 
-      <section className="admin-org-panel">
-        <div className="admin-org-panel-header">
-          <div>
-            <h2 className="admin-org-panel-title">People</h2>
-            <p className="admin-org-panel-copy">Members and outstanding invites.</p>
-          </div>
-          <button
-            type="button"
-            className="button button--dark"
-            onClick={() => setInviteModalOpen(true)}
-          >
-            <PlusIcon /> Invite user
-          </button>
-        </div>
-
-        {inviteLink ? (
-          <div className="admin-org-invite-link">
-            <div>
-              <p className="admin-org-invite-link-title">Invite link ready</p>
-              <p className="admin-org-invite-link-copy">Share this with the person you invited.</p>
-            </div>
-            <div className="admin-org-invite-link-row">
-              <input
-                className="text-input"
-                readOnly
-                value={inviteLink}
-                onFocus={(event) => event.target.select()}
-              />
-              <button
-                type="button"
-                className="button button--ghost"
-                onClick={() => void copyInviteLink(inviteLink)}
-              >
-                Copy
-              </button>
-              <button
-                type="button"
-                className="button button--ghost"
-                onClick={() => setInviteLink(null)}
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {users.length === 0 && pendingInvites.length === 0 ? (
-          <p className="admin-org-empty">No people in this organisation yet.</p>
-        ) : (
-          <ul className="admin-org-people">
-            {users.map((user) => (
-              <li key={user.id} className="admin-org-person">
-                <span className="admin-org-person-avatar" aria-hidden="true">
-                  {getInitials(user.name, user.email)}
-                </span>
-                <span className="admin-org-person-copy">
-                  <span className="admin-org-person-name">{user.name ?? user.email}</span>
-                  <span className="admin-org-person-meta">{user.email}</span>
-                </span>
-                <span className="admin-org-person-role">{formatUserRole(user.role)}</span>
-                {user.id === currentUserId && access === 'member' ? (
-                  <button
-                    type="button"
-                    className="button button--ghost admin-org-person-leave"
-                    disabled={isLeaving}
-                    onClick={() => {
-                      void leave().then((ok) => {
-                        if (ok) void refresh();
-                      });
-                    }}
-                  >
-                    {isLeaving ? 'Leaving…' : 'Remove me'}
-                  </button>
-                ) : (
-                  <time className="admin-org-person-time" dateTime={user.createdAt}>
-                    {formatDate(user.createdAt)}
-                  </time>
-                )}
-              </li>
-            ))}
-            {pendingInvites.map((invite) => (
-              <li key={invite.id} className="admin-org-person admin-org-person--pending">
-                <span className="admin-org-person-avatar" aria-hidden="true">
-                  {getInitials(invite.name, invite.email)}
-                </span>
-                <span className="admin-org-person-copy">
-                  <span className="admin-org-person-name">{invite.name ?? invite.email}</span>
-                  <span className="admin-org-person-meta">
-                    {invite.email} · Invite expires {formatDate(invite.expiresAt)}
-                  </span>
-                </span>
-                <span className="admin-org-person-role">
-                  {formatUserRole(invite.role)}
-                  <span className="admin-org-pending-pill">Pending</span>
-                </span>
-                <InviteRowMenu
-                  busy={busyInviteId === invite.id}
-                  onResend={() => void handleCopyInviteLink(invite.id)}
-                  onRevoke={() => void handleRevokeInvite(invite.id)}
+          {inviteLink ? (
+            <div className="admin-org-invite-link">
+              <div>
+                <p className="admin-org-invite-link-title">Invite link ready</p>
+                <p className="admin-org-invite-link-copy">
+                  Share this with the person you invited.
+                </p>
+              </div>
+              <div className="admin-org-invite-link-row">
+                <input
+                  className="text-input"
+                  readOnly
+                  value={inviteLink}
+                  onFocus={(event) => event.target.select()}
                 />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  onClick={() => void copyInviteLink(inviteLink)}
+                >
+                  Copy
+                </button>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  onClick={() => setInviteLink(null)}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {users.length === 0 && pendingInvites.length === 0 ? (
+            <p className="admin-org-empty">No people in this organisation yet.</p>
+          ) : (
+            <ul className="admin-org-people">
+              {users.map((user) => (
+                <li key={user.id} className="admin-org-person">
+                  <span className="admin-org-person-avatar" aria-hidden="true">
+                    {getInitials(user.name, user.email)}
+                  </span>
+                  <span className="admin-org-person-copy">
+                    <span className="admin-org-person-name">{user.name ?? user.email}</span>
+                    <span className="admin-org-person-meta">{user.email}</span>
+                  </span>
+                  <span className="admin-org-person-role">{formatUserRole(user.role)}</span>
+                  {user.id === currentUserId && access === 'member' ? (
+                    <button
+                      type="button"
+                      className="button button--ghost admin-org-person-leave"
+                      disabled={isLeaving}
+                      onClick={() => {
+                        void leave().then((ok) => {
+                          if (ok) void refresh();
+                        });
+                      }}
+                    >
+                      {isLeaving ? 'Leaving…' : 'Remove me'}
+                    </button>
+                  ) : (
+                    <time className="admin-org-person-time" dateTime={user.createdAt}>
+                      {formatDate(user.createdAt)}
+                    </time>
+                  )}
+                </li>
+              ))}
+              {pendingInvites.map((invite) => (
+                <li key={invite.id} className="admin-org-person admin-org-person--pending">
+                  <span className="admin-org-person-avatar" aria-hidden="true">
+                    {getInitials(invite.name, invite.email)}
+                  </span>
+                  <span className="admin-org-person-copy">
+                    <span className="admin-org-person-name">{invite.name ?? invite.email}</span>
+                    <span className="admin-org-person-meta">
+                      {invite.email} · Invite expires {formatDate(invite.expiresAt)}
+                    </span>
+                  </span>
+                  <span className="admin-org-person-role">
+                    {formatUserRole(invite.role)}
+                    <span className="admin-org-pending-pill">Pending</span>
+                  </span>
+                  <InviteRowMenu
+                    busy={busyInviteId === invite.id}
+                    onResend={() => void handleCopyInviteLink(invite.id)}
+                    onRevoke={() => void handleRevokeInvite(invite.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
 
       <section className="admin-org-panel">
         <div className="admin-org-panel-header">

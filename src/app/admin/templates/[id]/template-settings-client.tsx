@@ -277,21 +277,43 @@ export function TemplateSettingsClient({
       </Link>
 
       <header className="admin-org-header">
-        <div>
-          <div className="admin-org-title-row">
-            <h1 className="admin-org-title">{initialTemplate.name}</h1>
-            <span className={`admin-template-status-chip admin-template-status-chip--${status}`}>
-              {STATUS_LABELS[status]}
-            </span>
+        <div className="admin-org-identity">
+          <span className="admin-template-mark" aria-hidden="true">
+            {thumbnailUrl ? (
+              // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
+              <img src={thumbnailUrl} alt="" />
+            ) : (
+              <PlaceholderThumbIcon />
+            )}
+          </span>
+          <div>
+            <div className="admin-org-title-row">
+              <h1 className="admin-org-title">{initialTemplate.name}</h1>
+              <span className={`admin-template-status-chip admin-template-status-chip--${status}`}>
+                {STATUS_LABELS[status]}
+              </span>
+            </div>
+            <p className="admin-org-meta">
+              {galleryFacets.length > 0 ? galleryFacets.join(' · ') : 'Uncategorised'}
+            </p>
           </div>
-          <p className="admin-org-meta">{STATUS_HINTS[status]}</p>
         </div>
-        <Link
-          href={`/admin/templates/${initialTemplate.id}/builder`}
-          className="button button--dark"
-        >
-          Open builder
-        </Link>
+        <div className="admin-org-header-actions">
+          <a
+            href={`/template-preview/${initialTemplate.id}`}
+            className="button button--ghost"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Preview
+          </a>
+          <Link
+            href={`/admin/templates/${initialTemplate.id}/builder`}
+            className="button button--dark"
+          >
+            Open builder
+          </Link>
+        </div>
       </header>
 
       <div className="admin-template-layout">
@@ -430,6 +452,7 @@ export function TemplateSettingsClient({
                     </button>
                   ))}
                 </div>
+                <p className="admin-template-status-hint">{STATUS_HINTS[status]}</p>
               </fieldset>
             </div>
 

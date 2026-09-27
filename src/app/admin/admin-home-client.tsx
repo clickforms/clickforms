@@ -1,6 +1,8 @@
 'use client';
 
+import type { OrgPlan, OrgStatus } from '@prisma/client';
 import Link from 'next/link';
+import { PLAN_LABELS } from '@/lib/admin/plan-limits';
 
 interface AdminHomeStats {
   organizationCount: number;
@@ -13,9 +15,36 @@ interface RecentOrganization {
   id: string;
   name: string;
   subdomain: string;
+  plan: OrgPlan;
+  status: OrgStatus;
+  trialEndsAt: string | null;
   createdAt: string;
   userCount: number;
   formCount: number;
+}
+
+const STATUS_LABELS: Record<OrgStatus, string> = {
+  active: 'Active',
+  trial: 'Trial',
+  suspended: 'Suspended',
+};
+
+function getTrialDaysRemaining(trialEndsAt: string | null, status: OrgStatus): number | null {
+  if (status !== 'trial' || !trialEndsAt) return null;
+  const now = new Date();
+  const [year, month, day] = trialEndsAt.slice(0, 10).split('-').map(Number);
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const trialUtc = Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
+  return Math.round((trialUtc - todayUtc) / (24 * 60 * 60 * 1000));
+}
+
+function trialLabel(daysRemaining: number | null): string | null {
+  if (daysRemaining === null) return null;
+  if (daysRemaining < 0) return 'Expired';
+  if (daysRemaining === 0) return 'Expires today';
+  if (daysRemaining === 1) return '1 day left';
+  if (daysRemaining <= 7) return `${daysRemaining} days left`;
+  return null;
 }
 
 export interface RecentAdminActivity {
@@ -231,14 +260,24 @@ export function AdminHomeClient({
     },
   ] as const;
 
+  const urgentTrialCount = recentOrganizations.filter((org) => {
+    const days = getTrialDaysRemaining(org.trialEndsAt, org.status);
+    return days !== null && days <= 7;
+  }).length;
+
   return (
     <div className="admin-home">
       <header className="admin-home-header">
         <div className="admin-home-heading">
+          <p className="admin-home-kicker">{formatTodayLabel(now)}</p>
           <h1 className="admin-home-title">
             {greeting}, {firstName}
           </h1>
-          <p className="admin-home-kicker">{formatTodayLabel(now)}</p>
+          <p className="admin-home-lead">
+            {urgentTrialCount > 0
+              ? `${urgentTrialCount} trial ${urgentTrialCount === 1 ? 'organisation needs' : 'organisations need'} review.`
+              : 'A snapshot of the platform and the latest changes.'}
+          </p>
         </div>
         <Link href="/admin/organisations/new" className="button button--dark">
           <PlusIcon /> New organisation
@@ -292,26 +331,50 @@ export function AdminHomeClient({
               </Link>
             </div>
             <ul className="admin-home-org-list">
-              {recentOrganizations.map((org) => (
-                <li key={org.id}>
-                  <Link href={`/admin/organisations/${org.id}`} className="admin-home-org">
-                    <span className="admin-home-org-mark" aria-hidden="true">
-                      {orgInitial(org.name)}
-                    </span>
-                    <span className="admin-home-org-copy">
-                      <span className="admin-home-org-name">{org.name}</span>
-                      <span className="admin-home-org-meta">
-                        {org.userCount} {org.userCount === 1 ? 'user' : 'users'}
-                        {' · '}
-                        {org.formCount} {org.formCount === 1 ? 'form' : 'forms'}
+              {recentOrganizations.map((org) => {
+                const daysRemaining = getTrialDaysRemaining(org.trialEndsAt, org.status);
+                const urgentTrial = trialLabel(daysRemaining);
+                return (
+                  <li key={org.id}>
+                    <Link href={`/admin/organisations/${org.id}`} className="admin-home-org">
+                      <span className="admin-home-org-mark" aria-hidden="true">
+                        {orgInitial(org.name)}
                       </span>
-                    </span>
-                    <time className="admin-home-org-time" dateTime={org.createdAt}>
-                      {formatRelativeTime(org.createdAt)}
-                    </time>
-                  </Link>
-                </li>
-              ))}
+                      <span className="admin-home-org-copy">
+                        <span className="admin-home-org-name-row">
+                          <span className="admin-home-org-name">{org.name}</span>
+                          <span className={`admin-orgs-status admin-orgs-status--${org.status}`}>
+                            {STATUS_LABELS[org.status]}
+                          </span>
+                        </span>
+                        <span className="admin-home-org-meta">
+                          {org.subdomain}
+                          {' · '}
+                          {PLAN_LABELS[org.plan]}
+                          {' · '}
+                          {org.userCount} {org.userCount === 1 ? 'user' : 'users'}
+                          {' · '}
+                          {org.formCount} {org.formCount === 1 ? 'form' : 'forms'}
+                        </span>
+                        {urgentTrial ? (
+                          <span
+                            className={`admin-home-org-alert${
+                              daysRemaining !== null && daysRemaining < 0
+                                ? ' admin-home-org-alert--expired'
+                                : ''
+                            }`}
+                          >
+                            {urgentTrial}
+                          </span>
+                        ) : null}
+                      </span>
+                      <time className="admin-home-org-time" dateTime={org.createdAt}>
+                        {formatRelativeTime(org.createdAt)}
+                      </time>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </section>
 
@@ -333,8 +396,8 @@ export function AdminHomeClient({
                   const actor = entry.actorName ?? 'System';
                   return (
                     <li key={entry.id} className="admin-home-activity-row">
-                      <span className="admin-home-activity-avatar" aria-hidden="true">
-                        {actorInitial(actor)}
+                      <span className="admin-home-activity-rail" aria-hidden="true">
+                        <span className="admin-home-activity-avatar">{actorInitial(actor)}</span>
                       </span>
                       <span className="admin-home-activity-copy">
                         <span className="admin-home-activity-action">

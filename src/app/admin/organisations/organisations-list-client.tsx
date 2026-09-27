@@ -17,6 +17,7 @@ export interface OrganizationRow {
   plan: OrgPlan;
   status: OrgStatus;
   createdAt: string;
+  trialEndsAt: string | null;
   userCount: number;
   formCount: number;
 }
@@ -92,6 +93,40 @@ function MoreIcon() {
       <circle cx="8" cy="12.75" r="1.15" fill="currentColor" />
     </svg>
   );
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : (parts[0]?.[1] ?? '');
+  return `${first}${last}`.toUpperCase();
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function getTrialDaysRemaining(trialEndsAt: string | null, status: OrgStatus): number | null {
+  if (status !== 'trial' || !trialEndsAt) return null;
+  const now = new Date();
+  const [year, month, day] = trialEndsAt.slice(0, 10).split('-').map(Number);
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const trialUtc = Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
+  return Math.round((trialUtc - todayUtc) / (24 * 60 * 60 * 1000));
+}
+
+function trialLabel(daysRemaining: number | null): string | null {
+  if (daysRemaining === null) return null;
+  if (daysRemaining < 0) return 'Expired';
+  if (daysRemaining === 0) return 'Expires today';
+  if (daysRemaining === 1) return '1 day left';
+  if (daysRemaining <= 7) return `${daysRemaining} days left`;
+  return null;
 }
 
 function OrgRowMenu({
@@ -191,6 +226,15 @@ export function OrganisationsListClient({
     return counts;
   }, [organizations]);
 
+  const urgentTrialCount = useMemo(
+    () =>
+      organizations.filter((org) => {
+        const days = getTrialDaysRemaining(org.trialEndsAt, org.status);
+        return days !== null && days <= 7;
+      }).length,
+    [organizations],
+  );
+
   const visibleOrganizations = useMemo(() => {
     const term = search.trim().toLowerCase();
     const filtered = organizations.filter((org) => {
@@ -250,7 +294,7 @@ export function OrganisationsListClient({
   }
 
   return (
-    <div className="admin-orgs">
+    <div className="admin-orgs admin-orgs-directory">
       <header className="admin-orgs-header">
         <div>
           <h1 className="admin-orgs-title">Organisations</h1>
@@ -260,6 +304,31 @@ export function OrganisationsListClient({
           <PlusIcon /> New organisation
         </Link>
       </header>
+
+      {organizations.length > 0 ? (
+        <section className="admin-orgs-directory-stats" aria-label="Organisation snapshot">
+          {STATUS_FILTERS.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              className={`admin-orgs-directory-stat${
+                statusFilter === filter ? ' admin-orgs-directory-stat--active' : ''
+              }${filter === 'trial' && urgentTrialCount > 0 ? ' admin-orgs-directory-stat--alert' : ''}`}
+              onClick={() => setStatusFilter(filter)}
+            >
+              <span className="admin-orgs-directory-stat-value">{statusCounts[filter]}</span>
+              <span className="admin-orgs-directory-stat-label">
+                {STATUS_FILTER_LABELS[filter]}
+                {filter === 'trial' && urgentTrialCount > 0 ? (
+                  <span className="admin-orgs-directory-stat-note">
+                    {urgentTrialCount} need review
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          ))}
+        </section>
+      ) : null}
 
       {deletingOrg ? (
         <DeleteOrganisationModal
@@ -300,18 +369,6 @@ export function OrganisationsListClient({
                 aria-label="Search organisations"
               />
             </label>
-            <div className="admin-orgs-chips" role="tablist" aria-label="Filter by status">
-              {STATUS_FILTERS.map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  className={`admin-orgs-chip${statusFilter === filter ? ' admin-orgs-chip--active' : ''}`}
-                  onClick={() => setStatusFilter(filter)}
-                >
-                  {STATUS_FILTER_LABELS[filter]} {statusCounts[filter]}
-                </button>
-              ))}
-            </div>
           </div>
           <div className="admin-table-scroll">
             <table className="admin-orgs-table">
@@ -340,6 +397,8 @@ export function OrganisationsListClient({
               <tbody>
                 {visibleOrganizations.map((org) => {
                   const detailHref = `/admin/organisations/${org.id}`;
+                  const daysRemaining = getTrialDaysRemaining(org.trialEndsAt, org.status);
+                  const urgentTrial = trialLabel(daysRemaining);
                   return (
                     // biome-ignore lint/a11y/useSemanticElements: must stay a <tr> for correct table semantics — role="button" + tabIndex + onKeyDown supply the missing button affordance instead of nesting a real <button> around table cells
                     <tr
@@ -356,7 +415,15 @@ export function OrganisationsListClient({
                       }}
                     >
                       <td data-label="Organisation">
-                        <span className="admin-orgs-name">{org.name}</span>
+                        <span className="admin-orgs-directory-identity">
+                          <span className="admin-orgs-directory-mark" aria-hidden="true">
+                            {getInitials(org.name)}
+                          </span>
+                          <span className="admin-orgs-directory-copy">
+                            <span className="admin-orgs-name">{org.name}</span>
+                            <span className="admin-orgs-directory-subdomain">{org.subdomain}</span>
+                          </span>
+                        </span>
                       </td>
                       <td data-label="Plan">
                         <span className={`admin-orgs-plan admin-orgs-plan--${org.plan}`}>
@@ -366,14 +433,25 @@ export function OrganisationsListClient({
                       <td data-label="Users">{org.userCount}</td>
                       <td data-label="Forms">{org.formCount}</td>
                       <td data-label="Status">
-                        <span className={`admin-orgs-status admin-orgs-status--${org.status}`}>
-                          <span className="admin-orgs-status-dot" aria-hidden="true" />
-                          {STATUS_LABELS[org.status]}
+                        <span className="admin-orgs-directory-status">
+                          <span className={`admin-orgs-status admin-orgs-status--${org.status}`}>
+                            <span className="admin-orgs-status-dot" aria-hidden="true" />
+                            {STATUS_LABELS[org.status]}
+                          </span>
+                          {urgentTrial ? (
+                            <span
+                              className={`admin-orgs-directory-trial${
+                                daysRemaining !== null && daysRemaining < 0
+                                  ? ' admin-orgs-directory-trial--expired'
+                                  : ''
+                              }`}
+                            >
+                              {urgentTrial}
+                            </span>
+                          ) : null}
                         </span>
                       </td>
-                      <td data-label="Created">
-                        {new Date(org.createdAt).toLocaleDateString('en-AU')}
-                      </td>
+                      <td data-label="Created">{formatDate(org.createdAt)}</td>
                       <td
                         data-label="Actions"
                         onClick={(event) => event.stopPropagation()}

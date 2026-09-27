@@ -19,6 +19,33 @@ export interface PlatformUserRow {
   organizationName: string;
 }
 
+const USER_FILTERS = ['all', 'admin', 'member', 'twoFactorOff'] as const;
+type UserFilter = (typeof USER_FILTERS)[number];
+
+const USER_FILTER_LABELS: Record<UserFilter, string> = {
+  all: 'All',
+  admin: 'Super admins',
+  member: 'Org users',
+  twoFactorOff: '2FA off',
+};
+
+function getInitials(name: string | null, email: string): string {
+  const source = name?.trim() || email;
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : (parts[0]?.[1] ?? '');
+  return `${first}${last}`.toUpperCase();
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 function SearchIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -106,20 +133,40 @@ function UserRowMenu({
 export function UsersAdminClient({ initialUsers }: { initialUsers: PlatformUserRow[] }) {
   const [users, setUsers] = useState(initialUsers);
   const [search, setSearch] = useState('');
+  const [userFilter, setUserFilter] = useState<UserFilter>('all');
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [resetLink, setResetLink] = useState<string | null>(null);
   const toast = useToast();
 
+  const filterCounts = useMemo(() => {
+    const counts: Record<UserFilter, number> = {
+      all: users.length,
+      admin: 0,
+      member: 0,
+      twoFactorOff: 0,
+    };
+    for (const user of users) {
+      if (user.role === 'admin') counts.admin += 1;
+      if (user.role === 'member') counts.member += 1;
+      if (!user.twoFactorEnabled) counts.twoFactorOff += 1;
+    }
+    return counts;
+  }, [users]);
+
   const visibleUsers = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return users;
-    return users.filter(
-      (user) =>
+    return users.filter((user) => {
+      if (userFilter === 'admin' && user.role !== 'admin') return false;
+      if (userFilter === 'member' && user.role !== 'member') return false;
+      if (userFilter === 'twoFactorOff' && user.twoFactorEnabled) return false;
+      if (!term) return true;
+      return (
         (user.name ?? '').toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term) ||
-        user.organizationName.toLowerCase().includes(term),
-    );
-  }, [users, search]);
+        user.organizationName.toLowerCase().includes(term)
+      );
+    });
+  }, [users, search, userFilter]);
 
   async function copyResetLink(url: string) {
     try {
@@ -172,13 +219,36 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: PlatformUserR
   }
 
   return (
-    <div className="admin-orgs">
+    <div className="admin-orgs admin-orgs-directory admin-users-directory">
       <header className="admin-orgs-header">
         <div>
           <h1 className="admin-orgs-title">Users</h1>
           <p className="admin-orgs-lead">Every user across every organisation.</p>
         </div>
       </header>
+
+      {users.length > 0 ? (
+        <section className="admin-orgs-directory-stats" aria-label="User snapshot">
+          {USER_FILTERS.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              className={`admin-orgs-directory-stat${
+                userFilter === filter ? ' admin-orgs-directory-stat--active' : ''
+              }${filter === 'twoFactorOff' && filterCounts.twoFactorOff > 0 ? ' admin-orgs-directory-stat--alert' : ''}`}
+              onClick={() => setUserFilter(filter)}
+            >
+              <span className="admin-orgs-directory-stat-value">{filterCounts[filter]}</span>
+              <span className="admin-orgs-directory-stat-label">
+                {USER_FILTER_LABELS[filter]}
+                {filter === 'twoFactorOff' && filterCounts.twoFactorOff > 0 ? (
+                  <span className="admin-orgs-directory-stat-note">Needs review</span>
+                ) : null}
+              </span>
+            </button>
+          ))}
+        </section>
+      ) : null}
 
       {users.length === 0 ? (
         <section className="admin-home-empty">
@@ -238,8 +308,7 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: PlatformUserR
             <table className="admin-orgs-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
+                  <th>User</th>
                   <th>Organisation</th>
                   <th>Role</th>
                   <th>2FA</th>
@@ -250,10 +319,17 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: PlatformUserR
               <tbody>
                 {visibleUsers.map((user) => (
                   <tr key={user.id}>
-                    <td data-label="Name">
-                      <span className="admin-orgs-name">{user.name ?? '—'}</span>
+                    <td data-label="User">
+                      <span className="admin-orgs-directory-identity">
+                        <span className="admin-orgs-directory-mark" aria-hidden="true">
+                          {getInitials(user.name, user.email)}
+                        </span>
+                        <span className="admin-orgs-directory-copy">
+                          <span className="admin-orgs-name">{user.name ?? 'Unnamed user'}</span>
+                          <span className="admin-orgs-directory-subdomain">{user.email}</span>
+                        </span>
+                      </span>
                     </td>
-                    <td data-label="Email">{user.email}</td>
                     <td data-label="Organisation">
                       {user.organizationId ? (
                         <Link
@@ -266,22 +342,20 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: PlatformUserR
                         user.organizationName
                       )}
                     </td>
-                    <td data-label="Role">{formatUserRole(user.role)}</td>
+                    <td data-label="Role">
+                      <span className="users-role-pill">{formatUserRole(user.role)}</span>
+                    </td>
                     <td data-label="2FA">
                       <span
-                        className={`admin-orgs-status ${
-                          user.twoFactorEnabled
-                            ? 'admin-orgs-status--active'
-                            : 'admin-orgs-status--off'
+                        className={`admin-users-2fa ${
+                          user.twoFactorEnabled ? 'admin-users-2fa--on' : 'admin-users-2fa--off'
                         }`}
                       >
                         <span className="admin-orgs-status-dot" aria-hidden="true" />
                         {user.twoFactorEnabled ? 'On' : 'Off'}
                       </span>
                     </td>
-                    <td data-label="Joined">
-                      {new Date(user.createdAt).toLocaleDateString('en-AU')}
-                    </td>
+                    <td data-label="Joined">{formatDate(user.createdAt)}</td>
                     <td data-label="Actions">
                       <div className="admin-orgs-actions">
                         <UserRowMenu
@@ -296,7 +370,7 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: PlatformUserR
                 ))}
                 {visibleUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="admin-table-empty">
+                    <td colSpan={6} className="admin-table-empty">
                       No users match that search.
                     </td>
                   </tr>

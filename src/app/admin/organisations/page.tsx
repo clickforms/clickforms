@@ -15,7 +15,15 @@ export default async function AdminOrganisationsPage() {
 
   const organizations = await prisma.organization.findMany({
     orderBy: { createdAt: 'desc' },
-    select: { id: true, name: true, subdomain: true, plan: true, status: true, createdAt: true },
+    select: {
+      id: true,
+      name: true,
+      subdomain: true,
+      plan: true,
+      status: true,
+      trialEndsAt: true,
+      createdAt: true,
+    },
   });
 
   const [userCounts, formCounts] = await Promise.all([
@@ -32,6 +40,7 @@ export default async function AdminOrganisationsPage() {
     plan: org.plan,
     status: org.status,
     createdAt: org.createdAt.toISOString(),
+    trialEndsAt: org.trialEndsAt?.toISOString() ?? null,
     userCount: userCountByOrg.get(org.id) ?? 0,
     formCount: formCountByOrg.get(org.id) ?? 0,
   }));

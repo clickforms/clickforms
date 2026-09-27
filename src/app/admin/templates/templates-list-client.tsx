@@ -56,6 +56,19 @@ const STATUS_LABELS: Record<TemplateStatus, string> = {
   archived: 'Archived',
 };
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function taxonomyLine(template: TemplateRow): string {
+  const parts = [template.industry, template.category, template.formType].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : 'Needs categorisation';
+}
+
 function SearchIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -512,14 +525,11 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
   }
 
   return (
-    <div className="admin-orgs">
+    <div className="admin-orgs admin-orgs-directory admin-templates-directory">
       <header className="admin-orgs-header">
         <div>
           <h1 className="admin-orgs-title">Templates</h1>
-          <p className="admin-orgs-lead">
-            Reusable forms organisations can copy and make their own from the /forms/templates
-            gallery.
-          </p>
+          <p className="admin-orgs-lead">Reusable forms organisations can copy from the gallery.</p>
         </div>
         <button type="button" className="button button--dark" onClick={() => setCreateOpen(true)}>
           <PlusIcon /> New template
@@ -724,224 +734,252 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
           </div>
         </section>
       ) : (
-        <div className="card admin-orgs-card">
-          <div className="admin-orgs-toolbar">
-            <label className="admin-orgs-search">
-              <span className="admin-orgs-search-icon">
-                <SearchIcon />
-              </span>
-              <input
-                type="text"
-                placeholder="Search templates..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                aria-label="Search templates"
-              />
-            </label>
-            <div className="admin-orgs-chips" role="tablist" aria-label="Filter by status">
-              {STATUS_FILTERS.map((filter) => (
+        <>
+          <section className="admin-orgs-directory-stats" aria-label="Template snapshot">
+            {STATUS_FILTERS.map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                className={`admin-orgs-directory-stat${
+                  statusFilter === filter ? ' admin-orgs-directory-stat--active' : ''
+                }`}
+                onClick={() => setStatusFilter(filter)}
+              >
+                <span className="admin-orgs-directory-stat-value">{statusCounts[filter]}</span>
+                <span className="admin-orgs-directory-stat-label">
+                  {STATUS_FILTER_LABELS[filter]}
+                </span>
+              </button>
+            ))}
+          </section>
+          <div className="card admin-orgs-card">
+            <div className="admin-orgs-toolbar">
+              <label className="admin-orgs-search">
+                <span className="admin-orgs-search-icon">
+                  <SearchIcon />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search templates..."
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  aria-label="Search templates"
+                />
+              </label>
+            </div>
+
+            {selectedIds.size > 0 ? (
+              <div className="admin-orgs-bulk-bar">
+                <span className="admin-orgs-bulk-count">{selectedIds.size} selected</span>
                 <button
-                  key={filter}
                   type="button"
-                  className={`admin-orgs-chip${statusFilter === filter ? ' admin-orgs-chip--active' : ''}`}
-                  onClick={() => setStatusFilter(filter)}
+                  className="button button--secondary"
+                  disabled={isBulkActing}
+                  onClick={() => void handleBulkSetStatus('published')}
                 >
-                  <span className={`admin-orgs-chip-dot admin-orgs-chip-dot--${filter}`} />
-                  {STATUS_FILTER_LABELS[filter]} {statusCounts[filter]}
+                  Publish
                 </button>
-              ))}
-            </div>
-          </div>
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  disabled={isBulkActing}
+                  onClick={() => void handleBulkSetStatus('archived')}
+                >
+                  Archive
+                </button>
+                <button
+                  type="button"
+                  className="button button--ghost-danger"
+                  disabled={isBulkActing}
+                  onClick={() => setBulkDeleting(true)}
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  className="admin-orgs-bulk-clear"
+                  disabled={isBulkActing}
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Clear
+                </button>
+              </div>
+            ) : null}
 
-          {selectedIds.size > 0 ? (
-            <div className="admin-orgs-bulk-bar">
-              <span className="admin-orgs-bulk-count">{selectedIds.size} selected</span>
-              <button
-                type="button"
-                className="button button--secondary"
-                disabled={isBulkActing}
-                onClick={() => void handleBulkSetStatus('published')}
-              >
-                Publish
-              </button>
-              <button
-                type="button"
-                className="button button--secondary"
-                disabled={isBulkActing}
-                onClick={() => void handleBulkSetStatus('archived')}
-              >
-                Archive
-              </button>
-              <button
-                type="button"
-                className="button button--ghost-danger"
-                disabled={isBulkActing}
-                onClick={() => setBulkDeleting(true)}
-              >
-                Delete
-              </button>
-              <button
-                type="button"
-                className="admin-orgs-bulk-clear"
-                disabled={isBulkActing}
-                onClick={() => setSelectedIds(new Set())}
-              >
-                Clear
-              </button>
-            </div>
-          ) : null}
-
-          <div className="admin-table-scroll">
-            <table className="admin-orgs-table">
-              <thead>
-                <tr>
-                  <th className="admin-orgs-table-check">
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSelected}
-                      disabled={visibleTemplates.length === 0}
-                      ref={(input) => {
-                        if (input) input.indeterminate = someVisibleSelected && !allVisibleSelected;
-                      }}
-                      onChange={toggleSelectAllVisible}
-                      aria-label="Select all templates"
-                    />
-                  </th>
-                  <th>Template</th>
-                  <th>Industry</th>
-                  <th>Category</th>
-                  <th>Form type</th>
-                  <th>Status</th>
-                  <th>
-                    <button
-                      type="button"
-                      className="table-sort-button"
-                      onClick={() =>
-                        setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))
-                      }
-                    >
-                      Updated
-                      <span className="table-sort-stack" aria-hidden="true">
-                        <span
-                          className={
-                            sortDirection === 'asc'
-                              ? 'table-sort-arrow table-sort-arrow--active'
-                              : 'table-sort-arrow'
-                          }
-                        >
-                          ▲
-                        </span>
-                        <span
-                          className={
-                            sortDirection === 'desc'
-                              ? 'table-sort-arrow table-sort-arrow--active'
-                              : 'table-sort-arrow'
-                          }
-                        >
-                          ▼
-                        </span>
-                      </span>
-                    </button>
-                  </th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleTemplates.map((template) => {
-                  const detailHref = `/admin/templates/${template.id}`;
-                  return (
-                    // biome-ignore lint/a11y/useSemanticElements: must stay a <tr> for correct table semantics — role="button" + tabIndex + onKeyDown supply the missing button affordance instead of nesting a real <button> around table cells
-                    <tr
-                      key={template.id}
-                      className="forms-row--clickable"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => router.push(detailHref)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          router.push(detailHref);
+            <div className="admin-table-scroll">
+              <table className="admin-orgs-table">
+                <thead>
+                  <tr>
+                    <th className="admin-orgs-table-check">
+                      <input
+                        type="checkbox"
+                        checked={allVisibleSelected}
+                        disabled={visibleTemplates.length === 0}
+                        ref={(input) => {
+                          if (input)
+                            input.indeterminate = someVisibleSelected && !allVisibleSelected;
+                        }}
+                        onChange={toggleSelectAllVisible}
+                        aria-label="Select all templates"
+                      />
+                    </th>
+                    <th>Template</th>
+                    <th>Industry</th>
+                    <th>Category</th>
+                    <th>Form type</th>
+                    <th>Status</th>
+                    <th>
+                      <button
+                        type="button"
+                        className="table-sort-button"
+                        onClick={() =>
+                          setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))
                         }
-                      }}
-                    >
-                      <td
-                        className="admin-orgs-table-check"
-                        data-label="Select"
-                        onClick={(event) => event.stopPropagation()}
-                        onKeyDown={(event) => event.stopPropagation()}
                       >
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(template.id)}
-                          onChange={() => toggleSelect(template.id)}
-                          aria-label={`Select ${template.name}`}
-                        />
-                      </td>
-                      <td data-label="Template">
-                        <span className="users-name-cell">
-                          <span className="template-row-thumb" aria-hidden="true">
-                            {template.thumbnailUrl ? (
-                              // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
-                              <img src={template.thumbnailUrl} alt="" />
-                            ) : (
-                              <PlaceholderThumbIcon />
-                            )}
+                        Updated
+                        <span className="table-sort-stack" aria-hidden="true">
+                          <span
+                            className={
+                              sortDirection === 'asc'
+                                ? 'table-sort-arrow table-sort-arrow--active'
+                                : 'table-sort-arrow'
+                            }
+                          >
+                            ▲
                           </span>
-                          <span className="users-name-text">{template.name}</span>
+                          <span
+                            className={
+                              sortDirection === 'desc'
+                                ? 'table-sort-arrow table-sort-arrow--active'
+                                : 'table-sort-arrow'
+                            }
+                          >
+                            ▼
+                          </span>
                         </span>
-                      </td>
-                      <td data-label="Industry">{template.industry || '—'}</td>
-                      <td data-label="Category">{template.category || '—'}</td>
-                      <td data-label="Form type">{template.formType || '—'}</td>
-                      <td data-label="Status">
-                        <span className={`badge ${STATUS_BADGE_CLASS[template.status]}`}>
-                          {STATUS_LABELS[template.status]}
-                        </span>
-                      </td>
-                      <td data-label="Updated">
-                        {new Date(template.updatedAt).toLocaleDateString('en-AU')}
-                      </td>
-                      <td
-                        data-label="Actions"
-                        onClick={(event) => event.stopPropagation()}
-                        onKeyDown={(event) => event.stopPropagation()}
-                      >
-                        <TemplateRowMenu
-                          template={template}
-                          busy={busyId === template.id}
-                          onEdit={() => router.push(detailHref)}
-                          onRecategorize={() => openRecategorize(template)}
-                          onPreview={() =>
-                            window.open(
-                              `/template-preview/${template.id}`,
-                              '_blank',
-                              'noopener,noreferrer',
-                            )
+                      </button>
+                    </th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleTemplates.map((template) => {
+                    const detailHref = `/admin/templates/${template.id}`;
+                    return (
+                      // biome-ignore lint/a11y/useSemanticElements: must stay a <tr> for correct table semantics — role="button" + tabIndex + onKeyDown supply the missing button affordance instead of nesting a real <button> around table cells
+                      <tr
+                        key={template.id}
+                        className="forms-row--clickable"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => router.push(detailHref)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            router.push(detailHref);
                           }
-                          onSetStatus={(status) => void handleSetStatus(template, status)}
-                          onDelete={() => setDeletingTemplate(template)}
-                        />
+                        }}
+                      >
+                        <td
+                          className="admin-orgs-table-check"
+                          data-label="Select"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(template.id)}
+                            onChange={() => toggleSelect(template.id)}
+                            aria-label={`Select ${template.name}`}
+                          />
+                        </td>
+                        <td data-label="Template">
+                          <span className="admin-orgs-directory-identity">
+                            <span className="template-row-thumb" aria-hidden="true">
+                              {template.thumbnailUrl ? (
+                                // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
+                                <img src={template.thumbnailUrl} alt="" />
+                              ) : (
+                                <PlaceholderThumbIcon />
+                              )}
+                            </span>
+                            <span className="admin-orgs-directory-copy">
+                              <span className="admin-orgs-name">{template.name}</span>
+                              <span className="admin-orgs-directory-subdomain">
+                                {taxonomyLine(template)}
+                              </span>
+                            </span>
+                          </span>
+                        </td>
+                        <td data-label="Industry">
+                          {template.industry ? (
+                            <span className="admin-templates-facet">{template.industry}</span>
+                          ) : (
+                            <span className="admin-templates-facet-empty">—</span>
+                          )}
+                        </td>
+                        <td data-label="Category">
+                          {template.category ? (
+                            <span className="admin-templates-facet">{template.category}</span>
+                          ) : (
+                            <span className="admin-templates-facet-empty">—</span>
+                          )}
+                        </td>
+                        <td data-label="Form type">
+                          {template.formType ? (
+                            <span className="admin-templates-facet">{template.formType}</span>
+                          ) : (
+                            <span className="admin-templates-facet-empty">—</span>
+                          )}
+                        </td>
+                        <td data-label="Status">
+                          <span className={`badge ${STATUS_BADGE_CLASS[template.status]}`}>
+                            {STATUS_LABELS[template.status]}
+                          </span>
+                        </td>
+                        <td data-label="Updated">{formatDate(template.updatedAt)}</td>
+                        <td
+                          data-label="Actions"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <TemplateRowMenu
+                            template={template}
+                            busy={busyId === template.id}
+                            onEdit={() => router.push(detailHref)}
+                            onRecategorize={() => openRecategorize(template)}
+                            onPreview={() =>
+                              window.open(
+                                `/template-preview/${template.id}`,
+                                '_blank',
+                                'noopener,noreferrer',
+                              )
+                            }
+                            onSetStatus={(status) => void handleSetStatus(template, status)}
+                            onDelete={() => setDeletingTemplate(template)}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {visibleTemplates.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="admin-table-empty">
+                        No templates match that search.
                       </td>
                     </tr>
-                  );
-                })}
-                {visibleTemplates.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="admin-table-empty">
-                      No templates match that search.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
 
-          <div className="admin-orgs-footer">
-            <span>
-              {visibleTemplates.length} {visibleTemplates.length === 1 ? 'template' : 'templates'}
-            </span>
+            <div className="admin-orgs-footer">
+              <span>
+                {visibleTemplates.length} {visibleTemplates.length === 1 ? 'template' : 'templates'}
+              </span>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

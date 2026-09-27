@@ -41,13 +41,50 @@ const STATUS_LABELS: Record<OrgStatus, string> = {
   suspended: 'Suspended',
 };
 
+const STATUS_FILTERS = ['all', 'active', 'trial', 'suspended'] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
+  all: 'All',
+  active: 'Active',
+  trial: 'Trial',
+  suspended: 'Suspended',
+};
+
 function formatDate(iso: string | null): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-AU', {
+  return new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString('en-AU', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   });
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : (parts[0]?.[1] ?? '');
+  return `${first}${last}`.toUpperCase();
+}
+
+function getTrialDaysRemaining(trialEndsAt: string | null, status: OrgStatus): number | null {
+  if (status !== 'trial' || !trialEndsAt) return null;
+  const now = new Date();
+  const [year, month, day] = trialEndsAt.slice(0, 10).split('-').map(Number);
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const trialUtc = Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
+  return Math.round((trialUtc - todayUtc) / (24 * 60 * 60 * 1000));
+}
+
+function trialLabel(daysRemaining: number | null): string | null {
+  if (daysRemaining === null) return null;
+  if (daysRemaining < 0) return 'Expired';
+  if (daysRemaining === 0) return 'Expires today';
+  if (daysRemaining === 1) return '1 day left';
+  if (daysRemaining <= 7) return `${daysRemaining} days left`;
+  return null;
 }
 
 function toDateInputValue(iso: string | null): string {
@@ -94,29 +131,52 @@ export function BillingAdminClient({
 }) {
   const [organizations, setOrganizations] = useState(initialOrganizations);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<StatusFilter, number> = {
+      all: organizations.length,
+      active: 0,
+      trial: 0,
+      suspended: 0,
+    };
+    for (const org of organizations) {
+      counts[org.status] += 1;
+    }
+    return counts;
+  }, [organizations]);
+
+  const urgentTrialCount = useMemo(
+    () =>
+      organizations.filter((org) => {
+        const days = getTrialDaysRemaining(org.trialEndsAt, org.status);
+        return days !== null && days <= 7;
+      }).length,
+    [organizations],
+  );
 
   const visibleOrganizations = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return organizations;
-    return organizations.filter(
-      (org) => org.name.toLowerCase().includes(term) || org.subdomain.toLowerCase().includes(term),
-    );
-  }, [organizations, search]);
+    return organizations.filter((org) => {
+      if (statusFilter !== 'all' && org.status !== statusFilter) return false;
+      if (!term) return true;
+      return org.name.toLowerCase().includes(term) || org.subdomain.toLowerCase().includes(term);
+    });
+  }, [organizations, search, statusFilter]);
 
   function handleSaved(updated: BillingOrgRow) {
     setOrganizations((current) => current.map((row) => (row.id === updated.id ? updated : row)));
   }
 
   return (
-    <div className="billing-page">
-      <header className="org-settings-header">
+    <div className="billing-page admin-orgs-directory">
+      <header className="admin-orgs-header">
         <div>
-          <p className="settings-page-kicker">Platform</p>
-          <h1 className="org-settings-title">Billing</h1>
-          <p className="org-settings-lead">Plan, usage, and trial for every organisation.</p>
+          <h1 className="admin-orgs-title">Billing</h1>
+          <p className="admin-orgs-lead">Plan, usage, and trial for every organisation.</p>
         </div>
-        <label className="forms-search billing-page-search">
-          <span className="forms-search-icon">
+        <label className="admin-orgs-search billing-page-search">
+          <span className="admin-orgs-search-icon">
             <SearchIcon />
           </span>
           <input
@@ -128,6 +188,31 @@ export function BillingAdminClient({
           />
         </label>
       </header>
+
+      {organizations.length > 0 ? (
+        <section className="admin-orgs-directory-stats" aria-label="Billing snapshot">
+          {STATUS_FILTERS.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              className={`admin-orgs-directory-stat${
+                statusFilter === filter ? ' admin-orgs-directory-stat--active' : ''
+              }${filter === 'trial' && urgentTrialCount > 0 ? ' admin-orgs-directory-stat--alert' : ''}`}
+              onClick={() => setStatusFilter(filter)}
+            >
+              <span className="admin-orgs-directory-stat-value">{statusCounts[filter]}</span>
+              <span className="admin-orgs-directory-stat-label">
+                {STATUS_FILTER_LABELS[filter]}
+                {filter === 'trial' && urgentTrialCount > 0 ? (
+                  <span className="admin-orgs-directory-stat-note">
+                    {urgentTrialCount} need review
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          ))}
+        </section>
+      ) : null}
 
       {visibleOrganizations.length === 0 ? (
         <div className="org-panel billing-empty">
@@ -201,7 +286,7 @@ function BillingOrgCard({
           // Cleared the moment status isn't 'trial', same as the detail page — a stale date
           // shouldn't linger once an org leaves trial (see isTrialExpired in plan-limits.ts).
           trialEndsAt:
-            status === 'trial' ? new Date(`${trialEndsAt}T00:00:00`).toISOString() : null,
+            status === 'trial' ? new Date(`${trialEndsAt}T23:59:59.999`).toISOString() : null,
         }),
       });
       if (!response.ok) {
@@ -231,24 +316,49 @@ function BillingOrgCard({
     }
   }
 
+  const daysRemaining = getTrialDaysRemaining(org.trialEndsAt, org.status);
+  const urgentTrial = trialLabel(daysRemaining);
   const renewalLabel =
     org.status === 'trial' && org.trialEndsAt
-      ? `Trial ends ${formatDate(org.trialEndsAt)}`
+      ? daysRemaining === 0
+        ? 'Trial ends today'
+        : `Trial through ${formatDate(org.trialEndsAt)}`
       : org.renewsAt
         ? `Renews ${formatDate(org.renewsAt)}`
         : null;
 
   return (
-    <article className="org-panel billing-org-card">
+    <article
+      className={`org-panel billing-org-card${urgentTrial ? ' billing-org-card--alert' : ''}`}
+    >
       <header className="billing-org-head">
         <div className="billing-org-identity">
-          <Link href={`/admin/organisations/${org.id}`} className="billing-org-name">
-            {org.name}
-          </Link>
-          <p className="billing-org-subdomain">{org.subdomain}</p>
+          <span className="admin-orgs-directory-mark" aria-hidden="true">
+            {getInitials(org.name)}
+          </span>
+          <div>
+            <Link href={`/admin/organisations/${org.id}`} className="billing-org-name">
+              {org.name}
+            </Link>
+            <p className="billing-org-subdomain">
+              {org.subdomain}
+              {' · '}
+              {PLAN_LABELS[org.plan]}
+            </p>
+          </div>
         </div>
         <div className="billing-org-head-meta">
-          {renewalLabel ? <span className="billing-org-renewal">{renewalLabel}</span> : null}
+          {urgentTrial ? (
+            <span
+              className={`billing-org-trial${
+                daysRemaining !== null && daysRemaining < 0 ? ' billing-org-trial--expired' : ''
+              }`}
+            >
+              {urgentTrial}
+            </span>
+          ) : renewalLabel ? (
+            <span className="billing-org-renewal">{renewalLabel}</span>
+          ) : null}
           <span className={`badge ${STATUS_BADGE_CLASS[org.status]}`}>
             {STATUS_LABELS[org.status]}
           </span>

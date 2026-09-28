@@ -336,6 +336,16 @@ export function TemplateBuilderClient({
     }
   }, [schema, templateId, toast]);
 
+  /** Passed down to FieldSettingsPanel -> FieldImageUpload's ensureFieldSaved prop (see
+   * its doc comment) — persists the current schema, same as clicking Save, but only
+   * when there's actually something unsaved. Lets "upload an image" work right after
+   * adding a new image field, without making the admin manually Save, close the field,
+   * and reopen it first just to make the field exist server-side. */
+  const ensureFieldSaved = useCallback(async (): Promise<boolean> => {
+    if (JSON.stringify(schema) === lastSavedSchemaJsonRef.current) return true;
+    return saveSchema();
+  }, [schema, saveSchema]);
+
   async function handleSaveAndClose() {
     if (hasUnsavedChanges) {
       const saved = await saveSchema();
@@ -732,6 +742,7 @@ export function TemplateBuilderClient({
                         onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
                         imagePreviewUrl={imagePreviewUrls[editingField.id]}
                         onImagePreviewUrlChange={handleImagePreviewUrlChange}
+                        ensureFieldSaved={ensureFieldSaved}
                       />
                       {editingField.type !== 'hidden' ? (
                         <div className="settings-section">
@@ -876,6 +887,7 @@ export function TemplateBuilderClient({
                 onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
                 imagePreviewUrl={imagePreviewUrls[editingField.id]}
                 onImagePreviewUrlChange={handleImagePreviewUrlChange}
+                ensureFieldSaved={ensureFieldSaved}
               />
               {editingField.type !== 'hidden' ? (
                 <div className="settings-section">

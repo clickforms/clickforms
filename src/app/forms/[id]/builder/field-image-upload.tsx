@@ -35,6 +35,18 @@ interface FieldImageUploadProps {
   canEdit: boolean;
   onUploaded: (storageKey: string) => void;
   onRemove: () => void;
+  /** The image API route (whichever imageApiUrl resolves to below) looks this field up
+   * against the *persisted* form/template schema, not the live in-browser one — so a
+   * field the admin just added to the canvas doesn't exist there yet until Save, and
+   * the presign call 404s with "Field not found" the moment they try to upload for it
+   * (this builder has no autosave, see the doc comment on previewUrl above). Called
+   * right before the presign request; if there are unsaved changes it saves them first
+   * (the same persistence Save itself uses) and only proceeds if that succeeds — so
+   * uploading for a brand-new field works without the admin having to manually Save,
+   * close the field, and reopen it first. Omitted entirely skips the check (there's
+   * currently no context that renders this component without one, but the prop is
+   * optional so a save-less caller wouldn't have to fake one). */
+  ensureFieldSaved?: () => Promise<boolean>;
 }
 
 interface CropSession {
@@ -54,6 +66,7 @@ export function FieldImageUpload({
   canEdit,
   onUploaded,
   onRemove,
+  ensureFieldSaved,
 }: FieldImageUploadProps) {
   const toast = useToast();
   const [uploading, setUploading] = useState(false);
@@ -77,6 +90,14 @@ export function FieldImageUpload({
     async (file: File) => {
       setUploading(true);
       try {
+        if (ensureFieldSaved) {
+          const canProceed = await ensureFieldSaved();
+          // ensureFieldSaved already reports its own failure (the same save-error toast
+          // Save itself would show) — return quietly rather than piling a second, vaguer
+          // "Image upload failed" toast on top.
+          if (!canProceed) return;
+        }
+
         const presignRes = await fetch(imageApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -127,7 +148,7 @@ export function FieldImageUpload({
         setUploading(false);
       }
     },
-    [closeCropSession, imageApiUrl, onPreviewUrlChange, onUploaded, toast],
+    [closeCropSession, ensureFieldSaved, imageApiUrl, onPreviewUrlChange, onUploaded, toast],
   );
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {

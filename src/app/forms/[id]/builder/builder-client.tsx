@@ -391,6 +391,16 @@ export function BuilderClient({
     }
   }, [schema, formId, setFormStatus, toast]);
 
+  /** Passed down to FieldSettingsPanel -> FieldImageUpload's ensureFieldSaved prop (see
+   * its doc comment) — persists the current schema, same as clicking Save, but only
+   * when there's actually something unsaved. Lets "upload an image" work right after
+   * adding a new image field, without making the admin manually Save, close the field,
+   * and reopen it first just to make the field exist server-side. */
+  const ensureFieldSaved = useCallback(async (): Promise<boolean> => {
+    if (JSON.stringify(schema) === lastSavedSchemaJsonRef.current) return true;
+    return saveSchema();
+  }, [schema, saveSchema]);
+
   const applyWorkflowResult = useCallback(
     (body: FormWorkflowResult) => {
       const nextStatus = body?.form?.status as FormStatus | undefined;
@@ -977,6 +987,7 @@ export function BuilderClient({
                             editingField ? imagePreviewUrls[editingField.id] : undefined
                           }
                           onImagePreviewUrlChange={handleImagePreviewUrlChange}
+                          ensureFieldSaved={ensureFieldSaved}
                         />
                       </div>
                     ) : (
@@ -1164,6 +1175,7 @@ export function BuilderClient({
                 onSetColumnLayoutColumns={handleSetColumnLayoutColumns}
                 imagePreviewUrl={editingField ? imagePreviewUrls[editingField.id] : undefined}
                 onImagePreviewUrlChange={handleImagePreviewUrlChange}
+                ensureFieldSaved={ensureFieldSaved}
               />
               {editingField.type !== 'hidden' ? (
                 <div className="settings-section">

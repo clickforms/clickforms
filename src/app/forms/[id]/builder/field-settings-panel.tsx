@@ -95,6 +95,9 @@ interface TypeSpecificSettingsProps {
    * this panel. Only meaningful for image/draw_on_image fields (MediaExtras below). */
   imagePreviewUrl?: string;
   onImagePreviewUrlChange: (fieldId: string, url: string | null) => void;
+  /** See the doc comment on FieldImageUpload's own ensureFieldSaved prop — forwarded
+   * straight through from FieldSettingsPanelProps. */
+  ensureFieldSaved?: () => Promise<boolean>;
 }
 
 // Chevron used on every collapsible group's <summary> — CSS rotates it via the
@@ -1307,6 +1310,7 @@ function MediaExtras({
   onUpdateField,
   imagePreviewUrl,
   onImagePreviewUrlChange,
+  ensureFieldSaved,
 }: TypeSpecificSettingsProps) {
   if (field.type !== 'image' && field.type !== 'draw_on_image') return null;
   return (
@@ -1320,6 +1324,7 @@ function MediaExtras({
       canEdit={canEdit}
       onUploaded={(storageKey) => onUpdateField(field.id, { imageStorageKey: storageKey })}
       onRemove={() => onUpdateField(field.id, { imageStorageKey: undefined })}
+      ensureFieldSaved={ensureFieldSaved}
     />
   );
 }
@@ -1962,6 +1967,8 @@ interface FieldSettingsPanelProps {
   /** See the doc comment on TypeSpecificSettingsProps.imagePreviewUrl. */
   imagePreviewUrl?: string;
   onImagePreviewUrlChange: (fieldId: string, url: string | null) => void;
+  /** See the doc comment on FieldImageUpload's own ensureFieldSaved prop. */
+  ensureFieldSaved?: () => Promise<boolean>;
 }
 
 export function FieldSettingsPanel({
@@ -1975,6 +1982,7 @@ export function FieldSettingsPanel({
   onSetColumnLayoutColumns,
   imagePreviewUrl,
   onImagePreviewUrlChange,
+  ensureFieldSaved,
 }: FieldSettingsPanelProps) {
   if (!field) {
     return (
@@ -2019,6 +2027,7 @@ export function FieldSettingsPanel({
     onSetColumnLayoutColumns,
     imagePreviewUrl,
     onImagePreviewUrlChange,
+    ensureFieldSaved,
   };
 
   // Hidden fields and column layouts carry no respondent-facing input, so "required" /

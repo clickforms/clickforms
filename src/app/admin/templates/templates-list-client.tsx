@@ -129,6 +129,7 @@ function TemplateRowMenu({
   onEdit,
   onRecategorize,
   onPreview,
+  onDuplicate,
   onSetStatus,
   onDelete,
 }: {
@@ -137,6 +138,7 @@ function TemplateRowMenu({
   onEdit: () => void;
   onRecategorize: () => void;
   onPreview: () => void;
+  onDuplicate: () => void;
   onSetStatus: (status: TemplateStatus) => void;
   onDelete: () => void;
 }) {
@@ -200,6 +202,19 @@ function TemplateRowMenu({
               }}
             >
               Preview
+            </button>
+          </li>
+          <li role="none">
+            <button
+              type="button"
+              role="menuitem"
+              className="actions-menu-item"
+              onClick={() => {
+                setOpen(false);
+                onDuplicate();
+              }}
+            >
+              Duplicate
             </button>
           </li>
           {template.status !== 'published' ? (
@@ -369,6 +384,41 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
       toast.success(`Template ${STATUS_LABELS[status].toLowerCase()}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not update template status');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDuplicate(template: TemplateRow) {
+    setBusyId(template.id);
+    try {
+      const response = await fetch(`/api/admin/form-templates/${template.id}/duplicate`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response, 'Failed to duplicate template'));
+      }
+      const { template: newTemplate } = await response.json();
+      // The duplicate never carries over a thumbnail (see the route's doc comment —
+      // thumbnailStorageKey is scoped to the source template's id, so the route never
+      // sets it on the copy) and always starts as a draft, matching what the route
+      // actually persists.
+      const row: TemplateRow = {
+        id: newTemplate.id,
+        name: newTemplate.name,
+        description: newTemplate.description,
+        industry: newTemplate.industry,
+        category: newTemplate.category,
+        formType: newTemplate.formType,
+        status: newTemplate.status,
+        thumbnailUrl: null,
+        createdAt: newTemplate.createdAt,
+        updatedAt: newTemplate.updatedAt,
+      };
+      setTemplates((current) => [row, ...current]);
+      toast.success('Template duplicated');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to duplicate template');
     } finally {
       setBusyId(null);
     }
@@ -955,6 +1005,7 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                                 'noopener,noreferrer',
                               )
                             }
+                            onDuplicate={() => void handleDuplicate(template)}
                             onSetStatus={(status) => void handleSetStatus(template, status)}
                             onDelete={() => setDeletingTemplate(template)}
                           />

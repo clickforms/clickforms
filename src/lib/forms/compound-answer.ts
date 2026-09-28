@@ -216,3 +216,11 @@ export function parseQuestionTableAnswer(
 export function serializeQuestionTableAnswer(answer: QuestionTableAnswer): string {
   return JSON.stringify(answer);
 }
+
+// Extra answer columns (questionTableFieldSchema.columns) share this same flat
+// QuestionTableAnswer map — parseQuestionTableAnswer above has no whitelist against known
+// row ids, so a row's extra-column answers can live alongside its primary answer under a
+// compound key without any change to parse/serialize, or to any already-stored answer.
+export function questionTableExtraCellKey(rowId: string, columnId: string): string {
+  return `${rowId}:${columnId}`;
+}

@@ -348,7 +348,10 @@ function cloneField(field: FormField): FormField {
     } as FormField;
   }
 
-  // question_table's rows have the same nested-options shape as table's columns above.
+  // question_table's rows have the same nested-options shape as table's columns above —
+  // and its optional extra `columns` (questionTableFieldSchema.columns) are literally
+  // table's TableColumn shape reused, so they need the identical treatment table's clone
+  // branch gives its own `columns` above.
   if (cloned.type === 'question_table') {
     return {
       ...cloned,
@@ -356,6 +359,11 @@ function cloneField(field: FormField): FormField {
         ...row,
         id: crypto.randomUUID(),
         options: row.options?.map((option) => ({ ...option, id: crypto.randomUUID() })),
+      })),
+      columns: cloned.columns?.map((column) => ({
+        ...column,
+        id: crypto.randomUUID(),
+        options: column.options?.map((option) => ({ ...option, id: crypto.randomUUID() })),
       })),
     } as FormField;
   }

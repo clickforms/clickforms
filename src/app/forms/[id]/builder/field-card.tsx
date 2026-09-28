@@ -995,6 +995,11 @@ function FieldPreview({
       const canEditInline = canEdit && Boolean(onUpdateField);
       const fieldColumnLabel = questionTableField.fieldColumnLabel || 'Field';
       const valueColumnLabel = questionTableField.valueColumnLabel || 'Details';
+      // Extra answer columns (see questionTableFieldSchema.columns) are added/renamed via
+      // the settings panel's TableColumnsEditor, not inline here — same division as each
+      // row's own answer type/options above, which also live in the settings panel while
+      // the canvas only handles row labels/count. Canvas just previews them read-only.
+      const extraColumns = questionTableField.columns ?? [];
       const headerStyle: CSSProperties = {
         backgroundColor: questionTableField.headerColor,
         color: questionTableField.headerTextColor,
@@ -1037,6 +1042,11 @@ function FieldPreview({
               <tr>
                 <th style={headerStyle}>{fieldColumnLabel}</th>
                 <th style={headerStyle}>{valueColumnLabel}</th>
+                {extraColumns.map((column) => (
+                  <th key={column.id} style={headerStyle}>
+                    {column.label || 'Untitled column'}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -1095,6 +1105,16 @@ function FieldPreview({
                       />
                     )}
                   </td>
+                  {extraColumns.map((column) => (
+                    <td key={column.id} style={valueStyle}>
+                      <input
+                        className="text-input field-preview-input"
+                        type="text"
+                        disabled
+                        placeholder={TABLE_COLUMN_TYPE_LABEL[column.type]}
+                      />
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

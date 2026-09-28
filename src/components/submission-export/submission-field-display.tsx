@@ -7,6 +7,7 @@ import {
   parseFullNameAnswer,
   parseQuestionTableAnswer,
   parseTableAnswer,
+  questionTableExtraCellKey,
 } from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import {
@@ -761,6 +762,7 @@ function QuestionTableExportDisplay({
   // custom properties — see the schema comment on questionTableFieldSchema for why these
   // are deliberately separate, parallel styling mechanisms.
   const answer = parseQuestionTableAnswer(typeof value === 'string' ? value : undefined);
+  const extraColumns = field.columns ?? [];
   const headerStyle: CSSProperties = {
     backgroundColor: field.headerColor,
     color: field.headerTextColor,
@@ -776,6 +778,11 @@ function QuestionTableExportDisplay({
           <tr>
             <th style={headerStyle}>{field.fieldColumnLabel || 'Field'}</th>
             <th style={headerStyle}>{field.valueColumnLabel || 'Details'}</th>
+            {extraColumns.map((column) => (
+              <th key={column.id} style={headerStyle}>
+                {column.label}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -791,6 +798,21 @@ function QuestionTableExportDisplay({
               <tr key={row.id}>
                 <td className="export-question-table-label-cell">{row.label}</td>
                 <td style={valueStyle}>{text || '—'}</td>
+                {extraColumns.map((column) => {
+                  const extraRaw = answer[questionTableExtraCellKey(row.id, column.id)] ?? '';
+                  let extraText = extraRaw;
+                  if (extraRaw && column.type === 'dropdown') {
+                    extraText =
+                      column.options?.find((option) => option.id === extraRaw)?.label ?? extraRaw;
+                  } else if (extraRaw && column.type === 'date') {
+                    extraText = formatDateValue(extraRaw);
+                  }
+                  return (
+                    <td key={column.id} style={valueStyle}>
+                      {extraText || '—'}
+                    </td>
+                  );
+                })}
               </tr>
             );
           })}

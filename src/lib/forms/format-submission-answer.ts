@@ -8,8 +8,9 @@ import {
   parseFullNameAnswer,
   parseQuestionTableAnswer,
   parseTableAnswer,
+  questionTableExtraCellKey,
 } from '@/lib/forms/compound-answer';
-import type { FormField } from '@/lib/forms/schema';
+import type { FormField, QuestionRowAnswerType } from '@/lib/forms/schema';
 import { formatTimeForDisplay } from '@/lib/forms/time-value';
 
 export interface ResolvedSubmissionFile {
@@ -162,33 +163,57 @@ export function formatSubmissionAnswer(
       // `formatted.kind === 'matrix'` renderer), just with a free-form answer per row
       // instead of a chosen rating column.
       const answer = parseQuestionTableAnswer(typeof value === 'string' ? value : undefined);
+      const extraColumns = field.columns ?? [];
+      // "Answered" here still means the row's own primary answer — extra columns are
+      // always-optional add-ons (see questionTableFieldSchema.columns), so a row with only
+      // extra-column values and a blank primary answer wouldn't currently count, matching
+      // validate-answers.ts's required check which also only looks at the primary answer.
       const answeredRows = field.rows.filter((row) => answer[row.id]?.trim());
       if (answeredRows.length === 0) {
         return { kind: 'empty' };
       }
+      // Shared by both the primary per-row answer and any extra-column answer below —
+      // QuestionRowAnswerType and TableColumnType (extra columns' type) are the identical
+      // ['short_text','number','dropdown','date'] union, see schema.ts.
+      function formatQuestionCell(
+        raw: string,
+        type: QuestionRowAnswerType,
+        options: { id: string; label: string }[] | undefined,
+      ): string {
+        if (!raw) return '—';
+        if (type === 'dropdown') {
+          return options?.find((o) => o.id === raw)?.label ?? raw;
+        }
+        if (type === 'date') {
+          const parsed = new Date(raw);
+          return Number.isNaN(parsed.getTime())
+            ? raw
+            : parsed.toLocaleDateString('en-AU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              });
+        }
+        return raw;
+      }
       return {
         kind: 'matrix',
         entries: field.rows.map((row) => {
-          const raw = answer[row.id] ?? '';
-          if (!raw) {
-            return { row: row.label, column: '—' };
-          }
-          if (row.type === 'dropdown') {
-            const option = row.options?.find((o) => o.id === raw);
-            return { row: row.label, column: option?.label ?? raw };
-          }
-          if (row.type === 'date') {
-            const parsed = new Date(raw);
-            const formatted = Number.isNaN(parsed.getTime())
-              ? raw
-              : parsed.toLocaleDateString('en-AU', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                });
-            return { row: row.label, column: formatted };
-          }
-          return { row: row.label, column: raw };
+          const primaryText = formatQuestionCell(answer[row.id] ?? '', row.type, row.options);
+          // Fold any non-blank extra-column values into the same `column` string as
+          // "Label: value" pairs — this reuses the 'matrix' kind's existing {row, column}
+          // shape rather than widening it, so every downstream consumer (the submission
+          // page's <ul> renderer, CSV export) keeps working without a new formatted kind.
+          const extraParts = extraColumns
+            .map((column) => {
+              const raw = answer[questionTableExtraCellKey(row.id, column.id)] ?? '';
+              const text = formatQuestionCell(raw, column.type, column.options);
+              return raw ? `${column.label}: ${text}` : null;
+            })
+            .filter((part): part is string => part !== null);
+          const column =
+            extraParts.length > 0 ? [primaryText, ...extraParts].join(' · ') : primaryText;
+          return { row: row.label, column };
         }),
       };
     }

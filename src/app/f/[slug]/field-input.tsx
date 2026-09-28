@@ -28,6 +28,7 @@ import {
   parseFullNameAnswer,
   parseQuestionTableAnswer,
   parseTableAnswer,
+  questionTableExtraCellKey,
   serializeAddressAnswer,
   serializeChoiceMatrixAnswer,
   serializeFullNameAnswer,
@@ -1631,9 +1632,19 @@ interface QuestionTableControlProps {
 
 function QuestionTableControl({ field, value, onChange }: QuestionTableControlProps) {
   const answer = parseQuestionTableAnswer(value);
+  const extraColumns = field.columns ?? [];
 
   function updateRowAnswer(rowId: string, rowValue: string) {
     onChange(serializeQuestionTableAnswer({ ...answer, [rowId]: rowValue }));
+  }
+
+  function updateExtraCell(rowId: string, columnId: string, cellValue: string) {
+    onChange(
+      serializeQuestionTableAnswer({
+        ...answer,
+        [questionTableExtraCellKey(rowId, columnId)]: cellValue,
+      }),
+    );
   }
 
   const headerStyle: CSSProperties = {
@@ -1651,6 +1662,11 @@ function QuestionTableControl({ field, value, onChange }: QuestionTableControlPr
           <tr>
             <th style={headerStyle}>{field.fieldColumnLabel || 'Field'}</th>
             <th style={headerStyle}>{field.valueColumnLabel || 'Details'}</th>
+            {extraColumns.map((column) => (
+              <th key={column.id} style={headerStyle}>
+                {column.label}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -1695,6 +1711,48 @@ function QuestionTableControl({ field, value, onChange }: QuestionTableControlPr
                     />
                   )}
                 </td>
+                {extraColumns.map((column) => {
+                  const extraCellId = `${field.id}-${row.id}-${column.id}`;
+                  const extraValue = answer[questionTableExtraCellKey(row.id, column.id)] ?? '';
+                  return (
+                    <td key={column.id} style={valueStyle}>
+                      {column.type === 'dropdown' ? (
+                        <select
+                          id={extraCellId}
+                          className="text-input form-field-input"
+                          value={extraValue}
+                          onChange={(event) =>
+                            updateExtraCell(row.id, column.id, event.target.value)
+                          }
+                        >
+                          <option value="">Select…</option>
+                          {(column.options ?? []).map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : column.type === 'date' ? (
+                        <DatePickerField
+                          id={extraCellId}
+                          className="text-input form-field-input"
+                          value={extraValue}
+                          onChange={(nextValue) => updateExtraCell(row.id, column.id, nextValue)}
+                        />
+                      ) : (
+                        <input
+                          id={extraCellId}
+                          type={column.type === 'number' ? 'number' : 'text'}
+                          className="text-input form-field-input"
+                          value={extraValue}
+                          onChange={(event) =>
+                            updateExtraCell(row.id, column.id, event.target.value)
+                          }
+                        />
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             );
           })}

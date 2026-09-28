@@ -782,6 +782,16 @@ const questionTableFieldSchema = baseFieldSchema.extend({
   // for), so admins can leave it blank rather than being forced to type a placeholder.
   label: z.string().optional(),
   rows: z.array(questionTableRowSchema).min(1),
+  // Optional *extra* answer columns — e.g. a "Name" row that also wants a "Notes" cell
+  // alongside its primary answer. Deliberately reuses `table`'s column shape/types
+  // (TableColumn/TABLE_COLUMN_TYPES, identical to QUESTION_ROW_ANSWER_TYPES) rather than
+  // inventing a new one, and is additive/optional so every existing question_table field
+  // (no `columns` at all) keeps rendering exactly as before — a single "Details" answer
+  // cell per row. When present, each row gets one extra <td> per entry here, in order,
+  // answered independently of the row's own primary answer (see QuestionTableAnswer's
+  // compound `${rowId}:${columnId}` keys in compound-answer.ts). Extra columns are always
+  // optional to answer in v1 — no per-column required flag (see validate-answers.ts).
+  columns: z.array(tableColumnSchema).optional(),
   // Header row text + coloring, independent of the form-wide branding.layoutStyle 'table'
   // theme (see LAYOUT_STYLE_OPTIONS) — this field renders as its own compact table with
   // its own look, usable in any form regardless of that form's overall layout style.

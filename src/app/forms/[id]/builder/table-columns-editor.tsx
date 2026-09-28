@@ -12,14 +12,25 @@ interface TableColumnsEditorProps {
   columns: TableColumn[];
   canEdit: boolean;
   onChange: (columns: TableColumn[]) => void;
+  /** Lowest the list may shrink to before the remove button disables itself. `table`
+   * requires at least one column (tableFieldSchema's `columns: z.array(...).min(1)`), so
+   * this defaults to 1; question_table's *extra* columns are fully optional
+   * (questionTableFieldSchema's `columns` is `.optional()`), so that usage passes 0. */
+  minColumns?: number;
 }
 
 /** Column editor for the `table` field type's Content settings — one row per column with
  * a label, a type picker (short_text/number/dropdown/date), and — only for dropdown
  * columns — a nested OptionsEditor for that column's own option list. Modeled on
  * OptionsEditor's move/remove/add chrome, extended with the extra per-column type field
- * choice_matrix's plain rows/columns don't need. */
-export function TableColumnsEditor({ columns, canEdit, onChange }: TableColumnsEditorProps) {
+ * choice_matrix's plain rows/columns don't need. Also reused as-is for question_table's
+ * optional extra answer columns (see field-settings-panel.tsx's question_table case). */
+export function TableColumnsEditor({
+  columns,
+  canEdit,
+  onChange,
+  minColumns = 1,
+}: TableColumnsEditorProps) {
   function updateColumn(index: number, patch: Partial<TableColumn>) {
     onChange(columns.map((column, i) => (i === index ? { ...column, ...patch } : column)));
   }
@@ -118,7 +129,7 @@ export function TableColumnsEditor({ columns, canEdit, onChange }: TableColumnsE
                   <button
                     type="button"
                     className="options-editor-remove"
-                    disabled={columns.length <= 1}
+                    disabled={columns.length <= minColumns}
                     onClick={() => removeColumn(index)}
                     aria-label="Remove column"
                   >

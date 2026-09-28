@@ -882,6 +882,22 @@ function ContentExtras({
               onChange={(rows) => onUpdateField(field.id, { rows })}
             />
           </div>
+          <div className="settings-subsection">
+            <p className="settings-subsection-title">Extra answer columns</p>
+            <p className="settings-field-hint">
+              Every question already has one answer cell. Add columns here to give each question
+              extra cells alongside it (e.g. a "Notes" column next to every answer) — reuses the
+              same column types as the Input Table field.
+            </p>
+            <TableColumnsEditor
+              columns={field.columns ?? []}
+              canEdit={canEdit}
+              minColumns={0}
+              onChange={(columns) =>
+                onUpdateField(field.id, { columns: columns.length > 0 ? columns : undefined })
+              }
+            />
+          </div>
           <div className="settings-inline-fields">
             <label className="settings-field">
               <span className="settings-label">Question column label</span>

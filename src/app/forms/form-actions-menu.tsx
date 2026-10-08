@@ -412,7 +412,16 @@ function computePanelStyle(trigger: HTMLElement, panel: HTMLElement): CSSPropert
     top = aboveTop >= viewportPadding ? aboveTop : viewportPadding;
   }
 
-  let left = triggerRect.right - panelRect.width;
+  // Anchor to the trigger's *left* edge by default (the menu grows rightward, directly
+  // under the button, which is the layout people expect) — only fall back to right-
+  // aligning against the trigger's right edge if left-aligned would run past the right
+  // edge of the viewport. Previously always right-aligned, which on a narrow trigger
+  // (e.g. "Actions" in a grid card) pushed the whole panel well to the left of the
+  // button it came from, reading as misplaced even once it was safely on-screen.
+  let left = triggerRect.left;
+  if (left + panelRect.width > viewportWidth - viewportPadding) {
+    left = triggerRect.right - panelRect.width;
+  }
   left = Math.max(
     viewportPadding,
     Math.min(left, viewportWidth - panelRect.width - viewportPadding),

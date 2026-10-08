@@ -4833,14 +4833,14 @@ textarea.text-input {
 
 .forms-grid-card.card {
   margin-top: 0;
-  padding: 1.1rem 1.15rem 1rem;
+  padding: 0.85rem 0.9rem 0.75rem;
   box-shadow: none;
 }
 
 .forms-grid-card {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.5rem;
   min-width: 0;
   height: 100%;
   cursor: pointer;
@@ -4854,12 +4854,18 @@ textarea.text-input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.65rem;
+  gap: 0.5rem;
   min-width: 0;
 }
 
+/* Grid tiles are dense and many-per-screen, so every piece of chrome inside one (title,
+   creator byline, badges, stats, action buttons) is a notch smaller than its standalone
+   use elsewhere — same reasoning as .submissions-table .badge's smaller scoped size
+   above. Font sizes stay at or above readable minimums; this never touches an <input>, so
+   it's unrelated to the 16px iOS-zoom floor used on form fields. */
 .forms-grid-card-header .live-status {
   flex-shrink: 0;
+  font-size: 0.6875rem;
 }
 
 .forms-grid-card-title {
@@ -4867,6 +4873,7 @@ textarea.text-input {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.875rem;
   font-weight: 650;
   line-height: 1.35;
 }
@@ -4875,13 +4882,26 @@ textarea.text-input {
   display: flex;
   align-items: center;
   min-width: 0;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  font-size: 0.75rem;
 }
 
 .forms-grid-card-meta .admin-table-creator {
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
+  gap: 0.35rem;
+}
+
+.forms-grid-card-meta .admin-table-avatar {
+  width: 1.1rem;
+  height: 1.1rem;
+  font-size: 0.5625rem;
+}
+
+.forms-grid-card-meta .badge {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.6875rem;
 }
 
 .forms-grid-card-stats {
@@ -4889,7 +4909,7 @@ textarea.text-input {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  font-size: 0.8125rem;
+  font-size: 0.7rem;
   color: var(--color-text-muted);
   white-space: nowrap;
 }
@@ -4902,14 +4922,21 @@ textarea.text-input {
 .forms-grid-card-actions {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
   margin-top: auto;
-  padding-top: 0.75rem;
+  padding-top: 0.6rem;
   border-top: 1px solid var(--color-border);
 }
 
 .forms-grid-card-actions .button--small {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.7rem;
   text-decoration: none;
+}
+
+.forms-grid-card-actions .actions-menu-trigger {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
 }
 
 .forms-grid-empty {

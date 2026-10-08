@@ -6456,6 +6456,10 @@ textarea.text-input {
   position: fixed;
   z-index: 200;
   min-width: 12.5rem;
+  /* CSS-level backstop alongside computePanelStyle's JS clamp in form-actions-menu.tsx —
+     even if that JS ever mis-measures the viewport (e.g. layout vs. visual viewport
+     mismatch on mobile), the panel itself can't render wider than the screen. */
+  max-width: calc(100vw - 1rem);
   max-height: min(24rem, calc(100vh - 1rem));
   margin: 0;
   padding: 0.35rem;
@@ -8012,16 +8016,24 @@ textarea.text-input {
 /* Two-line menu item — icon + label on top, a muted explainer line underneath. Used for
    actions whose effect isn't obvious from the label alone (e.g. "Take offline" actually
    stopping the public link vs. "Set to draft" not doing that). */
+/* min-width: 0 overrides the flex-item default of min-width: auto, which otherwise lets
+   this column refuse to shrink below its *unwrapped* content width (e.g. Publish's hint
+   "Makes the form live and publicly reachable") — .actions-menu-panel has no explicit
+   width, so a fixed-position element with no width sizes itself shrink-to-fit around its
+   widest content; without this, that hint line alone could size the whole panel wider
+   than intended. */
 .actions-menu-item-text {
   display: flex;
   flex-direction: column;
   gap: 0.05rem;
+  min-width: 0;
 }
 
 .actions-menu-item-hint {
   font-size: 0.6875rem;
   font-weight: 500;
   color: var(--color-text-subtle);
+  white-space: normal;
 }
 
 /* Groups the back-step ("Set to draft") and forward-step (Approve/Publish/Unpublish)

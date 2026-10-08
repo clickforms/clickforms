@@ -391,8 +391,23 @@ function computePanelStyle(trigger: HTMLElement, panel: HTMLElement): CSSPropert
   const gap = 6;
   const viewportPadding = 8;
 
+  // window.innerWidth/innerHeight report the *layout* viewport, which on mobile
+  // (notably iOS Safari/Chrome) can be wider than what's actually visible — the real
+  // clamp needs the *visual* viewport. document.documentElement.clientWidth is a further
+  // fallback that excludes the scrollbar width window.innerWidth can include. Taking the
+  // smallest of the three is always at least as safe as window.innerWidth alone.
+  const viewportWidth = Math.min(
+    window.innerWidth,
+    window.visualViewport?.width ?? window.innerWidth,
+    document.documentElement.clientWidth || window.innerWidth,
+  );
+  const viewportHeight = Math.min(
+    window.innerHeight,
+    window.visualViewport?.height ?? window.innerHeight,
+  );
+
   let top = triggerRect.bottom + gap;
-  if (top + panelRect.height > window.innerHeight - viewportPadding) {
+  if (top + panelRect.height > viewportHeight - viewportPadding) {
     const aboveTop = triggerRect.top - panelRect.height - gap;
     top = aboveTop >= viewportPadding ? aboveTop : viewportPadding;
   }
@@ -400,7 +415,7 @@ function computePanelStyle(trigger: HTMLElement, panel: HTMLElement): CSSPropert
   let left = triggerRect.right - panelRect.width;
   left = Math.max(
     viewportPadding,
-    Math.min(left, window.innerWidth - panelRect.width - viewportPadding),
+    Math.min(left, viewportWidth - panelRect.width - viewportPadding),
   );
 
   return { position: 'fixed', top, left };

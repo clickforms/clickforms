@@ -4958,6 +4958,29 @@ textarea.text-input {
   text-decoration: none;
 }
 
+/* Outline instead of solid fill — a filled green pill on every single card in the grid
+   was a lot of solid color competing with the live-status dot's own green; an outline
+   reads as the same affordance with far less visual weight. Scoped to the grid card only
+   — .button--success elsewhere (builder header, table-view row actions) stays filled. */
+.forms-grid-card-actions .button--success {
+  background-color: transparent;
+  color: #16a34a;
+  border: 1px solid #16a34a;
+}
+
+.forms-grid-card-actions .button--success:hover {
+  background-color: rgba(22, 163, 74, 0.08);
+}
+
+.admin-shell[data-theme="dark"] .forms-grid-card-actions .button--success {
+  color: #4ade80;
+  border-color: #4ade80;
+}
+
+.admin-shell[data-theme="dark"] .forms-grid-card-actions .button--success:hover {
+  background-color: rgba(74, 222, 128, 0.12);
+}
+
 .forms-grid-empty {
   grid-column: 1 / -1;
 }

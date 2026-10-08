@@ -4868,6 +4868,10 @@ textarea.text-input {
   font-size: 0.625rem;
 }
 
+/* Neutralized from .admin-table-name-link's green + .admin-table-avatar's lavender —
+   with several cards on screen at once, every title/avatar being its own accent color
+   read as noisy. The grid card keeps color only where it's meaningful: the live-status
+   dot, and the Publish button. Table view keeps the green title link untouched. */
 .forms-grid-card-title {
   min-width: 0;
   overflow: hidden;
@@ -4876,6 +4880,12 @@ textarea.text-input {
   font-size: 0.8125rem;
   font-weight: 650;
   line-height: 1.35;
+  color: var(--color-text);
+}
+
+.forms-grid-card-title:hover {
+  color: var(--color-text);
+  text-decoration: underline;
 }
 
 .forms-grid-card-meta {
@@ -4897,6 +4907,8 @@ textarea.text-input {
   width: 1rem;
   height: 1rem;
   font-size: 0.5rem;
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text-muted);
 }
 
 .forms-grid-card-meta .badge {

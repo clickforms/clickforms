@@ -4947,9 +4947,9 @@ textarea.text-input {
    other in this row. */
 .forms-grid-card-actions .button--small,
 .forms-grid-card-actions .actions-menu-trigger {
-  height: 1.6rem;
-  padding: 0 0.6rem;
-  font-size: 0.6875rem;
+  height: 1.35rem;
+  padding: 0 0.5rem;
+  font-size: 0.625rem;
   line-height: 1;
   box-sizing: border-box;
 }

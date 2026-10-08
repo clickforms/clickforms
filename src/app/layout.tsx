@@ -38,7 +38,7 @@ const spaceGrotesk = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Clickforms — Internal forms & workflows',
+  title: 'Clickforms',
   description:
     'Build intake, consent, and service agreement forms. Collect e-signatures and submissions, route through approvals, and manage responses — your in-house replacement for scattered form workflows.',
   applicationName: 'Clickforms',
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     apple: [{ url: '/brand/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
-    title: 'Clickforms — Internal forms & workflows',
+    title: 'Clickforms',
     description:
       'Build intake, consent, and service agreement forms. Collect e-signatures and submissions, route through approvals, and manage responses.',
     siteName: 'Clickforms',

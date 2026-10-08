@@ -15,8 +15,8 @@ interface PageProps {
 }
 
 // Share links (WhatsApp/iMessage/Slack unfurls, etc.) previously inherited the root
-// layout's generic "Clickforms — Internal forms & workflows" title, long description, and
-// Clickforms logo image -- confusing for a respondent who's never heard of the platform
+// layout's generic "Clickforms" title, long description, and Clickforms logo image --
+// confusing for a respondent who's never heard of the platform
 // and just wants to know whose form this is. This overrides all of that per-form with the
 // org's own name as the title, no description, plus the org's own uploaded logo as the
 // preview image when they have one (falls back to the inherited default image otherwise).

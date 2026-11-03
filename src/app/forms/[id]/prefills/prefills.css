@@ -1,75 +1,3 @@
-.prefills-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
-}
-.prefills-empty {
-  padding: 3rem 1rem;
-  text-align: center;
-  border: 1px dashed var(--border, #d9dde3);
-  border-radius: 12px;
-}
-.prefills-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  border: 1px solid var(--border, #e3e6ea);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.prefills-table th {
-  text-align: left;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #6b7280;
-  padding: 0.75rem 1rem;
-  background: #f8f9fb;
-}
-.prefills-table td {
-  padding: 0.8rem 1rem;
-  border-top: 1px solid #eef0f3;
-  font-size: 0.92rem;
-  vertical-align: middle;
-}
-.prefills-recipient {
-  display: flex;
-  flex-direction: column;
-}
-.prefills-recipient span {
-  color: #6b7280;
-  font-size: 0.85rem;
-}
-.prefills-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-.prefills-status {
-  display: inline-block;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  background: #eef0f3;
-  color: #4b5563;
-}
-.prefills-status--opened {
-  background: #e0edff;
-  color: #1d4ed8;
-}
-.prefills-status--started {
-  background: #fff3d6;
-  color: #92600a;
-}
-.prefills-status--completed {
-  background: #dcf5e4;
-  color: #166534;
-}
-.prefills-status--expired {
-  background: #f3e8e8;
-  color: #8a3a3a;
-}
 .prefill-badge {
   margin-left: 0.5rem;
   padding: 0.1rem 0.5rem;
@@ -80,8 +8,362 @@
   color: #1d4ed8;
 }
 
-.prefills-status--draft {
+.pf-card {
+  background: #fff;
+  border: 1px solid #e6e8ec;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.pf-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid #eef0f3;
+}
+.pf-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.pf-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #5b6472;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.pf-filter:hover {
   background: #f3f4f6;
+}
+.pf-filter[aria-selected="true"] {
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 600;
+}
+.pf-filter-count {
+  min-width: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.07);
+  font-size: 0.72rem;
+  line-height: 1.3rem;
+  text-align: center;
+}
+.pf-filter[aria-selected="true"] .pf-filter-count {
+  background: rgba(67, 56, 202, 0.14);
+}
+.pf-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.pf-search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.7rem;
+  height: 34px;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  color: #8a93a0;
+  background: #fff;
+}
+.pf-search:focus-within {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+}
+.pf-search input {
+  width: 150px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.86rem;
+  color: #111827;
+}
+
+.pf-scroll {
+  overflow-x: auto;
+}
+.pf-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.pf-table th {
+  padding: 0.65rem 1.1rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #8a93a0;
+  background: #fafbfc;
+  border-bottom: 1px solid #eef0f3;
+  white-space: nowrap;
+}
+.pf-table td {
+  padding: 0.8rem 1.1rem;
+  border-bottom: 1px solid #f1f2f4;
+  font-size: 0.9rem;
+  color: #111827;
+  vertical-align: middle;
+}
+.pf-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.pf-table tbody tr:hover {
+  background: #fafbff;
+}
+.pf-muted {
+  color: #6b7280;
+  font-size: 0.86rem;
+}
+.pf-table td.pf-none {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #8a93a0;
+}
+
+.pf-person {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.pf-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.pf-avatar--draft {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.pf-person-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pf-person-text strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-person-text small {
+  font-size: 0.78rem;
+  color: #8a93a0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #4b5563;
+  white-space: nowrap;
+}
+.pf-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pf-status--sent {
+  background: #eef2ff;
+  color: #4338ca;
+}
+.pf-status--opened {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.pf-status--started {
+  background: #fef3c7;
+  color: #b45309;
+}
+.pf-status--completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+.pf-status--expired {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pf-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+.pf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.pf-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.pf-btn--sm {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+}
+.pf-btn--primary {
+  background: #4f46e5;
+  color: #fff;
+}
+.pf-btn--primary:hover:not(:disabled) {
+  background: #4338ca;
+}
+.pf-btn--ghost {
+  background: #fff;
   color: #374151;
-  border: 1px dashed #9ca3af;
+  border-color: #d9dde3;
+}
+.pf-btn--ghost:hover:not(:disabled) {
+  background: #f6f7f9;
+}
+.pf-btn--danger {
+  background: #dc2626;
+  color: #fff;
+}
+.pf-btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+.pf-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.pf-icon-btn:hover:not(:disabled) {
+  background: #f0f1f4;
+  color: #111827;
+}
+.pf-icon-btn--danger:hover:not(:disabled) {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.pf-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 4rem 1.5rem;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #e6e8ec;
+  border-radius: 14px;
+}
+.pf-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: #eef2ff;
+  color: #4f46e5;
+  margin-bottom: 0.4rem;
+}
+.pf-empty h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #111827;
+}
+.pf-empty p {
+  margin: 0 0 0.6rem;
+  max-width: 420px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.pf-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(17, 24, 39, 0.5);
+}
+.pf-dialog {
+  width: 100%;
+  max-width: 400px;
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+}
+.pf-dialog h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.1rem;
+  color: #111827;
+}
+.pf-dialog p {
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #6b7280;
+}
+.pf-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }

@@ -7,12 +7,14 @@ import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { LandingPricing } from '@/components/landing/landing-pricing';
 import { authOptions } from '@/lib/auth';
+import { pageMetadata } from '@/lib/seo/site';
 
-export const metadata: Metadata = {
-  title: 'Pricing | Clickforms',
+export const metadata: Metadata = pageMetadata({
+  path: '/pricing',
+  title: 'Form Builder Pricing in AUD — Free 7-Day Trial | Clickforms',
   description:
-    'Simple, Australian-dollar pricing for Clickforms — Standard, Business, Professional, and Enterprise plans, each starting with a 7-day free trial.',
-};
+    'Simple Australian-dollar pricing for the Clickforms online form builder. Standard, Business, Professional and Enterprise plans, each with a 7-day free trial and no credit card.',
+});
 
 export default async function PricingPage() {
   const session = await getServerSession(authOptions);

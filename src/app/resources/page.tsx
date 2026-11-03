@@ -8,6 +8,7 @@ import { ArrowRightIcon, DocumentIcon } from '@/components/landing/landing-icons
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
+import { pageMetadata } from '@/lib/seo/site';
 
 const RESOURCE_STATS = [
   { value: '20+', label: 'Field types built in' },
@@ -51,11 +52,12 @@ const FORM_TYPES = [
   },
 ] as const;
 
-export const metadata: Metadata = {
-  title: 'Resources | Clickforms',
+export const metadata: Metadata = pageMetadata({
+  path: '/resources',
+  title: 'Form Templates & Types: Intake, Consent, Agreements | Clickforms',
   description:
-    'Form types Clickforms teams run every day — intake, consent, agreements, and reporting, built for detail-heavy, regulated workflows.',
-};
+    'Form types Clickforms teams run every day — client intake, consent, service agreements, incident reports, referrals and staff onboarding forms.',
+});
 
 export default async function ResourcesPage() {
   const session = await getServerSession(authOptions);

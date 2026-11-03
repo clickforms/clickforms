@@ -14,6 +14,7 @@ import {
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
+import { pageMetadata } from '@/lib/seo/site';
 
 const SERVICE_FEATURES = [
   {
@@ -33,11 +34,12 @@ const SERVICE_FEATURES = [
   },
 ] as const;
 
-export const metadata: Metadata = {
-  title: 'Services | Clickforms',
+export const metadata: Metadata = pageMetadata({
+  path: '/product/services',
+  title: 'Form Builder Features: E-Signatures, Logic & Approvals | Clickforms',
   description:
-    'A purpose-built form builder for intake, consent, and service agreements — signatures, uploads, and approval workflows your compliance review can trust.',
-};
+    'Explore Clickforms features — e-signatures, file uploads, conditional logic, approval workflows, branding and audit trails for custom online forms.',
+});
 
 export default async function ServicesPage() {
   const session = await getServerSession(authOptions);

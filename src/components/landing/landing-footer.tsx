@@ -7,6 +7,7 @@ import {
   XIcon,
   YouTubeIcon,
 } from '@/components/landing/landing-icons';
+import { SOLUTIONS } from '@/lib/seo/solutions';
 
 const SOCIAL_LINKS = [
   { label: 'Facebook', href: '#', icon: FacebookIcon },
@@ -37,6 +38,14 @@ export function LandingFooter() {
           <Link href="/product/services">Services</Link>
           <Link href="/product/how-it-works">How it works</Link>
           <Link href="/resources">Form types</Link>
+        </div>
+        <div className="landing-footer-col">
+          <p className="landing-footer-col-title">Solutions</p>
+          {SOLUTIONS.map((item) => (
+            <Link key={item.slug} href={`/solutions/${item.slug}`}>
+              {item.name}
+            </Link>
+          ))}
         </div>
         <div className="landing-footer-col">
           <p className="landing-footer-col-title">Learn more</p>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
+import { DEFAULT_KEYWORDS, siteUrl } from '@/lib/seo/site';
 import './globals.css';
 
 // Self-hosted so compile/runtime never needs to reach Google Fonts (offline, air-gapped,
@@ -38,9 +39,14 @@ const spaceGrotesk = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Clickforms',
+  metadataBase: new URL(siteUrl()),
+  title: {
+    default: 'Clickforms | Online Form Builder for Custom Forms in Australia',
+    template: '%s',
+  },
   description:
-    'Build intake, consent, and service agreement forms. Collect e-signatures and submissions, route through approvals, and manage responses — your in-house replacement for scattered form workflows.',
+    'Build custom online forms in minutes — intake, consent and service agreement forms with e-signatures, conditional logic and approval workflows. Australian-hosted, with a 7-day free trial.',
+  keywords: DEFAULT_KEYWORDS,
   applicationName: 'Clickforms',
   icons: {
     icon: [
@@ -53,12 +59,15 @@ export const metadata: Metadata = {
     apple: [{ url: '/brand/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
-    title: 'Clickforms',
+    type: 'website',
+    title: 'Clickforms | Online Form Builder for Custom Forms in Australia',
     description:
-      'Build intake, consent, and service agreement forms. Collect e-signatures and submissions, route through approvals, and manage responses.',
+      'Build custom online forms in minutes — intake, consent and service agreement forms with e-signatures, conditional logic and approval workflows.',
     siteName: 'Clickforms',
+    locale: 'en_AU',
     images: [{ url: '/brand/logo.png', width: 666, height: 184, alt: 'Clickforms' }],
   },
+  twitter: { card: 'summary' },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

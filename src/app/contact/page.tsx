@@ -6,11 +6,13 @@ import { LandingFooter } from '@/components/landing/landing-footer';
 import { MailIcon, PhoneIcon } from '@/components/landing/landing-icons';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { authOptions } from '@/lib/auth';
+import { pageMetadata } from '@/lib/seo/site';
 
-export const metadata: Metadata = {
-  title: 'Contact | Clickforms',
-  description: 'Get in touch with the Clickforms team by email, phone, or message.',
-};
+export const metadata: Metadata = pageMetadata({
+  path: '/contact',
+  title: 'Contact Clickforms | Online Form Builder Support',
+  description: 'Get in touch with the Clickforms team by email, phone or message.',
+});
 
 export default async function ContactPage() {
   const session = await getServerSession(authOptions);

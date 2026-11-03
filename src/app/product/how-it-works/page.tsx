@@ -7,6 +7,7 @@ import { BoltIcon, CheckIcon } from '@/components/landing/landing-icons';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
+import { pageMetadata } from '@/lib/seo/site';
 
 const STEPS = [
   {
@@ -31,11 +32,12 @@ const STEPS = [
   },
 ] as const;
 
-export const metadata: Metadata = {
-  title: 'How it works | Clickforms',
+export const metadata: Metadata = pageMetadata({
+  path: '/product/how-it-works',
+  title: 'How to Build and Publish Online Forms | Clickforms',
   description:
-    'Build, publish, collect, and review — how Clickforms turns intake and consent into structured, audit-ready submissions.',
-};
+    'See how Clickforms works: build a custom form, publish it with one link, collect signed submissions and review them with approvals and an audit trail.',
+});
 
 export default async function HowItWorksPage() {
   const session = await getServerSession(authOptions);

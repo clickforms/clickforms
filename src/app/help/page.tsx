@@ -8,6 +8,7 @@ import { ChevronDownIcon } from '@/components/landing/landing-icons';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingPageHero } from '@/components/landing/landing-page-hero';
 import { authOptions } from '@/lib/auth';
+import { pageMetadata } from '@/lib/seo/site';
 
 const TOPICS = [
   'Billing & plans',
@@ -36,11 +37,12 @@ const FAQS = [
   },
 ] as const;
 
-export const metadata: Metadata = {
-  title: 'Help | Clickforms',
+export const metadata: Metadata = pageMetadata({
+  path: '/help',
+  title: 'Form Builder FAQ & Help Centre | Clickforms',
   description:
-    'Answers to common Clickforms questions about branding, logic, access, and file uploads.',
-};
+    'Answers about building online forms with Clickforms: branding, conditional logic, signatures, uploads, security, approvals and billing.',
+});
 
 export default async function HelpPage() {
   const session = await getServerSession(authOptions);

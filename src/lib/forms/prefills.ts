@@ -45,11 +45,12 @@ export function sanitizePrefillAnswers(schema: FormSchema, answers: unknown): Fo
   return result;
 }
 
-export type PrefillStatus = 'sent' | 'opened' | 'started' | 'completed' | 'expired';
+export type PrefillStatus = 'draft' | 'sent' | 'opened' | 'started' | 'completed' | 'expired';
 
 export interface PrefillRow {
   id: string;
   recipient_email: string | null;
+  is_draft: boolean;
   recipient_name: string | null;
   token: string;
   sent_at: Date | null;
@@ -62,11 +63,13 @@ export interface PrefillRow {
 }
 
 export function prefillStatus(row: {
+  is_draft: boolean;
   opened_at: Date | null;
   expires_at: Date;
   responses: number;
   completed: number;
 }): PrefillStatus {
+  if (row.is_draft) return 'draft';
   if (row.completed > 0) return 'completed';
   if (row.expires_at.getTime() < Date.now()) return 'expired';
   if (row.responses > 0) return 'started';
@@ -77,7 +80,7 @@ export function prefillStatus(row: {
 /** All prefills for one form, newest first, with response counts. Run inside withOrgContext. */
 export async function listPrefills(tx: Prisma.TransactionClient, formId: string) {
   return tx.$queryRaw<PrefillRow[]>`
-    SELECT p.id, p.recipient_email, p.recipient_name, p.token, p.sent_at, p.opened_at,
+    SELECT p.id, p.is_draft, p.recipient_email, p.recipient_name, p.token, p.sent_at, p.opened_at,
            p.expires_at, p.created_at,
            COALESCE(u.name, u.email) AS created_by_name,
            (SELECT count(*)::int FROM submissions s

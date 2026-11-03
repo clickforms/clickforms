@@ -49,6 +49,7 @@ export default async function PrefillsPage({ params }: PageProps) {
           recipientEmail: row.recipient_email,
           recipientName: row.recipient_name,
           url: prefillUrl(subdomain, form.slug, row.token),
+          continueHref: `/f/${form.slug}/prefill?draft=${row.id}`,
           status: prefillStatus(row),
           sentAt: (row.sent_at ?? row.created_at).toISOString(),
           createdBy: row.created_by_name,

@@ -101,7 +101,8 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
     const found = await withOrgContext(organizationId, async (tx) => {
       const rows = await tx.$queryRaw<{ id: string; answers: unknown }[]>`
         SELECT id, answers FROM form_prefills
-        WHERE token = ${rawToken} AND form_id = ${form.id}::uuid AND expires_at > now()`;
+        WHERE token = ${rawToken} AND form_id = ${form.id}::uuid AND expires_at > now()
+          AND NOT is_draft`;
       const row = rows[0];
       if (row) {
         await tx.$executeRaw`UPDATE form_prefills SET opened_at = now() WHERE id = ${row.id}::uuid AND opened_at IS NULL`;

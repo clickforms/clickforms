@@ -373,6 +373,7 @@ model FormPrefill {
   recipientName  String?   @map("recipient_name")
   token          String    @unique
   answers        Json      @default("{}")
+  isDraft        Boolean   @default(false) @map("is_draft")
   sentAt         DateTime? @map("sent_at")
   openedAt       DateTime? @map("opened_at")
   expiresAt      DateTime  @map("expires_at")

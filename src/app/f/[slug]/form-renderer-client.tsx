@@ -65,6 +65,8 @@ interface FormRendererClientProps {
   /** Admin "send a prefilled form" mode (/f/[slug]/prefill): the last-page button opens a
    * send-by-email panel instead of submitting. */
   prefillBuilder?: boolean;
+  /** Builder only: the saved draft being continued (updated in place when saved/sent). */
+  draftId?: string;
 }
 
 interface PresignResponse {
@@ -111,6 +113,7 @@ function FormRendererInner({
   prefillAnswers,
   prefillToken,
   prefillBuilder = false,
+  draftId,
 }: FormRendererClientProps) {
   const toast = useToast();
   const [pageIndex, setPageIndex] = useState(0);
@@ -439,6 +442,7 @@ function FormRendererInner({
         body: JSON.stringify({
           answers,
           delivery: sendMode,
+          draftId,
           recipientEmail: sendMode === 'email' ? email : undefined,
           recipientName: recipientName.trim() || undefined,
           note: sendMode === 'email' ? note.trim() || undefined : undefined,
@@ -455,7 +459,30 @@ function FormRendererInner({
     } finally {
       setSubmitting(false);
     }
-  }, [answers, formId, note, recipientEmail, recipientName, sendMode, toast]);
+  }, [answers, draftId, formId, note, recipientEmail, recipientName, sendMode, toast]);
+
+  const saveDraft = useCallback(async () => {
+    if (!formId) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/prefills`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers, delivery: 'draft', draftId }),
+      });
+      const data: { error?: string } = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not save the draft.');
+        setSubmitting(false);
+        return;
+      }
+      toast.success('Draft saved');
+      window.location.href = `/forms/${formId}/prefills`;
+    } catch {
+      toast.error('Could not save the draft.');
+      setSubmitting(false);
+    }
+  }, [answers, draftId, formId, toast]);
 
   const handleNextOrSubmit = useCallback(async () => {
     const page = schema.pages[pageIndex];
@@ -767,12 +794,17 @@ function FormRendererInner({
               }}
             />
           ) : null}
-          {isLastPage ? (
+          {isLastPage || prefillBuilder ? (
             <button
               type="button"
               className="form-save-later"
-              disabled
-              title="Save and resume by email — coming soon"
+              disabled={!prefillBuilder || submitting}
+              onClick={prefillBuilder ? () => void saveDraft() : undefined}
+              title={
+                prefillBuilder
+                  ? 'Save this prefill as a draft'
+                  : 'Save and resume by email — coming soon'
+              }
             >
               Save and Complete Later
             </button>

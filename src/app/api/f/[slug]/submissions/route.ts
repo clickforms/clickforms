@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
           UPDATE submissions SET prefill_id = p.id, prefill_recipient = COALESCE(p.recipient_email, p.recipient_name, 'Shared link')
           FROM form_prefills p
           WHERE submissions.id = ${created.id}::uuid
-            AND p.token = ${prefillToken} AND p.form_id = ${form.id}::uuid`;
+            AND p.token = ${prefillToken} AND p.form_id = ${form.id}::uuid AND NOT p.is_draft`;
       }
       return created;
     });

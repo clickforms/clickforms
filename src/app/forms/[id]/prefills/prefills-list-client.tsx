@@ -5,12 +5,14 @@ import { useState } from 'react';
 import { useToast } from '@/components/toast';
 import './prefills.css';
 
-type Status = 'sent' | 'opened' | 'started' | 'completed' | 'expired';
+type Status = 'draft' | 'sent' | 'opened' | 'started' | 'completed' | 'expired';
 
 interface PrefillItem {
   id: string;
   recipientEmail: string | null;
   url: string;
+  /** Where "Continue" opens the builder for a draft. */
+  continueHref: string;
   recipientName: string | null;
   status: Status;
   sentAt: string;
@@ -19,6 +21,7 @@ interface PrefillItem {
 }
 
 const STATUS_LABEL: Record<Status, string> = {
+  draft: 'Draft',
   sent: 'Sent',
   opened: 'Opened',
   started: 'In progress',
@@ -124,7 +127,10 @@ export function PrefillsListClient({
                 <td>
                   <div className="prefills-recipient">
                     {item.recipientName ? <strong>{item.recipientName}</strong> : null}
-                    <span>{item.recipientEmail ?? 'Shared as a link'}</span>
+                    <span>
+                      {item.recipientEmail ??
+                        (item.status === 'draft' ? 'Not sent yet' : 'Shared as a link')}
+                    </span>
                   </div>
                 </td>
                 <td>
@@ -135,7 +141,12 @@ export function PrefillsListClient({
                 <td>{new Date(item.sentAt).toLocaleDateString('en-AU')}</td>
                 <td>{item.createdBy ?? '—'}</td>
                 <td className="prefills-actions">
-                  {item.status !== 'expired' ? (
+                  {item.status === 'draft' ? (
+                    <a className="button button--small" href={item.continueHref}>
+                      Continue
+                    </a>
+                  ) : null}
+                  {item.status !== 'expired' && item.status !== 'draft' ? (
                     <button
                       type="button"
                       className="button button--secondary button--small"
@@ -150,6 +161,7 @@ export function PrefillsListClient({
                     </button>
                   ) : null}
                   {item.recipientEmail &&
+                  item.status !== 'draft' &&
                   item.status !== 'expired' &&
                   item.status !== 'completed' ? (
                     <button

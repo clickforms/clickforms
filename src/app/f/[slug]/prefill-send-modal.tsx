@@ -216,7 +216,7 @@ export function PrefillSendModal({
                   id="pfm-link-name"
                   ref={firstFieldRef}
                   type="text"
-                  placeholder="e.g. Sarah Jones — so you can find it later"
+                  placeholder="e.g. Sarah Jones"
                   value={name}
                   onChange={(event) => onName(event.target.value)}
                 />

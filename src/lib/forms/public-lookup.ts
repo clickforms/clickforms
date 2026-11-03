@@ -1,4 +1,5 @@
 import type { Form, Submission } from '@prisma/client';
+import { cache } from 'react';
 import { isTrialExpired } from '@/lib/admin/plan-limits';
 import { FormOfflineError, NotFoundError } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
@@ -38,7 +39,9 @@ import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
  * getFormForExistingSubmission below deliberately does NOT carry this check: a submission
  * already in progress when the trial lapsed is still allowed to finish, same principle as
  * a form taken offline manually mid-fill (see the PATCH final-submit route). */
-export async function getPublishedFormBySlug(
+// Wrapped in React cache(): the public page's generateMetadata and its component both call this
+// with the same arguments, so within one request it now hits the database once, not twice.
+export const getPublishedFormBySlug = cache(async function getPublishedFormBySlug(
   slug: string,
   organizationId: string,
 ): Promise<Form & { currentVersionId: string }> {
@@ -58,7 +61,7 @@ export async function getPublishedFormBySlug(
   }
 
   return form as Form & { currentVersionId: string };
-}
+});
 
 /** For routes that continue an *existing* submission (final submit, upload presign/confirm)
  * rather than starting a new one. Deliberately does NOT require `currentVersionId` — a
@@ -97,7 +100,18 @@ export async function findOrganizationSubdomainForSlug(slug: string): Promise<st
   return form?.organization.subdomain ?? null;
 }
 
+// Short-lived in-process memo of parsed schemas. A published form's version is read (and zod-
+// parsed, which is not free for a large form) on every respondent page view; the TTL keeps
+// the rare in-place correction from being stale for long.
+const SCHEMA_MEMO_TTL_MS = 60_000;
+const SCHEMA_MEMO_MAX = 200;
+const schemaMemo = new Map<string, { expires: number; schema: FormSchema }>();
+
 export async function getFormSchemaByVersionId(formVersionId: string): Promise<FormSchema> {
+  const memo = schemaMemo.get(formVersionId);
+  if (memo && memo.expires > Date.now()) {
+    return memo.schema;
+  }
   const version = await prisma.formVersion.findUnique({ where: { id: formVersionId } });
   if (!version) {
     throw new NotFoundError('Form version');
@@ -113,6 +127,11 @@ export async function getFormSchemaByVersionId(formVersionId: string): Promise<F
     );
     throw new NotFoundError('Form version');
   }
+  if (schemaMemo.size >= SCHEMA_MEMO_MAX) {
+    const oldest = schemaMemo.keys().next().value;
+    if (oldest !== undefined) schemaMemo.delete(oldest);
+  }
+  schemaMemo.set(formVersionId, { expires: Date.now() + SCHEMA_MEMO_TTL_MS, schema: parsed.data });
   return parsed.data;
 }
 

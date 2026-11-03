@@ -2,6 +2,7 @@ import 'server-only';
 
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { cache } from 'react';
 import { NotFoundError } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
 import { findOrganizationSubdomainForSlug } from '@/lib/forms/public-lookup';
@@ -25,12 +26,14 @@ export async function getCurrentSubdomain(): Promise<string | null> {
  * src/lib/auth.ts login and src/lib/forms/public-lookup.ts: the organizationId isn't
  * known yet, that's exactly what this call is resolving.
  */
-export async function getOrganizationBySubdomain(subdomain: string) {
+// React cache(): generateMetadata and the page component both resolve the same subdomain in
+// one render — this makes that a single query per request instead of two.
+export const getOrganizationBySubdomain = cache(async (subdomain: string) => {
   return prisma.organization.findUnique({
     where: { subdomain },
     select: { id: true, name: true, subdomain: true, logoStorageKey: true },
   });
-}
+});
 
 /** Builds the root-relative-safe absolute origin for an org's public subdomain, e.g. "https://carecircle.clickforms.com.au". */
 export function buildOrgOrigin(subdomain: string): string {

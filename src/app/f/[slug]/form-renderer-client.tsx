@@ -3,6 +3,7 @@
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FieldInput } from '@/app/f/[slug]/field-input';
+import { PrefillSendModal } from '@/app/f/[slug]/prefill-send-modal';
 import { ToastProvider, useToast } from '@/components/toast';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getVisibleFieldIds } from '@/lib/forms/conditional-logic';
@@ -413,6 +414,14 @@ function FormRendererInner({
     toast,
   ]);
 
+  const closeSendModal = useCallback(() => {
+    setSendOpen(false);
+    setSentTo(null);
+    setRecipientEmail('');
+    setRecipientName('');
+    setNote('');
+  }, []);
+
   const sendPrefill = useCallback(async () => {
     if (!formId) return;
     const email = recipientEmail.trim();
@@ -733,92 +742,25 @@ function FormRendererInner({
             </button>
           </div>
           {prefillBuilder && sendOpen ? (
-            <div className="form-prefill-send" role="dialog" aria-label="Send prefilled form">
-              {sentTo ? (
-                <>
-                  <h3 className="form-prefill-send-title">Sent to {sentTo.email}</h3>
-                  <p className="form-field-help">
-                    They&apos;ll get an email with a personal link. Track it, resend it or delete it
-                    from the Prefills tab.
-                  </p>
-                  <div className="form-prefill-send-actions">
-                    <a
-                      className="button form-prefill-send-primary"
-                      href={`/forms/${formId}/prefills`}
-                    >
-                      View prefills
-                    </a>
-                    <button
-                      type="button"
-                      className="button button--secondary"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(sentTo.url).then(
-                          () => toast.success('Link copied'),
-                          () => toast.error('Could not copy the link'),
-                        );
-                      }}
-                    >
-                      Copy link
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3 className="form-prefill-send-title">Send this form to…</h3>
-                  <label className="form-prefill-send-label">
-                    Email address
-                    <input
-                      type="email"
-                      className="text-input"
-                      value={recipientEmail}
-                      onChange={(event) => setRecipientEmail(event.target.value)}
-                      placeholder="name@example.com"
-                    />
-                  </label>
-                  <label className="form-prefill-send-label">
-                    Name (optional)
-                    <input
-                      type="text"
-                      className="text-input"
-                      value={recipientName}
-                      onChange={(event) => setRecipientName(event.target.value)}
-                    />
-                  </label>
-                  <label className="form-prefill-send-label">
-                    Personal note (optional)
-                    <textarea
-                      className="text-input"
-                      rows={3}
-                      value={note}
-                      onChange={(event) => setNote(event.target.value)}
-                    />
-                  </label>
-                  <p className="form-field-help">
-                    They&apos;ll receive an email with a personal link to this form with your
-                    answers filled in. They can change anything before submitting. The link expires
-                    in 30 days.
-                  </p>
-                  <div className="form-prefill-send-actions">
-                    <button
-                      type="button"
-                      className="button form-prefill-send-primary"
-                      disabled={submitting}
-                      onClick={() => void sendPrefill()}
-                    >
-                      {submitting ? 'Sending…' : 'Send email'}
-                    </button>
-                    <button
-                      type="button"
-                      className="button button--secondary"
-                      disabled={submitting}
-                      onClick={() => setSendOpen(false)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <PrefillSendModal
+              formId={formId}
+              email={recipientEmail}
+              name={recipientName}
+              note={note}
+              sending={submitting}
+              sent={sentTo}
+              onEmail={setRecipientEmail}
+              onName={setRecipientName}
+              onNote={setNote}
+              onSend={() => void sendPrefill()}
+              onClose={closeSendModal}
+              onCopy={(url) => {
+                void navigator.clipboard.writeText(url).then(
+                  () => toast.success('Link copied'),
+                  () => toast.error('Could not copy the link'),
+                );
+              }}
+            />
           ) : null}
           {isLastPage ? (
             <button

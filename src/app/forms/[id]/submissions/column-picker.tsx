@@ -135,10 +135,7 @@ export function ColumnPicker({ formId, label, fields, selectedId }: ColumnPicker
             >
               <div className="column-picker-head">
                 <p className="column-picker-title">Show in this column</p>
-                <p className="column-picker-sub">
-                  Pick the field that identifies each response — a name, job number, site or
-                  anything else on your form.
-                </p>
+                <p className="column-picker-sub">Which field should identify each response?</p>
               </div>
               <input
                 ref={searchRef}
@@ -160,7 +157,7 @@ export function ColumnPicker({ formId, label, fields, selectedId }: ColumnPicker
                     >
                       <span className="column-picker-option-text">
                         <strong>Automatic</strong>
-                        <small>Name or email, if the form has one</small>
+                        <small>Name or email if available</small>
                       </span>
                       {selectedId === null ? <Check /> : null}
                     </button>

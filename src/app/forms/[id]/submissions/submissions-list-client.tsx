@@ -31,21 +31,22 @@ interface SubmissionSummary {
   createdAt: string;
 }
 
-function formatResponseTimestamp(iso: string): string {
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Built by hand (no Intl) so the server and browser always produce identical text — Intl month
+// names differ between Node and browsers ("July" vs "Jul"), which caused a hydration mismatch.
+// `local` is false for the server render / first client render (UTC, identical on both sides)
+// and flips to true after mount, when the viewer's own timezone is applied.
+function formatResponseTimestamp(iso: string, local: boolean): string {
   const date = new Date(iso);
-  const day = date.toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-  const time = date
-    .toLocaleTimeString('en-AU', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
-    .toUpperCase();
-  return `${day} · ${time}`;
+  const day = local ? date.getDate() : date.getUTCDate();
+  const month = MONTHS[local ? date.getMonth() : date.getUTCMonth()];
+  const year = local ? date.getFullYear() : date.getUTCFullYear();
+  const hours24 = local ? date.getHours() : date.getUTCHours();
+  const minutes = local ? date.getMinutes() : date.getUTCMinutes();
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  const suffix = hours24 < 12 ? 'AM' : 'PM';
+  return `${day} ${month} ${year} · ${hours12}:${String(minutes).padStart(2, '0')} ${suffix}`;
 }
 
 const PAGE_SIZE = 10;
@@ -254,6 +255,8 @@ export function SubmissionsListClient({
   });
   const [page, setPage] = useState(1);
   const [filtersReady, setFiltersReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   // Mobile only (the stacked-card table layout below 768px) — which single row's IP
   // address/actions are expanded. A plain id rather than a Set, same as the Forms list's
   // own accordion (forms-list-client.tsx): opening one row collapses whichever was open.
@@ -393,7 +396,9 @@ export function SubmissionsListClient({
       if (!term) return true;
       const badge = SUBMISSION_STATUS_BADGE[submission.status];
       const haystack = [
-        submission.submittedAt ? formatResponseTimestamp(submission.submittedAt) : 'in progress',
+        submission.submittedAt
+          ? formatResponseTimestamp(submission.submittedAt, mounted)
+          : 'in progress',
         badge.label,
         submission.participantName ?? '',
         submission.prefillRecipient ?? '',
@@ -403,7 +408,7 @@ export function SubmissionsListClient({
         .toLowerCase();
       return haystack.includes(term);
     });
-  }, [submissions, search, dateRange]);
+  }, [submissions, search, dateRange, mounted]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSubmissions.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -514,7 +519,7 @@ export function SubmissionsListClient({
                       <span className="submissions-timestamp">
                         <ClockIcon />
                         {submission.submittedAt
-                          ? formatResponseTimestamp(submission.submittedAt)
+                          ? formatResponseTimestamp(submission.submittedAt, mounted)
                           : 'In progress'}
                       </span>
                     </td>

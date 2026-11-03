@@ -5,6 +5,19 @@ function asText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+/** Ids of the fields deriveParticipantName can read — lets callers select only those keys
+ * out of each submission's (potentially large) answers JSON instead of loading all of it. */
+export function participantFieldIds(schema: FormSchema): string[] {
+  return Object.values(schema.fields)
+    .filter(
+      (field) =>
+        field.type === 'full_name' ||
+        field.type === 'email' ||
+        (field.type === 'short_text' && /\bname\b/i.test(field.label)),
+    )
+    .map((field) => field.id);
+}
+
 /**
  * Best-effort "who responded" label for the Responses list. Prefers a Full Name field, then
  * a short-text field whose label mentions "name", then an email field. Returns null when

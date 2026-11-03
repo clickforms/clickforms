@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { SubmissionsListClient } from '@/app/forms/[id]/submissions/submissions-list-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
-import { deriveParticipantName } from '@/lib/forms/participant-name';
+import { deriveParticipantName, participantFieldIds } from '@/lib/forms/participant-name';
 import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
 import { requireOrganizationId } from '@/lib/session';
 import { canEditForm } from '@/lib/user-roles';
@@ -38,10 +38,6 @@ export default async function SubmissionsListPage({ params }: PageProps) {
       return null;
     }
 
-    // `answers` and `formVersionId` are selected only to derive the participant name
-    // server-side (see deriveParticipantName below) — the blob itself is never sent to the
-    // client; the full answers are otherwise only needed on the detail page.
-    //
     // Excludes 'in_progress' rows: those are created the moment a respondent uploads a
     // file/signature or hits Submit, so every abandoned or still-in-progress form open
     // would otherwise show up here as a phantom response. This mirrors the responseCount
@@ -60,25 +56,44 @@ export default async function SubmissionsListPage({ params }: PageProps) {
         submittedAt: true,
         ipAddress: true,
         createdAt: true,
-        answers: true,
         formVersionId: true,
       },
     });
 
-    const versionIds = [...new Set(submissions.map((submission) => submission.formVersionId))];
+    // The participant name needs a few answer values, but the full answers JSON (signatures,
+    // tables, long text) can be large and this list loads every response — so pull only the
+    // handful of name/email keys out in SQL rather than selecting the whole blob.
     const versions = await tx.formVersion.findMany({
-      where: { id: { in: versionIds }, organizationId: requireOrganizationId(session) },
+      where: { formId: form.id, organizationId: requireOrganizationId(session) },
       select: { id: true, schema: true },
     });
+    const candidateKeys = new Set<string>();
+    for (const version of versions) {
+      const parsed = formSchemaSchema.safeParse(version.schema);
+      if (parsed.success) {
+        for (const key of participantFieldIds(parsed.data)) candidateKeys.add(key);
+      }
+    }
+    const picked =
+      candidateKeys.size === 0
+        ? []
+        : await tx.$queryRaw<{ id: string; picked: Record<string, unknown> | null }[]>`
+            SELECT s.id,
+              (SELECT jsonb_object_agg(k, s.answers -> k)
+                 FROM unnest(${[...candidateKeys]}::text[]) AS k
+                WHERE jsonb_exists(s.answers, k)) AS picked
+            FROM submissions s
+            WHERE s.form_id = ${form.id}::uuid AND s.status <> 'in_progress'`;
+    const pickedAnswersById = new Map(picked.map((row) => [row.id, row.picked ?? {}]));
 
-    return { form, submissions, versions };
+    return { form, submissions, versions, pickedAnswersById };
   });
 
   if (!result) {
     notFound();
   }
 
-  const { form, submissions, versions } = result;
+  const { form, submissions, versions, pickedAnswersById } = result;
   const canDelete = canEditForm(session.user.role, form.createdBy, session.user.id);
 
   const schemaByVersionId = new Map<string, FormSchema>();
@@ -110,10 +125,7 @@ export default async function SubmissionsListPage({ params }: PageProps) {
           participantName: (() => {
             const schema = schemaByVersionId.get(submission.formVersionId);
             return schema
-              ? deriveParticipantName(
-                  schema,
-                  (submission.answers ?? {}) as unknown as Record<string, unknown>,
-                )
+              ? deriveParticipantName(schema, pickedAnswersById.get(submission.id) ?? {})
               : null;
           })(),
           createdAt: submission.createdAt.toISOString(),

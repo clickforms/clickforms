@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import type { ReactNode } from 'react';
 import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import { FieldColorSettings } from '@/app/forms/[id]/builder/field-color-settings';
@@ -13,7 +14,6 @@ import { PaletteIcon } from '@/app/forms/[id]/builder/field-palette';
 import { OptionsEditor } from '@/app/forms/[id]/builder/options-editor';
 import { PictureChoiceOptionsEditor } from '@/app/forms/[id]/builder/picture-choice-options-editor';
 import { QuestionTableRowsEditor } from '@/app/forms/[id]/builder/question-table-rows-editor';
-import { RichTextEditor } from '@/app/forms/[id]/builder/rich-text-editor';
 import { type FieldPatch, findParentColumnLayout } from '@/app/forms/[id]/builder/schema-mutations';
 import { TableColumnsEditor } from '@/app/forms/[id]/builder/table-columns-editor';
 import { describeCalculationFormula } from '@/lib/forms/calculation';
@@ -69,6 +69,13 @@ import {
   type TextAlign,
 } from '@/lib/forms/schema';
 import { maskPlaceholder } from '@/lib/forms/text-mask';
+
+// Tiptap + lowlight/highlight.js are a large chunk; loading the editor on demand keeps them out
+// of the initial bundle of every form workspace page (the share modal is mounted on all of them).
+const RichTextEditor = dynamic(
+  () => import('@/app/forms/[id]/builder/rich-text-editor').then((mod) => mod.RichTextEditor),
+  { ssr: false, loading: () => <div className="rich-text-editor-loading">Loading editor…</div> },
+);
 
 // ---------------------------------------------------------------------------
 // This panel is organized into named, collapsible groups — Content, Validation &

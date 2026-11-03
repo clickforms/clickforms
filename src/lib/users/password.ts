@@ -1,3 +1,4 @@
+import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
@@ -24,50 +25,79 @@ export const passwordSchema = z.string().refine(isStrongPassword, {
 });
 
 /**
- * bcrypt cost factor for new password hashes. Every "set a password" route used to call
- * `bcrypt.hash(password, 12)` directly. That's a reasonable cost for the native C++
- * bcrypt binding, but this app uses bcryptjs (the pure-JS implementation — deliberately,
- * so the app doesn't need native module compilation in serverless deploys), which is
- * meaningfully slower per unit of cost. At cost 12 it commonly took several hundred ms per
- * hash/compare on a serverless function, and since NextAuth's authorize() runs one compare
- * on every single sign-in (see src/lib/auth.ts), that was showing up as customer reports
- * of "login is laggy." Cost 10 is still at OWASP's current minimum recommendation for
- * bcrypt ("work factor of 10 or more" — see the Password Storage Cheat Sheet) and cuts
- * that time to roughly a quarter, since bcrypt's cost is exponential: each +1 doubles the
- * work. This is a speed fix, not a security relaxation — 10 remains an accepted secure
- * value, and existing accounts are transparently upgraded to it (see needsRehash below)
- * rather than left on whatever cost they were created with.
+ * Password hashing. New hashes use scrypt via Node's built-in crypto, which runs on libuv's
+ * thread pool — off the main thread. The previous bcryptjs (pure JS) hashed/compared on the
+ * main thread, so every sign-in burned the single event loop for ~100-300ms and stalled every
+ * other in-flight request on the box (reported as "lag around login/at busy times").
+ *
+ * Parameters: N=2^16 (64 MiB, the memory-hardness that matters against GPU/ASIC cracking —
+ * double OWASP's N=2^15 option), r=8, p=1: ~120ms per hash on the thread pool.
+ * Existing bcrypt hashes keep verifying (bcryptjs is now only used for that), and are
+ * transparently replaced with a scrypt hash the next time their owner signs in — see
+ * needsRehash and src/lib/auth.ts's authorize().
+ *
+ * Stored format: scrypt$<N>$<r>$<p>$<salt b64>$<hash b64>
  */
-const BCRYPT_COST = 10;
+const SCRYPT_N = 2 ** 16;
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_KEYLEN = 32;
+const SCRYPT_MAXMEM = 128 * SCRYPT_N * SCRYPT_R * 2;
+
+function scryptAsync(
+  password: string,
+  salt: Buffer,
+  params: { N: number; r: number; p: number },
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scrypt(
+      password.normalize('NFKC'),
+      salt,
+      SCRYPT_KEYLEN,
+      { ...params, maxmem: SCRYPT_MAXMEM },
+      (error, derived) => (error ? reject(error) : resolve(derived)),
+    );
+  });
+}
 
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, BCRYPT_COST);
+  const salt = randomBytes(16);
+  const derived = await scryptAsync(password, salt, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P });
+  return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt.toString('base64')}$${derived.toString('base64')}`;
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
-
-/** bcrypt hashes embed their own cost factor as the second '$'-delimited segment, e.g.
- * "$2a$12$...". Returns null for a malformed/non-bcrypt hash rather than throwing — callers
- * treat that the same as "needs rehashing," never as "somehow already fine." */
-function bcryptCostOf(hash: string): number | null {
-  const match = hash.match(/^\$2[aby]\$(\d{2})\$/);
-  const digits = match?.[1];
-  return digits ? Number.parseInt(digits, 10) : null;
+  if (!hash.startsWith('scrypt$')) {
+    // Legacy bcrypt hash (pre-scrypt accounts).
+    return bcrypt.compare(password, hash);
+  }
+  const [, n, r, p, saltB64, hashB64] = hash.split('$');
+  if (!n || !r || !p || !saltB64 || !hashB64) return false;
+  const expected = Buffer.from(hashB64, 'base64');
+  try {
+    const derived = await scryptAsync(password, Buffer.from(saltB64, 'base64'), {
+      N: Number(n),
+      r: Number(r),
+      p: Number(p),
+    });
+    return derived.length === expected.length && timingSafeEqual(derived, expected);
+  } catch {
+    return false;
+  }
 }
 
 /**
- * True when `hash` was made at a cost above the current target — i.e. it's one of the
- * pre-existing cost-12 hashes from before this fix shipped. Used to opportunistically
- * rehash a password at the new, faster cost right after it's next verified (see
- * src/lib/auth.ts's authorize()), so returning users get the speedup without a forced
- * password reset. Never fires for a hash already at or below BCRYPT_COST — this only ever
- * moves existing accounts *down* to the new standard cost, never below it, and the
- * verified plaintext password is required to produce the replacement hash, so this can't
- * be triggered by anything other than the account's own owner successfully signing in.
+ * True for any hash that isn't current-format scrypt (i.e. every legacy bcrypt hash). Used to
+ * opportunistically rehash right after the plaintext has been verified at sign-in, so users
+ * move to scrypt without a forced reset. The verified plaintext is required to produce the
+ * replacement, so this can only ever be triggered by the account owner successfully signing in.
  */
 export function needsRehash(hash: string): boolean {
-  const cost = bcryptCostOf(hash);
-  return cost === null || cost > BCRYPT_COST;
+  const [scheme, n, r, p] = hash.split('$');
+  return !(
+    scheme === 'scrypt' &&
+    Number(n) === SCRYPT_N &&
+    Number(r) === SCRYPT_R &&
+    Number(p) === SCRYPT_P
+  );
 }

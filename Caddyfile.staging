@@ -5,7 +5,7 @@
 staging.clickforms.com.au {
 	reverse_proxy app:3000
 
-	encode gzip
+	encode zstd gzip
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"

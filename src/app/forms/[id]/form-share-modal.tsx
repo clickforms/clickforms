@@ -1,11 +1,18 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
-import { RichTextEditor } from '@/app/forms/[id]/builder/rich-text-editor';
 import { useToast } from '@/components/toast';
 import { formShareEmail, formShareEmailDefaultMessage } from '@/lib/emails/templates';
 import { readApiError } from '@/lib/error-message';
 import { formShareSms, formShareSmsDefaultMessage } from '@/lib/sms-templates';
+
+// Tiptap + lowlight/highlight.js are a large chunk; loading the editor on demand keeps them out
+// of the initial bundle of every form workspace page (the share modal is mounted on all of them).
+const RichTextEditor = dynamic(
+  () => import('@/app/forms/[id]/builder/rich-text-editor').then((mod) => mod.RichTextEditor),
+  { ssr: false, loading: () => <div className="rich-text-editor-loading">Loading editor…</div> },
+);
 
 type ShareChannel = 'email' | 'sms';
 

@@ -4,6 +4,7 @@ import { SubmissionsListClient } from '@/app/forms/[id]/submissions/submissions-
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { deriveParticipantName, participantFieldIds } from '@/lib/forms/participant-name';
+import { formatResponseLabel } from '@/lib/forms/response-label';
 import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
 import { requireOrganizationId } from '@/lib/session';
 import { canEditForm } from '@/lib/user-roles';
@@ -67,7 +68,11 @@ export default async function SubmissionsListPage({ params }: PageProps) {
       where: { formId: form.id, organizationId: requireOrganizationId(session) },
       select: { id: true, schema: true },
     });
+    const labelRows = await tx.$queryRaw<{ response_label_field_id: string | null }[]>`
+      SELECT response_label_field_id FROM forms WHERE id = ${form.id}::uuid`;
+    const labelFieldId = labelRows[0]?.response_label_field_id ?? null;
     const candidateKeys = new Set<string>();
+    if (labelFieldId) candidateKeys.add(labelFieldId);
     for (const version of versions) {
       const parsed = formSchemaSchema.safeParse(version.schema);
       if (parsed.success) {
@@ -91,14 +96,15 @@ export default async function SubmissionsListPage({ params }: PageProps) {
       WHERE form_id = ${form.id}::uuid AND prefill_recipient IS NOT NULL`;
     const prefillRecipientById = new Map(prefillRows.map((r) => [r.id, r.prefill_recipient]));
 
-    return { form, submissions, versions, pickedAnswersById, prefillRecipientById };
+    return { form, submissions, versions, pickedAnswersById, prefillRecipientById, labelFieldId };
   });
 
   if (!result) {
     notFound();
   }
 
-  const { form, submissions, versions, pickedAnswersById, prefillRecipientById } = result;
+  const { form, submissions, versions, pickedAnswersById, prefillRecipientById, labelFieldId } =
+    result;
   const canDelete = canEditForm(session.user.role, form.createdBy, session.user.id);
 
   const schemaByVersionId = new Map<string, FormSchema>();
@@ -108,6 +114,16 @@ export default async function SubmissionsListPage({ params }: PageProps) {
       schemaByVersionId.set(version.id, parsed.data);
     }
   }
+
+  // Heading for the first column: the chosen field's label (latest version), else generic.
+  const latestSchema = [...versions]
+    .reverse()
+    .map((v) => formSchemaSchema.safeParse(v.schema))
+    .find((r) => r.success && (!labelFieldId || r.data.fields[labelFieldId]));
+  const responseColumnLabel =
+    (labelFieldId && latestSchema?.success
+      ? latestSchema.data.fields[labelFieldId]?.label
+      : null) || (labelFieldId ? 'Response' : 'Respondent');
 
   return (
     <div className="submissions-page">
@@ -122,6 +138,7 @@ export default async function SubmissionsListPage({ params }: PageProps) {
       <SubmissionsListClient
         formId={form.id}
         canDelete={canDelete}
+        responseColumnLabel={responseColumnLabel}
         initialSubmissions={submissions.map((submission) => ({
           id: submission.id,
           status: submission.status,
@@ -129,9 +146,10 @@ export default async function SubmissionsListPage({ params }: PageProps) {
           ipAddress: submission.ipAddress,
           participantName: (() => {
             const schema = schemaByVersionId.get(submission.formVersionId);
-            return schema
-              ? deriveParticipantName(schema, pickedAnswersById.get(submission.id) ?? {})
-              : null;
+            const picked = pickedAnswersById.get(submission.id) ?? {};
+            if (labelFieldId)
+              return formatResponseLabel(schema, labelFieldId, picked[labelFieldId]);
+            return schema ? deriveParticipantName(schema, picked) : null;
           })(),
           prefillRecipient: prefillRecipientById.get(submission.id) ?? null,
           createdAt: submission.createdAt.toISOString(),

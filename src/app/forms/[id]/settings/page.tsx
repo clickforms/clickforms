@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { FormSettingsClient } from '@/app/forms/[id]/settings/form-settings-client';
+import { ResponseColumnSettings } from '@/app/forms/[id]/settings/response-column-settings';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { listResponseLabelCandidates } from '@/lib/forms/response-label';
 import {
   createEmptyFormSchema,
   formSchemaSchema,
@@ -30,9 +32,8 @@ export default async function FormSettingsPage({ params }: PageProps) {
     return null;
   }
 
-  const { form, availableFields, organizationNotificationEmail } = await withOrgContext(
-    session.user.organizationId,
-    async (tx) => {
+  const { form, availableFields, organizationNotificationEmail, responseFields, responseFieldId } =
+    await withOrgContext(session.user.organizationId, async (tx) => {
       const form = await tx.form.findFirst({
         where: { id, organizationId: requireOrganizationId(session) },
         select: {
@@ -47,7 +48,13 @@ export default async function FormSettingsPage({ params }: PageProps) {
         },
       });
       if (!form) {
-        return { form: null, availableFields: [], organizationNotificationEmail: null };
+        return {
+          form: null,
+          availableFields: [],
+          organizationNotificationEmail: null,
+          responseFields: [],
+          responseFieldId: null as string | null,
+        };
       }
 
       // The picker offers fields from the form's current (latest) version — same draft an
@@ -67,13 +74,17 @@ export default async function FormSettingsPage({ params }: PageProps) {
         select: { notificationEmail: true },
       });
 
+      const labelRows = await tx.$queryRaw<{ response_label_field_id: string | null }[]>`
+        SELECT response_label_field_id FROM forms WHERE id = ${form.id}::uuid`;
+
       return {
         form,
+        responseFields: listResponseLabelCandidates(schema),
+        responseFieldId: labelRows[0]?.response_label_field_id ?? null,
         availableFields: listFilenamePrefixCandidates(schema),
         organizationNotificationEmail: organization?.notificationEmail ?? null,
       };
-    },
-  );
+    });
 
   if (!form || !canViewForm(form.isPrivate, form.createdBy, session.user.id)) {
     notFound();
@@ -82,16 +93,24 @@ export default async function FormSettingsPage({ params }: PageProps) {
   const canEdit = canEditForm(session.user.role, form.createdBy, session.user.id);
 
   return (
-    <FormSettingsClient
-      formId={form.id}
-      formName={form.name}
-      canEdit={canEdit}
-      initialPdfFilenameTemplate={form.pdfFilenameTemplate ?? ''}
-      initialFilenamePrefixFieldId={form.filenamePrefixFieldId}
-      availableFields={availableFields}
-      initialNotificationMode={form.notificationMode}
-      initialNotificationEmail={form.notificationEmail}
-      organizationNotificationEmail={organizationNotificationEmail}
-    />
+    <>
+      <ResponseColumnSettings
+        formId={form.id}
+        canEdit={canEdit}
+        fields={responseFields}
+        initialFieldId={responseFieldId}
+      />
+      <FormSettingsClient
+        formId={form.id}
+        formName={form.name}
+        canEdit={canEdit}
+        initialPdfFilenameTemplate={form.pdfFilenameTemplate ?? ''}
+        initialFilenamePrefixFieldId={form.filenamePrefixFieldId}
+        availableFields={availableFields}
+        initialNotificationMode={form.notificationMode}
+        initialNotificationEmail={form.notificationEmail}
+        organizationNotificationEmail={organizationNotificationEmail}
+      />
+    </>
   );
 }

@@ -419,6 +419,8 @@ model Form {
   // is enforced in the PATCH /api/forms/[id] handler instead (checked against the current
   // schema at save time) rather than by Postgres.
   filenamePrefixFieldId String? @map("filename_prefix_field_id")
+  // Field whose answer is the first column of the Responses list. Null = automatic.
+  responseLabelFieldId String? @map("response_label_field_id")
   // Who gets emailed when this form receives a new response (Settings tab, see
   // src/app/forms/[id]/settings) — org_default (the default) defers to
   // Organization.notificationEmail, custom uses notificationEmail below, off never

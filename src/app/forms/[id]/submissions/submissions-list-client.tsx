@@ -229,10 +229,13 @@ export function SubmissionsListClient({
   formId,
   initialSubmissions,
   canDelete,
+  responseColumnLabel,
 }: {
   formId: string;
   initialSubmissions: SubmissionSummary[];
   canDelete: boolean;
+  /** Heading of the first column — the form's chosen identifying field, or a generic label. */
+  responseColumnLabel: string;
 }) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -451,7 +454,7 @@ export function SubmissionsListClient({
           <table className="admin-table submissions-table">
             <thead>
               <tr>
-                <th>Participant</th>
+                <th>{responseColumnLabel}</th>
                 <th>Submitted at</th>
                 <th>Status</th>
                 <th className="submissions-row-toggle-cell" />
@@ -480,7 +483,7 @@ export function SubmissionsListClient({
                       }
                     }}
                   >
-                    <td data-label="Participant">
+                    <td data-label={responseColumnLabel}>
                       {submission.participantName ?? '—'}
                       {submission.prefillRecipient ? (
                         <span

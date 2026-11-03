@@ -255,6 +255,13 @@ export function SubmissionsListClient({
   });
   const [page, setPage] = useState(1);
   const [filtersReady, setFiltersReady] = useState(false);
+  // `submissions` is local state (rows can be deleted/updated optimistically), so a
+  // router.refresh() after changing the first-column field would leave the old labels in it.
+  // The first-column text always comes straight from the latest server props instead.
+  const labelById = useMemo(
+    () => new Map(initialSubmissions.map((row) => [row.id, row.participantName])),
+    [initialSubmissions],
+  );
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   // Mobile only (the stacked-card table layout below 768px) — which single row's IP
@@ -400,7 +407,7 @@ export function SubmissionsListClient({
           ? formatResponseTimestamp(submission.submittedAt, mounted)
           : 'in progress',
         badge.label,
-        submission.participantName ?? '',
+        labelById.get(submission.id) ?? '',
         submission.prefillRecipient ?? '',
         submission.ipAddress ?? '',
       ]
@@ -408,7 +415,7 @@ export function SubmissionsListClient({
         .toLowerCase();
       return haystack.includes(term);
     });
-  }, [submissions, search, dateRange, mounted]);
+  }, [submissions, search, dateRange, mounted, labelById]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSubmissions.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -505,7 +512,7 @@ export function SubmissionsListClient({
                     }}
                   >
                     <td data-label={responseColumnLabel}>
-                      {submission.participantName ?? '—'}
+                      {labelById.get(submission.id) ?? '—'}
                       {submission.prefillRecipient ? (
                         <span
                           className="prefill-badge"

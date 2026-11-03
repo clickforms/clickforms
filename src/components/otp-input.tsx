@@ -1,5 +1,6 @@
 'use client';
 
+import './otp-input.css';
 import { type ClipboardEvent, type KeyboardEvent, useEffect, useRef } from 'react';
 
 interface OtpInputProps {

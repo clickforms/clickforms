@@ -1,5 +1,6 @@
 'use client';
 
+import '@/app/login/verify.css';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSession, signIn } from 'next-auth/react';

@@ -1,0 +1,79 @@
+/* Two-step verification screen (login-form.tsx). Kept out of globals.css so it can't be
+   affected by that file's size or compile caching. */
+.verify-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.verify-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin-bottom: 0.75rem;
+  border-radius: 999px;
+  background: var(--color-primary-soft, #e8fbef);
+  color: #15803d;
+}
+
+.verify-title {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.15;
+}
+
+.verify-lead {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.verify-lead strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.verify-notice {
+  margin: 0;
+  color: #15803d;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.verify-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.verify-footer p {
+  margin: 0;
+}
+
+.verify-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #15803d;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.verify-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.verify-link:disabled {
+  color: var(--color-text-muted, #9ca3af);
+  cursor: default;
+}

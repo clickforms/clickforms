@@ -5,11 +5,13 @@ import './prefill-send-modal.css';
 
 interface PrefillSendModalProps {
   formId?: string;
+  mode: 'email' | 'link';
+  onMode: (mode: 'email' | 'link') => void;
   email: string;
   name: string;
   note: string;
   sending: boolean;
-  sent: { email: string; url: string } | null;
+  sent: { email: string | null; url: string } | null;
   onEmail: (value: string) => void;
   onName: (value: string) => void;
   onNote: (value: string) => void;
@@ -18,9 +20,11 @@ interface PrefillSendModalProps {
   onCopy: (url: string) => void;
 }
 
-/** Modal for emailing a prefilled form to one recipient (admin prefill builder only). */
+/** Modal for sharing a prefilled form — by email, or as a link to copy (admin prefill builder). */
 export function PrefillSendModal({
   formId,
+  mode,
+  onMode,
   email,
   name,
   note,
@@ -33,10 +37,10 @@ export function PrefillSendModal({
   onClose,
   onCopy,
 }: PrefillSendModalProps) {
-  const emailRef = useRef<HTMLInputElement>(null);
+  const firstFieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    emailRef.current?.focus();
+    firstFieldRef.current?.focus();
     function onKey(event: KeyboardEvent) {
       if (event.key === 'Escape' && !sending) onClose();
     }
@@ -79,24 +83,49 @@ export function PrefillSendModal({
               </svg>
             </span>
             <h2 id="pfm-title" className="pfm-title">
-              Form sent
+              {sent.email ? 'Form sent' : 'Link ready'}
             </h2>
             <p className="pfm-sub">
-              {sent.email} will get an email with their personal link. You can track it, resend it
-              or delete it from the Prefills tab.
+              {sent.email
+                ? `${sent.email} will get an email with their personal link. You can track it, resend it or delete it from the Prefills tab.`
+                : 'Copy the link and send it however you like. It works for one person and expires in 30 days. You can find it again in the Prefills tab.'}
             </p>
+            {!sent.email ? (
+              <div className="pfm-linkbox">
+                <input
+                  type="text"
+                  readOnly
+                  value={sent.url}
+                  aria-label="Prefilled link"
+                  onFocus={(event) => event.target.select()}
+                />
+                <button
+                  type="button"
+                  className="pfm-btn pfm-btn--primary"
+                  onClick={() => onCopy(sent.url)}
+                >
+                  Copy
+                </button>
+              </div>
+            ) : null}
             <div className="pfm-actions pfm-actions--center">
               <a className="pfm-btn pfm-btn--ghost" href={`/forms/${formId}/prefills`}>
                 View prefills
               </a>
+              {sent.email ? (
+                <button
+                  type="button"
+                  className="pfm-btn pfm-btn--ghost"
+                  onClick={() => onCopy(sent.url)}
+                >
+                  Copy link
+                </button>
+              ) : null}
               <button
                 type="button"
-                className="pfm-btn pfm-btn--ghost"
-                onClick={() => onCopy(sent.url)}
+                className={`pfm-btn ${sent.email ? 'pfm-btn--primary' : 'pfm-btn--ghost'}`}
+                onClick={onClose}
               >
-                Copy link
-              </button>
-              <button type="button" className="pfm-btn pfm-btn--primary" onClick={onClose}>
                 Done
               </button>
             </div>
@@ -110,48 +139,89 @@ export function PrefillSendModal({
             }}
           >
             <h2 id="pfm-title" className="pfm-title">
-              Send prefilled form
+              Share prefilled form
             </h2>
             <p className="pfm-sub">
-              They&apos;ll get an email with a personal link to this form, with your answers already
-              filled in. They can change anything before submitting.
+              Your answers will be filled in for them. They can change anything before submitting.
             </p>
 
-            <div className="pfm-field">
-              <label htmlFor="pfm-email">Email address</label>
-              <input
-                id="pfm-email"
-                ref={emailRef}
-                type="email"
-                required
-                placeholder="name@example.com"
-                value={email}
-                onChange={(event) => onEmail(event.target.value)}
-              />
+            <div className="pfm-tabs" role="tablist" aria-label="How to share">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'email'}
+                className="pfm-tab"
+                onClick={() => onMode('email')}
+              >
+                Send by email
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'link'}
+                className="pfm-tab"
+                onClick={() => onMode('link')}
+              >
+                Copy link
+              </button>
             </div>
-            <div className="pfm-field">
-              <label htmlFor="pfm-name">
-                Name <span className="pfm-optional">Optional</span>
-              </label>
-              <input
-                id="pfm-name"
-                type="text"
-                value={name}
-                onChange={(event) => onName(event.target.value)}
-              />
-            </div>
-            <div className="pfm-field">
-              <label htmlFor="pfm-note">
-                Message <span className="pfm-optional">Optional</span>
-              </label>
-              <textarea
-                id="pfm-note"
-                rows={3}
-                placeholder="Add a short note to go with the email"
-                value={note}
-                onChange={(event) => onNote(event.target.value)}
-              />
-            </div>
+
+            {mode === 'email' ? (
+              <>
+                <div className="pfm-field">
+                  <label htmlFor="pfm-email">Email address</label>
+                  <input
+                    id="pfm-email"
+                    ref={firstFieldRef}
+                    type="email"
+                    required
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(event) => onEmail(event.target.value)}
+                  />
+                </div>
+                <div className="pfm-field">
+                  <label htmlFor="pfm-name">
+                    Name <span className="pfm-optional">Optional</span>
+                  </label>
+                  <input
+                    id="pfm-name"
+                    type="text"
+                    value={name}
+                    onChange={(event) => onName(event.target.value)}
+                  />
+                </div>
+                <div className="pfm-field">
+                  <label htmlFor="pfm-note">
+                    Message <span className="pfm-optional">Optional</span>
+                  </label>
+                  <textarea
+                    id="pfm-note"
+                    rows={3}
+                    placeholder="Add a short note to go with the email"
+                    value={note}
+                    onChange={(event) => onNote(event.target.value)}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="pfm-field">
+                <label htmlFor="pfm-link-name">
+                  Who is it for? <span className="pfm-optional">Optional</span>
+                </label>
+                <input
+                  id="pfm-link-name"
+                  ref={firstFieldRef}
+                  type="text"
+                  placeholder="e.g. Sarah Jones — so you can find it later"
+                  value={name}
+                  onChange={(event) => onName(event.target.value)}
+                />
+                <p className="pfm-hint">
+                  Nothing is emailed. You&apos;ll get a link to send by text, chat or anywhere else.
+                </p>
+              </div>
+            )}
 
             <p className="pfm-hint">The link expires in 30 days.</p>
 
@@ -165,7 +235,7 @@ export function PrefillSendModal({
                 Cancel
               </button>
               <button type="submit" className="pfm-btn pfm-btn--primary" disabled={sending}>
-                {sending ? 'Sending…' : 'Send email'}
+                {sending ? 'Working…' : mode === 'email' ? 'Send email' : 'Create link'}
               </button>
             </div>
           </form>

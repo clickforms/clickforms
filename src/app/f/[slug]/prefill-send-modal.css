@@ -191,3 +191,47 @@
     transform: none;
   }
 }
+.pfm-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #f3f4f6;
+}
+.pfm-tab {
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b7280;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.pfm-tab[aria-selected="true"] {
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+.pfm-linkbox {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+.pfm-linkbox input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #f9fafb;
+  color: #374151;
+  font: inherit;
+  font-size: 0.85rem;
+}

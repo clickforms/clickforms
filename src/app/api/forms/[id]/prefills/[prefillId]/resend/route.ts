@@ -24,7 +24,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
       const rows = await tx.$queryRaw<
         {
           token: string;
-          recipient_email: string;
+          recipient_email: string | null;
           recipient_name: string | null;
           expires_at: Date;
         }[]
@@ -32,6 +32,12 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
         WHERE id = ${prefillId}::uuid AND form_id = ${form.id}::uuid`;
       const prefill = rows[0];
       if (!prefill) throw new NotFoundError('Prefill');
+      const email = prefill.recipient_email;
+      if (!email) {
+        throw new InvalidRequestError(
+          'This prefill was shared as a link, so there is no email to resend.',
+        );
+      }
       if (prefill.expires_at.getTime() < Date.now()) {
         throw new InvalidRequestError('This prefill has expired. Create a new one.');
       }
@@ -46,6 +52,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
         select: { name: true },
       });
       return {
+        email,
         prefill,
         form,
         subdomain: organization.subdomain,
@@ -54,7 +61,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
     });
 
     await sendPrefillEmail({
-      to: data.prefill.recipient_email,
+      to: data.email,
       recipientName: data.prefill.recipient_name,
       senderName: data.senderName,
       formName: data.form.name,

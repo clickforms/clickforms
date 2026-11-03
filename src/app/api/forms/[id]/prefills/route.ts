@@ -18,7 +18,10 @@ const SEND_RATE_WINDOW_MS = 60 * 60 * 1000;
 
 const bodySchema = z.object({
   answers: z.record(z.string(), z.unknown()),
-  recipientEmail: z.string().trim().email('Enter a valid email address'),
+  // 'email' sends the recipient their link; 'link' just creates it so the admin can copy and
+  // share it themselves (text message, chat, etc.).
+  delivery: z.enum(['email', 'link']).default('email'),
+  recipientEmail: z.string().trim().email('Enter a valid email address').optional(),
   recipientName: z.string().trim().max(120).optional(),
   note: z.string().trim().max(1000).optional(),
 });
@@ -34,6 +37,10 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     requireRole(session, ['admin', 'editor', 'member']);
     const { id } = await params;
     const body = bodySchema.parse(await request.json());
+    if (body.delivery === 'email' && !body.recipientEmail) {
+      throw new InvalidRequestError('Enter the recipient’s email address.');
+    }
+    const emailTo = body.delivery === 'email' ? (body.recipientEmail ?? null) : null;
     const organizationId = requireOrganizationId(session);
 
     const created = await withOrgContext(organizationId, async (tx) => {
@@ -70,8 +77,8 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         INSERT INTO form_prefills
           (organization_id, form_id, created_by, recipient_email, recipient_name, token, answers, sent_at, expires_at)
         VALUES
-          (${organizationId}::uuid, ${form.id}::uuid, ${session.user.id}::uuid, ${body.recipientEmail},
-           ${body.recipientName || null}, ${token}, ${JSON.stringify(answers)}::jsonb, now(), ${expiresAt})
+          (${organizationId}::uuid, ${form.id}::uuid, ${session.user.id}::uuid, ${emailTo},
+           ${body.recipientName || null}, ${token}, ${JSON.stringify(answers)}::jsonb, ${emailTo ? new Date() : null}, ${expiresAt})
         RETURNING id`;
 
       const organization = await tx.organization.findUniqueOrThrow({
@@ -94,16 +101,18 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     });
 
     const url = prefillUrl(created.subdomain, created.slug, created.token);
-    await sendPrefillEmail({
-      to: body.recipientEmail,
-      recipientName: body.recipientName,
-      senderName: created.senderName,
-      formName: created.formName,
-      url,
-      note: body.note,
-      expiresAt: created.expiresAt,
-      organizationId,
-    });
+    if (emailTo) {
+      await sendPrefillEmail({
+        to: emailTo,
+        recipientName: body.recipientName,
+        senderName: created.senderName,
+        formName: created.formName,
+        url,
+        note: body.note,
+        expiresAt: created.expiresAt,
+        organizationId,
+      });
+    }
 
     return NextResponse.json({ id: created.prefillId, url }, { status: 201 });
   } catch (error) {

@@ -369,7 +369,7 @@ model FormPrefill {
   organizationId String    @map("organization_id") @db.Uuid
   formId         String    @map("form_id") @db.Uuid
   createdBy      String?   @map("created_by") @db.Uuid
-  recipientEmail String    @map("recipient_email")
+  recipientEmail String?   @map("recipient_email")
   recipientName  String?   @map("recipient_name")
   token          String    @unique
   answers        Json      @default("{}")

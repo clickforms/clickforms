@@ -4,6 +4,7 @@ import { PrefillsListClient } from '@/app/forms/[id]/prefills/prefills-list-clie
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { listPrefills, prefillStatus } from '@/lib/forms/prefills';
+import { prefillUrl } from '@/lib/forms/send-prefill-email';
 import { requireOrganizationId } from '@/lib/session';
 
 interface PageProps {
@@ -20,11 +21,15 @@ export default async function PrefillsPage({ params }: PageProps) {
       where: { id, organizationId: requireOrganizationId(session) },
     });
     if (!form) return null;
-    return { form, rows: await listPrefills(tx, form.id) };
+    const organization = await tx.organization.findUniqueOrThrow({
+      where: { id: requireOrganizationId(session) },
+      select: { subdomain: true },
+    });
+    return { form, rows: await listPrefills(tx, form.id), subdomain: organization.subdomain };
   });
   if (!result) notFound();
 
-  const { form, rows } = result;
+  const { form, rows, subdomain } = result;
   return (
     <div className="submissions-page">
       <div className="submissions-page-header">
@@ -43,6 +48,7 @@ export default async function PrefillsPage({ params }: PageProps) {
           id: row.id,
           recipientEmail: row.recipient_email,
           recipientName: row.recipient_name,
+          url: prefillUrl(subdomain, form.slug, row.token),
           status: prefillStatus(row),
           sentAt: (row.sent_at ?? row.created_at).toISOString(),
           createdBy: row.created_by_name,

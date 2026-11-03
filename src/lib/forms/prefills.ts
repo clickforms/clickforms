@@ -49,7 +49,7 @@ export type PrefillStatus = 'sent' | 'opened' | 'started' | 'completed' | 'expir
 
 export interface PrefillRow {
   id: string;
-  recipient_email: string;
+  recipient_email: string | null;
   recipient_name: string | null;
   token: string;
   sent_at: Date | null;

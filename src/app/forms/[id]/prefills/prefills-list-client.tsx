@@ -9,7 +9,8 @@ type Status = 'sent' | 'opened' | 'started' | 'completed' | 'expired';
 
 interface PrefillItem {
   id: string;
-  recipientEmail: string;
+  recipientEmail: string | null;
+  url: string;
   recipientName: string | null;
   status: Status;
   sentAt: string;
@@ -65,7 +66,12 @@ export function PrefillsListClient({
       item.responses > 0
         ? ' Responses already submitted through it are kept.'
         : ' The link will stop working.';
-    if (!window.confirm(`Delete the prefill for ${item.recipientEmail}?${extra}`)) return;
+    if (
+      !window.confirm(
+        `Delete the prefill for ${item.recipientEmail ?? item.recipientName ?? 'this link'}?${extra}`,
+      )
+    )
+      return;
     setBusyId(item.id);
     try {
       const res = await fetch(`/api/forms/${formId}/prefills/${item.id}`, { method: 'DELETE' });
@@ -118,7 +124,7 @@ export function PrefillsListClient({
                 <td>
                   <div className="prefills-recipient">
                     {item.recipientName ? <strong>{item.recipientName}</strong> : null}
-                    <span>{item.recipientEmail}</span>
+                    <span>{item.recipientEmail ?? 'Shared as a link'}</span>
                   </div>
                 </td>
                 <td>
@@ -129,7 +135,23 @@ export function PrefillsListClient({
                 <td>{new Date(item.sentAt).toLocaleDateString('en-AU')}</td>
                 <td>{item.createdBy ?? '—'}</td>
                 <td className="prefills-actions">
-                  {item.status !== 'expired' && item.status !== 'completed' ? (
+                  {item.status !== 'expired' ? (
+                    <button
+                      type="button"
+                      className="button button--secondary button--small"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(item.url).then(
+                          () => toast.success('Link copied'),
+                          () => toast.error('Could not copy the link'),
+                        );
+                      }}
+                    >
+                      Copy link
+                    </button>
+                  ) : null}
+                  {item.recipientEmail &&
+                  item.status !== 'expired' &&
+                  item.status !== 'completed' ? (
                     <button
                       type="button"
                       className="button button--secondary button--small"

@@ -116,7 +116,8 @@ function FormRendererInner({
   const [pageIndex, setPageIndex] = useState(0);
   const [answers, setAnswers] = useState<FormAnswers>(prefillAnswers ?? {});
   const [sendOpen, setSendOpen] = useState(false);
-  const [sentTo, setSentTo] = useState<{ email: string; url: string } | null>(null);
+  const [sentTo, setSentTo] = useState<{ email: string | null; url: string } | null>(null);
+  const [sendMode, setSendMode] = useState<'email' | 'link'>('email');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [note, setNote] = useState('');
@@ -420,12 +421,13 @@ function FormRendererInner({
     setRecipientEmail('');
     setRecipientName('');
     setNote('');
+    setSendMode('email');
   }, []);
 
   const sendPrefill = useCallback(async () => {
     if (!formId) return;
     const email = recipientEmail.trim();
-    if (!email) {
+    if (sendMode === 'email' && !email) {
       toast.error("Enter the recipient's email address.");
       return;
     }
@@ -436,9 +438,10 @@ function FormRendererInner({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           answers,
-          recipientEmail: email,
+          delivery: sendMode,
+          recipientEmail: sendMode === 'email' ? email : undefined,
           recipientName: recipientName.trim() || undefined,
-          note: note.trim() || undefined,
+          note: sendMode === 'email' ? note.trim() || undefined : undefined,
         }),
       });
       const data: { url?: string; error?: string } = await res.json();
@@ -446,13 +449,13 @@ function FormRendererInner({
         toast.error(data.error ?? 'Could not send the prefilled form.');
         return;
       }
-      setSentTo({ email, url: data.url });
+      setSentTo({ email: sendMode === 'email' ? email : null, url: data.url });
     } catch {
       toast.error('Could not send the prefilled form.');
     } finally {
       setSubmitting(false);
     }
-  }, [answers, formId, note, recipientEmail, recipientName, toast]);
+  }, [answers, formId, note, recipientEmail, recipientName, sendMode, toast]);
 
   const handleNextOrSubmit = useCallback(async () => {
     const page = schema.pages[pageIndex];
@@ -749,6 +752,8 @@ function FormRendererInner({
               note={note}
               sending={submitting}
               sent={sentTo}
+              mode={sendMode}
+              onMode={setSendMode}
               onEmail={setRecipientEmail}
               onName={setRecipientName}
               onNote={setNote}

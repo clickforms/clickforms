@@ -41,7 +41,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         // Links the response to its prefill (and snapshots the recipient so the label
         // survives the prefill being deleted). An unknown/other-form token is just ignored.
         await tx.$executeRaw`
-          UPDATE submissions SET prefill_id = p.id, prefill_recipient = p.recipient_email
+          UPDATE submissions SET prefill_id = p.id, prefill_recipient = COALESCE(p.recipient_email, p.recipient_name, 'Shared link')
           FROM form_prefills p
           WHERE submissions.id = ${created.id}::uuid
             AND p.token = ${prefillToken} AND p.form_id = ${form.id}::uuid`;

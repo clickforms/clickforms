@@ -40,6 +40,7 @@ import {
   addColumnLayoutToPage,
   addFieldToPage,
   addPage,
+  applyCopiedStyle,
   clearConditionalRule,
   duplicateField,
   type FieldPatch,
@@ -619,6 +620,11 @@ export function BuilderClient({
     setSchema((prev) => updateField(prev, fieldId, patch));
   }
 
+  function handleApplyCopiedStyle(branding: FormBranding, logos: FormField[]) {
+    if (!canEditCanvas) return;
+    setSchema((prev) => applyCopiedStyle(prev, branding, logos));
+  }
+
   function handleUpdateBranding(patch: Partial<FormBranding>) {
     if (!canEditCanvas) return;
     setSchema((prev) => ({ ...prev, branding: { ...prev.branding, ...patch } }));
@@ -1006,6 +1012,8 @@ export function BuilderClient({
                           branding={schema.branding}
                           canEdit={canEditCanvas}
                           onUpdateBranding={handleUpdateBranding}
+                          formId={formId}
+                          onApplyCopiedStyle={handleApplyCopiedStyle}
                         />
                       </div>
                     </div>
@@ -1314,6 +1322,8 @@ export function BuilderClient({
                     branding={schema.branding}
                     canEdit={canEditCanvas}
                     onUpdateBranding={handleUpdateBranding}
+                    formId={formId}
+                    onApplyCopiedStyle={handleApplyCopiedStyle}
                   />
                 </div>
               </div>

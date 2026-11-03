@@ -238,7 +238,14 @@ export function FieldInput({
         className={`form-image-field form-image-field--align-${align}`}
         style={resolveImageSpacingStyle(field)}
       >
-        {field.label ? <p className="form-image-field-caption">{field.label}</p> : null}
+        {field.label ? (
+          <p
+            className="form-image-field-caption"
+            style={field.textColor ? { color: field.textColor } : undefined}
+          >
+            {field.label}
+          </p>
+        ) : null}
         {field.linkUrl ? (
           <a
             href={field.linkUrl}
@@ -305,7 +312,14 @@ export function FieldInput({
           className={`form-field-label ${field.type === 'signature' ? 'form-field-label--with-status' : ''}`}
           htmlFor={field.id}
           style={
-            field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined
+            field.type === 'question_table'
+              ? {
+                  ...(field.textColor ? { color: field.textColor } : {}),
+                  ...resolveQuestionTableLabelStyle(field),
+                }
+              : field.textColor
+                ? { color: field.textColor }
+                : undefined
           }
         >
           <span>
@@ -320,7 +334,14 @@ export function FieldInput({
           ) : null}
         </label>
       ) : null}
-      {field.helpText ? <p className="form-field-help">{field.helpText}</p> : null}
+      {field.helpText ? (
+        <p
+          className="form-field-help"
+          style={field.textColor ? { color: field.textColor } : undefined}
+        >
+          {field.helpText}
+        </p>
+      ) : null}
 
       {field.type === 'short_text' ? (
         <input

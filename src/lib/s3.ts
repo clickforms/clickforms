@@ -1,6 +1,7 @@
 import 'server-only';
 
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
@@ -331,5 +332,18 @@ export async function getObjectBytes(storageKey: string): Promise<Uint8Array> {
  * blocked logo change is a broken feature. */
 export async function deleteObject(storageKey: string): Promise<void> {
   const command = new DeleteObjectCommand({ Bucket: getBucketName(), Key: storageKey });
+  await getS3Client().send(command);
+}
+
+/** Server-side copy within the bucket — used by "Copy style from another form" so the new
+ * form gets its own header-logo object (deleting/replacing the source form's logo later
+ * must never break this form). */
+export async function copyObject(sourceKey: string, destKey: string): Promise<void> {
+  const bucket = getBucketName();
+  const command = new CopyObjectCommand({
+    Bucket: bucket,
+    Key: destKey,
+    CopySource: `${bucket}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`,
+  });
   await getS3Client().send(command);
 }

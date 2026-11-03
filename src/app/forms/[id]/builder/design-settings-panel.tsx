@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
+import { useToast } from '@/components/toast';
 import {
   DEFAULT_FIELD_TEXT_COLOR,
   DEFAULT_FORM_PRIMARY_COLOR,
@@ -11,6 +13,7 @@ import {
   FONT_FAMILY_OPTIONS,
   type FontFamily,
   type FormBranding,
+  type FormField,
   LAYOUT_STYLE_LABEL,
   LAYOUT_STYLE_OPTIONS,
   SUBMIT_BUTTON_SIZE_LABEL,
@@ -31,15 +34,114 @@ interface DesignSettingsPanelProps {
   branding: FormBranding;
   canEdit: boolean;
   onUpdateBranding: (patch: Partial<FormBranding>) => void;
+  /** Current form's id — needed (with onApplyCopiedStyle) to offer "Copy style from another form". */
+  formId?: string;
+  onApplyCopiedStyle?: (branding: FormBranding, logos: FormField[]) => void;
+}
+
+interface FormOption {
+  id: string;
+  name: string;
+}
+
+function CopyStyleSection({
+  formId,
+  canEdit,
+  onApply,
+}: {
+  formId: string;
+  canEdit: boolean;
+  onApply: (branding: FormBranding, logos: FormField[]) => void;
+}) {
+  const toast = useToast();
+  const [forms, setForms] = useState<FormOption[]>([]);
+  const [sourceId, setSourceId] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/forms')
+      .then((response) => (response.ok ? response.json() : { forms: [] }))
+      .then((data: { forms: FormOption[] }) => {
+        if (!cancelled) setForms(data.forms.filter((form) => form.id !== formId));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [formId]);
+
+  async function handleCopy() {
+    if (!sourceId) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/forms/${formId}/copy-style`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceFormId: sourceId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast.error(data.error ?? 'Could not copy the style.');
+        return;
+      }
+      onApply(data.branding as FormBranding, data.logos as FormField[]);
+      toast.success('Style copied. Review it, then save.');
+      setSourceId('');
+    } catch {
+      toast.error('Could not copy the style.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="settings-section">
+      <p className="settings-section-title">Copy style</p>
+      <label className="settings-field">
+        <span className="settings-label">Copy from another form</span>
+        <select
+          className="text-input"
+          disabled={!canEdit || busy}
+          value={sourceId}
+          onChange={(event) => setSourceId(event.target.value)}
+        >
+          <option value="">Choose a form…</option>
+          {forms.map((form) => (
+            <option key={form.id} value={form.id}>
+              {form.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="button"
+        className="button button--secondary button--small"
+        disabled={!canEdit || busy || !sourceId}
+        onClick={() => void handleCopy()}
+      >
+        {busy ? 'Copying…' : 'Copy style'}
+      </button>
+      <p className="settings-field-hint">
+        Replaces this form's fonts, colours, layout, submit button and header logo with the selected
+        form's. Questions are untouched.
+      </p>
+    </div>
+  );
 }
 
 export function DesignSettingsPanel({
   branding,
   canEdit,
   onUpdateBranding,
+  formId,
+  onApplyCopiedStyle,
 }: DesignSettingsPanelProps) {
   return (
     <>
+      {formId && onApplyCopiedStyle ? (
+        <CopyStyleSection formId={formId} canEdit={canEdit} onApply={onApplyCopiedStyle} />
+      ) : null}
       <div className="settings-section">
         <p className="settings-section-title">Typography</p>
         <label className="settings-field">

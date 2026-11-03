@@ -582,9 +582,6 @@ function FieldPreview({
               className="field-preview-image"
               style={resolveImageStyle(field)}
             />
-            {field.linkUrl ? (
-              <span className="field-preview-hint">Links to {field.linkUrl}</span>
-            ) : null}
           </div>
         );
       }
@@ -1736,7 +1733,11 @@ export function FieldCard({
           />
         )}
         <div className="field-card-header">
-          <span className="field-card-label field-card-label--muted">Formatted Text</span>
+          {/* The "Formatted Text" type tag is canvas-only chrome; inside a column slot it just
+              reads as stray text the author can't remove, so it's top-level only. */}
+          {nested ? null : (
+            <span className="field-card-label field-card-label--muted">Formatted Text</span>
+          )}
           <div className="field-card-badges">
             {hasConditionalRule && <span className="badge badge--draft">Conditional</span>}
             {!visibleInPreview && <span className="badge badge--neutral">Hidden in preview</span>}
@@ -1800,17 +1801,27 @@ export function FieldCard({
             <span
               className="field-card-label"
               style={
-                field.type === 'question_table' ? resolveQuestionTableLabelStyle(field) : undefined
+                field.type === 'question_table'
+                  ? {
+                      ...(field.textColor ? { color: field.textColor } : {}),
+                      ...resolveQuestionTableLabelStyle(field),
+                    }
+                  : field.textColor
+                    ? { color: field.textColor }
+                    : undefined
               }
             >
               {field.label || 'Untitled field'}
               {field.required && <span className="field-card-required">*</span>}
             </span>
           ) : field.label ? (
-            <span className="field-card-label">{field.label}</span>
-          ) : (
-            <span className="field-card-label field-card-label--muted">Image</span>
-          )}
+            <span
+              className="field-card-label"
+              style={field.textColor ? { color: field.textColor } : undefined}
+            >
+              {field.label}
+            </span>
+          ) : null}
         </div>
         {field.helpText && !isImage ? <p className="field-card-help">{field.helpText}</p> : null}
         <FieldPreview
@@ -1869,8 +1880,13 @@ export function FieldCard({
             }
             style={
               field.type === 'question_table' && field.label
-                ? resolveQuestionTableLabelStyle(field)
-                : undefined
+                ? {
+                    ...(field.textColor ? { color: field.textColor } : {}),
+                    ...resolveQuestionTableLabelStyle(field),
+                  }
+                : field.textColor
+                  ? { color: field.textColor }
+                  : undefined
             }
           >
             {questionNumber ? `${questionNumber}. ` : ''}
@@ -1880,7 +1896,12 @@ export function FieldCard({
             {field.required && <span className="field-card-required">*</span>}
           </span>
         ) : field.label ? (
-          <span className="field-card-label">{field.label}</span>
+          <span
+            className="field-card-label"
+            style={field.textColor ? { color: field.textColor } : undefined}
+          >
+            {field.label}
+          </span>
         ) : (
           <span className="field-card-label field-card-label--muted">Image</span>
         )}

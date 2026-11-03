@@ -23,6 +23,7 @@ interface SubmissionSummary {
   status: SubmissionStatus;
   submittedAt: string | null;
   ipAddress: string | null;
+  participantName: string | null;
   createdAt: string;
 }
 
@@ -383,6 +384,7 @@ export function SubmissionsListClient({
       const haystack = [
         submission.submittedAt ? formatResponseTimestamp(submission.submittedAt) : 'in progress',
         badge.label,
+        submission.participantName ?? '',
         submission.ipAddress ?? '',
       ]
         .join(' ')
@@ -445,6 +447,7 @@ export function SubmissionsListClient({
           <table className="admin-table submissions-table">
             <thead>
               <tr>
+                <th>Participant</th>
                 <th>Submitted at</th>
                 <th>Status</th>
                 <th className="submissions-row-toggle-cell" />
@@ -473,6 +476,7 @@ export function SubmissionsListClient({
                       }
                     }}
                   >
+                    <td data-label="Participant">{submission.participantName ?? '—'}</td>
                     <td data-label="Submitted at">
                       <span className="submissions-timestamp">
                         <ClockIcon />

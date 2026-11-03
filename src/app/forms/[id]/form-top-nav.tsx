@@ -446,6 +446,22 @@ export function FormTopNav({
                     </button>
                   </li>
                 ) : null}
+                {isLive ? (
+                  <li>
+                    <Link
+                      href={`/f/${slug}/prefill`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="actions-menu-item"
+                      onClick={() => setActionsOpen(false)}
+                    >
+                      <span className="actions-menu-icon">
+                        <ShareLinkIcon />
+                      </span>
+                      Prefilled link
+                    </Link>
+                  </li>
+                ) : null}
                 {takeOfflineAction ? (
                   <li className="form-top-nav-actions-danger-row">
                     <button

@@ -1900,6 +1900,13 @@ function AppearanceExtras({ field, canEdit, onUpdateField }: TypeSpecificSetting
             </label>
           ))}
         </div>
+        <FieldColorPicker
+          label="Caption color"
+          value={field.textColor}
+          defaultColor={DEFAULT_FIELD_TEXT_COLOR}
+          canEdit={canEdit}
+          onChange={(textColor) => onUpdateField(field.id, { textColor })}
+        />
       </>
     );
   }
@@ -1914,6 +1921,7 @@ function AppearanceExtras({ field, canEdit, onUpdateField }: TypeSpecificSetting
           canEdit={canEdit}
           onChange={(value) => onUpdateField(field.id, { strokeColor: value })}
         />
+        <FieldColorSettings field={field} canEdit={canEdit} onUpdateField={onUpdateField} />
         <label className="settings-field">
           <span className="settings-label">Pen thickness</span>
           <input
@@ -1959,6 +1967,7 @@ function AppearanceExtras({ field, canEdit, onUpdateField }: TypeSpecificSetting
           canEdit={canEdit}
           onChange={(value) => onUpdateField(field.id, { color: value })}
         />
+        <FieldColorSettings field={field} canEdit={canEdit} onUpdateField={onUpdateField} />
       </>
     );
   }

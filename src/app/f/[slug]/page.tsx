@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
 import { FormOfflineError } from '@/lib/api-errors';
+import { readPrefillToken, sanitizePrefillAnswers } from '@/lib/forms/prefill-token';
 import { getFormSchemaByVersionId, getPublishedFormBySlug } from '@/lib/forms/public-lookup';
 import { publicFormShareMetadata } from '@/lib/forms/share-metadata';
 import {
@@ -12,6 +13,7 @@ import {
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ prefill?: string | string[] }>;
 }
 
 // Share links (WhatsApp/iMessage/Slack unfurls, etc.) previously inherited the root
@@ -53,7 +55,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // form with a currentVersionId resolves here (see getPublishedFormBySlug), and only that
 // version's schema is ever shown — never a newer draft the admin might be mid-edit on,
 // even while status has moved off 'published' for that draft's own approval pipeline.
-export default async function PublicFormPage({ params }: PageProps) {
+export default async function PublicFormPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
 
   const organizationId = await resolveOrganizationIdForSlugOrRedirect(slug, `/f/${slug}`);
@@ -87,12 +89,19 @@ export default async function PublicFormPage({ params }: PageProps) {
     notFound();
   }
 
+  // ?prefill=<token> from an admin-generated "Prefilled link" (lib/forms/prefill-token.ts).
+  // An invalid/expired/other-form token is ignored, not an error — the form just opens blank.
+  const prefillParam = (await searchParams)?.prefill;
+  const prefillToken = Array.isArray(prefillParam) ? prefillParam[0] : prefillParam;
+  const prefillAnswers = prefillToken ? readPrefillToken(prefillToken, form.id) : null;
+
   return (
     <FormRendererClient
       slug={form.slug}
       formName={form.name}
       formVersionId={form.currentVersionId}
       schema={schema}
+      prefillAnswers={prefillAnswers ? sanitizePrefillAnswers(schema, prefillAnswers) : undefined}
     />
   );
 }

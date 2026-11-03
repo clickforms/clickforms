@@ -56,6 +56,12 @@ interface FormRendererClientProps {
   // Every network side effect below is short-circuited so a preview never creates a real
   // Submission row, presigns a real upload, or requires the form to be published.
   previewMode?: boolean;
+  /** Answers decoded from an admin-generated ?prefill= token (see lib/forms/prefill-token.ts)
+   * — seeds the initial `answers`, so the respondent can still edit any of them. */
+  prefillAnswers?: FormAnswers;
+  /** Admin "build a prefilled link" mode (/f/[slug]/prefill): the last-page button
+   * generates a shareable link from the entered answers instead of submitting. */
+  prefillBuilder?: boolean;
 }
 
 interface PresignResponse {
@@ -99,10 +105,13 @@ function FormRendererInner({
   formName,
   schema,
   previewMode = false,
+  prefillAnswers,
+  prefillBuilder = false,
 }: FormRendererClientProps) {
   const toast = useToast();
   const [pageIndex, setPageIndex] = useState(0);
-  const [answers, setAnswers] = useState<FormAnswers>({});
+  const [answers, setAnswers] = useState<FormAnswers>(prefillAnswers ?? {});
+  const [prefillUrl, setPrefillUrl] = useState<string | null>(null);
   const [errors, setErrors] = useState<AnswerErrors>({});
 
   // Hidden fields (see hiddenFieldSchema in lib/forms/schema.ts) never render a visible
@@ -393,9 +402,42 @@ function FormRendererInner({
     toast,
   ]);
 
+  const generatePrefillLink = useCallback(async () => {
+    if (!formId) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/prefill-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers }),
+      });
+      const data: { url?: string; error?: string } = await res.json();
+      if (!res.ok || !data.url) {
+        toast.error(data.error ?? 'Could not create the prefilled link.');
+        return;
+      }
+      setPrefillUrl(data.url);
+    } catch {
+      toast.error('Could not create the prefilled link.');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [answers, formId, toast]);
+
   const handleNextOrSubmit = useCallback(async () => {
     const page = schema.pages[pageIndex];
     if (!page) return;
+
+    // Prefill builder: no validation (the admin is only seeding some answers) and nothing is
+    // submitted — the last page's button mints a link instead.
+    if (prefillBuilder) {
+      if (pageIndex < schema.pages.length - 1) {
+        setPageIndex((i) => i + 1);
+      } else {
+        await generatePrefillLink();
+      }
+      return;
+    }
 
     const pageErrors = validatePageAnswers(schema, page, answers);
     if (Object.keys(pageErrors).length > 0) {
@@ -410,7 +452,7 @@ function FormRendererInner({
     }
 
     await submitForm();
-  }, [answers, pageIndex, schema, submitForm, toast]);
+  }, [answers, generatePrefillLink, pageIndex, prefillBuilder, schema, submitForm, toast]);
 
   const handleBack = useCallback(() => {
     setSubmitError(null);
@@ -658,9 +700,45 @@ function FormRendererInner({
               onClick={() => void handleNextOrSubmit()}
               disabled={submitting}
             >
-              {submitting ? 'Submitting…' : isLastPage ? submitButtonText : 'Next'}
+              {submitting
+                ? prefillBuilder
+                  ? 'Creating link…'
+                  : 'Submitting…'
+                : isLastPage
+                  ? prefillBuilder
+                    ? 'Generate prefilled link'
+                    : submitButtonText
+                  : 'Next'}
             </button>
           </div>
+          {prefillBuilder && prefillUrl ? (
+            <div className="form-prefill-result">
+              <input
+                type="text"
+                readOnly
+                className="text-input"
+                value={prefillUrl}
+                aria-label="Prefilled link"
+                onFocus={(event) => event.target.select()}
+              />
+              <button
+                type="button"
+                className="button button--secondary button--small"
+                onClick={() => {
+                  void navigator.clipboard.writeText(prefillUrl).then(
+                    () => toast.success('Link copied'),
+                    () => toast.error('Could not copy — select and copy manually'),
+                  );
+                }}
+              >
+                Copy link
+              </button>
+              <p className="form-field-help">
+                Anyone with this link sees these answers pre-filled and can change them before
+                submitting. The link expires in 30 days.
+              </p>
+            </div>
+          ) : null}
           {isLastPage ? (
             <button
               type="button"

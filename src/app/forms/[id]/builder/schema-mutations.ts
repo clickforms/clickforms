@@ -1,8 +1,10 @@
 import { createColumnLayoutField, createDefaultField } from '@/app/forms/[id]/builder/field-meta';
+import { partitionHeaderLogos } from '@/lib/forms/form-title';
 import type {
   ColumnCount,
   ConditionalRule,
   FieldType,
+  FormBranding,
   FormField,
   FormPage,
   FormSchema,
@@ -111,6 +113,33 @@ export function addFieldToPage(
       fields.splice(insertAt, 0, field.id);
       return { ...page, fields };
     }),
+  };
+}
+
+/** "Copy style from another form": replaces the form-wide branding wholesale and swaps the
+ * first page's header logo(s) for `logos` (already copied to this form's own storage keys by
+ * POST /api/forms/[id]/copy-style). Only header logos are replaced — never body fields — and
+ * if the source had no logo the existing ones are still cleared so the result mirrors it. */
+export function applyCopiedStyle(
+  schema: FormSchema,
+  branding: FormBranding,
+  logos: FormField[],
+): FormSchema {
+  const firstPage = schema.pages[0];
+  if (!firstPage) return { ...schema, branding };
+
+  const { headerLogoIds, bodyFieldIds } = partitionHeaderLogos(firstPage.fields, schema.fields);
+  const fields = { ...schema.fields };
+  for (const logoId of headerLogoIds) delete fields[logoId];
+  for (const logo of logos) fields[logo.id] = logo;
+
+  return {
+    ...schema,
+    branding,
+    fields,
+    pages: schema.pages.map((page, index) =>
+      index === 0 ? { ...page, fields: [...logos.map((logo) => logo.id), ...bodyFieldIds] } : page,
+    ),
   };
 }
 

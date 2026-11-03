@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { SubmissionsListClient } from '@/app/forms/[id]/submissions/submissions-list-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { deriveParticipantName } from '@/lib/forms/participant-name';
+import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
 import { requireOrganizationId } from '@/lib/session';
 import { canEditForm } from '@/lib/user-roles';
 
@@ -36,8 +38,9 @@ export default async function SubmissionsListPage({ params }: PageProps) {
       return null;
     }
 
-    // No `answers` in the select — this is a list view, the full JSONB answer blob is
-    // only needed on the detail page.
+    // `answers` and `formVersionId` are selected only to derive the participant name
+    // server-side (see deriveParticipantName below) — the blob itself is never sent to the
+    // client; the full answers are otherwise only needed on the detail page.
     //
     // Excludes 'in_progress' rows: those are created the moment a respondent uploads a
     // file/signature or hits Submit, so every abandoned or still-in-progress form open
@@ -57,18 +60,34 @@ export default async function SubmissionsListPage({ params }: PageProps) {
         submittedAt: true,
         ipAddress: true,
         createdAt: true,
+        answers: true,
+        formVersionId: true,
       },
     });
 
-    return { form, submissions };
+    const versionIds = [...new Set(submissions.map((submission) => submission.formVersionId))];
+    const versions = await tx.formVersion.findMany({
+      where: { id: { in: versionIds }, organizationId: requireOrganizationId(session) },
+      select: { id: true, schema: true },
+    });
+
+    return { form, submissions, versions };
   });
 
   if (!result) {
     notFound();
   }
 
-  const { form, submissions } = result;
+  const { form, submissions, versions } = result;
   const canDelete = canEditForm(session.user.role, form.createdBy, session.user.id);
+
+  const schemaByVersionId = new Map<string, FormSchema>();
+  for (const version of versions) {
+    const parsed = formSchemaSchema.safeParse(version.schema);
+    if (parsed.success) {
+      schemaByVersionId.set(version.id, parsed.data);
+    }
+  }
 
   return (
     <div className="submissions-page">
@@ -88,6 +107,15 @@ export default async function SubmissionsListPage({ params }: PageProps) {
           status: submission.status,
           submittedAt: submission.submittedAt ? submission.submittedAt.toISOString() : null,
           ipAddress: submission.ipAddress,
+          participantName: (() => {
+            const schema = schemaByVersionId.get(submission.formVersionId);
+            return schema
+              ? deriveParticipantName(
+                  schema,
+                  (submission.answers ?? {}) as unknown as Record<string, unknown>,
+                )
+              : null;
+          })(),
           createdAt: submission.createdAt.toISOString(),
         }))}
       />

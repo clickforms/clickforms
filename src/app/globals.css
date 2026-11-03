@@ -21998,3 +21998,12 @@ textarea.form-field-input {
     justify-content: center;
   }
 }
+
+/* Admin "Prefilled link" builder (/f/[slug]/prefill) — the generated link + copy button
+   shown under the form's last-page button. */
+.form-prefill-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

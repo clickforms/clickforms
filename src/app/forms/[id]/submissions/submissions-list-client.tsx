@@ -1,6 +1,4 @@
-import '@/app/forms/[id]/prefills/prefills.css';
-
-('use client');
+'use client';
 
 import type { SubmissionStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
@@ -17,6 +15,7 @@ import {
   writeSubmissionFilters,
 } from '@/app/forms/[id]/submissions/submissions-list-filters';
 import { useToast } from '@/components/toast';
+import '@/app/forms/[id]/prefills/prefills.css';
 import { readApiError } from '@/lib/error-message';
 import { parseIsoDate } from '@/lib/forms/date-value';
 

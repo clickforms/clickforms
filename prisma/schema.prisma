@@ -221,7 +221,7 @@ model User {
   isPlatformAdmin Boolean @default(false) @map("is_platform_admin")
   // Email-code two-step sign-in (see src/lib/auth/two-factor.ts and the authorize() check in
   // src/lib/auth.ts). Also surfaced as a column on /admin/users.
-  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  twoFactorEnabled Boolean @default(true) @map("two_factor_enabled")
   // Permission level within /admin. Null for everyone except platform admins; see the
   // PlatformAdminRole enum doc comment for why this is separate from `role`.
   platformAdminRole PlatformAdminRole? @map("platform_admin_role")

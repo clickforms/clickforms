@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSession, signIn } from 'next-auth/react';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
+import { OtpInput } from '@/components/otp-input';
 
 const REMEMBERED_EMAIL_KEY = 'clickforms.login.rememberedEmail';
 
@@ -69,6 +70,30 @@ function EyeOffIcon() {
   );
 }
 
+function maskEmail(email: string): string {
+  const [local = '', domain = ''] = email.split('@');
+  if (!domain) return email;
+  const visible = local.slice(0, Math.min(2, local.length));
+  return `${visible}${'•'.repeat(Math.max(local.length - visible.length, 3))}@${domain}`;
+}
+
+function MailIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M4 7.5l8 6 8-6"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+const RESEND_SECONDS = 30;
+
 export function LoginForm({
   callbackUrl,
   initialError,
@@ -87,6 +112,14 @@ export function LoginForm({
   // then asks for it and re-submits the same email + password with it.
   const [needsCode, setNeedsCode] = useState(false);
   const [code, setCode] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = window.setTimeout(() => setResendIn((seconds) => seconds - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendIn]);
 
   useEffect(() => {
     const rememberedEmail = window.localStorage.getItem(REMEMBERED_EMAIL_KEY);
@@ -115,11 +148,13 @@ export function LoginForm({
     if (result?.error === 'TwoFactorRequired') {
       setNeedsCode(true);
       setCode('');
+      setResendIn(RESEND_SECONDS);
       return;
     }
 
     if (result?.error) {
       setError(resolveErrorMessage(result.error));
+      if (result.error === 'InvalidTwoFactorCode') setCode('');
       return;
     }
 
@@ -148,24 +183,102 @@ export function LoginForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void submitCredentials(needsCode ? code.trim() : undefined);
+    if (needsCode && code.length !== 6) return;
+    void submitCredentials(needsCode ? code : undefined);
   }
 
   // Signing in again without a code makes the server email a fresh one (rate-limited to one
   // per 30 seconds server-side).
   async function handleResend() {
+    setNotice(null);
     await submitCredentials(undefined);
-    setError('We sent a new code. It can take a moment to arrive.');
+    setNotice('A new code is on its way.');
   }
 
-  const canSubmit =
-    email.trim().length > 0 &&
-    password.length > 0 &&
-    (!needsCode || code.trim().length === 6) &&
-    !isSubmitting;
+  function handleBackToSignIn() {
+    setNeedsCode(false);
+    setCode('');
+    setError(null);
+    setNotice(null);
+    setPassword('');
+  }
+
+  const canSubmit = email.trim().length > 0 && password.length > 0 && !isSubmitting;
+
+  if (needsCode) {
+    return (
+      <form className="login-form login-form--verify" onSubmit={handleSubmit}>
+        <div className="verify-header">
+          <span className="verify-icon" aria-hidden="true">
+            <MailIcon />
+          </span>
+          <p className="signup-panel-kicker">Two-step verification</p>
+          <h2 id="login-panel-title" className="verify-title">
+            Check your email
+          </h2>
+          <p className="verify-lead">
+            We sent a 6-digit code to <strong>{maskEmail(email.trim())}</strong>. Enter it below to
+            finish signing in.
+          </p>
+        </div>
+
+        {error ? (
+          <p className="login-form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {notice && !error ? <p className="verify-notice">{notice}</p> : null}
+
+        <OtpInput
+          label="Verification code"
+          value={code}
+          onChange={(next) => {
+            setCode(next);
+            if (error) setError(null);
+          }}
+          onComplete={(complete) => void submitCredentials(complete)}
+          disabled={isSubmitting}
+          invalid={Boolean(error)}
+          autoFocus
+        />
+
+        <button
+          className="button login-submit"
+          type="submit"
+          disabled={code.length !== 6 || isSubmitting}
+        >
+          {isSubmitting ? 'Verifying…' : 'Verify and sign in'}
+        </button>
+
+        <div className="verify-footer">
+          <p>
+            Didn&apos;t get it? Check your spam folder or{' '}
+            <button
+              type="button"
+              className="verify-link"
+              onClick={() => void handleResend()}
+              disabled={isSubmitting || resendIn > 0}
+            >
+              {resendIn > 0 ? `resend in ${resendIn}s` : 'resend the code'}
+            </button>
+            .
+          </p>
+          <button type="button" className="verify-link" onClick={handleBackToSignIn}>
+            ← Back to sign in
+          </button>
+        </div>
+      </form>
+    );
+  }
 
   return (
     <form className="login-form" onSubmit={handleSubmit}>
+      <div className="signup-panel-header">
+        <p className="signup-panel-kicker">Sign in</p>
+        <h2 id="login-panel-title">Sign in to admin</h2>
+        <p>Use your email and password to access Clickforms.</p>
+      </div>
+
       {error ? (
         <p className="login-form-error" role="alert">
           {error}
@@ -220,33 +333,6 @@ export function LoginForm({
         </div>
       </label>
 
-      {needsCode ? (
-        <label className="login-field">
-          <span className="login-field-label">Verification code</span>
-          <input
-            className="text-input login-field-input"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-            disabled={isSubmitting}
-            placeholder="6-digit code"
-          />
-          <span className="login-field-hint-link">
-            We emailed a code to {email.trim()}. It expires in 10 minutes.{' '}
-            <button
-              type="button"
-              className="login-field-hint-link"
-              onClick={() => void handleResend()}
-              disabled={isSubmitting}
-            >
-              Resend code
-            </button>
-          </span>
-        </label>
-      ) : null}
-
       <label className="login-remember-row">
         <input
           type="checkbox"
@@ -258,7 +344,7 @@ export function LoginForm({
       </label>
 
       <button className="button login-submit" type="submit" disabled={!canSubmit}>
-        {isSubmitting ? 'Signing in…' : needsCode ? 'Verify and sign in' : 'Sign in'}
+        {isSubmitting ? 'Signing in…' : 'Sign in'}
       </button>
 
       <p className="login-form-footer">

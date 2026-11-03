@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { OtpInput } from '@/components/otp-input';
 import { useToast } from '@/components/toast';
 
 function PhoneIcon() {
@@ -107,9 +108,9 @@ export function TwoFactorClient({
     toast.success(`Code sent to ${email}`);
   }
 
-  async function confirmEnable() {
+  async function confirmEnable(submitted: string = code) {
     setBusy(true);
-    const result = await postJson('/api/me/two-factor/enable', { code });
+    const result = await postJson('/api/me/two-factor/enable', { code: submitted });
     setBusy(false);
     if (!result.ok) {
       toast.error(result.error ?? 'That code is incorrect or has expired.');
@@ -181,18 +182,15 @@ export function TwoFactorClient({
 
           {step === 'enter-code' ? (
             <div className="two-factor-step">
-              <label className="settings-field">
-                <span className="settings-label">Enter the 6-digit code we emailed you</span>
-                <input
-                  className="text-input"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-                  placeholder="123456"
-                />
-              </label>
+              <p className="settings-label">Enter the 6-digit code we emailed you</p>
+              <OtpInput
+                label="Verification code"
+                value={code}
+                onChange={setCode}
+                onComplete={(complete) => void confirmEnable(complete)}
+                disabled={busy}
+                autoFocus
+              />
               <div className="two-factor-actions">
                 <button
                   type="button"

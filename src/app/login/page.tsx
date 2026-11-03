@@ -94,11 +94,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </aside>
 
         <section className="signup-panel" aria-labelledby="login-panel-title">
-          <div className="signup-panel-header">
-            <p className="signup-panel-kicker">Sign in</p>
-            <h2 id="login-panel-title">Sign in to admin</h2>
-            <p>Use your email and password to access Clickforms.</p>
-          </div>
           <LoginForm callbackUrl={callbackUrl} initialError={params.error} />
         </section>
       </div>

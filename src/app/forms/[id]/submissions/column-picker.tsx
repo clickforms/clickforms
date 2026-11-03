@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useToast } from '@/components/toast';
 import './column-picker.css';
 
@@ -25,20 +26,43 @@ export function ColumnPicker({ formId, label, fields, selectedId }: ColumnPicker
   const [query, setQuery] = useState('');
   const [pending, setPending] = useState<string | null | undefined>(undefined);
   const rootRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // The table sits inside an overflow-scrolling wrapper that would clip an absolutely
+  // positioned popover, so it's portalled to <body> and placed from the trigger's rect.
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current) return;
+    const rect = rootRef.current.getBoundingClientRect();
+    const width = 320;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    setCoords({ top: rect.bottom + 8, left });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     searchRef.current?.focus();
     function onPointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !popoverRef.current?.contains(target)) {
+        setOpen(false);
+      }
     }
+    const close = () => setOpen(false);
+    const closeOnOuterScroll = (event: Event) => {
+      if (!popoverRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', closeOnOuterScroll, true);
     function onKey(event: KeyboardEvent) {
       if (event.key === 'Escape') setOpen(false);
     }
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('keydown', onKey);
     return () => {
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', closeOnOuterScroll, true);
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKey);
     };
@@ -100,62 +124,71 @@ export function ColumnPicker({ formId, label, fields, selectedId }: ColumnPicker
         </svg>
       </button>
 
-      {open ? (
-        <div className="column-picker-popover" role="dialog" aria-label="Choose column field">
-          <div className="column-picker-head">
-            <p className="column-picker-title">Show in this column</p>
-            <p className="column-picker-sub">
-              Pick the field that identifies each response — a name, job number, site or anything
-              else on your form.
-            </p>
-          </div>
-          <input
-            ref={searchRef}
-            type="text"
-            className="column-picker-search"
-            placeholder="Search fields"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label="Search fields"
-          />
-          <ul className="column-picker-list">
-            {!query ? (
-              <li>
-                <button
-                  type="button"
-                  aria-pressed={selectedId === null}
-                  className="column-picker-option"
-                  onClick={() => void choose(null)}
-                >
-                  <span className="column-picker-option-text">
-                    <strong>Automatic</strong>
-                    <small>Name or email, if the form has one</small>
-                  </span>
-                  {selectedId === null ? <Check /> : null}
-                </button>
-              </li>
-            ) : null}
-            {visible.map((field) => (
-              <li key={field.id}>
-                <button
-                  type="button"
-                  aria-pressed={selectedId === field.id}
-                  className="column-picker-option"
-                  onClick={() => void choose(field.id)}
-                >
-                  <span className="column-picker-option-text">
-                    <strong>{field.label || 'Untitled field'}</strong>
-                  </span>
-                  {selectedId === field.id ? <Check /> : null}
-                </button>
-              </li>
-            ))}
-            {visible.length === 0 ? (
-              <li className="column-picker-empty">No matching fields</li>
-            ) : null}
-          </ul>
-        </div>
-      ) : null}
+      {open && coords
+        ? createPortal(
+            <div
+              ref={popoverRef}
+              className="column-picker-popover"
+              style={{ top: coords.top, left: coords.left }}
+              role="dialog"
+              aria-label="Choose column field"
+            >
+              <div className="column-picker-head">
+                <p className="column-picker-title">Show in this column</p>
+                <p className="column-picker-sub">
+                  Pick the field that identifies each response — a name, job number, site or
+                  anything else on your form.
+                </p>
+              </div>
+              <input
+                ref={searchRef}
+                type="text"
+                className="column-picker-search"
+                placeholder="Search fields"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                aria-label="Search fields"
+              />
+              <ul className="column-picker-list">
+                {!query ? (
+                  <li>
+                    <button
+                      type="button"
+                      aria-pressed={selectedId === null}
+                      className="column-picker-option"
+                      onClick={() => void choose(null)}
+                    >
+                      <span className="column-picker-option-text">
+                        <strong>Automatic</strong>
+                        <small>Name or email, if the form has one</small>
+                      </span>
+                      {selectedId === null ? <Check /> : null}
+                    </button>
+                  </li>
+                ) : null}
+                {visible.map((field) => (
+                  <li key={field.id}>
+                    <button
+                      type="button"
+                      aria-pressed={selectedId === field.id}
+                      className="column-picker-option"
+                      onClick={() => void choose(field.id)}
+                    >
+                      <span className="column-picker-option-text">
+                        <strong>{field.label || 'Untitled field'}</strong>
+                      </span>
+                      {selectedId === field.id ? <Check /> : null}
+                    </button>
+                  </li>
+                ))}
+                {visible.length === 0 ? (
+                  <li className="column-picker-empty">No matching fields</li>
+                ) : null}
+              </ul>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

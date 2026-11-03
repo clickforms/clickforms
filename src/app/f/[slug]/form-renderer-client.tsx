@@ -799,6 +799,15 @@ function FormRendererInner({
               type="button"
               className={`form-save-later${prefillBuilder ? ' form-save-later--active' : ''}`}
               disabled={!prefillBuilder || submitting}
+              style={
+                prefillBuilder
+                  ? {
+                      cursor: submitting ? 'progress' : 'pointer',
+                      opacity: submitting ? 0.5 : 1,
+                      color: '#374151',
+                    }
+                  : undefined
+              }
               onClick={prefillBuilder ? () => void saveDraft() : undefined}
               title={
                 prefillBuilder

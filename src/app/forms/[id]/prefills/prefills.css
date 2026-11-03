@@ -1,0 +1,107 @@
+.prefills-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+.prefills-empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  border: 1px dashed var(--border, #d9dde3);
+  border-radius: 12px;
+}
+.prefills-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid var(--border, #e3e6ea);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.prefills-table th {
+  text-align: left;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  padding: 0.75rem 1rem;
+  background: #f8f9fb;
+}
+.prefills-table td {
+  padding: 0.8rem 1rem;
+  border-top: 1px solid #eef0f3;
+  font-size: 0.92rem;
+  vertical-align: middle;
+}
+.prefills-recipient {
+  display: flex;
+  flex-direction: column;
+}
+.prefills-recipient span {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+.prefills-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.prefills-status {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #eef0f3;
+  color: #4b5563;
+}
+.prefills-status--opened {
+  background: #e0edff;
+  color: #1d4ed8;
+}
+.prefills-status--started {
+  background: #fff3d6;
+  color: #92600a;
+}
+.prefills-status--completed {
+  background: #dcf5e4;
+  color: #166534;
+}
+.prefills-status--expired {
+  background: #f3e8e8;
+  color: #8a3a3a;
+}
+.form-prefill-send {
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid #e3e6ea;
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  text-align: left;
+}
+.form-prefill-send-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.form-prefill-send-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.form-prefill-send-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.prefill-badge {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #e0edff;
+  color: #1d4ed8;
+}

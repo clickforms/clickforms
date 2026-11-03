@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
 import { FormOfflineError } from '@/lib/api-errors';
-import { readPrefillToken, sanitizePrefillAnswers } from '@/lib/forms/prefill-token';
+import { withOrgContext } from '@/lib/db';
+import type { FormAnswers } from '@/lib/forms/conditional-logic';
+import { sanitizePrefillAnswers } from '@/lib/forms/prefills';
 import { getFormSchemaByVersionId, getPublishedFormBySlug } from '@/lib/forms/public-lookup';
 import { publicFormShareMetadata } from '@/lib/forms/share-metadata';
 import {
@@ -89,11 +91,28 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
     notFound();
   }
 
-  // ?prefill=<token> from an admin-generated "Prefilled link" (lib/forms/prefill-token.ts).
-  // An invalid/expired/other-form token is ignored, not an error — the form just opens blank.
+  // ?prefill=<token> from an emailed prefill (lib/forms/prefills.ts). An unknown, expired or
+  // other-form token is ignored, not an error — the form just opens blank.
   const prefillParam = (await searchParams)?.prefill;
-  const prefillToken = Array.isArray(prefillParam) ? prefillParam[0] : prefillParam;
-  const prefillAnswers = prefillToken ? readPrefillToken(prefillToken, form.id) : null;
+  const rawToken = Array.isArray(prefillParam) ? prefillParam[0] : prefillParam;
+  let prefillAnswers: FormAnswers | undefined;
+  let prefillToken: string | undefined;
+  if (rawToken && rawToken.length <= 100) {
+    const found = await withOrgContext(organizationId, async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string; answers: unknown }[]>`
+        SELECT id, answers FROM form_prefills
+        WHERE token = ${rawToken} AND form_id = ${form.id}::uuid AND expires_at > now()`;
+      const row = rows[0];
+      if (row) {
+        await tx.$executeRaw`UPDATE form_prefills SET opened_at = now() WHERE id = ${row.id}::uuid AND opened_at IS NULL`;
+      }
+      return row ?? null;
+    }).catch(() => null);
+    if (found) {
+      prefillAnswers = sanitizePrefillAnswers(schema, found.answers);
+      prefillToken = rawToken;
+    }
+  }
 
   return (
     <FormRendererClient
@@ -101,7 +120,8 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
       formName={form.name}
       formVersionId={form.currentVersionId}
       schema={schema}
-      prefillAnswers={prefillAnswers ? sanitizePrefillAnswers(schema, prefillAnswers) : undefined}
+      prefillAnswers={prefillAnswers}
+      prefillToken={prefillToken}
     />
   );
 }

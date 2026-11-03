@@ -191,6 +191,7 @@ model Organization {
   forms           Form[]
   formVersions    FormVersion[]
   submissions     Submission[]
+  formPrefills    FormPrefill[]
   submissionFiles   SubmissionFile[]
   organizationFiles OrganizationFile[]
   signatures        Signature[]
@@ -230,6 +231,7 @@ model User {
   organization       Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   uploadedFiles      OrganizationFile[] @relation("OrganizationFileUploadedBy")
   createdForms       Form[]             @relation("FormCreatedBy")
+  createdPrefills    FormPrefill[]      @relation("PrefillCreatedBy")
   approvedWorkflows  WorkflowStep[]  @relation("WorkflowApprover")
   auditLogs          AuditLog[]      @relation("AuditActor")
   twoFactorCodes     TwoFactorCode[]
@@ -358,6 +360,34 @@ model TwoFactorCode {
   @@map("two_factor_codes")
 }
 
+// An admin-created "prefill": a form with some answers pre-populated, emailed to one
+// recipient through an unguessable token link (?prefill=<token>). Listed per form under
+// Prefills. Accessed via raw SQL (src/lib/forms/prefills.ts). Deleting one never deletes the
+// responses that came back through it (Submission.prefillId is SetNull).
+model FormPrefill {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  formId         String    @map("form_id") @db.Uuid
+  createdBy      String?   @map("created_by") @db.Uuid
+  recipientEmail String    @map("recipient_email")
+  recipientName  String?   @map("recipient_name")
+  token          String    @unique
+  answers        Json      @default("{}")
+  sentAt         DateTime? @map("sent_at")
+  openedAt       DateTime? @map("opened_at")
+  expiresAt      DateTime  @map("expires_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  form         Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  creator      User?        @relation("PrefillCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  submissions  Submission[]
+
+  @@index([organizationId])
+  @@index([formId])
+  @@map("form_prefills")
+}
+
 model Form {
   id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   organizationId    String     @map("organization_id") @db.Uuid
@@ -409,6 +439,7 @@ model Form {
   // The one version currently live on the public renderer, if published.
   currentVersion FormVersion?  @relation("FormCurrentVersion", fields: [currentVersionId], references: [id])
   submissions    Submission[]
+  prefills       FormPrefill[]
 
   // Slug uniqueness is scoped per-org, not global, to match the multi-tenancy shaping
   // called out in ARCHITECTURE.md §7. The public route (`GET /f/:slug`) is org-scoped
@@ -453,6 +484,10 @@ model Submission {
   // isn't meaningful and a signed submission is read-only (spec 05).
   resumeToken    String?          @unique @map("resume_token")
   ipAddress      String?          @map("ip_address")
+  // Set when the respondent arrived through an admin-created prefill link (see FormPrefill).
+  // prefillId is nulled if the prefill is deleted; prefillRecipient keeps the "sent to" label.
+  prefillId        String?        @map("prefill_id") @db.Uuid
+  prefillRecipient String?        @map("prefill_recipient")
   submittedAt    DateTime?        @map("submitted_at")
   createdAt      DateTime         @default(now()) @map("created_at")
 
@@ -462,9 +497,11 @@ model Submission {
   files         SubmissionFile[]
   signatures    Signature[]
   workflowSteps WorkflowStep[]
+  prefill       FormPrefill?     @relation(fields: [prefillId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([formId, status])
+  @@index([prefillId])
   @@map("submissions")
 }
 

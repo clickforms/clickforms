@@ -22001,12 +22001,6 @@ textarea.form-field-input {
 
 /* Admin "Prefilled link" builder (/f/[slug]/prefill) — the generated link + copy button
    shown under the form's last-page button. */
-.form-prefill-result {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
 
 /* Route-level loading placeholder (components/page-skeleton.tsx, used by loading.tsx). */
 .page-skeleton {

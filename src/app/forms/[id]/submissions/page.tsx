@@ -86,14 +86,19 @@ export default async function SubmissionsListPage({ params }: PageProps) {
             WHERE s.form_id = ${form.id}::uuid AND s.status <> 'in_progress'`;
     const pickedAnswersById = new Map(picked.map((row) => [row.id, row.picked ?? {}]));
 
-    return { form, submissions, versions, pickedAnswersById };
+    const prefillRows = await tx.$queryRaw<{ id: string; prefill_recipient: string | null }[]>`
+      SELECT id, prefill_recipient FROM submissions
+      WHERE form_id = ${form.id}::uuid AND prefill_recipient IS NOT NULL`;
+    const prefillRecipientById = new Map(prefillRows.map((r) => [r.id, r.prefill_recipient]));
+
+    return { form, submissions, versions, pickedAnswersById, prefillRecipientById };
   });
 
   if (!result) {
     notFound();
   }
 
-  const { form, submissions, versions, pickedAnswersById } = result;
+  const { form, submissions, versions, pickedAnswersById, prefillRecipientById } = result;
   const canDelete = canEditForm(session.user.role, form.createdBy, session.user.id);
 
   const schemaByVersionId = new Map<string, FormSchema>();
@@ -128,6 +133,7 @@ export default async function SubmissionsListPage({ params }: PageProps) {
               ? deriveParticipantName(schema, pickedAnswersById.get(submission.id) ?? {})
               : null;
           })(),
+          prefillRecipient: prefillRecipientById.get(submission.id) ?? null,
           createdAt: submission.createdAt.toISOString(),
         }))}
       />

@@ -19,8 +19,15 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     const organizationId = await resolveOrganizationIdOrThrow();
     const form = await getPublishedFormBySlug(slug, organizationId);
 
-    const submission = await withOrgContext(form.organizationId, (tx) =>
-      tx.submission.create({
+    // Optional: the respondent arrived through an emailed prefill link. Body may be empty.
+    const body: { prefillToken?: unknown } = await request.json().catch(() => ({}));
+    const prefillToken =
+      typeof body.prefillToken === 'string' && body.prefillToken.length <= 100
+        ? body.prefillToken
+        : null;
+
+    const submission = await withOrgContext(form.organizationId, async (tx) => {
+      const created = await tx.submission.create({
         data: {
           organizationId: form.organizationId,
           formId: form.id,
@@ -29,8 +36,18 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
           answers: {},
           ipAddress: getRequestIp(request),
         },
-      }),
-    );
+      });
+      if (prefillToken) {
+        // Links the response to its prefill (and snapshots the recipient so the label
+        // survives the prefill being deleted). An unknown/other-form token is just ignored.
+        await tx.$executeRaw`
+          UPDATE submissions SET prefill_id = p.id, prefill_recipient = p.recipient_email
+          FROM form_prefills p
+          WHERE submissions.id = ${created.id}::uuid
+            AND p.token = ${prefillToken} AND p.form_id = ${form.id}::uuid`;
+      }
+      return created;
+    });
 
     return NextResponse.json(
       { submissionId: submission.id, formVersionId: submission.formVersionId },

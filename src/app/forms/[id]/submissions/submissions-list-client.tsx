@@ -1,4 +1,6 @@
-'use client';
+import '@/app/forms/[id]/prefills/prefills.css';
+
+('use client');
 
 import type { SubmissionStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
@@ -24,6 +26,8 @@ interface SubmissionSummary {
   submittedAt: string | null;
   ipAddress: string | null;
   participantName: string | null;
+  /** Email the response's prefill was sent to — kept even if the prefill is later deleted. */
+  prefillRecipient?: string | null;
   createdAt: string;
 }
 
@@ -385,6 +389,7 @@ export function SubmissionsListClient({
         submission.submittedAt ? formatResponseTimestamp(submission.submittedAt) : 'in progress',
         badge.label,
         submission.participantName ?? '',
+        submission.prefillRecipient ?? '',
         submission.ipAddress ?? '',
       ]
         .join(' ')
@@ -476,7 +481,17 @@ export function SubmissionsListClient({
                       }
                     }}
                   >
-                    <td data-label="Participant">{submission.participantName ?? '—'}</td>
+                    <td data-label="Participant">
+                      {submission.participantName ?? '—'}
+                      {submission.prefillRecipient ? (
+                        <span
+                          className="prefill-badge"
+                          title={`Sent as a prefilled form to ${submission.prefillRecipient}`}
+                        >
+                          Prefilled
+                        </span>
+                      ) : null}
+                    </td>
                     <td data-label="Submitted at">
                       <span className="submissions-timestamp">
                         <ClockIcon />

@@ -265,6 +265,13 @@ export function FormTopNav({
       badge: responseCount,
     },
     {
+      key: 'prefills',
+      href: `/forms/${formId}/prefills`,
+      label: 'Prefills',
+      icon: <ShareLinkIcon />,
+      match: (path) => path.includes(`/forms/${formId}/prefills`),
+    },
+    {
       key: 'settings',
       href: `/forms/${formId}/settings`,
       label: 'Settings',
@@ -458,7 +465,7 @@ export function FormTopNav({
                       <span className="actions-menu-icon">
                         <ShareLinkIcon />
                       </span>
-                      Prefilled link
+                      Send prefilled form
                     </Link>
                   </li>
                 ) : null}

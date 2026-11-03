@@ -56,11 +56,13 @@ interface FormRendererClientProps {
   // Every network side effect below is short-circuited so a preview never creates a real
   // Submission row, presigns a real upload, or requires the form to be published.
   previewMode?: boolean;
-  /** Answers decoded from an admin-generated ?prefill= token (see lib/forms/prefill-token.ts)
-   * — seeds the initial `answers`, so the respondent can still edit any of them. */
+  /** Answers stored for a valid emailed ?prefill= token (see lib/forms/prefills.ts) — seeds
+   * the initial `answers`, so the respondent can still edit any of them. */
   prefillAnswers?: FormAnswers;
-  /** Admin "build a prefilled link" mode (/f/[slug]/prefill): the last-page button
-   * generates a shareable link from the entered answers instead of submitting. */
+  /** The token itself, sent when the response starts so it's linked to the prefill. */
+  prefillToken?: string;
+  /** Admin "send a prefilled form" mode (/f/[slug]/prefill): the last-page button opens a
+   * send-by-email panel instead of submitting. */
   prefillBuilder?: boolean;
 }
 
@@ -106,12 +108,17 @@ function FormRendererInner({
   schema,
   previewMode = false,
   prefillAnswers,
+  prefillToken,
   prefillBuilder = false,
 }: FormRendererClientProps) {
   const toast = useToast();
   const [pageIndex, setPageIndex] = useState(0);
   const [answers, setAnswers] = useState<FormAnswers>(prefillAnswers ?? {});
-  const [prefillUrl, setPrefillUrl] = useState<string | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sentTo, setSentTo] = useState<{ email: string; url: string } | null>(null);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [note, setNote] = useState('');
   const [errors, setErrors] = useState<AnswerErrors>({});
 
   // Hidden fields (see hiddenFieldSchema in lib/forms/schema.ts) never render a visible
@@ -170,7 +177,11 @@ function FormRendererInner({
     if (!submissionPromiseRef.current) {
       submissionPromiseRef.current = (async () => {
         try {
-          const res = await fetch(`/api/f/${slug}/submissions`, { method: 'POST' });
+          const res = await fetch(`/api/f/${slug}/submissions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefillToken }),
+          });
           const data: { submissionId?: string; error?: string } = await res.json();
           if (!res.ok || !data.submissionId) {
             throw new Error(data.error ?? "Couldn't start this form. Please try again.");
@@ -184,7 +195,7 @@ function FormRendererInner({
       })();
     }
     return submissionPromiseRef.current;
-  }, [slug, previewMode]);
+  }, [slug, previewMode, prefillToken]);
 
   const visibleFieldIds = useMemo(() => getVisibleFieldIds(schema, answers), [schema, answers]);
 
@@ -402,27 +413,37 @@ function FormRendererInner({
     toast,
   ]);
 
-  const generatePrefillLink = useCallback(async () => {
+  const sendPrefill = useCallback(async () => {
     if (!formId) return;
+    const email = recipientEmail.trim();
+    if (!email) {
+      toast.error("Enter the recipient's email address.");
+      return;
+    }
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/forms/${formId}/prefill-link`, {
+      const res = await fetch(`/api/forms/${formId}/prefills`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({
+          answers,
+          recipientEmail: email,
+          recipientName: recipientName.trim() || undefined,
+          note: note.trim() || undefined,
+        }),
       });
       const data: { url?: string; error?: string } = await res.json();
       if (!res.ok || !data.url) {
-        toast.error(data.error ?? 'Could not create the prefilled link.');
+        toast.error(data.error ?? 'Could not send the prefilled form.');
         return;
       }
-      setPrefillUrl(data.url);
+      setSentTo({ email, url: data.url });
     } catch {
-      toast.error('Could not create the prefilled link.');
+      toast.error('Could not send the prefilled form.');
     } finally {
       setSubmitting(false);
     }
-  }, [answers, formId, toast]);
+  }, [answers, formId, note, recipientEmail, recipientName, toast]);
 
   const handleNextOrSubmit = useCallback(async () => {
     const page = schema.pages[pageIndex];
@@ -434,7 +455,7 @@ function FormRendererInner({
       if (pageIndex < schema.pages.length - 1) {
         setPageIndex((i) => i + 1);
       } else {
-        await generatePrefillLink();
+        setSendOpen(true);
       }
       return;
     }
@@ -452,7 +473,7 @@ function FormRendererInner({
     }
 
     await submitForm();
-  }, [answers, generatePrefillLink, pageIndex, prefillBuilder, schema, submitForm, toast]);
+  }, [answers, pageIndex, prefillBuilder, schema, submitForm, toast]);
 
   const handleBack = useCallback(() => {
     setSubmitError(null);
@@ -702,41 +723,101 @@ function FormRendererInner({
             >
               {submitting
                 ? prefillBuilder
-                  ? 'Creating link…'
+                  ? 'Sending…'
                   : 'Submitting…'
                 : isLastPage
                   ? prefillBuilder
-                    ? 'Generate prefilled link'
+                    ? 'Send prefilled form…'
                     : submitButtonText
                   : 'Next'}
             </button>
           </div>
-          {prefillBuilder && prefillUrl ? (
-            <div className="form-prefill-result">
-              <input
-                type="text"
-                readOnly
-                className="text-input"
-                value={prefillUrl}
-                aria-label="Prefilled link"
-                onFocus={(event) => event.target.select()}
-              />
-              <button
-                type="button"
-                className="button button--secondary button--small"
-                onClick={() => {
-                  void navigator.clipboard.writeText(prefillUrl).then(
-                    () => toast.success('Link copied'),
-                    () => toast.error('Could not copy — select and copy manually'),
-                  );
-                }}
-              >
-                Copy link
-              </button>
-              <p className="form-field-help">
-                Anyone with this link sees these answers pre-filled and can change them before
-                submitting. The link expires in 30 days.
-              </p>
+          {prefillBuilder && sendOpen ? (
+            <div className="form-prefill-send" role="dialog" aria-label="Send prefilled form">
+              {sentTo ? (
+                <>
+                  <h3 className="form-prefill-send-title">Sent to {sentTo.email}</h3>
+                  <p className="form-field-help">
+                    They&apos;ll get an email with a personal link. Track it, resend it or delete it
+                    from the Prefills tab.
+                  </p>
+                  <div className="form-prefill-send-actions">
+                    <a
+                      className="button form-prefill-send-primary"
+                      href={`/forms/${formId}/prefills`}
+                    >
+                      View prefills
+                    </a>
+                    <button
+                      type="button"
+                      className="button button--secondary"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(sentTo.url).then(
+                          () => toast.success('Link copied'),
+                          () => toast.error('Could not copy the link'),
+                        );
+                      }}
+                    >
+                      Copy link
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="form-prefill-send-title">Send this form to…</h3>
+                  <label className="form-prefill-send-label">
+                    Email address
+                    <input
+                      type="email"
+                      className="text-input"
+                      value={recipientEmail}
+                      onChange={(event) => setRecipientEmail(event.target.value)}
+                      placeholder="name@example.com"
+                    />
+                  </label>
+                  <label className="form-prefill-send-label">
+                    Name (optional)
+                    <input
+                      type="text"
+                      className="text-input"
+                      value={recipientName}
+                      onChange={(event) => setRecipientName(event.target.value)}
+                    />
+                  </label>
+                  <label className="form-prefill-send-label">
+                    Personal note (optional)
+                    <textarea
+                      className="text-input"
+                      rows={3}
+                      value={note}
+                      onChange={(event) => setNote(event.target.value)}
+                    />
+                  </label>
+                  <p className="form-field-help">
+                    They&apos;ll receive an email with a personal link to this form with your
+                    answers filled in. They can change anything before submitting. The link expires
+                    in 30 days.
+                  </p>
+                  <div className="form-prefill-send-actions">
+                    <button
+                      type="button"
+                      className="button form-prefill-send-primary"
+                      disabled={submitting}
+                      onClick={() => void sendPrefill()}
+                    >
+                      {submitting ? 'Sending…' : 'Send email'}
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--secondary"
+                      disabled={submitting}
+                      onClick={() => setSendOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ) : null}
           {isLastPage ? (

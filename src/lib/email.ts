@@ -23,6 +23,7 @@ export type EmailKind =
   | 'submission_notification'
   | 'contact_form'
   | 'form_share'
+  | 'form_prefill'
   | 'two_factor_code';
 
 interface SendEmailParams {

@@ -22,7 +22,8 @@ export type EmailKind =
   | 'password_reset'
   | 'submission_notification'
   | 'contact_form'
-  | 'form_share';
+  | 'form_share'
+  | 'two_factor_code';
 
 interface SendEmailParams {
   to: string;

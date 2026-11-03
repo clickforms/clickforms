@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/components/toast';
 
@@ -59,18 +60,80 @@ function Toggle({
   );
 }
 
-// Enrollment (QR code / secret generation / verification) has no backend yet — this
-// only toggles the row's local on/off display for now. Wiring it up to a real TOTP flow
-// is separate follow-up work, not part of matching this page's visual design.
-export function TwoFactorClient() {
-  const toast = useToast();
-  const [enabled, setEnabled] = useState(false);
+async function postJson(url: string, body?: unknown): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    return response.ok ? { ok: true } : { ok: false, error: data.error };
+  } catch {
+    return { ok: false, error: 'Something went wrong. Please try again.' };
+  }
+}
 
-  function handleToggle(next: boolean) {
-    setEnabled(next);
-    if (next) {
-      toast.success('Authenticator app setup is coming soon.');
+type Step = 'idle' | 'enter-code' | 'confirm-disable';
+
+// Email-code two-step verification: when on, signing in also needs a 6-digit code emailed to
+// the account address. Turning it on first sends a code to prove the inbox works (so a typo'd
+// or dead address can't lock the owner out); turning it off needs the account password.
+export function TwoFactorClient({
+  initialEnabled,
+  email,
+}: {
+  initialEnabled: boolean;
+  email: string;
+}) {
+  const toast = useToast();
+  const router = useRouter();
+  const [enabled, setEnabled] = useState(initialEnabled);
+  const [step, setStep] = useState<Step>('idle');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function startEnable() {
+    setBusy(true);
+    const result = await postJson('/api/me/two-factor/send');
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error ?? 'Could not send the code.');
+      return;
     }
+    setCode('');
+    setStep('enter-code');
+    toast.success(`Code sent to ${email}`);
+  }
+
+  async function confirmEnable() {
+    setBusy(true);
+    const result = await postJson('/api/me/two-factor/enable', { code });
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error ?? 'That code is incorrect or has expired.');
+      return;
+    }
+    setEnabled(true);
+    setStep('idle');
+    toast.success('Two-step verification is on.');
+    router.refresh();
+  }
+
+  async function confirmDisable() {
+    setBusy(true);
+    const result = await postJson('/api/me/two-factor/disable', { password });
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error ?? 'Could not turn off two-step verification.');
+      return;
+    }
+    setEnabled(false);
+    setStep('idle');
+    setPassword('');
+    toast.success('Two-step verification is off.');
+    router.refresh();
   }
 
   return (
@@ -90,9 +153,10 @@ export function TwoFactorClient() {
             <PhoneIcon />
           </span>
           <div>
-            <h2 className="contact-details-title">Two-factor authentication</h2>
+            <h2 className="contact-details-title">Email verification code</h2>
             <p className="contact-details-intro">
-              Require a one-time code from your phone in addition to your password.
+              When you sign in, we email a 6-digit code to {email || 'your account email'}. You
+              enter it after your password.
             </p>
           </div>
         </div>
@@ -100,11 +164,99 @@ export function TwoFactorClient() {
         <div className="two-factor-body">
           <div className="two-factor-method-row">
             <div>
-              <p className="two-factor-method-title">Authenticator app</p>
+              <p className="two-factor-method-title">Email code</p>
               <p className="two-factor-method-status">{enabled ? 'Enabled' : 'Not enabled'}</p>
             </div>
-            <Toggle checked={enabled} onChange={handleToggle} label="Authenticator app" />
+            <Toggle
+              checked={enabled || step === 'enter-code'}
+              disabled={busy}
+              label="Email verification code"
+              onChange={(next) => {
+                if (next) void startEnable();
+                else if (enabled) setStep('confirm-disable');
+                else setStep('idle');
+              }}
+            />
           </div>
+
+          {step === 'enter-code' ? (
+            <div className="two-factor-step">
+              <label className="settings-field">
+                <span className="settings-label">Enter the 6-digit code we emailed you</span>
+                <input
+                  className="text-input"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={code}
+                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                />
+              </label>
+              <div className="two-factor-actions">
+                <button
+                  type="button"
+                  className="button button--small"
+                  disabled={busy || code.length !== 6}
+                  onClick={() => void confirmEnable()}
+                >
+                  Turn on
+                </button>
+                <button
+                  type="button"
+                  className="button button--ghost button--small"
+                  disabled={busy}
+                  onClick={() => void startEnable()}
+                >
+                  Resend code
+                </button>
+                <button
+                  type="button"
+                  className="button button--ghost button--small"
+                  disabled={busy}
+                  onClick={() => setStep('idle')}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {step === 'confirm-disable' ? (
+            <div className="two-factor-step">
+              <label className="settings-field">
+                <span className="settings-label">Enter your password to turn this off</span>
+                <input
+                  className="text-input"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </label>
+              <div className="two-factor-actions">
+                <button
+                  type="button"
+                  className="button button--small"
+                  disabled={busy || password.length === 0}
+                  onClick={() => void confirmDisable()}
+                >
+                  Turn off
+                </button>
+                <button
+                  type="button"
+                  className="button button--ghost button--small"
+                  disabled={busy}
+                  onClick={() => {
+                    setStep('idle');
+                    setPassword('');
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

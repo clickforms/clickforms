@@ -15,6 +15,9 @@ function resolveErrorMessage(error: string | undefined): ReactNode | null {
   if (error === 'OrganizationSuspended') {
     return 'This organisation has been suspended. Contact support for help.';
   }
+  if (error === 'InvalidTwoFactorCode') {
+    return 'That code is incorrect or has expired. Check the latest email, or resend a new code.';
+  }
   if (error === 'AmbiguousAccount') {
     return "This email and password match more than one of your organisations, so we can't tell which one to sign you into. Please use a different password for each organisation, or contact support for help.";
   }
@@ -80,6 +83,10 @@ export function LoginForm({
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<ReactNode | null>(resolveErrorMessage(initialError));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Set once the server has emailed a verification code (user has two-step on): the form
+  // then asks for it and re-submits the same email + password with it.
+  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState('');
 
   useEffect(() => {
     const rememberedEmail = window.localStorage.getItem(REMEMBERED_EMAIL_KEY);
@@ -89,8 +96,7 @@ export function LoginForm({
     }
   }, []);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submitCredentials(withCode: string | undefined) {
     setError(null);
     setIsSubmitting(true);
 
@@ -99,11 +105,18 @@ export function LoginForm({
     const result = await signIn('credentials', {
       email: trimmedEmail,
       password,
+      ...(withCode ? { code: withCode } : {}),
       redirect: false,
       callbackUrl,
     });
 
     setIsSubmitting(false);
+
+    if (result?.error === 'TwoFactorRequired') {
+      setNeedsCode(true);
+      setCode('');
+      return;
+    }
 
     if (result?.error) {
       setError(resolveErrorMessage(result.error));
@@ -133,7 +146,23 @@ export function LoginForm({
     }
   }
 
-  const canSubmit = email.trim().length > 0 && password.length > 0 && !isSubmitting;
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void submitCredentials(needsCode ? code.trim() : undefined);
+  }
+
+  // Signing in again without a code makes the server email a fresh one (rate-limited to one
+  // per 30 seconds server-side).
+  async function handleResend() {
+    await submitCredentials(undefined);
+    setError('We sent a new code. It can take a moment to arrive.');
+  }
+
+  const canSubmit =
+    email.trim().length > 0 &&
+    password.length > 0 &&
+    (!needsCode || code.trim().length === 6) &&
+    !isSubmitting;
 
   return (
     <form className="login-form" onSubmit={handleSubmit}>
@@ -191,6 +220,33 @@ export function LoginForm({
         </div>
       </label>
 
+      {needsCode ? (
+        <label className="login-field">
+          <span className="login-field-label">Verification code</span>
+          <input
+            className="text-input login-field-input"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+            disabled={isSubmitting}
+            placeholder="6-digit code"
+          />
+          <span className="login-field-hint-link">
+            We emailed a code to {email.trim()}. It expires in 10 minutes.{' '}
+            <button
+              type="button"
+              className="login-field-hint-link"
+              onClick={() => void handleResend()}
+              disabled={isSubmitting}
+            >
+              Resend code
+            </button>
+          </span>
+        </label>
+      ) : null}
+
       <label className="login-remember-row">
         <input
           type="checkbox"
@@ -202,7 +258,7 @@ export function LoginForm({
       </label>
 
       <button className="button login-submit" type="submit" disabled={!canSubmit}>
-        {isSubmitting ? 'Signing in…' : 'Sign in'}
+        {isSubmitting ? 'Signing in…' : needsCode ? 'Verify and sign in' : 'Sign in'}
       </button>
 
       <p className="login-form-footer">

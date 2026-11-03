@@ -22068,3 +22068,18 @@ textarea.form-field-input {
     animation: none;
   }
 }
+
+/* Two-factor settings: inline code / password step under the toggle row. */
+.two-factor-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  max-width: 22rem;
+}
+
+.two-factor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

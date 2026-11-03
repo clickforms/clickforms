@@ -219,8 +219,8 @@ model User {
   // platform admins and do *not* belong to a customer Organization — `organizationId`
   // is null for them. `role: admin` only ever means "admin of my own org".
   isPlatformAdmin Boolean @default(false) @map("is_platform_admin")
-  // Display-only today (see src/app/forms/settings/two-factor/two-factor-client.tsx —
-  // enrollment has no backend yet). Also surfaced as a column on /admin/users.
+  // Email-code two-step sign-in (see src/lib/auth/two-factor.ts and the authorize() check in
+  // src/lib/auth.ts). Also surfaced as a column on /admin/users.
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   // Permission level within /admin. Null for everyone except platform admins; see the
   // PlatformAdminRole enum doc comment for why this is separate from `role`.
@@ -232,6 +232,7 @@ model User {
   createdForms       Form[]             @relation("FormCreatedBy")
   approvedWorkflows  WorkflowStep[]  @relation("WorkflowApprover")
   auditLogs          AuditLog[]      @relation("AuditActor")
+  twoFactorCodes     TwoFactorCode[]
   sentInvites        UserInvite[]    @relation("InviteSender")
   sentPlatformAdminInvites PlatformAdminInvite[] @relation("PlatformAdminInviteSender")
   passwordResetTokens PasswordResetToken[]
@@ -335,6 +336,26 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+// One-time email codes for two-step sign-in (purpose 'login') and for confirming enrolment
+// ('enable'). Only a keyed hash of the 6-digit code is stored. Accessed via raw SQL in
+// src/lib/auth/two-factor.ts. No RLS — codes are checked at sign-in, before an org context
+// exists (same as PasswordResetToken).
+model TwoFactorCode {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  purpose   String
+  codeHash  String    @map("code_hash")
+  attempts  Int       @default(0)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@map("two_factor_codes")
 }
 
 model Form {

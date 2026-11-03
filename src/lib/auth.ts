@@ -12,6 +12,7 @@
 
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { issueTwoFactorCode, verifyTwoFactorCode } from '@/lib/auth/two-factor';
 import { prisma, withOrgContext } from '@/lib/db';
 import { hashPassword, needsRehash, verifyPassword } from '@/lib/users/password';
 
@@ -51,6 +52,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        code: { label: 'Verification code', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -124,6 +126,22 @@ export const authOptions: NextAuthOptions = {
         // shell (admin-shell-client.tsx) shows a persistent banner for it. Suspension is
         // different: a platform admin can suspend without leaving `status` clean data to
         // display, so locking that one out at sign-in is still the right call.
+
+        // Two-step verification (opt-in per user, Settings → Two-factor). Password alone is
+        // never enough for these accounts: with no code supplied we email one and signal the
+        // login form to ask for it ('TwoFactorRequired'); the form then re-submits the same
+        // credentials plus the code. Placed after the password and suspension checks so a
+        // wrong password never triggers an email.
+        if (user.twoFactorEnabled) {
+          const submittedCode = credentials.code?.trim();
+          if (!submittedCode) {
+            await issueTwoFactorCode(user, 'login');
+            throw new Error('TwoFactorRequired');
+          }
+          if (!(await verifyTwoFactorCode(user.id, 'login', submittedCode))) {
+            throw new Error('InvalidTwoFactorCode');
+          }
+        }
 
         // Opportunistic rehash: this account's hash predates the BCRYPT_COST speedup in
         // src/lib/users/password.ts and is still sitting at the old, slower cost. The

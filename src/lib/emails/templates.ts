@@ -85,6 +85,33 @@ export function passwordResetEmail(params: {
   return { subject: 'Reset your Clickforms password', html, text };
 }
 
+/** Six-digit one-time code for two-step sign-in, or for confirming enrolment in it. */
+export function twoFactorCodeEmail(params: {
+  name: string;
+  code: string;
+  purpose: 'login' | 'enable';
+}): RenderedEmail {
+  const { html, text } = renderEmailLayout({
+    preheader: `Your Clickforms verification code is ${params.code}.`,
+    heading: params.purpose === 'login' ? 'Your sign-in code' : 'Confirm two-step verification',
+    paragraphs: [
+      `Hi ${params.name},`,
+      params.purpose === 'login'
+        ? 'Enter this code to finish signing in to Clickforms:'
+        : 'Enter this code to turn on two-step verification for your Clickforms account:',
+    ],
+    messageCallout: `<div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; text-align: center; padding: 8px 0;">${params.code}</div>`,
+    footnote:
+      "This code expires in 10 minutes. If you didn't try to sign in, someone may know your password — please change it.",
+  });
+
+  return {
+    subject: `${params.code} is your Clickforms verification code`,
+    html,
+    text: `${text}\n\nYour code: ${params.code}`,
+  };
+}
+
 /** New-response alert, fired from PATCH /api/f/[slug]/submissions/[submissionId] once a
  * respondent finishes submitting — see src/lib/forms/submission-notification.ts for who
  * it's sent to (org default vs. per-form override vs. off) and the PDF it's attached

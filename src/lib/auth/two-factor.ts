@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { twoFactorCodeEmail } from '@/lib/emails/templates';
@@ -97,4 +98,66 @@ export async function verifyTwoFactorCode(
 
   await prisma.$executeRaw`UPDATE two_factor_codes SET used_at = now() WHERE id = ${row.id}::uuid`;
   return true;
+}
+
+// "Trusted for 24 hours": once a user has passed the emailed-code check on this browser, a
+// signed cookie lets them sign in again with just their password until it expires. The cookie
+// is bound to the user and to their current password hash, so it stops working if they change
+// their password, and it can't be used for anyone else's account.
+const TRUST_COOKIE = 'cf_2fa_trust';
+const TRUST_TTL_MS = 24 * 60 * 60 * 1000;
+
+function trustSignature(userId: string, expiresAt: number, passwordHash: string): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error('SESSION_SECRET must be set for two-step verification');
+  }
+  return createHmac('sha256', secret)
+    .update(`trust:${userId}:${expiresAt}:${passwordHash.slice(-16)}`)
+    .digest('hex');
+}
+
+/** True when this browser passed two-step verification for this user within the last 24 hours. */
+export async function hasTwoFactorTrust(user: {
+  id: string;
+  passwordHash: string;
+}): Promise<boolean> {
+  try {
+    const value = (await cookies()).get(TRUST_COOKIE)?.value;
+    if (!value) return false;
+    const [userId, expires, signature] = value.split('.');
+    const expiresAt = Number(expires);
+    if (userId !== user.id || !signature || !Number.isFinite(expiresAt)) return false;
+    if (expiresAt < Date.now()) return false;
+    const expected = Buffer.from(trustSignature(user.id, expiresAt, user.passwordHash));
+    const actual = Buffer.from(signature);
+    return expected.length === actual.length && timingSafeEqual(expected, actual);
+  } catch {
+    return false;
+  }
+}
+
+/** Remembers a successful verification on this browser for 24 hours. */
+export async function grantTwoFactorTrust(user: {
+  id: string;
+  passwordHash: string;
+}): Promise<void> {
+  try {
+    const expiresAt = Date.now() + TRUST_TTL_MS;
+    (await cookies()).set(
+      TRUST_COOKIE,
+      `${user.id}.${expiresAt}.${trustSignature(user.id, expiresAt, user.passwordHash)}`,
+      {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: TRUST_TTL_MS / 1000,
+      },
+    );
+  } catch (error) {
+    // Never block a successful sign-in because the trust cookie couldn't be written — the
+    // user just gets asked for a code again next time.
+    console.error('[2fa] could not set trust cookie', error);
+  }
 }

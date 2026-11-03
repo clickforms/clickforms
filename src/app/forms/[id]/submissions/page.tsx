@@ -4,7 +4,7 @@ import { SubmissionsListClient } from '@/app/forms/[id]/submissions/submissions-
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { deriveParticipantName, participantFieldIds } from '@/lib/forms/participant-name';
-import { formatResponseLabel } from '@/lib/forms/response-label';
+import { formatResponseLabel, listResponseLabelCandidates } from '@/lib/forms/response-label';
 import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
 import { requireOrganizationId } from '@/lib/session';
 import { canEditForm } from '@/lib/user-roles';
@@ -115,6 +115,13 @@ export default async function SubmissionsListPage({ params }: PageProps) {
     }
   }
 
+  // Fields offered in the first-column picker: the latest version's eligible fields.
+  const newestSchema = [...versions]
+    .reverse()
+    .map((v) => formSchemaSchema.safeParse(v.schema))
+    .find((r) => r.success);
+  const columnFields = newestSchema?.success ? listResponseLabelCandidates(newestSchema.data) : [];
+
   // Heading for the first column: the chosen field's label (latest version), else generic.
   const latestSchema = [...versions]
     .reverse()
@@ -139,6 +146,8 @@ export default async function SubmissionsListPage({ params }: PageProps) {
         formId={form.id}
         canDelete={canDelete}
         responseColumnLabel={responseColumnLabel}
+        columnFields={columnFields}
+        columnFieldId={labelFieldId}
         initialSubmissions={submissions.map((submission) => ({
           id: submission.id,
           status: submission.status,

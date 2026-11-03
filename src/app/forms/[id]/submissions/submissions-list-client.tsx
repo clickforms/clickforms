@@ -16,6 +16,7 @@ import {
 } from '@/app/forms/[id]/submissions/submissions-list-filters';
 import { useToast } from '@/components/toast';
 import '@/app/forms/[id]/prefills/prefills.css';
+import { ColumnPicker } from '@/app/forms/[id]/submissions/column-picker';
 import { readApiError } from '@/lib/error-message';
 import { parseIsoDate } from '@/lib/forms/date-value';
 
@@ -230,12 +231,16 @@ export function SubmissionsListClient({
   initialSubmissions,
   canDelete,
   responseColumnLabel,
+  columnFields,
+  columnFieldId,
 }: {
   formId: string;
   initialSubmissions: SubmissionSummary[];
   canDelete: boolean;
   /** Heading of the first column — the form's chosen identifying field, or a generic label. */
   responseColumnLabel: string;
+  columnFields: { id: string; label: string }[];
+  columnFieldId: string | null;
 }) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -454,7 +459,18 @@ export function SubmissionsListClient({
           <table className="admin-table submissions-table">
             <thead>
               <tr>
-                <th>{responseColumnLabel}</th>
+                <th>
+                  {canDelete ? (
+                    <ColumnPicker
+                      formId={formId}
+                      label={responseColumnLabel}
+                      fields={columnFields}
+                      selectedId={columnFieldId}
+                    />
+                  ) : (
+                    responseColumnLabel
+                  )}
+                </th>
                 <th>Submitted at</th>
                 <th>Status</th>
                 <th className="submissions-row-toggle-cell" />

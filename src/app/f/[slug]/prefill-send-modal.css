@@ -267,3 +267,17 @@
 .pfm-addlink:hover {
   text-decoration: underline;
 }
+
+/* Builder-only: the shared .form-save-later is styled as a disabled control everywhere else. */
+.form-save-later.form-save-later--active {
+  color: #374151;
+  cursor: pointer;
+  opacity: 1;
+}
+.form-save-later.form-save-later--active:hover {
+  color: #111827;
+}
+.form-save-later.form-save-later--active:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}

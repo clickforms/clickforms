@@ -797,7 +797,7 @@ function FormRendererInner({
           {isLastPage || prefillBuilder ? (
             <button
               type="button"
-              className="form-save-later"
+              className={`form-save-later${prefillBuilder ? ' form-save-later--active' : ''}`}
               disabled={!prefillBuilder || submitting}
               onClick={prefillBuilder ? () => void saveDraft() : undefined}
               title={

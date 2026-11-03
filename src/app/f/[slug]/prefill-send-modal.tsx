@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './prefill-send-modal.css';
 
 interface PrefillSendModalProps {
@@ -38,6 +38,7 @@ export function PrefillSendModal({
   onCopy,
 }: PrefillSendModalProps) {
   const firstFieldRef = useRef<HTMLInputElement>(null);
+  const [showNote, setShowNote] = useState(note.length > 0);
 
   useEffect(() => {
     firstFieldRef.current?.focus();
@@ -141,9 +142,7 @@ export function PrefillSendModal({
             <h2 id="pfm-title" className="pfm-title">
               Share prefilled form
             </h2>
-            <p className="pfm-sub">
-              Your answers will be filled in for them. They can change anything before submitting.
-            </p>
+            <p className="pfm-sub">Your answers are filled in. They can change anything.</p>
 
             <div className="pfm-tabs" role="tablist" aria-label="How to share">
               <button
@@ -191,18 +190,22 @@ export function PrefillSendModal({
                     onChange={(event) => onName(event.target.value)}
                   />
                 </div>
-                <div className="pfm-field">
-                  <label htmlFor="pfm-note">
-                    Message <span className="pfm-optional">Optional</span>
-                  </label>
-                  <textarea
-                    id="pfm-note"
-                    rows={3}
-                    placeholder="Add a short note to go with the email"
-                    value={note}
-                    onChange={(event) => onNote(event.target.value)}
-                  />
-                </div>
+                {showNote ? (
+                  <div className="pfm-field">
+                    <label htmlFor="pfm-note">Message</label>
+                    <textarea
+                      id="pfm-note"
+                      rows={3}
+                      placeholder="Add a short note to go with the email"
+                      value={note}
+                      onChange={(event) => onNote(event.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <button type="button" className="pfm-addlink" onClick={() => setShowNote(true)}>
+                    + Add a message
+                  </button>
+                )}
               </>
             ) : (
               <div className="pfm-field">
@@ -217,26 +220,24 @@ export function PrefillSendModal({
                   value={name}
                   onChange={(event) => onName(event.target.value)}
                 />
-                <p className="pfm-hint">
-                  Nothing is emailed. You&apos;ll get a link to send by text, chat or anywhere else.
-                </p>
               </div>
             )}
 
-            <p className="pfm-hint">The link expires in 30 days.</p>
-
-            <div className="pfm-actions">
-              <button
-                type="button"
-                className="pfm-btn pfm-btn--ghost"
-                disabled={sending}
-                onClick={onClose}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="pfm-btn pfm-btn--primary" disabled={sending}>
-                {sending ? 'Working…' : mode === 'email' ? 'Send email' : 'Create link'}
-              </button>
+            <div className="pfm-actions pfm-actions--split">
+              <span className="pfm-hint">Link expires in 30 days</span>
+              <span className="pfm-actions-right">
+                <button
+                  type="button"
+                  className="pfm-btn pfm-btn--ghost"
+                  disabled={sending}
+                  onClick={onClose}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="pfm-btn pfm-btn--primary" disabled={sending}>
+                  {sending ? 'Working…' : mode === 'email' ? 'Send email' : 'Create link'}
+                </button>
+              </span>
             </div>
           </form>
         )}

@@ -9,8 +9,10 @@ import { FormActionsMenu } from '@/app/forms/form-actions-menu';
 import { TransferFormModal } from '@/app/forms/transfer-form-modal';
 import { DropdownMenu } from '@/components/dropdown-menu';
 import { LiveStatusBadge } from '@/components/live-status-badge';
+import { LocalDate, useMounted } from '@/components/local-date';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
+import { formatDateTime, formatShortDate } from '@/lib/format-date';
 import { type FormWorkflowAction, runFormWorkflow } from '@/lib/forms/form-workflow-client';
 
 type ViewMode = 'list' | 'grid';
@@ -222,14 +224,6 @@ function matchesStatusFilter(form: FormSummary, filter: StatusFilter): boolean {
   return !isFormLive(form);
 }
 
-function formatShortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 function formatRelativeTime(iso: string): string {
   const date = new Date(iso);
   const diffMs = Date.now() - date.getTime();
@@ -240,7 +234,7 @@ function formatRelativeTime(iso: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.round(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return formatShortDate(iso);
+  return formatShortDate(iso, false);
 }
 
 export function FormsListClient({
@@ -256,6 +250,7 @@ export function FormsListClient({
   /** Every org member, for the transfer-ownership picker. */
   orgMembers: OrgMember[];
 }) {
+  const mounted = useMounted();
   const [forms, setForms] = useState(initialForms);
   const [search, setSearch] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -832,17 +827,13 @@ export function FormsListClient({
                               </Link>
                             )}
                           </td>
-                          <td
-                            data-label="Created"
-                            title={new Date(form.createdAt).toLocaleString('en-AU')}
-                          >
-                            {formatShortDate(form.createdAt)}
+                          <td data-label="Created">
+                            <LocalDate iso={form.createdAt} />
                           </td>
-                          <td
-                            data-label="Last updated"
-                            title={new Date(form.updatedAt).toLocaleString('en-AU')}
-                          >
-                            {updatedLabel}
+                          <td data-label="Last updated">
+                            <span title={formatDateTime(form.updatedAt, mounted)}>
+                              {updatedLabel}
+                            </span>
                           </td>
                           <td
                             data-label="Responses"
@@ -1042,6 +1033,7 @@ function FormsGridCard({
   onTogglePrivate: () => void;
   onTransfer: () => void;
 }) {
+  const mounted = useMounted();
   const isLive = isFormLive(form);
   const builderHref = `/forms/${form.id}/builder`;
   const responsesHref = `/forms/${form.id}/submissions`;
@@ -1107,7 +1099,7 @@ function FormsGridCard({
         >
           {form.responseCount} {form.responseCount === 1 ? 'response' : 'responses'}
         </Link>
-        <span title={new Date(form.updatedAt).toLocaleString('en-AU')}>
+        <span title={formatDateTime(form.updatedAt, mounted)}>
           Updated {formatRelativeTime(form.updatedAt)}
         </span>
       </div>

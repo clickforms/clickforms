@@ -43,11 +43,11 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
       const responseCount = await tx.submission.count({
         where: { formId: id, organizationId: requireOrganizationId(session), status: 'submitted' },
       });
-      // Prefills sent or shared (drafts excluded) — shown on the Prefills tab like the Responses
+      // Number of prefills listed on the Prefills tab (corrections sit under their original) — shown on the Prefills tab like the Responses
       // count. Raw SQL: form_prefills isn't in the generated Prisma client.
       const prefillRows = await tx.$queryRaw<{ count: number }[]>`
         SELECT count(*)::int AS count FROM form_prefills
-        WHERE form_id = ${id}::uuid AND NOT is_draft`;
+        WHERE form_id = ${id}::uuid AND parent_id IS NULL`;
       const prefillCount = prefillRows[0]?.count ?? 0;
       // Needed to build the absolute /f/[slug] link for the top nav's Share button —
       // see src/app/forms/list/page.tsx for the same buildOrgFormUrl pattern.

@@ -104,7 +104,9 @@ export async function verifyTwoFactorCode(
 // signed cookie lets them sign in again with just their password until it expires. The cookie
 // is bound to the user and to their current password hash, so it stops working if they change
 // their password, and it can't be used for anyone else's account.
-const TRUST_COOKIE = 'cf_2fa_trust';
+// One cookie per user: signing in as a second account on the same browser (e.g. an admin and a
+// staff account) must not overwrite the first account's trust and force a code again.
+const trustCookieName = (userId: string) => `cf_2fa_trust_${userId}`;
 const TRUST_TTL_MS = 24 * 60 * 60 * 1000;
 
 function trustSignature(userId: string, expiresAt: number, passwordHash: string): string {
@@ -123,7 +125,7 @@ export async function hasTwoFactorTrust(user: {
   passwordHash: string;
 }): Promise<boolean> {
   try {
-    const value = (await cookies()).get(TRUST_COOKIE)?.value;
+    const value = (await cookies()).get(trustCookieName(user.id))?.value;
     if (!value) return false;
     const [userId, expires, signature] = value.split('.');
     const expiresAt = Number(expires);
@@ -145,7 +147,7 @@ export async function grantTwoFactorTrust(user: {
   try {
     const expiresAt = Date.now() + TRUST_TTL_MS;
     (await cookies()).set(
-      TRUST_COOKIE,
+      trustCookieName(user.id),
       `${user.id}.${expiresAt}.${trustSignature(user.id, expiresAt, user.passwordHash)}`,
       {
         httpOnly: true,

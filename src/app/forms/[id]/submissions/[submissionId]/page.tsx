@@ -295,7 +295,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     </div>
   );
 
-  const statusControl =
+  const banner =
     heldPrefill && prefillInfo?.prefill_id ? (
       <PrefillReviewBar
         formId={form.id}
@@ -303,14 +303,16 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         canAct={canDelete}
         recipient={prefillInfo.recipient}
       />
-    ) : (
-      <SubmissionStatusControl
-        formId={form.id}
-        submissionId={submission.id}
-        initialStatus={submission.status}
-        canChange={canDelete}
-      />
-    );
+    ) : null;
+
+  const statusControl = heldPrefill ? null : (
+    <SubmissionStatusControl
+      formId={form.id}
+      submissionId={submission.id}
+      initialStatus={submission.status}
+      canChange={canDelete}
+    />
+  );
 
   return (
     <div className="submission-detail-page">
@@ -323,6 +325,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         canDelete={canDelete}
         meta={meta}
         statusControl={statusControl}
+        banner={banner}
       >
         {schema.pages.map((page) => (
           <div key={page.id} className="card submission-page">

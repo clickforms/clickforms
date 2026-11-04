@@ -757,3 +757,24 @@
 .pfd-row--changed > td:first-child {
   box-shadow: inset 3px 0 0 #55ea8c;
 }
+
+.pfr-bar {
+  margin-bottom: 1rem;
+  border-left: 1px solid #e6e9ef;
+  background: #fff;
+}
+.pfr-text strong {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.pfr-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fdab3d;
+  box-shadow: 0 0 0 3px #fff1dc;
+}
+.pfr-actions .pf-btn--sm {
+  padding: 0.45rem 0.95rem;
+}

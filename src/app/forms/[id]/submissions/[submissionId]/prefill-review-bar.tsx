@@ -54,12 +54,12 @@ export function PrefillReviewBar({
     <>
       <div className="pfr-bar">
         <div className="pfr-text">
-          <strong>Waiting for review</strong>
+          <strong>
+            <i className="pfr-dot" aria-hidden="true" />
+            Needs review
+          </strong>
           <span>
-            {recipient
-              ? `Returned by ${recipient} through a prefill. `
-              : 'Returned through a prefill. '}
-            It isn&apos;t in Responses yet.
+            {recipient ? `From ${recipient}. ` : ''}Not in Responses until you promote it.
           </span>
         </div>
         <div className="pfr-actions">

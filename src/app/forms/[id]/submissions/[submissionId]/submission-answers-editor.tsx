@@ -32,6 +32,8 @@ interface SubmissionAnswersEditorProps {
   canDelete: boolean;
   meta: ReactNode;
   statusControl: ReactNode;
+  /** Full-width notice shown under the title (e.g. a prefill awaiting review). */
+  banner?: ReactNode;
   children: ReactNode;
 }
 
@@ -345,6 +347,7 @@ export function SubmissionAnswersEditor({
   canDelete,
   meta,
   statusControl,
+  banner,
   children,
 }: SubmissionAnswersEditorProps) {
   const [editing, setEditing] = useState(false);
@@ -557,6 +560,7 @@ export function SubmissionAnswersEditor({
         </div>
       </div>
 
+      {banner}
       {meta}
 
       {!editing ? (

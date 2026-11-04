@@ -1,231 +1,88 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { SubmissionPreviewModal } from '@/app/forms/[id]/submissions/submission-preview-modal';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useMounted } from '@/components/local-date';
-import { useToast } from '@/components/toast';
 import { formatDateTime } from '@/lib/format-date';
-import type { CompareRow } from '@/lib/forms/prefill-compare';
 
-interface CompareData {
-  rows: CompareRow[];
-  responseId: string | null;
+interface ResponseItem {
+  id: string;
   held: boolean;
-  returnedAt: string | null;
+  submittedAt: string | null;
+  label: string | null;
 }
 
-const TAG: Record<string, string> = {
-  changed: 'Changed',
-  added: 'Added by client',
-  cleared: 'Cleared by client',
-};
-
-const isDiff = (row: CompareRow) => ['changed', 'added', 'cleared'].includes(row.status);
-
 /**
- * Inline panel shown when a prefill row with a returned response is expanded: what changed, the
- * response itself (opened in the same form-styled view used on the Responses page), and the
- * promote / discard actions.
+ * What an expanded prefill row shows: the responses that came back through it, as a list. Each
+ * one opens the full review page (the same form-styled page used on Responses), where it can be
+ * checked against what was sent, edited, and promoted.
  */
-export function PrefillPanel({
-  formId,
-  prefillId,
-  onChanged,
-}: {
-  formId: string;
-  prefillId: string;
-  /** Called after promote/discard so the list refreshes. */
-  onChanged: () => void;
-}) {
-  const toast = useToast();
+export function PrefillPanel({ formId, prefillId }: { formId: string; prefillId: string }) {
   const mounted = useMounted();
-  const [data, setData] = useState<CompareData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [onlyChanges, setOnlyChanges] = useState(true);
-  const [previewId, setPreviewId] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<'promote' | 'discard' | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [items, setItems] = useState<ResponseItem[] | null>(null);
+  const [changedCount, setChangedCount] = useState(0);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/forms/${formId}/prefills/${prefillId}/compare`)
       .then(async (res) => {
         if (!res.ok) throw new Error('failed');
-        return (await res.json()) as CompareData;
+        return (await res.json()) as { responses: ResponseItem[]; changedCount: number };
       })
       .then((json) => {
-        if (!cancelled) setData(json);
+        if (cancelled) return;
+        setItems(json.responses);
+        setChangedCount(json.changedCount);
       })
       .catch(() => {
-        if (!cancelled) setError('Could not load this response.');
+        if (!cancelled) setError(true);
       });
     return () => {
       cancelled = true;
     };
   }, [formId, prefillId]);
 
-  const changed = useMemo(() => (data ? data.rows.filter(isDiff) : []), [data]);
-  const shown = data ? (onlyChanges && changed.length > 0 ? changed : data.rows) : [];
-
-  async function act(action: 'promote' | 'discard') {
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/forms/${formId}/prefills/${prefillId}/${action}`, {
-        method: 'POST',
-      });
-      const json: { error?: string } = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(json.error ?? 'Something went wrong.');
-        return;
-      }
-      toast.success(action === 'promote' ? 'Promoted to Responses' : 'Response discarded');
-      setConfirm(null);
-      onChanged();
-    } catch {
-      toast.error('Something went wrong.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (error) return <div className="pfp pfp--msg">{error}</div>;
-  if (!data) return <div className="pfp pfp--msg">Loading…</div>;
+  if (error) return <div className="pfp pfp--msg">Could not load the responses.</div>;
+  if (!items) return <div className="pfp pfp--msg">Loading…</div>;
+  if (items.length === 0) return <div className="pfp pfp--msg">No responses yet.</div>;
 
   return (
     <div className="pfp">
-      <div className="pfp-bar">
-        <div className="pfp-summary">
-          <strong>
-            {changed.length === 0
-              ? 'No changes — returned exactly as sent'
-              : `${changed.length} ${changed.length === 1 ? 'field' : 'fields'} changed by the client`}
-          </strong>
+      <p className="pfp-heading">
+        {items.length === 1 ? 'Response' : `${items.length} responses`}
+        {changedCount > 0 ? (
           <span>
-            {data.returnedAt ? `Returned ${formatDateTime(data.returnedAt, mounted)}` : null}
-            {data.held ? ' · Not in Responses yet' : ' · In Responses'}
+            {' '}
+            · {changedCount} {changedCount === 1 ? 'field' : 'fields'} changed by the client
           </span>
-        </div>
-        <div className="pfp-actions">
-          {data.responseId ? (
-            <button
-              type="button"
-              className="pf-btn pf-btn--ghost pf-btn--sm"
-              onClick={() => setPreviewId(data.responseId)}
-            >
-              Open response
-            </button>
-          ) : null}
-          {data.held ? (
-            <>
-              <button
-                type="button"
-                className="pf-btn pf-btn--ghost pf-btn--sm pf-btn--dangerline"
-                onClick={() => setConfirm('discard')}
+        ) : null}
+      </p>
+      <ul className="pfp-list">
+        {items.map((item) => (
+          <li key={item.id}>
+            <Link href={`/forms/${formId}/submissions/${item.id}`} className="pfp-item">
+              <span className="pfp-item-main">
+                <strong>{item.label ?? 'Response'}</strong>
+                <small>
+                  {item.submittedAt
+                    ? `Returned ${formatDateTime(item.submittedAt, mounted)}`
+                    : 'Returned'}
+                </small>
+              </span>
+              <span
+                className={`pf-status ${item.held ? 'pf-status--review' : 'pf-status--completed'}`}
               >
-                Discard
-              </button>
-              <button
-                type="button"
-                className="pf-btn pf-btn--primary pf-btn--sm"
-                onClick={() => setConfirm('promote')}
-              >
-                Promote to response
-              </button>
-            </>
-          ) : data.responseId ? (
-            <a
-              className="pf-btn pf-btn--ghost pf-btn--sm"
-              href={`/forms/${formId}/submissions/${data.responseId}`}
-            >
-              View in Responses
-            </a>
-          ) : null}
-        </div>
-      </div>
-
-      {data.rows.length > 0 ? (
-        <>
-          {changed.length > 0 ? (
-            <label className="pfd-switch pfp-switch">
-              <input
-                type="checkbox"
-                checked={onlyChanges}
-                onChange={(event) => setOnlyChanges(event.target.checked)}
-              />
-              <span aria-hidden="true" />
-              Changes only
-            </label>
-          ) : null}
-          <table className="pf-table pfd-table pfp-table">
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Sent</th>
-                <th>Returned</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((row) => (
-                <tr key={row.fieldId} className={isDiff(row) ? 'pfd-row--changed' : undefined}>
-                  <td className="pfd-field">
-                    {row.label}
-                    {isDiff(row) ? <em>{TAG[row.status]}</em> : null}
-                  </td>
-                  <td className={row.original ? undefined : 'pf-muted'}>{row.original ?? '—'}</td>
-                  <td className={row.returned ? (isDiff(row) ? 'pfd-new' : undefined) : 'pf-muted'}>
-                    {row.returned ?? '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      ) : null}
-
-      <SubmissionPreviewModal
-        open={previewId !== null}
-        formId={formId}
-        submissionId={previewId}
-        onClose={() => setPreviewId(null)}
-      />
-
-      {confirm ? (
-        // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click-to-dismiss
-        <div
-          className="pf-overlay"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !busy) setConfirm(null);
-          }}
-        >
-          <div className="pf-dialog" role="dialog" aria-modal="true">
-            <h2>{confirm === 'promote' ? 'Promote to response?' : 'Discard this response?'}</h2>
-            <p>
-              {confirm === 'promote'
-                ? 'It will appear in Responses and count as a submitted response. The prefill and its original answers stay here.'
-                : 'The returned response is deleted for good. The prefill stays, and the link can be used again.'}
-            </p>
-            <div className="pf-dialog-actions">
-              <button
-                type="button"
-                className="pf-btn pf-btn--ghost"
-                disabled={busy}
-                onClick={() => setConfirm(null)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={`pf-btn ${confirm === 'promote' ? 'pf-btn--primary' : 'pf-btn--danger'}`}
-                disabled={busy}
-                onClick={() => void act(confirm)}
-              >
-                {busy ? 'Working…' : confirm === 'promote' ? 'Promote' : 'Discard'}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+                <i aria-hidden="true" />
+                {item.held ? 'Needs review' : 'In Responses'}
+              </span>
+              <span className="pfp-item-go" aria-hidden="true">
+                {item.held ? 'Review' : 'Open'} →
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

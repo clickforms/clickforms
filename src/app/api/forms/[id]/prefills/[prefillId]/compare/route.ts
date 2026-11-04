@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
+import { deriveParticipantName } from '@/lib/forms/participant-name';
 import { buildPrefillComparison } from '@/lib/forms/prefill-compare';
 import { formSchemaSchema } from '@/lib/forms/schema';
 import { requireOrganizationId, requireSession } from '@/lib/session';
@@ -38,14 +39,14 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
         SELECT id, answers, status::text AS status, prefill_held, submitted_at, form_version_id
         FROM submissions
         WHERE prefill_id = ${prefillId}::uuid AND (prefill_held OR status <> 'in_progress')
-        ORDER BY created_at DESC LIMIT 1`;
+        ORDER BY created_at DESC`;
       const response = responses[0] ?? null;
 
       const versionId = response?.form_version_id ?? form.currentVersionId;
       const version = versionId
         ? await tx.formVersion.findFirst({ where: { id: versionId } })
         : null;
-      return { prefill, response, version };
+      return { prefill, response, responses, version };
     });
     if (!data) throw new NotFoundError('Prefill');
 
@@ -54,7 +55,20 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
       ? buildPrefillComparison(parsed.data, data.prefill.answers, data.response?.answers ?? null)
       : [];
 
+    // The prefill's returned responses, newest first — each one opens on the review page.
+    const list = data.responses.map((row) => ({
+      id: row.id,
+      held: row.prefill_held,
+      submittedAt: row.submitted_at?.toISOString() ?? null,
+      label: parsed?.success ? deriveParticipantName(parsed.data, row.answers) : null,
+    }));
+    const changedCount = rows.filter((r) =>
+      ['changed', 'added', 'cleared'].includes(r.status),
+    ).length;
+
     return NextResponse.json({
+      responses: list,
+      changedCount,
       rows,
       responseId: data.response?.id ?? null,
       held: Boolean(data.response?.prefill_held),

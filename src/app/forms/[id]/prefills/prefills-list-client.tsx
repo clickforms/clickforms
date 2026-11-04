@@ -416,14 +416,7 @@ export function PrefillsListClient({
                   {expandable && isOpen ? (
                     <tr className="pf-panel-row">
                       <td colSpan={5}>
-                        <PrefillPanel
-                          formId={formId}
-                          prefillId={item.id}
-                          onChanged={() => {
-                            setOpenId(null);
-                            router.refresh();
-                          }}
-                        />
+                        <PrefillPanel formId={formId} prefillId={item.id} />
                       </td>
                     </tr>
                   ) : null}

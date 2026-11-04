@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { SubmissionAnswersEditor } from '@/app/forms/[id]/submissions/[submissionId]/submission-answers-editor';
+import '@/app/forms/[id]/prefills/prefills.css';
+import { PrefillReviewBar } from '@/app/forms/[id]/submissions/[submissionId]/prefill-review-bar';
 import { SubmissionStatusControl } from '@/app/forms/[id]/submissions/[submissionId]/submission-status-control';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
@@ -18,6 +20,7 @@ import {
 } from '@/lib/forms/field-styles';
 import { formatSubmissionAnswer } from '@/lib/forms/format-submission-answer';
 import { resolveMergeFieldsForRespondent } from '@/lib/forms/merge-fields';
+import { buildPrefillComparison } from '@/lib/forms/prefill-compare';
 import {
   createEmptyFormSchema,
   type FormField,
@@ -167,14 +170,29 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
       where: { submissionId: submission.id, organizationId: requireOrganizationId(session) },
     });
 
-    return { form, submission, version, files };
+    // Came back through an emailed prefill? (raw SQL — columns added after the Prisma client)
+    const prefillRows = await tx.$queryRaw<
+      {
+        prefill_id: string | null;
+        prefill_held: boolean;
+        recipient: string | null;
+        original: Record<string, unknown> | null;
+      }[]
+    >`SELECT s.prefill_id, s.prefill_held,
+             COALESCE(p.recipient_name, p.recipient_email, s.prefill_recipient) AS recipient,
+             p.answers AS original
+      FROM submissions s LEFT JOIN form_prefills p ON p.id = s.prefill_id
+      WHERE s.id = ${submission.id}::uuid`;
+
+    return { form, submission, version, files, prefillInfo: prefillRows[0] ?? null };
   });
 
   if (!result) {
     notFound();
   }
 
-  const { form, submission, version, files } = result;
+  const { form, submission, version, files, prefillInfo } = result;
+  const heldPrefill = Boolean(prefillInfo?.prefill_held && prefillInfo.prefill_id);
 
   let schema: FormSchema;
   if (version) {
@@ -209,10 +227,12 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
   // Editing an in-progress submission would race with the respondent's own session
   // (they could still be filling it out), so editing is only offered once it has
   // actually been submitted.
-  const canEditAnswers = canDelete && submission.status !== 'in_progress';
+  // A response held for prefill review has also been submitted (it only stays 'in_progress'
+  // so it's hidden from Responses), so it is editable too.
+  const canEditAnswers = canDelete && (submission.status !== 'in_progress' || heldPrefill);
 
-  const meta = (
-    <div key="submission-meta" className="card submission-meta">
+  const metaCard = (
+    <div className="card submission-meta">
       <div className="submission-meta-row">
         <span className="submission-meta-label">Submitted</span>
         <span>
@@ -228,14 +248,69 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     </div>
   );
 
-  const statusControl = (
-    <SubmissionStatusControl
-      formId={form.id}
-      submissionId={submission.id}
-      initialStatus={submission.status}
-      canChange={canDelete}
-    />
+  const comparisonRows =
+    prefillInfo?.original && version
+      ? buildPrefillComparison(schema, prefillInfo.original, answers as Record<string, unknown>)
+      : [];
+  const changedRows = comparisonRows.filter((r) =>
+    ['changed', 'added', 'cleared'].includes(r.status),
   );
+
+  const meta = (
+    <div key="submission-meta" className="submission-meta-stack">
+      {metaCard}
+      {comparisonRows.length > 0 ? (
+        <details className="card pfr-compare" open={heldPrefill}>
+          <summary>
+            Compared with what you sent
+            <span>
+              {changedRows.length === 0
+                ? 'No changes'
+                : `${changedRows.length} ${changedRows.length === 1 ? 'field' : 'fields'} changed`}
+            </span>
+          </summary>
+          <table className="pf-table pfd-table">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Sent</th>
+                <th>Returned</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(changedRows.length > 0 ? changedRows : comparisonRows).map((row) => (
+                <tr
+                  key={row.fieldId}
+                  className={changedRows.includes(row) ? 'pfd-row--changed' : undefined}
+                >
+                  <td className="pfd-field">{row.label}</td>
+                  <td className={row.original ? undefined : 'pf-muted'}>{row.original ?? '—'}</td>
+                  <td className={row.returned ? undefined : 'pf-muted'}>{row.returned ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      ) : null}
+    </div>
+  );
+
+  const statusControl =
+    heldPrefill && prefillInfo?.prefill_id ? (
+      <PrefillReviewBar
+        formId={form.id}
+        prefillId={prefillInfo.prefill_id}
+        canAct={canDelete}
+        recipient={prefillInfo.recipient}
+      />
+    ) : (
+      <SubmissionStatusControl
+        formId={form.id}
+        submissionId={submission.id}
+        initialStatus={submission.status}
+        canChange={canDelete}
+      />
+    );
 
   return (
     <div className="submission-detail-page">

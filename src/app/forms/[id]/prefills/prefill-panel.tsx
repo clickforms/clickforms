@@ -49,15 +49,6 @@ export function PrefillPanel({ formId, prefillId }: { formId: string; prefillId:
 
   return (
     <div className="pfp">
-      <p className="pfp-heading">
-        {items.length === 1 ? 'Response' : `${items.length} responses`}
-        {changedCount > 0 ? (
-          <span>
-            {' '}
-            · {changedCount} {changedCount === 1 ? 'field' : 'fields'} changed by the client
-          </span>
-        ) : null}
-      </p>
       <ul className="pfp-list">
         {items.map((item) => (
           <li key={item.id}>
@@ -65,20 +56,29 @@ export function PrefillPanel({ formId, prefillId }: { formId: string; prefillId:
               <span className="pfp-item-main">
                 <strong>{item.label ?? 'Response'}</strong>
                 <small>
-                  {item.submittedAt
-                    ? `Returned ${formatDateTime(item.submittedAt, mounted)}`
-                    : 'Returned'}
+                  {item.submittedAt ? formatDateTime(item.submittedAt, mounted) : 'Returned'}
                 </small>
               </span>
-              <span
-                className={`pf-status ${item.held ? 'pf-status--review' : 'pf-status--completed'}`}
-              >
-                <i aria-hidden="true" />
+              {item.held && changedCount > 0 ? (
+                <span className="pfp-changed">{changedCount} changed</span>
+              ) : null}
+              <span className={`pfp-state ${item.held ? 'pfp-state--review' : 'pfp-state--done'}`}>
                 {item.held ? 'Needs review' : 'In Responses'}
               </span>
-              <span className="pfp-item-go" aria-hidden="true">
-                {item.held ? 'Review' : 'Open'} →
-              </span>
+              <svg
+                className="pfp-item-go"
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 3.5 4.5 4.5L6 12.5" />
+              </svg>
             </Link>
           </li>
         ))}

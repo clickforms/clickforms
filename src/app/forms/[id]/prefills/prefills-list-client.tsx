@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
+import { PrefillPanel } from '@/app/forms/[id]/prefills/prefill-panel';
 import { useToast } from '@/components/toast';
 import './prefills.css';
 
@@ -90,6 +91,7 @@ export function PrefillsListClient({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | Status>('all');
   const [search, setSearch] = useState('');
+  const [openId, setOpenId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<PrefillItem | null>(null);
   const [hold, setHold] = useState(holdResponses);
 
@@ -287,106 +289,147 @@ export function PrefillsListClient({
             </tr>
           </thead>
           <tbody>
-            {visible.map((item) => (
-              <tr key={item.id}>
-                <td>
-                  <div className="pf-person">
-                    <span
-                      className={`pf-avatar${item.status === 'draft' ? ' pf-avatar--draft' : ''}`}
-                    >
-                      {initials(item)}
-                    </span>
-                    <span className="pf-person-text">
-                      <strong>
-                        <a
-                          className="pf-namelink"
-                          href={item.status === 'draft' ? item.continueHref : item.detailHref}
+            {visible.map((item) => {
+              // Rows whose response has come back expand in place (no page change).
+              const expandable = item.status === 'review' || item.status === 'completed';
+              const isOpen = openId === item.id;
+              return (
+                <Fragment key={item.id}>
+                  <tr
+                    className={
+                      expandable ? `pf-row--expandable${isOpen ? ' pf-row--open' : ''}` : undefined
+                    }
+                    onClick={expandable ? () => setOpenId(isOpen ? null : item.id) : undefined}
+                  >
+                    <td>
+                      <div className="pf-person">
+                        <span
+                          className={`pf-avatar${item.status === 'draft' ? ' pf-avatar--draft' : ''}`}
                         >
-                          {item.recipientName ||
-                            item.recipientEmail ||
-                            (item.status === 'draft' ? 'Untitled draft' : 'Shared link')}
-                        </a>
-                      </strong>
-                      <small>
-                        {item.recipientEmail
-                          ? item.recipientName
-                            ? item.recipientEmail
-                            : 'Emailed'
-                          : item.status === 'draft'
-                            ? 'Not sent yet'
-                            : 'Shared as a link'}
-                      </small>
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <span className={`pf-status pf-status--${item.status}`}>
-                    <i aria-hidden="true" />
-                    {STATUS_LABEL[item.status]}
-                  </span>
-                </td>
-                <td className="pf-muted">{formatDate(item.sentAt)}</td>
-                <td className="pf-muted">{item.createdBy ?? '—'}</td>
-                <td>
-                  <div className="pf-actions">
-                    {item.status === 'review' ? (
-                      <a className="pf-btn pf-btn--primary pf-btn--sm" href={item.detailHref}>
-                        Review
-                      </a>
-                    ) : item.status === 'draft' ? (
-                      <a className="pf-btn pf-btn--primary pf-btn--sm" href={item.continueHref}>
-                        Continue
-                      </a>
-                    ) : item.status !== 'expired' ? (
-                      <button
-                        type="button"
-                        className="pf-btn pf-btn--ghost pf-btn--sm"
-                        onClick={() => copy(item.url)}
+                          {initials(item)}
+                        </span>
+                        <span className="pf-person-text">
+                          <strong>
+                            {item.recipientName ||
+                              item.recipientEmail ||
+                              (item.status === 'draft' ? 'Untitled draft' : 'Shared link')}
+                          </strong>
+                          <small>
+                            {item.recipientEmail
+                              ? item.recipientName
+                                ? item.recipientEmail
+                                : 'Emailed'
+                              : item.status === 'draft'
+                                ? 'Not sent yet'
+                                : 'Shared as a link'}
+                          </small>
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`pf-status pf-status--${item.status}`}>
+                        <i aria-hidden="true" />
+                        {STATUS_LABEL[item.status]}
+                      </span>
+                    </td>
+                    <td className="pf-muted">{formatDate(item.sentAt)}</td>
+                    <td className="pf-muted">{item.createdBy ?? '—'}</td>
+                    <td>
+                      {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row-expand clicks from the action buttons */}
+                      <div
+                        className="pf-actions"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
                       >
-                        Copy link
-                      </button>
-                    ) : null}
-                    {item.recipientEmail &&
-                    item.status !== 'draft' &&
-                    item.status !== 'expired' &&
-                    item.status !== 'completed' ? (
-                      <button
-                        type="button"
-                        className="pf-icon-btn"
-                        title="Resend email"
-                        aria-label="Resend email"
-                        disabled={busyId === item.id}
-                        onClick={() => void resend(item)}
-                      >
-                        <Icon d="M2.5 4.5h11v7h-11zM2.5 5l5.5 4 5.5-4" />
-                      </button>
-                    ) : null}
-                    {item.status !== 'draft' ? (
-                      <a
-                        className="pf-icon-btn"
-                        href={item.sendAgainHref}
-                        title="Send to someone else"
-                        aria-label="Send to someone else"
-                      >
-                        <Icon d="M2.5 8h9M8.5 4.5 12 8l-3.5 3.5" />
-                      </a>
-                    ) : null}
-                    {item.status !== 'review' ? (
-                      <button
-                        type="button"
-                        className="pf-icon-btn pf-icon-btn--danger"
-                        title="Delete"
-                        aria-label="Delete prefill"
-                        disabled={busyId === item.id}
-                        onClick={() => setToDelete(item)}
-                      >
-                        <Icon d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8" />
-                      </button>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                        {expandable ? (
+                          <span
+                            className={`pf-chevron${isOpen ? ' pf-chevron--open' : ''}`}
+                            aria-hidden="true"
+                          >
+                            <Icon d="M4 6l4 4 4-4" />
+                          </span>
+                        ) : null}
+                        {item.status === 'review' ? (
+                          <button
+                            type="button"
+                            className="pf-btn pf-btn--primary pf-btn--sm"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setOpenId(isOpen ? null : item.id);
+                            }}
+                          >
+                            {isOpen ? 'Close' : 'Review'}
+                          </button>
+                        ) : item.status === 'draft' ? (
+                          <a className="pf-btn pf-btn--primary pf-btn--sm" href={item.continueHref}>
+                            Continue
+                          </a>
+                        ) : item.status !== 'expired' ? (
+                          <button
+                            type="button"
+                            className="pf-btn pf-btn--ghost pf-btn--sm"
+                            onClick={() => copy(item.url)}
+                          >
+                            Copy link
+                          </button>
+                        ) : null}
+                        {item.recipientEmail &&
+                        item.status !== 'draft' &&
+                        item.status !== 'expired' &&
+                        item.status !== 'completed' ? (
+                          <button
+                            type="button"
+                            className="pf-icon-btn"
+                            title="Resend email"
+                            aria-label="Resend email"
+                            disabled={busyId === item.id}
+                            onClick={() => void resend(item)}
+                          >
+                            <Icon d="M2.5 4.5h11v7h-11zM2.5 5l5.5 4 5.5-4" />
+                          </button>
+                        ) : null}
+                        {item.status !== 'draft' ? (
+                          <a
+                            className="pf-icon-btn"
+                            href={item.sendAgainHref}
+                            title="Send to someone else"
+                            aria-label="Send to someone else"
+                          >
+                            <Icon d="M2.5 8h9M8.5 4.5 12 8l-3.5 3.5" />
+                          </a>
+                        ) : null}
+                        {item.status !== 'review' ? (
+                          <button
+                            type="button"
+                            className="pf-icon-btn pf-icon-btn--danger"
+                            title="Delete"
+                            aria-label="Delete prefill"
+                            disabled={busyId === item.id}
+                            onClick={() => setToDelete(item)}
+                          >
+                            <Icon d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8" />
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                  {expandable && isOpen ? (
+                    <tr className="pf-panel-row">
+                      <td colSpan={5}>
+                        <PrefillPanel
+                          formId={formId}
+                          prefillId={item.id}
+                          onChanged={() => {
+                            setOpenId(null);
+                            router.refresh();
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
+              );
+            })}
             {visible.length === 0 ? (
               <tr>
                 <td colSpan={5} className="pf-none">

@@ -570,3 +570,73 @@
 .pf-filter[aria-selected="true"] .pf-filter-count {
   background: rgba(67, 56, 202, 0.14);
 }
+
+.pf-row--expandable {
+  cursor: pointer;
+}
+.pf-row--open td {
+  background: #f7f8ff;
+}
+.pf-chevron {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: #8a93a0;
+  transition: transform 0.15s;
+}
+.pf-chevron--open {
+  transform: rotate(180deg);
+}
+.pf-table tbody tr.pf-panel-row:hover {
+  background: transparent;
+}
+.pf-table .pf-panel-row > td {
+  padding: 0;
+  background: #f7f8ff;
+  border-bottom: 1px solid #e0e4ff;
+}
+.pfp {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem 1.25rem 1.25rem 3.6rem;
+}
+.pfp--msg {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+.pfp-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.pfp-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.pfp-summary strong {
+  font-size: 0.92rem;
+  color: #111827;
+}
+.pfp-summary span {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+.pfp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pfp-switch {
+  align-self: flex-start;
+}
+.pfp-table {
+  background: #fff;
+  border: 1px solid #e6e8ec;
+  border-radius: 10px;
+  overflow: hidden;
+}

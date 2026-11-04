@@ -70,6 +70,8 @@ export interface PrefillRow {
   completed: number;
   /** Responses returned through this prefill and held for review. */
   held: number;
+  /** Raw answer to the form's chosen identifying field (first column), if one is set. */
+  label_value: unknown;
   /** Corrections sent back to the recipient that haven't come back yet. */
   pending_corrections: number;
 }
@@ -94,13 +96,18 @@ export function prefillStatus(row: {
 }
 
 /** All prefills for one form, newest first, with response counts. Run inside withOrgContext. */
-export async function listPrefills(tx: Prisma.TransactionClient, formId: string) {
+export async function listPrefills(
+  tx: Prisma.TransactionClient,
+  formId: string,
+  labelFieldId: string | null = null,
+) {
   // A prefill's family is itself plus any corrections sent back under it, so the row's counts and
   // status cover the whole conversation with that recipient. Corrections aren't listed separately.
   return tx.$queryRaw<PrefillRow[]>`
     SELECT p.id, p.is_draft, p.recipient_email, p.recipient_name, p.token, p.sent_at, p.opened_at,
            p.expires_at, p.created_at,
            COALESCE(u.name, u.email) AS created_by_name,
+           p.answers -> ${labelFieldId}::text AS label_value,
            (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
               WHERE (f.id = p.id OR f.parent_id = p.id) AND s.status <> 'in_progress') AS completed,
            (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id

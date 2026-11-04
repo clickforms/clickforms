@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Fragment, useMemo, useState } from 'react';
 import { PrefillPanel } from '@/app/forms/[id]/prefills/prefill-panel';
+import { ColumnPicker } from '@/app/forms/[id]/submissions/column-picker';
 import { useToast } from '@/components/toast';
 import './prefills.css';
 
@@ -20,6 +21,8 @@ interface PrefillItem {
   id: string;
   recipientEmail: string | null;
   recipientName: string | null;
+  /** The form's chosen identifying field for this prefill (first column). */
+  label: string | null;
   url: string;
   /** Where "Continue" opens the builder for a draft. */
   continueHref: string;
@@ -64,7 +67,7 @@ function formatDate(iso: string): string {
 }
 
 function initials(item: PrefillItem): string {
-  const source = item.recipientName || item.recipientEmail || '';
+  const source = item.label || item.recipientName || item.recipientEmail || '';
   const parts = source.split(/[\s@._-]+/).filter(Boolean);
   return ((parts[0]?.[0] ?? '?') + (parts[1]?.[0] ?? '')).toUpperCase();
 }
@@ -73,7 +76,7 @@ const AVATAR_COLORS = ['#55ea8c', '#3dd975', '#a8f0c4', '#d3ccff', '#b9e8cf', '#
 
 /** A stable colour per person, so rows are easy to tell apart at a glance. */
 function avatarColor(item: PrefillItem): string {
-  const source = item.recipientName || item.recipientEmail || item.id;
+  const source = item.label || item.recipientName || item.recipientEmail || item.id;
   let hash = 0;
   for (const char of source) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   return AVATAR_COLORS[hash % AVATAR_COLORS.length] ?? '#579bfc';
@@ -98,12 +101,20 @@ export function PrefillsListClient({
   slug,
   isLive,
   holdResponses,
+  columnLabel,
+  columnFields,
+  columnFieldId,
+  canCustomize,
   initialPrefills,
 }: {
   formId: string;
   slug: string;
   isLive: boolean;
   holdResponses: boolean;
+  columnLabel: string;
+  columnFields: { id: string; label: string }[];
+  columnFieldId: string | null;
+  canCustomize: boolean;
   initialPrefills: PrefillItem[];
 }) {
   const router = useRouter();
@@ -146,7 +157,7 @@ export function PrefillsListClient({
     return initialPrefills.filter((item) => {
       if (filter !== 'all' && item.status !== filter) return false;
       if (!term) return true;
-      return `${item.recipientName ?? ''} ${item.recipientEmail ?? ''}`
+      return `${item.label ?? ''} ${item.recipientName ?? ''} ${item.recipientEmail ?? ''}`
         .toLowerCase()
         .includes(term);
     });
@@ -304,7 +315,18 @@ export function PrefillsListClient({
         <table className="admin-table submissions-table pf-list-table">
           <thead>
             <tr>
-              <th>Recipient</th>
+              <th>
+                {canCustomize ? (
+                  <ColumnPicker
+                    formId={formId}
+                    label={columnLabel}
+                    fields={columnFields}
+                    selectedId={columnFieldId}
+                  />
+                ) : (
+                  columnLabel
+                )}
+              </th>
               <th>Status</th>
               <th>Date</th>
               <th>Created by</th>
@@ -339,18 +361,19 @@ export function PrefillsListClient({
                         </span>
                         <span className="pf-person-text">
                           <strong>
-                            {item.recipientName ||
+                            {item.label ||
+                              item.recipientName ||
                               item.recipientEmail ||
                               (item.status === 'draft' ? 'Untitled draft' : 'Shared link')}
                           </strong>
                           <small>
                             {item.recipientEmail
-                              ? item.recipientName
-                                ? item.recipientEmail
-                                : 'Emailed'
-                              : item.status === 'draft'
-                                ? 'Not sent yet'
-                                : 'Shared as a link'}
+                              ? item.recipientEmail
+                              : item.recipientName && item.recipientName !== item.label
+                                ? `Sent to ${item.recipientName}`
+                                : item.status === 'draft'
+                                  ? 'Not sent yet'
+                                  : 'Shared as a link'}
                           </small>
                         </span>
                       </div>

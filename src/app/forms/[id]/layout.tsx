@@ -24,7 +24,7 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
   // Sequential, not Promise.all — all queries share one connection via withOrgContext's
   // transaction, and concurrent queries on a single `pg` client are deprecated (and will
   // error in pg@9.0).
-  const { form, responseCount, organization, sender } = await withOrgContext(
+  const { form, responseCount, prefillCount, organization, sender } = await withOrgContext(
     session.user.organizationId,
     async (tx) => {
       const form = await tx.form.findFirst({
@@ -43,6 +43,12 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
       const responseCount = await tx.submission.count({
         where: { formId: id, organizationId: requireOrganizationId(session), status: 'submitted' },
       });
+      // Prefills sent or shared (drafts excluded) — shown on the Prefills tab like the Responses
+      // count. Raw SQL: form_prefills isn't in the generated Prisma client.
+      const prefillRows = await tx.$queryRaw<{ count: number }[]>`
+        SELECT count(*)::int AS count FROM form_prefills
+        WHERE form_id = ${id}::uuid AND NOT is_draft`;
+      const prefillCount = prefillRows[0]?.count ?? 0;
       // Needed to build the absolute /f/[slug] link for the top nav's Share button —
       // see src/app/forms/list/page.tsx for the same buildOrgFormUrl pattern.
       const organization = await tx.organization.findUniqueOrThrow({
@@ -56,7 +62,7 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
         where: { id: session.user.id },
         select: { name: true },
       });
-      return { form, responseCount, organization, sender };
+      return { form, responseCount, prefillCount, organization, sender };
     },
   );
 
@@ -82,6 +88,7 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
       slug={form.slug}
       initialStatus={form.status}
       responseCount={responseCount}
+      prefillCount={prefillCount}
       publicUrl={publicUrl}
       senderName={senderName}
     >

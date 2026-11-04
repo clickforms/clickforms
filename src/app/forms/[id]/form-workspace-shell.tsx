@@ -11,6 +11,7 @@ interface FormWorkspaceShellProps {
   slug: string;
   initialStatus: FormStatus;
   responseCount: number;
+  prefillCount: number;
   /** Absolute public URL on the org's subdomain (e.g. https://acme.clickforms.com.au/f/slug)
    *  — used by FormTopNav's Share button, which lives here rather than per-tab since it's
    *  the same link regardless of which tab (Builder/Responses/Settings) is active. */
@@ -27,6 +28,7 @@ export function FormWorkspaceShell({
   slug,
   initialStatus,
   responseCount,
+  prefillCount,
   publicUrl,
   senderName,
   children,
@@ -39,6 +41,7 @@ export function FormWorkspaceShell({
           formName={formName}
           slug={slug}
           responseCount={responseCount}
+          prefillCount={prefillCount}
           publicUrl={publicUrl}
           senderName={senderName}
         />

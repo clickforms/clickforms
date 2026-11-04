@@ -201,6 +201,7 @@ interface FormTopNavProps {
   formName: string;
   slug: string;
   responseCount: number;
+  prefillCount: number;
   /** Absolute public URL on the org's subdomain — see FormWorkspaceShellProps for why
    *  this lives up here rather than being computed per-tab. */
   publicUrl: string;
@@ -223,6 +224,7 @@ export function FormTopNav({
   formName,
   slug,
   responseCount,
+  prefillCount,
   publicUrl,
   senderName,
 }: FormTopNavProps) {
@@ -273,6 +275,7 @@ export function FormTopNav({
       match: (path) =>
         path.includes(`/forms/${formId}/prefills`) ||
         (path.includes(`/forms/${formId}/submissions`) && openedFromPrefills),
+      badge: prefillCount,
     },
     {
       key: 'settings',

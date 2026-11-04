@@ -853,3 +853,45 @@
 .pfr-more-item:hover {
   background: #fdf0f2;
 }
+
+/* review banner, refined */
+.pfr-bar {
+  justify-content: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #fde3b8;
+  border-left: 1px solid #fde3b8;
+  background: linear-gradient(90deg, #fff8ec 0%, #fff 55%);
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+}
+.pfr-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #fdab3d;
+  color: #fff;
+}
+.pfr-icon--back {
+  background: #9b87fa;
+}
+.pfr-bar .pfr-text {
+  flex: 1;
+  min-width: 220px;
+}
+.pfr-bar .pfr-text strong {
+  font-size: 1rem;
+}
+.pfr-bar .pfr-text span {
+  font-size: 0.85rem;
+}
+.pfr-bar .pfr-actions {
+  margin-left: auto;
+  gap: 0.5rem;
+}
+.pfr-bar .pf-btn--sm {
+  padding: 0.5rem 1.1rem;
+  font-size: 0.86rem;
+}

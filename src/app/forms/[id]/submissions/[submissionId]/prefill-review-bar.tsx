@@ -81,11 +81,26 @@ export function PrefillReviewBar({
   return (
     <>
       <div className="pfr-bar">
+        <span className={`pfr-icon${sentBack ? ' pfr-icon--back' : ''}`} aria-hidden="true">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {sentBack ? (
+              <path d="M8 5 4 9l4 4M4 9h8a4 4 0 0 1 4 4v1" />
+            ) : (
+              <path d="M10 6v4.5l3 1.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+            )}
+          </svg>
+        </span>
         <div className="pfr-text">
-          <strong>
-            <i className="pfr-dot" aria-hidden="true" />
-            {sentBack ? 'Sent back' : 'Needs review'}
-          </strong>
+          <strong>{sentBack ? 'Sent back for correction' : 'Needs review'}</strong>
           <span>
             {sentBack
               ? `${recipient ?? 'They'} ${recipient ? 'has' : 'have'} been asked to correct it. Their new answers will appear under the same prefill.`

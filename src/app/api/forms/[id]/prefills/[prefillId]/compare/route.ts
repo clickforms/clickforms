@@ -17,6 +17,10 @@ interface ResponseRow {
   prefill_held: boolean;
   submitted_at: Date | null;
   form_version_id: string;
+  sent_back_at: Date | null;
+  prefill_id: string;
+  round: number;
+  original: Record<string, unknown>;
 }
 
 /** What was sent vs what came back for one prefill — loaded when its row is expanded. */
@@ -35,11 +39,17 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
       const prefill = prefills[0];
       if (!prefill) return null;
 
+      // The prefill plus any corrections sent back under it, oldest round first.
       const responses = await tx.$queryRaw<ResponseRow[]>`
-        SELECT id, answers, status::text AS status, prefill_held, submitted_at, form_version_id
-        FROM submissions
-        WHERE prefill_id = ${prefillId}::uuid AND (prefill_held OR status <> 'in_progress')
-        ORDER BY created_at DESC`;
+        SELECT s.id, s.answers, s.status::text AS status, s.prefill_held, s.submitted_at,
+               s.form_version_id, s.sent_back_at, s.prefill_id, f.answers AS original,
+               (CASE WHEN f.parent_id IS NULL THEN 0
+                     ELSE (SELECT count(*)::int FROM form_prefills x
+                           WHERE x.parent_id = f.parent_id AND x.created_at <= f.created_at) END) AS round
+        FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
+        WHERE (f.id = ${prefillId}::uuid OR f.parent_id = ${prefillId}::uuid)
+          AND (s.prefill_held OR s.status <> 'in_progress')
+        ORDER BY s.created_at DESC`;
       const response = responses[0] ?? null;
 
       const versionId = response?.form_version_id ?? form.currentVersionId;
@@ -52,19 +62,31 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
 
     const parsed = data.version ? formSchemaSchema.safeParse(data.version.schema) : null;
     const rows = parsed?.success
-      ? buildPrefillComparison(parsed.data, data.prefill.answers, data.response?.answers ?? null)
+      ? buildPrefillComparison(
+          parsed.data,
+          data.response?.original ?? data.prefill.answers,
+          data.response?.answers ?? null,
+        )
       : [];
 
-    // The prefill's returned responses, newest first — each one opens on the review page.
+    // Each returned response, newest first — it opens on the review page. `changed` counts the
+    // fields that differ from what was sent to that person in that round.
+    const countChanged = (original: Record<string, unknown>, returned: Record<string, unknown>) =>
+      parsed?.success
+        ? buildPrefillComparison(parsed.data, original, returned).filter((r) =>
+            ['changed', 'added', 'cleared'].includes(r.status),
+          ).length
+        : 0;
     const list = data.responses.map((row) => ({
       id: row.id,
-      held: row.prefill_held,
+      held: row.prefill_held && !row.sent_back_at,
+      sentBack: Boolean(row.sent_back_at),
+      round: row.round,
+      changed: countChanged(row.original, row.answers),
       submittedAt: row.submitted_at?.toISOString() ?? null,
       label: parsed?.success ? deriveParticipantName(parsed.data, row.answers) : null,
     }));
-    const changedCount = rows.filter((r) =>
-      ['changed', 'added', 'cleared'].includes(r.status),
-    ).length;
+    const changedCount = list[0]?.changed ?? 0;
 
     return NextResponse.json({
       responses: list,

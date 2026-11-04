@@ -6,7 +6,15 @@ import { PrefillPanel } from '@/app/forms/[id]/prefills/prefill-panel';
 import { useToast } from '@/components/toast';
 import './prefills.css';
 
-type Status = 'draft' | 'review' | 'sent' | 'opened' | 'started' | 'completed' | 'expired';
+type Status =
+  | 'draft'
+  | 'review'
+  | 'correction'
+  | 'sent'
+  | 'opened'
+  | 'started'
+  | 'completed'
+  | 'expired';
 
 interface PrefillItem {
   id: string;
@@ -27,6 +35,7 @@ interface PrefillItem {
 const STATUS_LABEL: Record<Status, string> = {
   draft: 'Draft',
   review: 'Needs review',
+  correction: 'Sent back',
   sent: 'Sent',
   opened: 'Opened',
   started: 'In progress',
@@ -37,6 +46,7 @@ const STATUS_LABEL: Record<Status, string> = {
 const FILTERS: { key: 'all' | Status; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'review', label: 'Needs review' },
+  { key: 'correction', label: 'Sent back' },
   { key: 'draft', label: 'Drafts' },
   { key: 'sent', label: 'Sent' },
   { key: 'opened', label: 'Opened' },
@@ -301,7 +311,10 @@ export function PrefillsListClient({
           <tbody>
             {visible.map((item) => {
               // Rows whose response has come back expand in place (no page change).
-              const expandable = item.status === 'review' || item.status === 'completed';
+              const expandable =
+                item.status === 'review' ||
+                item.status === 'correction' ||
+                item.status === 'completed';
               const isOpen = openId === item.id;
               return (
                 <Fragment key={item.id}>

@@ -177,8 +177,9 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         prefill_held: boolean;
         recipient: string | null;
         original: Record<string, unknown> | null;
+        sent_back_at: Date | null;
       }[]
-    >`SELECT s.prefill_id, s.prefill_held,
+    >`SELECT s.prefill_id, s.prefill_held, s.sent_back_at,
              COALESCE(p.recipient_name, p.recipient_email, s.prefill_recipient) AS recipient,
              p.answers AS original
       FROM submissions s LEFT JOIN form_prefills p ON p.id = s.prefill_id
@@ -302,6 +303,8 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         prefillId={prefillInfo.prefill_id}
         canAct={canDelete}
         recipient={prefillInfo.recipient}
+        submissionId={submission.id}
+        sentBack={Boolean(prefillInfo.sent_back_at)}
       />
     ) : null;
 

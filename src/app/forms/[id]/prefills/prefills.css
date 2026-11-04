@@ -778,3 +778,36 @@
 .pfr-actions .pf-btn--sm {
   padding: 0.45rem 0.95rem;
 }
+
+/* ---- corrections ---- */
+.pf-status--correction {
+  background: #9b87fa;
+}
+.pfp-state--back::before {
+  background: #7c5cfa;
+}
+.pfp-round {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: #efecff;
+  color: #5b3fd6;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 600;
+}
+.pf-note {
+  width: 100%;
+  margin: 0 0 1.25rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #c3c6d4;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.88rem;
+  resize: vertical;
+}
+.pf-note:focus {
+  outline: 0;
+  border-color: #55ea8c;
+  box-shadow: 0 0 0 2px #cdf9de;
+}

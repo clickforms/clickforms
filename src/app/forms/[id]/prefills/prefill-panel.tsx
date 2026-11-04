@@ -8,6 +8,9 @@ import { formatDateTime } from '@/lib/format-date';
 interface ResponseItem {
   id: string;
   held: boolean;
+  sentBack: boolean;
+  round: number;
+  changed: number;
   submittedAt: string | null;
   label: string | null;
 }
@@ -20,7 +23,6 @@ interface ResponseItem {
 export function PrefillPanel({ formId, prefillId }: { formId: string; prefillId: string }) {
   const mounted = useMounted();
   const [items, setItems] = useState<ResponseItem[] | null>(null);
-  const [changedCount, setChangedCount] = useState(0);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -28,12 +30,11 @@ export function PrefillPanel({ formId, prefillId }: { formId: string; prefillId:
     fetch(`/api/forms/${formId}/prefills/${prefillId}/compare`)
       .then(async (res) => {
         if (!res.ok) throw new Error('failed');
-        return (await res.json()) as { responses: ResponseItem[]; changedCount: number };
+        return (await res.json()) as { responses: ResponseItem[] };
       })
       .then((json) => {
         if (cancelled) return;
         setItems(json.responses);
-        setChangedCount(json.changedCount);
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -57,16 +58,21 @@ export function PrefillPanel({ formId, prefillId }: { formId: string; prefillId:
               className="pfp-item"
             >
               <span className="pfp-item-main">
-                <strong>{item.label ?? 'Response'}</strong>
+                <strong>
+                  {item.label ?? 'Response'}
+                  {item.round > 0 ? <em className="pfp-round">Correction {item.round}</em> : null}
+                </strong>
                 <small>
                   {item.submittedAt ? formatDateTime(item.submittedAt, mounted) : 'Returned'}
                 </small>
               </span>
-              {item.held && changedCount > 0 ? (
-                <span className="pfp-changed">{changedCount} changed</span>
+              {item.changed > 0 ? (
+                <span className="pfp-changed">{item.changed} changed</span>
               ) : null}
-              <span className={`pfp-state ${item.held ? 'pfp-state--review' : 'pfp-state--done'}`}>
-                {item.held ? 'Needs review' : 'In Responses'}
+              <span
+                className={`pfp-state ${item.held ? 'pfp-state--review' : item.sentBack ? 'pfp-state--back' : 'pfp-state--done'}`}
+              >
+                {item.held ? 'Needs review' : item.sentBack ? 'Sent back' : 'In Responses'}
               </span>
               <svg
                 className="pfp-item-go"

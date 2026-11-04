@@ -48,6 +48,7 @@ export function sanitizePrefillAnswers(schema: FormSchema, answers: unknown): Fo
 export type PrefillStatus =
   | 'draft'
   | 'review'
+  | 'correction'
   | 'sent'
   | 'opened'
   | 'started'
@@ -69,6 +70,8 @@ export interface PrefillRow {
   completed: number;
   /** Responses returned through this prefill and held for review. */
   held: number;
+  /** Corrections sent back to the recipient that haven't come back yet. */
+  pending_corrections: number;
 }
 
 export function prefillStatus(row: {
@@ -78,9 +81,11 @@ export function prefillStatus(row: {
   responses: number;
   completed: number;
   held: number;
+  pending_corrections: number;
 }): PrefillStatus {
   if (row.is_draft) return 'draft';
   if (row.held > 0) return 'review';
+  if (row.pending_corrections > 0) return 'correction';
   if (row.completed > 0) return 'completed';
   if (row.expires_at.getTime() < Date.now()) return 'expired';
   if (row.responses > 0) return 'started';
@@ -90,18 +95,25 @@ export function prefillStatus(row: {
 
 /** All prefills for one form, newest first, with response counts. Run inside withOrgContext. */
 export async function listPrefills(tx: Prisma.TransactionClient, formId: string) {
+  // A prefill's family is itself plus any corrections sent back under it, so the row's counts and
+  // status cover the whole conversation with that recipient. Corrections aren't listed separately.
   return tx.$queryRaw<PrefillRow[]>`
     SELECT p.id, p.is_draft, p.recipient_email, p.recipient_name, p.token, p.sent_at, p.opened_at,
            p.expires_at, p.created_at,
            COALESCE(u.name, u.email) AS created_by_name,
-           (SELECT count(*)::int FROM submissions s
-              WHERE s.prefill_id = p.id AND s.status <> 'in_progress') AS completed,
-           (SELECT count(*)::int FROM submissions s
-              WHERE s.prefill_id = p.id AND s.prefill_held) AS held,
-           (SELECT count(*)::int FROM submissions s
-              WHERE s.prefill_id = p.id AND NOT s.prefill_held) AS responses
+           (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
+              WHERE (f.id = p.id OR f.parent_id = p.id) AND s.status <> 'in_progress') AS completed,
+           (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
+              WHERE (f.id = p.id OR f.parent_id = p.id) AND s.prefill_held
+                AND s.sent_back_at IS NULL) AS held,
+           (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
+              WHERE (f.id = p.id OR f.parent_id = p.id) AND NOT s.prefill_held) AS responses,
+           (SELECT count(*)::int FROM form_prefills c
+              WHERE c.parent_id = p.id
+                AND NOT EXISTS (SELECT 1 FROM submissions s WHERE s.prefill_id = c.id
+                                  AND (s.prefill_held OR s.status <> 'in_progress'))) AS pending_corrections
     FROM form_prefills p
     LEFT JOIN users u ON u.id = p.created_by
-    WHERE p.form_id = ${formId}::uuid
+    WHERE p.form_id = ${formId}::uuid AND p.parent_id IS NULL
     ORDER BY p.created_at DESC`;
 }

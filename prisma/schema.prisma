@@ -377,8 +377,11 @@ model FormPrefill {
   sentAt         DateTime? @map("sent_at")
   openedAt       DateTime? @map("opened_at")
   expiresAt      DateTime  @map("expires_at")
+  parentId       String?   @map("parent_id") @db.Uuid
   createdAt      DateTime  @default(now()) @map("created_at")
 
+  parent       FormPrefill?  @relation("PrefillCorrections", fields: [parentId], references: [id], onDelete: Cascade)
+  corrections  FormPrefill[] @relation("PrefillCorrections")
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   form         Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
   creator      User?        @relation("PrefillCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -495,6 +498,7 @@ model Submission {
   prefillRecipient String?        @map("prefill_recipient")
   // Held in the Prefills tab for review until promoted (status stays in_progress meanwhile).
   prefillHeld      Boolean        @default(false) @map("prefill_held")
+  sentBackAt       DateTime?      @map("sent_back_at")
   submittedAt    DateTime?        @map("submitted_at")
   createdAt      DateTime         @default(now()) @map("created_at")
 

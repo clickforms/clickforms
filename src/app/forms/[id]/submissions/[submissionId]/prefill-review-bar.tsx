@@ -13,16 +13,45 @@ export function PrefillReviewBar({
   prefillId,
   canAct,
   recipient,
+  submissionId,
+  sentBack,
 }: {
   formId: string;
   prefillId: string;
   canAct: boolean;
   recipient: string | null;
+  submissionId: string;
+  sentBack: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [confirm, setConfirm] = useState<'promote' | 'discard' | null>(null);
+  const [confirm, setConfirm] = useState<'promote' | 'discard' | 'sendback' | null>(null);
+  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+
+  async function sendBack() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/prefills/${prefillId}/send-back`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId, note: note.trim() || undefined }),
+      });
+      const data: { error?: string; emailed?: boolean } = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? 'Something went wrong.');
+        return;
+      }
+      toast.success(data.emailed ? 'Sent back for correction' : 'Correction link created');
+      setConfirm(null);
+      setNote('');
+      router.push(`/forms/${formId}/prefills`);
+    } catch {
+      toast.error('Something went wrong.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function act(action: 'promote' | 'discard') {
     setBusy(true);
@@ -56,10 +85,12 @@ export function PrefillReviewBar({
         <div className="pfr-text">
           <strong>
             <i className="pfr-dot" aria-hidden="true" />
-            Needs review
+            {sentBack ? 'Sent back' : 'Needs review'}
           </strong>
           <span>
-            {recipient ? `From ${recipient}. ` : ''}Not in Responses until you promote it.
+            {sentBack
+              ? `${recipient ?? 'They'} ${recipient ? 'has' : 'have'} been asked to correct it. Their new answers will appear under the same prefill.`
+              : `${recipient ? `From ${recipient}. ` : ''}Not in Responses until you promote it.`}
           </span>
         </div>
         <div className="pfr-actions">
@@ -68,6 +99,15 @@ export function PrefillReviewBar({
           </Link>
           {canAct ? (
             <>
+              {sentBack ? null : (
+                <button
+                  type="button"
+                  className="pf-btn pf-btn--ghost pf-btn--sm"
+                  onClick={() => setConfirm('sendback')}
+                >
+                  Send back
+                </button>
+              )}
               <button
                 type="button"
                 className="pf-btn pf-btn--ghost pf-btn--sm pf-btn--dangerline"
@@ -97,12 +137,30 @@ export function PrefillReviewBar({
           }}
         >
           <div className="pf-dialog" role="dialog" aria-modal="true">
-            <h2>{confirm === 'promote' ? 'Promote to response?' : 'Discard this response?'}</h2>
+            <h2>
+              {confirm === 'promote'
+                ? 'Promote to response?'
+                : confirm === 'sendback'
+                  ? 'Send back for correction?'
+                  : 'Discard this response?'}
+            </h2>
             <p>
               {confirm === 'promote'
                 ? 'It will appear in Responses and count as a submitted response. The prefill and its original answers stay in the Prefills tab.'
-                : 'The returned response is deleted for good. The prefill stays, and the link can be used again.'}
+                : confirm === 'sendback'
+                  ? 'They get a new link with their answers filled in so they can fix them. It stays under this prefill, and this response is kept as a record.'
+                  : 'The returned response is deleted for good. The prefill stays, and the link can be used again.'}
             </p>
+            {confirm === 'sendback' ? (
+              <textarea
+                className="pf-note"
+                rows={3}
+                maxLength={1000}
+                placeholder="What should they fix? (optional)"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+              />
+            ) : null}
             <div className="pf-dialog-actions">
               <button
                 type="button"
@@ -114,11 +172,17 @@ export function PrefillReviewBar({
               </button>
               <button
                 type="button"
-                className={`pf-btn ${confirm === 'promote' ? 'pf-btn--primary' : 'pf-btn--danger'}`}
+                className={`pf-btn ${confirm === 'discard' ? 'pf-btn--danger' : 'pf-btn--primary'}`}
                 disabled={busy}
-                onClick={() => void act(confirm)}
+                onClick={() => (confirm === 'sendback' ? void sendBack() : void act(confirm))}
               >
-                {busy ? 'Working…' : confirm === 'promote' ? 'Promote' : 'Discard'}
+                {busy
+                  ? 'Working…'
+                  : confirm === 'promote'
+                    ? 'Promote'
+                    : confirm === 'sendback'
+                      ? 'Send back'
+                      : 'Discard'}
               </button>
             </div>
           </div>

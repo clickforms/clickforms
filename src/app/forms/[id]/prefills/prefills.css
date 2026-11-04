@@ -604,3 +604,11 @@
 .pfp-item:hover .pfp-item-go {
   text-decoration: underline;
 }
+
+.pf-filters .pf-filter,
+.pf-filters .pf-filter:hover,
+.pf-filters .pf-filter[aria-selected="true"] {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}

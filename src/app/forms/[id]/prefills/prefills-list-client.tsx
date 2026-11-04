@@ -241,24 +241,41 @@ export function PrefillsListClient({
   }
 
   return (
-    <div className="pf-card">
-      <div className="pf-toolbar">
-        <div className="pf-filters" role="tablist" aria-label="Filter by status">
-          {FILTERS.filter((f) => f.key === 'all' || (counts.get(f.key) ?? 0) > 0).map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              role="tab"
-              aria-selected={filter === f.key}
-              className="pf-filter"
-              onClick={() => setFilter(f.key)}
-            >
-              {f.label}
-              <span className="pf-filter-count">{counts.get(f.key) ?? 0}</span>
-            </button>
-          ))}
-        </div>
-        <div className="pf-toolbar-right">
+    <div className="card admin-table-card pf-card">
+      <div className="submissions-toolbar">
+        <div className="submissions-toolbar-filters">
+          <label className="submissions-search">
+            <span className="submissions-search-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+                <path
+                  d="m10.5 10.5 3 3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder="Search prefills"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              aria-label="Search prefills"
+            />
+          </label>
+          <select
+            className="pf-select"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value as 'all' | Status)}
+            aria-label="Filter by status"
+          >
+            {FILTERS.filter((f) => f.key === 'all' || (counts.get(f.key) ?? 0) > 0).map((f) => (
+              <option key={f.key} value={f.key}>
+                {f.key === 'all' ? 'All statuses' : f.label} ({counts.get(f.key) ?? 0})
+              </option>
+            ))}
+          </select>
           <label
             className="pfd-switch"
             title="When on, a returned prefill waits here until you promote it to a response"
@@ -271,34 +288,19 @@ export function PrefillsListClient({
             <span aria-hidden="true" />
             Review before Responses
           </label>
-          <label className="pf-search">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-              <path
-                d="m10.5 10.5 3 3"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              aria-label="Search prefills"
-            />
-          </label>
-          {isLive ? (
-            <a className="pf-btn pf-btn--primary" href={newHref}>
-              + New prefill
-            </a>
-          ) : null}
+          <span className="submissions-count-badge">
+            {visible.length} of {items.length} {items.length === 1 ? 'prefill' : 'prefills'}
+          </span>
         </div>
+        {isLive ? (
+          <a className="pf-btn pf-btn--primary pf-btn--pill" href={newHref}>
+            + New prefill
+          </a>
+        ) : null}
       </div>
 
-      <div className="pf-scroll">
-        <table className="pf-table">
+      <div className="admin-table-scroll">
+        <table className="admin-table submissions-table pf-list-table">
           <thead>
             <tr>
               <th>Recipient</th>
@@ -441,7 +443,7 @@ export function PrefillsListClient({
             })}
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={5} className="pf-none">
+                <td colSpan={5} className="pf-none admin-table-empty">
                   No prefills match.
                 </td>
               </tr>

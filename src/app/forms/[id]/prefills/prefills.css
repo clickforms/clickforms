@@ -895,3 +895,116 @@
   padding: 0.5rem 1.1rem;
   font-size: 0.86rem;
 }
+
+/* ---- list: shares the Responses page's card / toolbar / table styling ---- */
+.pf-card {
+  margin-top: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 1rem;
+}
+.pf-list-table td.pf-muted {
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.9375rem;
+}
+.pf-select {
+  height: 2.4rem;
+  padding: 0 2rem 0 0.95rem;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3' fill='none' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 0.8rem center;
+  appearance: none;
+  color: var(--color-text, #111827);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pf-select:focus-visible {
+  outline: 0;
+  border-color: var(--color-lavender, #d3ccff);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft, #efecff);
+}
+.pf-btn--pill {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+}
+.pf-list-table .pf-btn {
+  border-radius: 999px;
+}
+.pf-list-table .pf-icon-btn {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  background: #fff;
+}
+.pf-list-table .pf-icon-btn:hover:not(:disabled) {
+  background: var(--color-surface-sunken, #f4f6fa);
+}
+.pf-list-table .pf-chevron {
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
+/* status: small soft-tinted pill, like the Responses badges */
+.pf-list-table .pf-status {
+  min-width: 0;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.pf-list-table .pf-status--draft {
+  background: #f4f6fa;
+  border-color: #e2e8f0;
+  color: #6b7280;
+}
+.pf-list-table .pf-status--sent {
+  background: #efecff;
+  border-color: #d3ccff;
+  color: #5b3fd6;
+}
+.pf-list-table .pf-status--opened {
+  background: #efecff;
+  border-color: #d3ccff;
+  color: #5b3fd6;
+}
+.pf-list-table .pf-status--started,
+.pf-list-table .pf-status--review {
+  background: #fff4e0;
+  border-color: #fbd999;
+  color: #b45309;
+}
+.pf-list-table .pf-status--correction {
+  background: #efecff;
+  border-color: #d3ccff;
+  color: #5b3fd6;
+}
+.pf-list-table .pf-status--completed {
+  background: #e9fdf1;
+  border-color: #b8f5d0;
+  color: #15803d;
+}
+.pf-list-table .pf-status--expired {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+.pf-list-table tbody tr:hover > td {
+  background: transparent;
+}
+.pf-list-table .pf-row--expandable:hover > td {
+  background: var(--color-surface-sunken, #f4f6fa);
+}
+.pf-list-table .pf-panel-row > td,
+.pf-list-table .pf-panel-row:hover > td {
+  padding: 0;
+  background: #fff;
+}

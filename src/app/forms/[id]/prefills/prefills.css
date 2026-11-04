@@ -1008,3 +1008,40 @@
   padding: 0;
   background: #fff;
 }
+
+/* expanded row: left-aligned, full width, clearly nested under the recipient */
+.pf-list-table .pf-panel-row > td:last-child,
+.pf-list-table .pf-panel-row > td {
+  width: auto;
+  text-align: left;
+  white-space: normal;
+  background: #fafbfd;
+}
+.pf-list-table .pfp {
+  width: 100%;
+  padding: 0.9rem 1.5rem 1.1rem 4.4rem;
+  box-shadow: none;
+}
+.pf-list-table .pfp::before {
+  content: "Returned responses";
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pf-list-table .pfp--msg::before {
+  content: none;
+}
+.pf-list-table .pfp-list {
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  background: #fff;
+}
+.pf-list-table .pfp-item {
+  padding: 0.8rem 1rem;
+  border-radius: 0;
+}
+.pf-list-table .pfp-item-main {
+  text-align: left;
+}

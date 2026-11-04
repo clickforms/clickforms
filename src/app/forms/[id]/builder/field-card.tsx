@@ -1732,17 +1732,17 @@ export function FieldCard({
             canMoveDown={canMoveDown}
           />
         )}
-        <div className="field-card-header">
-          {/* The "Formatted Text" type tag is canvas-only chrome; inside a column slot it just
-              reads as stray text the author can't remove, so it's top-level only. */}
-          {nested ? null : (
-            <span className="field-card-label field-card-label--muted">Formatted Text</span>
-          )}
-          <div className="field-card-badges">
-            {hasConditionalRule && <span className="badge badge--draft">Conditional</span>}
-            {!visibleInPreview && <span className="badge badge--neutral">Hidden in preview</span>}
+        {/* No "Formatted Text" type tag here: it read as a permanent title the author couldn't remove,
+            and what the block is is already obvious from its content. Only the status badges
+            (conditional / hidden) still need a header row. */}
+        {hasConditionalRule || !visibleInPreview ? (
+          <div className="field-card-header">
+            <div className="field-card-badges">
+              {hasConditionalRule && <span className="badge badge--draft">Conditional</span>}
+              {!visibleInPreview && <span className="badge badge--neutral">Hidden in preview</span>}
+            </div>
           </div>
-        </div>
+        ) : null}
         <FieldPreview
           field={field}
           formId={formId}

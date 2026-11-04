@@ -414,7 +414,7 @@ export function PrefillsListClient({
                           </button>
                         ) : item.status === 'draft' ? (
                           <a className="pf-btn pf-btn--primary pf-btn--sm" href={item.continueHref}>
-                            Continue
+                            Open
                           </a>
                         ) : null}
                         {item.status !== 'draft' ? (

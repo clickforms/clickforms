@@ -52,7 +52,10 @@ export function PrefillPanel({ formId, prefillId }: { formId: string; prefillId:
       <ul className="pfp-list">
         {items.map((item) => (
           <li key={item.id}>
-            <Link href={`/forms/${formId}/submissions/${item.id}`} className="pfp-item">
+            <Link
+              href={`/forms/${formId}/submissions/${item.id}?from=prefills`}
+              className="pfp-item"
+            >
               <span className="pfp-item-main">
                 <strong>{item.label ?? 'Response'}</strong>
                 <small>

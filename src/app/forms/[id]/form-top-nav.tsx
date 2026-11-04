@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type MouseEvent, type ReactNode, useRef, useState } from 'react';
 import { FormShareModal } from '@/app/forms/[id]/form-share-modal';
 import { useFormWorkspaceStatus } from '@/app/forms/[id]/form-workspace-context';
@@ -227,6 +227,7 @@ export function FormTopNav({
   senderName,
 }: FormTopNavProps) {
   const pathname = usePathname();
+  const openedFromPrefills = useSearchParams().get('from') === 'prefills';
   const router = useRouter();
   const {
     status,
@@ -261,7 +262,7 @@ export function FormTopNav({
       href: `/forms/${formId}/submissions`,
       label: 'Responses',
       icon: <ResponsesIcon />,
-      match: (path) => path.includes(`/forms/${formId}/submissions`),
+      match: (path) => path.includes(`/forms/${formId}/submissions`) && !openedFromPrefills,
       badge: responseCount,
     },
     {
@@ -269,7 +270,9 @@ export function FormTopNav({
       href: `/forms/${formId}/prefills`,
       label: 'Prefills',
       icon: <ShareLinkIcon />,
-      match: (path) => path.includes(`/forms/${formId}/prefills`),
+      match: (path) =>
+        path.includes(`/forms/${formId}/prefills`) ||
+        (path.includes(`/forms/${formId}/submissions`) && openedFromPrefills),
     },
     {
       key: 'settings',

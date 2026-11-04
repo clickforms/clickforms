@@ -299,6 +299,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
   const banner =
     heldPrefill && prefillInfo?.prefill_id ? (
       <PrefillReviewBar
+        key="prefill-review"
         formId={form.id}
         prefillId={prefillInfo.prefill_id}
         canAct={canDelete}

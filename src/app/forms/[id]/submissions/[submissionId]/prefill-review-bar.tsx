@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/toast';
 import '@/app/forms/[id]/prefills/prefills.css';
 
@@ -26,6 +26,24 @@ export function PrefillReviewBar({
   const toast = useToast();
   const [confirm, setConfirm] = useState<'promote' | 'discard' | 'sendback' | null>(null);
   const [note, setNote] = useState('');
+  const menuRef = useRef<HTMLDetailsElement>(null);
+
+  // The "more" menu is a <details>: close it on an outside click or Escape.
+  useEffect(() => {
+    function close(event: Event) {
+      const menu = menuRef.current;
+      if (!menu?.open) return;
+      if (event.type === 'keydown' && (event as KeyboardEvent).key !== 'Escape') return;
+      if (event.type === 'mousedown' && menu.contains(event.target as Node)) return;
+      menu.open = false;
+    }
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, []);
   const [busy, setBusy] = useState(false);
 
   async function sendBack() {
@@ -111,7 +129,7 @@ export function PrefillReviewBar({
         <div className="pfr-actions">
           {canAct ? (
             <>
-              <details className="pfr-more">
+              <details className="pfr-more" ref={menuRef}>
                 <summary className="pf-icon-btn" aria-label="More options" title="More">
                   <svg
                     width="16"
@@ -129,7 +147,10 @@ export function PrefillReviewBar({
                   <button
                     type="button"
                     className="pfr-more-item pfr-more-item--danger"
-                    onClick={() => setConfirm('discard')}
+                    onClick={() => {
+                      if (menuRef.current) menuRef.current.open = false;
+                      setConfirm('discard');
+                    }}
                   >
                     Discard response
                   </button>

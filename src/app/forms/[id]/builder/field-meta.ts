@@ -286,7 +286,6 @@ export function createColumnLayoutField(columns: ColumnCount): {
   const layout: FormField = {
     id: layoutId,
     type: 'column_layout',
-    label: `${columns}-column section`,
     required: false,
     columns,
     fieldIds: Array.from({ length: columns }, () => null),

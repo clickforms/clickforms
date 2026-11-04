@@ -554,6 +554,9 @@ const dividerFieldSchema = baseFieldSchema.extend({
 
 const columnLayoutFieldSchema = baseFieldSchema.extend({
   type: z.literal('column_layout'),
+  // Optional: a column section is just a layout container; the heading is only a builder aid
+  // (and a title on the response detail page), so it can be left blank.
+  label: z.string().optional(),
   columns: z.union([z.literal(2), z.literal(3), z.literal(4)]),
   // A slot holds `null` when empty — new column sections start with every slot empty
   // (the admin picks a field type per-slot in the builder) rather than pre-seeding a

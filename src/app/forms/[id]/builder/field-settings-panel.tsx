@@ -2157,7 +2157,9 @@ export function FieldSettingsPanel({
           <label className="settings-field">
             <span className="settings-label">
               {isSectionBreak || isColumnLayout
-                ? 'Header title'
+                ? isColumnLayout
+                  ? 'Header title (optional)'
+                  : 'Header title'
                 : isImage || isDivider
                   ? 'Caption (optional)'
                   : isHidden
@@ -2170,7 +2172,10 @@ export function FieldSettingsPanel({
               disabled={!canEdit}
               onChange={(event) =>
                 onUpdateField(field.id, {
-                  label: isDivider ? event.target.value || undefined : event.target.value,
+                  label:
+                    isDivider || isColumnLayout
+                      ? event.target.value || undefined
+                      : event.target.value,
                 })
               }
             />

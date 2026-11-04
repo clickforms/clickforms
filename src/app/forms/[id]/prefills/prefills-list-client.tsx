@@ -59,6 +59,16 @@ function initials(item: PrefillItem): string {
   return ((parts[0]?.[0] ?? '?') + (parts[1]?.[0] ?? '')).toUpperCase();
 }
 
+const AVATAR_COLORS = ['#579bfc', '#00c875', '#fdab3d', '#e2445c', '#037f4c', '#66ccff', '#ff7575'];
+
+/** A stable colour per person, so rows are easy to tell apart at a glance. */
+function avatarColor(item: PrefillItem): string {
+  const source = item.recipientName || item.recipientEmail || item.id;
+  let hash = 0;
+  for (const char of source) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length] ?? '#579bfc';
+}
+
 function Icon({ d }: { d: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -305,6 +315,9 @@ export function PrefillsListClient({
                       <div className="pf-person">
                         <span
                           className={`pf-avatar${item.status === 'draft' ? ' pf-avatar--draft' : ''}`}
+                          style={
+                            item.status === 'draft' ? undefined : { background: avatarColor(item) }
+                          }
                         >
                           {initials(item)}
                         </span>

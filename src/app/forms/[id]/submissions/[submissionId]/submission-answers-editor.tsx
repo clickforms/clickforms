@@ -561,7 +561,7 @@ export function SubmissionAnswersEditor({
       </div>
 
       {banner}
-      {meta}
+      {editing ? null : meta}
 
       {!editing ? (
         children

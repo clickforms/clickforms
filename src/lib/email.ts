@@ -24,6 +24,7 @@ export type EmailKind =
   | 'contact_form'
   | 'form_share'
   | 'form_prefill'
+  | 'prefill_returned'
   | 'two_factor_code';
 
 interface SendEmailParams {

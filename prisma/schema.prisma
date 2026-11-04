@@ -422,6 +422,8 @@ model Form {
   filenamePrefixFieldId String? @map("filename_prefix_field_id")
   // Field whose answer is the first column of the Responses list. Null = automatic.
   responseLabelFieldId String? @map("response_label_field_id")
+  // Hold responses that come back through a prefill for review before they count as responses.
+  holdPrefilledResponses Boolean @default(true) @map("hold_prefilled_responses")
   // Who gets emailed when this form receives a new response (Settings tab, see
   // src/app/forms/[id]/settings) — org_default (the default) defers to
   // Organization.notificationEmail, custom uses notificationEmail below, off never
@@ -491,6 +493,8 @@ model Submission {
   // prefillId is nulled if the prefill is deleted; prefillRecipient keeps the "sent to" label.
   prefillId        String?        @map("prefill_id") @db.Uuid
   prefillRecipient String?        @map("prefill_recipient")
+  // Held in the Prefills tab for review until promoted (status stays in_progress meanwhile).
+  prefillHeld      Boolean        @default(false) @map("prefill_held")
   submittedAt    DateTime?        @map("submitted_at")
   createdAt      DateTime         @default(now()) @map("created_at")
 

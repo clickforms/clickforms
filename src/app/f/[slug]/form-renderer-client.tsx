@@ -119,9 +119,9 @@ function FormRendererInner({
   const [pageIndex, setPageIndex] = useState(0);
   const [answers, setAnswers] = useState<FormAnswers>(prefillAnswers ?? {});
   const [sendOpen, setSendOpen] = useState(false);
-  const [sentTo, setSentTo] = useState<{ email: string | null; url: string } | null>(null);
+  const [sentTo, setSentTo] = useState<{ emails: string[]; url: string } | null>(null);
   const [sendMode, setSendMode] = useState<'email' | 'link'>('email');
-  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientEmails, setRecipientEmails] = useState<string[]>([]);
   const [recipientName, setRecipientName] = useState('');
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<AnswerErrors>({});
@@ -421,45 +421,48 @@ function FormRendererInner({
   const closeSendModal = useCallback(() => {
     setSendOpen(false);
     setSentTo(null);
-    setRecipientEmail('');
+    setRecipientEmails([]);
     setRecipientName('');
     setNote('');
     setSendMode('email');
   }, []);
 
-  const sendPrefill = useCallback(async () => {
-    if (!formId) return;
-    const email = recipientEmail.trim();
-    if (sendMode === 'email' && !email) {
-      toast.error("Enter the recipient's email address.");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/forms/${formId}/prefills`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          answers,
-          delivery: sendMode,
-          draftId,
-          recipientEmail: sendMode === 'email' ? email : undefined,
-          recipientName: recipientName.trim() || undefined,
-          note: sendMode === 'email' ? note.trim() || undefined : undefined,
-        }),
-      });
-      const data: { url?: string; error?: string } = await res.json();
-      if (!res.ok || !data.url) {
-        toast.error(data.error ?? 'Could not send the prefilled form.');
+  const sendPrefill = useCallback(
+    async (emailsOverride?: string[]) => {
+      if (!formId) return;
+      const emails = emailsOverride ?? recipientEmails;
+      if (sendMode === 'email' && emails.length === 0) {
+        toast.error("Enter the recipient's email address.");
         return;
       }
-      setSentTo({ email: sendMode === 'email' ? email : null, url: data.url });
-    } catch {
-      toast.error('Could not send the prefilled form.');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [answers, draftId, formId, note, recipientEmail, recipientName, sendMode, toast]);
+      setSubmitting(true);
+      try {
+        const res = await fetch(`/api/forms/${formId}/prefills`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            answers,
+            delivery: sendMode,
+            draftId,
+            recipientEmails: sendMode === 'email' ? emails : undefined,
+            recipientName: recipientName.trim() || undefined,
+            note: sendMode === 'email' ? note.trim() || undefined : undefined,
+          }),
+        });
+        const data: { url?: string; error?: string } = await res.json();
+        if (!res.ok || !data.url) {
+          toast.error(data.error ?? 'Could not send the prefilled form.');
+          return;
+        }
+        setSentTo({ emails: sendMode === 'email' ? emails : [], url: data.url });
+      } catch {
+        toast.error('Could not send the prefilled form.');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [answers, draftId, formId, note, recipientEmails, recipientName, sendMode, toast],
+  );
 
   const saveDraft = useCallback(async () => {
     if (!formId) return;
@@ -774,17 +777,17 @@ function FormRendererInner({
           {prefillBuilder && sendOpen ? (
             <PrefillSendModal
               formId={formId}
-              email={recipientEmail}
+              emails={recipientEmails}
               name={recipientName}
               note={note}
               sending={submitting}
               sent={sentTo}
               mode={sendMode}
               onMode={setSendMode}
-              onEmail={setRecipientEmail}
+              onEmails={setRecipientEmails}
               onName={setRecipientName}
               onNote={setNote}
-              onSend={() => void sendPrefill()}
+              onSend={(emails) => void sendPrefill(emails)}
               onClose={closeSendModal}
               onCopy={(url) => {
                 void navigator.clipboard.writeText(url).then(

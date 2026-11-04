@@ -25,11 +25,18 @@ export default async function PrefillsPage({ params }: PageProps) {
       where: { id: requireOrganizationId(session) },
       select: { subdomain: true },
     });
-    return { form, rows: await listPrefills(tx, form.id), subdomain: organization.subdomain };
+    const holdRows = await tx.$queryRaw<{ hold: boolean }[]>`
+      SELECT hold_prefilled_responses AS hold FROM forms WHERE id = ${form.id}::uuid`;
+    return {
+      form,
+      rows: await listPrefills(tx, form.id),
+      subdomain: organization.subdomain,
+      hold: holdRows[0]?.hold ?? true,
+    };
   });
   if (!result) notFound();
 
-  const { form, rows, subdomain } = result;
+  const { form, rows, subdomain, hold } = result;
   return (
     <div className="submissions-page">
       <div className="submissions-page-header">
@@ -44,12 +51,15 @@ export default async function PrefillsPage({ params }: PageProps) {
         formId={form.id}
         slug={form.slug}
         isLive={Boolean(form.currentVersionId)}
+        holdResponses={hold}
         initialPrefills={rows.map((row) => ({
           id: row.id,
           recipientEmail: row.recipient_email,
           recipientName: row.recipient_name,
           url: prefillUrl(subdomain, form.slug, row.token),
           continueHref: `/f/${form.slug}/prefill?draft=${row.id}`,
+          detailHref: `/forms/${form.id}/prefills/${row.id}`,
+          sendAgainHref: `/f/${form.slug}/prefill?from=${row.id}`,
           status: prefillStatus(row),
           sentAt: (row.sent_at ?? row.created_at).toISOString(),
           createdBy: row.created_by_name,

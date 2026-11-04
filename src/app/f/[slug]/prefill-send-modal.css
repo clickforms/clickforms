@@ -281,3 +281,64 @@
   opacity: 0.5;
   cursor: progress;
 }
+
+.pfm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #fff;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.pfm-chips:focus-within {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+.pfm-chips input {
+  flex: 1;
+  min-width: 140px;
+  width: auto;
+  border: 0;
+  padding: 0.3rem 0.35rem;
+  box-shadow: none;
+}
+.pfm-chips input:focus {
+  box-shadow: none;
+}
+.pfm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.pfm-chip button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.pfm-chip button:hover {
+  background: rgba(79, 70, 229, 0.18);
+}
+.pfm-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #b91c1c;
+}

@@ -391,3 +391,26 @@ export function platformAdminInviteEmail(params: {
 
   return { subject: "You've been invited to Clickforms Admin", html, text };
 }
+
+/** Sent to the form's notification address when a prefilled form comes back and is being held in
+ * the Prefills tab for review (see lib/forms/prefill-review.ts). */
+export function prefillReturnedEmail(params: {
+  formName: string;
+  recipientLabel: string;
+  reviewUrl: string;
+}): RenderedEmail {
+  const { html, text } = renderEmailLayout({
+    preheader: `${params.recipientLabel} completed a prefilled form: ${params.formName}.`,
+    heading: 'A prefilled form came back',
+    headingAlign: 'center',
+    paragraphs: [
+      `${params.recipientLabel} has completed the prefilled form "${params.formName}". It's waiting in the Prefills tab for you to review and promote to a response.`,
+    ],
+    cta: { label: 'Review response', url: params.reviewUrl },
+  });
+  return {
+    subject: `Review needed: ${params.recipientLabel} completed ${params.formName}`,
+    html,
+    text,
+  };
+}

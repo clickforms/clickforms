@@ -7,15 +7,15 @@ interface PrefillSendModalProps {
   formId?: string;
   mode: 'email' | 'link';
   onMode: (mode: 'email' | 'link') => void;
-  email: string;
+  emails: string[];
   name: string;
   note: string;
   sending: boolean;
-  sent: { email: string | null; url: string } | null;
-  onEmail: (value: string) => void;
+  sent: { emails: string[]; url: string } | null;
+  onEmails: (value: string[]) => void;
   onName: (value: string) => void;
   onNote: (value: string) => void;
-  onSend: () => void;
+  onSend: (emails: string[]) => void;
   onClose: () => void;
   onCopy: (url: string) => void;
 }
@@ -25,12 +25,12 @@ export function PrefillSendModal({
   formId,
   mode,
   onMode,
-  email,
+  emails,
   name,
   note,
   sending,
   sent,
-  onEmail,
+  onEmails,
   onName,
   onNote,
   onSend,
@@ -38,6 +38,7 @@ export function PrefillSendModal({
   onCopy,
 }: PrefillSendModalProps) {
   const firstFieldRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState('');
   const [showNote, setShowNote] = useState(note.length > 0);
 
   useEffect(() => {
@@ -48,6 +49,25 @@ export function PrefillSendModal({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose, sending]);
+
+  const [pendingError, setPendingError] = useState<string | null>(null);
+
+  /** Turns typed/pasted text into email chips; returns the full list. Invalid entries stay in the box. */
+  function commitPending(extra?: string): string[] {
+    const text = `${pending} ${extra ?? ''}`;
+    const tokens = text.split(/[\s,;]+/).filter(Boolean);
+    const valid: string[] = [];
+    const invalid: string[] = [];
+    for (const token of tokens) {
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(token)) valid.push(token.toLowerCase());
+      else invalid.push(token);
+    }
+    const merged = [...new Set([...emails, ...valid])];
+    if (valid.length > 0) onEmails(merged);
+    setPending(invalid.join(' '));
+    setPendingError(invalid.length > 0 ? `“${invalid[0]}” isn’t a valid email address` : null);
+    return merged;
+  }
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click-to-dismiss; Escape and the close button cover keyboard users
@@ -84,14 +104,16 @@ export function PrefillSendModal({
               </svg>
             </span>
             <h2 id="pfm-title" className="pfm-title">
-              {sent.email ? 'Form sent' : 'Link ready'}
+              {sent.emails.length > 0 ? 'Form sent' : 'Link ready'}
             </h2>
             <p className="pfm-sub">
-              {sent.email
-                ? `${sent.email} will get an email with their personal link. You can track it, resend it or delete it from the Prefills tab.`
+              {sent.emails.length > 0
+                ? `${
+                    sent.emails.length === 1 ? sent.emails[0] : `${sent.emails.length} people`
+                  } will get an email with ${sent.emails.length === 1 ? 'their' : 'a'} personal link. Each one is tracked separately in the Prefills tab, where you can compare what you sent with what comes back.`
                 : 'Copy the link and send it however you like. It works for one person and expires in 30 days. You can find it again in the Prefills tab.'}
             </p>
-            {!sent.email ? (
+            {sent.emails.length === 0 ? (
               <div className="pfm-linkbox">
                 <input
                   type="text"
@@ -113,7 +135,7 @@ export function PrefillSendModal({
               <a className="pfm-btn pfm-btn--ghost" href={`/forms/${formId}/prefills`}>
                 View prefills
               </a>
-              {sent.email ? (
+              {sent.emails.length > 0 && sent.emails.length === 1 ? (
                 <button
                   type="button"
                   className="pfm-btn pfm-btn--ghost"
@@ -124,7 +146,7 @@ export function PrefillSendModal({
               ) : null}
               <button
                 type="button"
-                className={`pfm-btn ${sent.email ? 'pfm-btn--primary' : 'pfm-btn--ghost'}`}
+                className={`pfm-btn ${sent.emails.length > 0 ? 'pfm-btn--primary' : 'pfm-btn--ghost'}`}
                 onClick={onClose}
               >
                 Done
@@ -136,7 +158,8 @@ export function PrefillSendModal({
             className="pfm-body"
             onSubmit={(event) => {
               event.preventDefault();
-              onSend();
+              const all = mode === 'email' ? commitPending() : [];
+              onSend(all);
             }}
           >
             <h2 id="pfm-title" className="pfm-title">
@@ -168,16 +191,52 @@ export function PrefillSendModal({
             {mode === 'email' ? (
               <>
                 <div className="pfm-field">
-                  <label htmlFor="pfm-email">Email address</label>
-                  <input
-                    id="pfm-email"
-                    ref={firstFieldRef}
-                    type="email"
-                    required
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(event) => onEmail(event.target.value)}
-                  />
+                  <label htmlFor="pfm-email">
+                    Email addresses{' '}
+                    <span className="pfm-optional">
+                      Add several to send to each person separately
+                    </span>
+                  </label>
+                  <div className="pfm-chips">
+                    {emails.map((address) => (
+                      <span key={address} className="pfm-chip">
+                        {address}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${address}`}
+                          onClick={() => onEmails(emails.filter((e) => e !== address))}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      id="pfm-email"
+                      ref={firstFieldRef}
+                      type="text"
+                      inputMode="email"
+                      placeholder={emails.length === 0 ? 'name@example.com' : 'Add another'}
+                      value={pending}
+                      onChange={(event) => setPending(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (['Enter', ',', ' ', ';'].includes(event.key) && pending.trim()) {
+                          event.preventDefault();
+                          commitPending();
+                        } else if (event.key === 'Backspace' && !pending && emails.length > 0) {
+                          onEmails(emails.slice(0, -1));
+                        }
+                      }}
+                      onBlur={() => void commitPending()}
+                      onPaste={(event) => {
+                        const text = event.clipboardData.getData('text');
+                        if (/[\s,;]/.test(text.trim())) {
+                          event.preventDefault();
+                          commitPending(text);
+                        }
+                      }}
+                    />
+                  </div>
+                  {pendingError ? <p className="pfm-error">{pendingError}</p> : null}
                 </div>
                 <div className="pfm-field">
                   <label htmlFor="pfm-name">

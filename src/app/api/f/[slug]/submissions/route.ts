@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { toErrorResponse } from '@/lib/api-errors';
+import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import { getPublishedFormBySlug, getRequestIp } from '@/lib/forms/public-lookup';
 import { resolveOrganizationIdOrThrow } from '@/lib/tenant';
@@ -27,6 +27,16 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         : null;
 
     const submission = await withOrgContext(form.organizationId, async (tx) => {
+      if (prefillToken) {
+        const used = await tx.$queryRaw<{ used: boolean }[]>`
+          SELECT EXISTS (
+            SELECT 1 FROM submissions s JOIN form_prefills p ON p.id = s.prefill_id
+            WHERE p.token = ${prefillToken} AND p.form_id = ${form.id}::uuid
+              AND (s.prefill_held OR s.status <> 'in_progress')) AS used`;
+        if (used[0]?.used) {
+          throw new InvalidRequestError('This link has already been used to submit the form.');
+        }
+      }
       const created = await tx.submission.create({
         data: {
           organizationId: form.organizationId,

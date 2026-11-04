@@ -45,7 +45,14 @@ export function sanitizePrefillAnswers(schema: FormSchema, answers: unknown): Fo
   return result;
 }
 
-export type PrefillStatus = 'draft' | 'sent' | 'opened' | 'started' | 'completed' | 'expired';
+export type PrefillStatus =
+  | 'draft'
+  | 'review'
+  | 'sent'
+  | 'opened'
+  | 'started'
+  | 'completed'
+  | 'expired';
 
 export interface PrefillRow {
   id: string;
@@ -60,6 +67,8 @@ export interface PrefillRow {
   created_by_name: string | null;
   responses: number;
   completed: number;
+  /** Responses returned through this prefill and held for review. */
+  held: number;
 }
 
 export function prefillStatus(row: {
@@ -68,8 +77,10 @@ export function prefillStatus(row: {
   expires_at: Date;
   responses: number;
   completed: number;
+  held: number;
 }): PrefillStatus {
   if (row.is_draft) return 'draft';
+  if (row.held > 0) return 'review';
   if (row.completed > 0) return 'completed';
   if (row.expires_at.getTime() < Date.now()) return 'expired';
   if (row.responses > 0) return 'started';
@@ -85,7 +96,10 @@ export async function listPrefills(tx: Prisma.TransactionClient, formId: string)
            COALESCE(u.name, u.email) AS created_by_name,
            (SELECT count(*)::int FROM submissions s
               WHERE s.prefill_id = p.id AND s.status <> 'in_progress') AS completed,
-           (SELECT count(*)::int FROM submissions s WHERE s.prefill_id = p.id) AS responses
+           (SELECT count(*)::int FROM submissions s
+              WHERE s.prefill_id = p.id AND s.prefill_held) AS held,
+           (SELECT count(*)::int FROM submissions s
+              WHERE s.prefill_id = p.id AND NOT s.prefill_held) AS responses
     FROM form_prefills p
     LEFT JOIN users u ON u.id = p.created_by
     WHERE p.form_id = ${formId}::uuid

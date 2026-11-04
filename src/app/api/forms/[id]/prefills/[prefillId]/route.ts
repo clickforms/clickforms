@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
+import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
@@ -21,6 +21,15 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
     await withOrgContext(organizationId, async (tx) => {
       const form = await tx.form.findFirst({ where: { id, organizationId } });
       assertFormEditAccess(form, session.user.role, session.user.id);
+
+      const held = await tx.$queryRaw<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM submissions
+        WHERE prefill_id = ${prefillId}::uuid AND prefill_held`;
+      if ((held[0]?.n ?? 0) > 0) {
+        throw new InvalidRequestError(
+          'This prefill has a returned response waiting for review. Promote or discard it first.',
+        );
+      }
 
       const deleted = await tx.$executeRaw`
         DELETE FROM form_prefills WHERE id = ${prefillId}::uuid AND form_id = ${form.id}::uuid`;

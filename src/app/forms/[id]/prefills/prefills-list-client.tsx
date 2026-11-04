@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { useToast } from '@/components/toast';
 import './prefills.css';
 
-type Status = 'draft' | 'sent' | 'opened' | 'started' | 'completed' | 'expired';
+type Status = 'draft' | 'review' | 'sent' | 'opened' | 'started' | 'completed' | 'expired';
 
 interface PrefillItem {
   id: string;
@@ -14,6 +14,9 @@ interface PrefillItem {
   url: string;
   /** Where "Continue" opens the builder for a draft. */
   continueHref: string;
+  /** The prefill's own page: original vs returned answers, promote, send to someone else. */
+  detailHref: string;
+  sendAgainHref: string;
   status: Status;
   sentAt: string;
   createdBy: string | null;
@@ -22,6 +25,7 @@ interface PrefillItem {
 
 const STATUS_LABEL: Record<Status, string> = {
   draft: 'Draft',
+  review: 'Needs review',
   sent: 'Sent',
   opened: 'Opened',
   started: 'In progress',
@@ -31,6 +35,7 @@ const STATUS_LABEL: Record<Status, string> = {
 
 const FILTERS: { key: 'all' | Status; label: string }[] = [
   { key: 'all', label: 'All' },
+  { key: 'review', label: 'Needs review' },
   { key: 'draft', label: 'Drafts' },
   { key: 'sent', label: 'Sent' },
   { key: 'opened', label: 'Opened' },
@@ -71,11 +76,13 @@ export function PrefillsListClient({
   formId,
   slug,
   isLive,
+  holdResponses,
   initialPrefills,
 }: {
   formId: string;
   slug: string;
   isLive: boolean;
+  holdResponses: boolean;
   initialPrefills: PrefillItem[];
 }) {
   const router = useRouter();
@@ -84,6 +91,27 @@ export function PrefillsListClient({
   const [filter, setFilter] = useState<'all' | Status>('all');
   const [search, setSearch] = useState('');
   const [toDelete, setToDelete] = useState<PrefillItem | null>(null);
+  const [hold, setHold] = useState(holdResponses);
+
+  async function toggleHold(next: boolean) {
+    setHold(next);
+    try {
+      const res = await fetch(`/api/forms/${formId}/prefill-settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holdResponses: next }),
+      });
+      if (!res.ok) throw new Error('failed');
+      toast.success(
+        next
+          ? 'Returned responses will be held for review'
+          : 'Returned responses go straight to Responses',
+      );
+    } catch {
+      setHold(!next);
+      toast.error('Could not update the setting.');
+    }
+  }
 
   const counts = useMemo(() => {
     const map = new Map<string, number>([['all', initialPrefills.length]]);
@@ -209,6 +237,18 @@ export function PrefillsListClient({
           ))}
         </div>
         <div className="pf-toolbar-right">
+          <label
+            className="pfd-switch"
+            title="When on, a returned prefill waits here until you promote it to a response"
+          >
+            <input
+              type="checkbox"
+              checked={hold}
+              onChange={(event) => void toggleHold(event.target.checked)}
+            />
+            <span aria-hidden="true" />
+            Review before Responses
+          </label>
           <label className="pf-search">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
@@ -258,9 +298,14 @@ export function PrefillsListClient({
                     </span>
                     <span className="pf-person-text">
                       <strong>
-                        {item.recipientName ||
-                          item.recipientEmail ||
-                          (item.status === 'draft' ? 'Untitled draft' : 'Shared link')}
+                        <a
+                          className="pf-namelink"
+                          href={item.status === 'draft' ? item.continueHref : item.detailHref}
+                        >
+                          {item.recipientName ||
+                            item.recipientEmail ||
+                            (item.status === 'draft' ? 'Untitled draft' : 'Shared link')}
+                        </a>
                       </strong>
                       <small>
                         {item.recipientEmail
@@ -284,7 +329,11 @@ export function PrefillsListClient({
                 <td className="pf-muted">{item.createdBy ?? '—'}</td>
                 <td>
                   <div className="pf-actions">
-                    {item.status === 'draft' ? (
+                    {item.status === 'review' ? (
+                      <a className="pf-btn pf-btn--primary pf-btn--sm" href={item.detailHref}>
+                        Review
+                      </a>
+                    ) : item.status === 'draft' ? (
                       <a className="pf-btn pf-btn--primary pf-btn--sm" href={item.continueHref}>
                         Continue
                       </a>
@@ -312,16 +361,28 @@ export function PrefillsListClient({
                         <Icon d="M2.5 4.5h11v7h-11zM2.5 5l5.5 4 5.5-4" />
                       </button>
                     ) : null}
-                    <button
-                      type="button"
-                      className="pf-icon-btn pf-icon-btn--danger"
-                      title="Delete"
-                      aria-label="Delete prefill"
-                      disabled={busyId === item.id}
-                      onClick={() => setToDelete(item)}
-                    >
-                      <Icon d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8" />
-                    </button>
+                    {item.status !== 'draft' ? (
+                      <a
+                        className="pf-icon-btn"
+                        href={item.sendAgainHref}
+                        title="Send to someone else"
+                        aria-label="Send to someone else"
+                      >
+                        <Icon d="M2.5 8h9M8.5 4.5 12 8l-3.5 3.5" />
+                      </a>
+                    ) : null}
+                    {item.status !== 'review' ? (
+                      <button
+                        type="button"
+                        className="pf-icon-btn pf-icon-btn--danger"
+                        title="Delete"
+                        aria-label="Delete prefill"
+                        disabled={busyId === item.id}
+                        onClick={() => setToDelete(item)}
+                      >
+                        <Icon d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8" />
+                      </button>
+                    ) : null}
                   </div>
                 </td>
               </tr>

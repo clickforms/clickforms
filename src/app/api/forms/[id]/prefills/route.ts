@@ -26,6 +26,11 @@ const bodySchema = z.object({
   /** An existing draft being continued — updated in place rather than creating a new row. */
   draftId: z.string().uuid().optional(),
   recipientEmail: z.string().trim().email('Enter a valid email address').optional(),
+  /** Several recipients at once — one separate prefill (own link, own response) per address. */
+  recipientEmails: z
+    .array(z.string().trim().email('Enter valid email addresses'))
+    .max(25)
+    .optional(),
   recipientName: z.string().trim().max(120).optional(),
   note: z.string().trim().max(1000).optional(),
 });
@@ -41,10 +46,22 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
     requireRole(session, ['admin', 'editor', 'member']);
     const { id } = await params;
     const body = bodySchema.parse(await request.json());
-    if (body.delivery === 'email' && !body.recipientEmail) {
+    const emailTargets =
+      body.delivery === 'email'
+        ? [
+            ...new Set(
+              [
+                ...(body.recipientEmails ?? []),
+                ...(body.recipientEmail ? [body.recipientEmail] : []),
+              ].map((e) => e.toLowerCase()),
+            ),
+          ]
+        : [];
+    if (body.delivery === 'email' && emailTargets.length === 0) {
       throw new InvalidRequestError('Enter the recipient’s email address.');
     }
-    const emailTo = body.delivery === 'email' ? (body.recipientEmail ?? null) : null;
+    // One entry per prefill to create; `null` = a link-only prefill (nothing emailed).
+    const targets: (string | null)[] = body.delivery === 'email' ? emailTargets : [null];
     const organizationId = requireOrganizationId(session);
 
     const created = await withOrgContext(organizationId, async (tx) => {
@@ -95,33 +112,40 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
       const recent = await tx.emailLog.count({
         where: { organizationId, kind: 'form_prefill', createdAt: { gte: windowStart } },
       });
-      if (recent >= SEND_RATE_LIMIT) {
+      if (recent + targets.length > SEND_RATE_LIMIT) {
         throw new InvalidRequestError(
           "You've sent a lot of these recently — please wait a bit before sending more.",
         );
       }
 
-      const token = generatePrefillToken();
       const expiresAt = new Date(Date.now() + PREFILL_TTL_MS);
-      if (body.draftId) {
-        // Finishing a draft: same row, now real (sent or shared as a link).
-        const finished = await tx.$executeRaw`
-          UPDATE form_prefills
-          SET answers = ${JSON.stringify(answers)}::jsonb, recipient_email = ${emailTo},
-              recipient_name = ${body.recipientName || null}, token = ${token}, is_draft = false,
-              sent_at = ${emailTo ? new Date() : null}, expires_at = ${expiresAt}
-          WHERE id = ${body.draftId}::uuid AND form_id = ${form.id}::uuid AND is_draft`;
-        if (finished === 0) throw new NotFoundError('Draft');
+      const created: { id: string; token: string; email: string | null }[] = [];
+      for (const [index, emailTo] of targets.entries()) {
+        const token = generatePrefillToken();
+        if (index === 0 && body.draftId) {
+          // Finishing a draft: same row, now real (sent or shared as a link).
+          const finished = await tx.$executeRaw`
+            UPDATE form_prefills
+            SET answers = ${JSON.stringify(answers)}::jsonb, recipient_email = ${emailTo},
+                recipient_name = ${body.recipientName || null}, token = ${token}, is_draft = false,
+                sent_at = ${emailTo ? new Date() : null}, expires_at = ${expiresAt}
+            WHERE id = ${body.draftId}::uuid AND form_id = ${form.id}::uuid AND is_draft`;
+          if (finished === 0) throw new NotFoundError('Draft');
+          created.push({ id: body.draftId, token, email: emailTo });
+          continue;
+        }
+        // Each recipient gets their own row with a frozen copy of the answers as sent.
+        const rows = await tx.$queryRaw<{ id: string }[]>`
+          INSERT INTO form_prefills
+            (organization_id, form_id, created_by, recipient_email, recipient_name, token, answers, sent_at, expires_at)
+          VALUES
+            (${organizationId}::uuid, ${form.id}::uuid, ${session.user.id}::uuid, ${emailTo},
+             ${emailTargets.length > 1 ? null : body.recipientName || null}, ${token}, ${JSON.stringify(answers)}::jsonb,
+             ${emailTo ? new Date() : null}, ${expiresAt})
+          RETURNING id`;
+        const row = rows[0];
+        if (row) created.push({ id: row.id, token, email: emailTo });
       }
-      const rows = body.draftId
-        ? [{ id: body.draftId }]
-        : await tx.$queryRaw<{ id: string }[]>`
-        INSERT INTO form_prefills
-          (organization_id, form_id, created_by, recipient_email, recipient_name, token, answers, sent_at, expires_at)
-        VALUES
-          (${organizationId}::uuid, ${form.id}::uuid, ${session.user.id}::uuid, ${emailTo},
-           ${body.recipientName || null}, ${token}, ${JSON.stringify(answers)}::jsonb, ${emailTo ? new Date() : null}, ${expiresAt})
-        RETURNING id`;
 
       const organization = await tx.organization.findUniqueOrThrow({
         where: { id: organizationId },
@@ -132,8 +156,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         select: { name: true },
       });
       return {
-        prefillId: rows[0]?.id,
-        token,
+        created,
         expiresAt,
         slug: form.slug,
         formName: form.name,
@@ -146,21 +169,29 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
       return NextResponse.json({ id: created.draftSavedId, draft: true }, { status: 201 });
     }
 
-    const url = prefillUrl(created.subdomain, created.slug, created.token);
-    if (emailTo) {
+    const results = created.created.map((item) => ({
+      id: item.id,
+      email: item.email,
+      url: prefillUrl(created.subdomain, created.slug, item.token),
+    }));
+    for (const item of results) {
+      if (!item.email) continue;
       await sendPrefillEmail({
-        to: emailTo,
-        recipientName: body.recipientName,
+        to: item.email,
+        recipientName: emailTargets.length > 1 ? null : body.recipientName,
         senderName: created.senderName,
         formName: created.formName,
-        url,
+        url: item.url,
         note: body.note,
         expiresAt: created.expiresAt,
         organizationId,
       });
     }
 
-    return NextResponse.json({ id: created.prefillId, url }, { status: 201 });
+    return NextResponse.json(
+      { id: results[0]?.id, url: results[0]?.url, results },
+      { status: 201 },
+    );
   } catch (error) {
     return toErrorResponse(error);
   }

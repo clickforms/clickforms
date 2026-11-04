@@ -99,8 +99,11 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
   let prefillToken: string | undefined;
   if (rawToken && rawToken.length <= 100) {
     const found = await withOrgContext(organizationId, async (tx) => {
-      const rows = await tx.$queryRaw<{ id: string; answers: unknown }[]>`
-        SELECT id, answers FROM form_prefills
+      const rows = await tx.$queryRaw<{ id: string; answers: unknown; used: boolean }[]>`
+        SELECT id, answers,
+          EXISTS (SELECT 1 FROM submissions s WHERE s.prefill_id = form_prefills.id
+                  AND (s.prefill_held OR s.status <> 'in_progress')) AS used
+        FROM form_prefills
         WHERE token = ${rawToken} AND form_id = ${form.id}::uuid AND expires_at > now()
           AND NOT is_draft`;
       const row = rows[0];
@@ -109,6 +112,20 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
       }
       return row ?? null;
     }).catch(() => null);
+    if (found?.used) {
+      // One response per link: once it has come back, the link just says so.
+      return (
+        <div className="form-renderer">
+          <div className="form-renderer-body form-success">
+            <h1>This form has already been submitted</h1>
+            <p>
+              Thank you — your response was received. If you need to change something, please
+              contact the organisation directly.
+            </p>
+          </div>
+        </div>
+      );
+    }
     if (found) {
       prefillAnswers = sanitizePrefillAnswers(schema, found.answers);
       prefillToken = rawToken;

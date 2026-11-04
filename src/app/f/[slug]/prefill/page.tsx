@@ -9,7 +9,7 @@ import { requireOrganizationId } from '@/lib/session';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ draft?: string }>;
+  searchParams?: Promise<{ draft?: string; from?: string }>;
 }
 
 // Admin-only page for sending a prefilled form: renders the live form, the admin fills in
@@ -17,32 +17,45 @@ interface PageProps {
 // recipient (POST /api/forms/[id]/prefills). Session-gated.
 export default async function FormPrefillPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const draftParam = (await searchParams)?.draft;
+  const query = await searchParams;
+  const draftParam = query?.draft;
+  const fromParam = query?.from;
 
   const session = await getServerSession(authOptions);
   if (!session?.user?.organizationId) {
     notFound();
   }
 
-  const { form, version, draft } = await withOrgContext(session.user.organizationId, async (tx) => {
-    const form = await tx.form.findFirst({
-      where: { slug, organizationId: requireOrganizationId(session) },
-    });
-    if (!form?.currentVersionId) {
-      return { form: null, version: null, draft: null };
-    }
-    const version = await tx.formVersion.findFirst({
-      where: { id: form.currentVersionId, organizationId: requireOrganizationId(session) },
-    });
-    // "Continue" on a draft from the Prefills tab: reload its saved answers.
-    const draftRows =
-      draftParam && /^[0-9a-f-]{36}$/i.test(draftParam)
-        ? await tx.$queryRaw<{ id: string; answers: unknown }[]>`
+  const { form, version, draft, from } = await withOrgContext(
+    session.user.organizationId,
+    async (tx) => {
+      const form = await tx.form.findFirst({
+        where: { slug, organizationId: requireOrganizationId(session) },
+      });
+      if (!form?.currentVersionId) {
+        return { form: null, version: null, draft: null, from: null };
+      }
+      const version = await tx.formVersion.findFirst({
+        where: { id: form.currentVersionId, organizationId: requireOrganizationId(session) },
+      });
+      // "Continue" on a draft from the Prefills tab: reload its saved answers.
+      const draftRows =
+        draftParam && /^[0-9a-f-]{36}$/i.test(draftParam)
+          ? await tx.$queryRaw<{ id: string; answers: unknown }[]>`
             SELECT id, answers FROM form_prefills
             WHERE id = ${draftParam}::uuid AND form_id = ${form.id}::uuid AND is_draft`
-        : [];
-    return { form, version, draft: draftRows[0] ?? null };
-  });
+          : [];
+      // "Send to someone else": start from another prefill's answers as a brand-new prefill. The
+      // source stays exactly as it was sent; this only copies its answers into the builder.
+      const fromRows =
+        fromParam && /^[0-9a-f-]{36}$/i.test(fromParam)
+          ? await tx.$queryRaw<{ answers: unknown; label: string | null }[]>`
+            SELECT answers, COALESCE(recipient_name, recipient_email) AS label FROM form_prefills
+            WHERE id = ${fromParam}::uuid AND form_id = ${form.id}::uuid`
+          : [];
+      return { form, version, draft: draftRows[0] ?? null, from: fromRows[0] ?? null };
+    },
+  );
 
   if (!form || !version) {
     notFound();
@@ -57,8 +70,9 @@ export default async function FormPrefillPage({ params, searchParams }: PageProp
   return (
     <div className="form-preview-shell">
       <div className="form-preview-banner">
-        Fill in the answers you want pre-populated, then send the form by email. Nothing here is
-        submitted as a response.
+        {from
+          ? `Starting from ${from.label ?? 'another'} prefill — change what you need, then send it to someone else. The original stays as it was sent.`
+          : 'Fill in the answers you want pre-populated, then send the form. Nothing here is submitted as a response.'}
       </div>
       <FormRendererClient
         slug={form.slug}
@@ -69,7 +83,13 @@ export default async function FormPrefillPage({ params, searchParams }: PageProp
         previewMode
         prefillBuilder
         draftId={draft?.id}
-        prefillAnswers={draft ? sanitizePrefillAnswers(schema, draft.answers) : undefined}
+        prefillAnswers={
+          draft
+            ? sanitizePrefillAnswers(schema, draft.answers)
+            : from
+              ? sanitizePrefillAnswers(schema, from.answers)
+              : undefined
+        }
       />
     </div>
   );

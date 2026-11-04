@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/components/toast';
@@ -94,11 +93,32 @@ export function PrefillReviewBar({
           </span>
         </div>
         <div className="pfr-actions">
-          <Link href={`/forms/${formId}/prefills`} className="pf-btn pf-btn--ghost pf-btn--sm">
-            Back to Prefills
-          </Link>
           {canAct ? (
             <>
+              <details className="pfr-more">
+                <summary className="pf-icon-btn" aria-label="More options" title="More">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <circle cx="3.5" cy="8" r="1.3" />
+                    <circle cx="8" cy="8" r="1.3" />
+                    <circle cx="12.5" cy="8" r="1.3" />
+                  </svg>
+                </summary>
+                <div className="pfr-more-menu">
+                  <button
+                    type="button"
+                    className="pfr-more-item pfr-more-item--danger"
+                    onClick={() => setConfirm('discard')}
+                  >
+                    Discard response
+                  </button>
+                </div>
+              </details>
               {sentBack ? null : (
                 <button
                   type="button"
@@ -110,17 +130,10 @@ export function PrefillReviewBar({
               )}
               <button
                 type="button"
-                className="pf-btn pf-btn--ghost pf-btn--sm pf-btn--dangerline"
-                onClick={() => setConfirm('discard')}
-              >
-                Discard
-              </button>
-              <button
-                type="button"
                 className="pf-btn pf-btn--primary pf-btn--sm"
                 onClick={() => setConfirm('promote')}
               >
-                Promote to response
+                Promote
               </button>
             </>
           ) : null}

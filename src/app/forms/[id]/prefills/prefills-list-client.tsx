@@ -393,13 +393,25 @@ export function PrefillsListClient({
                           <a className="pf-btn pf-btn--primary pf-btn--sm" href={item.continueHref}>
                             Continue
                           </a>
-                        ) : item.status !== 'expired' ? (
+                        ) : null}
+                        {item.status !== 'draft' ? (
+                          <a
+                            className="pf-btn pf-btn--ghost pf-btn--sm"
+                            href={item.sendAgainHref}
+                            title="Open the prefilled answers to edit or send to someone else"
+                          >
+                            Open
+                          </a>
+                        ) : null}
+                        {item.status !== 'draft' && item.status !== 'expired' ? (
                           <button
                             type="button"
-                            className="pf-btn pf-btn--ghost pf-btn--sm"
+                            className="pf-icon-btn"
+                            title="Copy link"
+                            aria-label="Copy link"
                             onClick={() => copy(item.url)}
                           >
-                            Copy link
+                            <Icon d="M6.5 9.5l3-3M5 7.5 3.8 8.7a2.1 2.1 0 0 0 3 3L8 10.5M11 8.5l1.2-1.2a2.1 2.1 0 0 0-3-3L8 5.5" />
                           </button>
                         ) : null}
                         {item.recipientEmail &&

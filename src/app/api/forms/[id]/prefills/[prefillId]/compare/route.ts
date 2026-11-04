@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
-import { deriveParticipantName } from '@/lib/forms/participant-name';
 import { buildPrefillComparison } from '@/lib/forms/prefill-compare';
+import { configuredResponseLabel } from '@/lib/forms/response-label';
 import { formSchemaSchema } from '@/lib/forms/schema';
 import { requireOrganizationId, requireSession } from '@/lib/session';
 
@@ -33,8 +33,14 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
     const data = await withOrgContext(organizationId, async (tx) => {
       const form = await tx.form.findFirst({ where: { id, organizationId } });
       if (!form) return null;
-      const prefills = await tx.$queryRaw<{ answers: Record<string, unknown> }[]>`
-        SELECT answers FROM form_prefills
+      const prefills = await tx.$queryRaw<
+        {
+          answers: Record<string, unknown>;
+          recipient_name: string | null;
+          recipient_email: string | null;
+        }[]
+      >`
+        SELECT answers, recipient_name, recipient_email FROM form_prefills
         WHERE id = ${prefillId}::uuid AND form_id = ${form.id}::uuid`;
       const prefill = prefills[0];
       if (!prefill) return null;
@@ -56,7 +62,15 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
       const version = versionId
         ? await tx.formVersion.findFirst({ where: { id: versionId } })
         : null;
-      return { prefill, response, responses, version };
+      const labelRows = await tx.$queryRaw<{ response_label_field_id: string | null }[]>`
+        SELECT response_label_field_id FROM forms WHERE id = ${form.id}::uuid`;
+      return {
+        prefill,
+        response,
+        responses,
+        version,
+        labelFieldId: labelRows[0]?.response_label_field_id ?? null,
+      };
     });
     if (!data) throw new NotFoundError('Prefill');
 
@@ -84,7 +98,13 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
       round: row.round,
       changed: countChanged(row.original, row.answers),
       submittedAt: row.submitted_at?.toISOString() ?? null,
-      label: parsed?.success ? deriveParticipantName(parsed.data, row.answers) : null,
+      // The form's chosen identifying field, else who the prefill was sent to — never a guess
+      // from field names, which can land on a staff member instead of the client.
+      label:
+        (parsed?.success
+          ? configuredResponseLabel(parsed.data, data.labelFieldId, row.answers)
+          : null) ??
+        (data.prefill.recipient_name || data.prefill.recipient_email || null),
     }));
     const changedCount = list[0]?.changed ?? 0;
 

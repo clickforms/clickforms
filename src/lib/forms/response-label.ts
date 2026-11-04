@@ -48,3 +48,18 @@ export function formatResponseLabel(
   }
   return null;
 }
+
+/**
+ * Who/what a response is about: the field the form owner picked as the identifying column (a
+ * client name, a job number…) when one is set and filled in, otherwise null so callers can fall
+ * back to something else. Deliberately does not guess from field labels — a form can have
+ * several "name" fields (staff, client, witness) and the guess picks the wrong one.
+ */
+export function configuredResponseLabel(
+  schema: FormSchema | undefined,
+  labelFieldId: string | null,
+  answers: Record<string, unknown>,
+): string | null {
+  if (!labelFieldId) return null;
+  return formatResponseLabel(schema, labelFieldId, answers[labelFieldId]);
+}

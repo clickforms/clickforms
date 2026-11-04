@@ -4,8 +4,8 @@ import { assertOrgActionsAllowed } from '@/lib/admin/plan-enforcement';
 import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
-import { deriveParticipantName } from '@/lib/forms/participant-name';
 import { generatePrefillToken, PREFILL_TTL_MS, sanitizePrefillAnswers } from '@/lib/forms/prefills';
+import { configuredResponseLabel } from '@/lib/forms/response-label';
 import { formSchemaSchema } from '@/lib/forms/schema';
 import { prefillUrl, sendPrefillEmail } from '@/lib/forms/send-prefill-email';
 import { requireOrganizationId, requireRole, requireSession, userDisplayName } from '@/lib/session';
@@ -83,9 +83,18 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
       }
       const isDraft = body.delivery === 'draft';
       // A label for drafts in the Prefills tab: whatever name/email the admin has filled in.
-      const draftLabel = isDraft
-        ? (body.recipientName ?? deriveParticipantName(parsed.data, answers))
-        : null;
+      let draftLabel: string | null = null;
+      if (isDraft) {
+        const labelRows = await tx.$queryRaw<{ response_label_field_id: string | null }[]>`
+          SELECT response_label_field_id FROM forms WHERE id = ${form.id}::uuid`;
+        draftLabel =
+          body.recipientName ??
+          configuredResponseLabel(
+            parsed.data,
+            labelRows[0]?.response_label_field_id ?? null,
+            answers,
+          );
+      }
 
       if (isDraft) {
         const draftExpiry = new Date(Date.now() + PREFILL_TTL_MS);

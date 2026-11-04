@@ -289,7 +289,8 @@ export function PrefillsListClient({
             Review before Responses
           </label>
           <span className="submissions-count-badge">
-            {visible.length} of {items.length} {items.length === 1 ? 'prefill' : 'prefills'}
+            {visible.length} of {initialPrefills.length}{' '}
+            {initialPrefills.length === 1 ? 'prefill' : 'prefills'}
           </span>
         </div>
         {isLive ? (

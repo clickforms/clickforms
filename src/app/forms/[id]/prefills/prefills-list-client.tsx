@@ -59,7 +59,7 @@ function initials(item: PrefillItem): string {
   return ((parts[0]?.[0] ?? '?') + (parts[1]?.[0] ?? '')).toUpperCase();
 }
 
-const AVATAR_COLORS = ['#579bfc', '#00c875', '#fdab3d', '#e2445c', '#037f4c', '#66ccff', '#ff7575'];
+const AVATAR_COLORS = ['#55ea8c', '#3dd975', '#a8f0c4', '#d3ccff', '#b9e8cf', '#7c5cfa'];
 
 /** A stable colour per person, so rows are easy to tell apart at a glance. */
 function avatarColor(item: PrefillItem): string {
@@ -400,16 +400,6 @@ export function PrefillsListClient({
                           >
                             <Icon d="M2.5 4.5h11v7h-11zM2.5 5l5.5 4 5.5-4" />
                           </button>
-                        ) : null}
-                        {item.status !== 'draft' ? (
-                          <a
-                            className="pf-icon-btn"
-                            href={item.sendAgainHref}
-                            title="Send to someone else"
-                            aria-label="Send to someone else"
-                          >
-                            <Icon d="M2.5 8h9M8.5 4.5 12 8l-3.5 3.5" />
-                          </a>
                         ) : null}
                         {item.status !== 'review' ? (
                           <button

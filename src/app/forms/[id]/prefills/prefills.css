@@ -59,8 +59,8 @@
   left: 0;
   right: 0;
   bottom: -1px;
-  height: 2px;
-  background: #323338;
+  height: 3px;
+  background: #55ea8c;
 }
 .pf-filter-count {
   min-width: 1.2rem;
@@ -91,8 +91,8 @@
   color: #676879;
 }
 .pf-search:focus-within {
-  border-color: #0073ea;
-  box-shadow: 0 0 0 1px #0073ea;
+  border-color: #55ea8c;
+  box-shadow: 0 0 0 2px #cdf9de;
 }
 .pf-search input {
   width: 140px;
@@ -165,8 +165,8 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #579bfc;
-  color: #fff;
+  background: #55ea8c;
+  color: #0b2a17;
   font-size: 0.72rem;
   font-weight: 600;
 }
@@ -217,10 +217,10 @@
   background: #c5c7d0;
 }
 .pf-status--sent {
-  background: #579bfc;
+  background: #9b87fa;
 }
 .pf-status--opened {
-  background: #0086c0;
+  background: #7c5cfa;
 }
 .pf-status--started {
   background: #fdab3d;
@@ -229,7 +229,7 @@
   background: #fdab3d;
 }
 .pf-status--completed {
-  background: #00c875;
+  background: #2ebf6b;
 }
 .pf-status--expired {
   background: #e2445c;
@@ -268,11 +268,12 @@
   font-size: 0.82rem;
 }
 .pf-btn--primary {
-  background: #323338;
-  color: #fff;
+  background: var(--color-primary, #55ea8c);
+  color: #0b2a17;
+  font-weight: 600;
 }
 .pf-btn--primary:hover:not(:disabled) {
-  background: #1c1d21;
+  background: var(--color-primary-hover, #3dd975);
 }
 .pf-btn--ghost {
   background: #fff;
@@ -413,7 +414,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem 1rem 1rem 3.75rem;
-  box-shadow: inset 3px 0 0 #323338;
+  box-shadow: inset 3px 0 0 #55ea8c;
 }
 .pfp--msg {
   color: #676879;
@@ -466,7 +467,7 @@
   font-size: 0.78rem;
 }
 .pfp-item-go {
-  color: #0073ea;
+  color: #5b3fd6;
   font-size: 0.84rem;
   font-weight: 500;
   white-space: nowrap;
@@ -584,11 +585,22 @@
   transition: transform 0.15s;
 }
 .pfd-switch input:checked + span {
-  background: #00c875;
+  background: #2ebf6b;
 }
 .pfd-switch input:checked + span::after {
   transform: translateX(14px);
 }
 .pfd-switch input:focus-visible + span {
   box-shadow: 0 0 0 3px rgba(0, 115, 234, 0.35);
+}
+
+.pf-filter[aria-selected="true"] .pf-filter-count {
+  background: #efecff;
+  color: #5b3fd6;
+}
+.pf-row--open > td:first-child {
+  box-shadow: inset 3px 0 0 #55ea8c;
+}
+.pfp-item:hover .pfp-item-go {
+  text-decoration: underline;
 }

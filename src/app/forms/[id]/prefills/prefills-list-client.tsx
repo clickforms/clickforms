@@ -42,7 +42,7 @@ const STATUS_LABEL: Record<Status, string> = {
   sent: 'Sent',
   opened: 'Opened',
   started: 'In progress',
-  completed: 'Completed',
+  completed: 'Returned',
   expired: 'Expired',
 };
 
@@ -54,7 +54,7 @@ const FILTERS: { key: 'all' | Status; label: string }[] = [
   { key: 'sent', label: 'Sent' },
   { key: 'opened', label: 'Opened' },
   { key: 'started', label: 'In progress' },
-  { key: 'completed', label: 'Completed' },
+  { key: 'completed', label: 'Returned' },
   { key: 'expired', label: 'Expired' },
 ];
 
@@ -339,7 +339,8 @@ export function PrefillsListClient({
               const expandable =
                 item.status === 'review' ||
                 item.status === 'correction' ||
-                item.status === 'completed';
+                item.status === 'completed' ||
+                item.responses > 0;
               const isOpen = openId === item.id;
               return (
                 <Fragment key={item.id}>
@@ -421,7 +422,7 @@ export function PrefillsListClient({
                           <a
                             className="pf-btn pf-btn--ghost pf-btn--sm"
                             href={item.sendAgainHref}
-                            title="Open the prefilled answers to edit or send to someone else"
+                            title="Edit this prefill and send it again, to the same person or others"
                           >
                             Open
                           </a>

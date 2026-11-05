@@ -32,6 +32,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
           SELECT EXISTS (
             SELECT 1 FROM submissions s JOIN form_prefills p ON p.id = s.prefill_id
             WHERE p.token = ${prefillToken} AND p.form_id = ${form.id}::uuid
+              AND s.created_at >= COALESCE(p.sent_at, p.created_at)
               AND (s.prefill_held OR s.status <> 'in_progress')) AS used`;
         if (used[0]?.used) {
           throw new InvalidRequestError('This link has already been used to submit the form.');

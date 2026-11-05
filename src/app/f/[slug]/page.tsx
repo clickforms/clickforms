@@ -102,6 +102,7 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
       const rows = await tx.$queryRaw<{ id: string; answers: unknown; used: boolean }[]>`
         SELECT id, answers,
           EXISTS (SELECT 1 FROM submissions s WHERE s.prefill_id = form_prefills.id
+                  AND s.created_at >= COALESCE(form_prefills.sent_at, form_prefills.created_at)
                   AND (s.prefill_held OR s.status <> 'in_progress')) AS used
         FROM form_prefills
         WHERE token = ${rawToken} AND form_id = ${form.id}::uuid AND expires_at > now()

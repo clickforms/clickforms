@@ -67,6 +67,8 @@ interface FormRendererClientProps {
   prefillBuilder?: boolean;
   /** Builder only: the saved draft being continued (updated in place when saved/sent). */
   draftId?: string;
+  /** A sent prefill being edited in place and re-sent. */
+  reopenId?: string;
 }
 
 interface PresignResponse {
@@ -114,6 +116,7 @@ function FormRendererInner({
   prefillToken,
   prefillBuilder = false,
   draftId,
+  reopenId,
 }: FormRendererClientProps) {
   const toast = useToast();
   const [pageIndex, setPageIndex] = useState(0);
@@ -444,6 +447,7 @@ function FormRendererInner({
             answers,
             delivery: sendMode,
             draftId,
+            reopenId,
             recipientEmails: sendMode === 'email' ? emails : undefined,
             recipientName: recipientName.trim() || undefined,
             note: sendMode === 'email' ? note.trim() || undefined : undefined,
@@ -461,7 +465,7 @@ function FormRendererInner({
         setSubmitting(false);
       }
     },
-    [answers, draftId, formId, note, recipientEmails, recipientName, sendMode, toast],
+    [answers, draftId, reopenId, formId, note, recipientEmails, recipientName, sendMode, toast],
   );
 
   const saveDraft = useCallback(async () => {

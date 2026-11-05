@@ -70,6 +70,8 @@ export interface PrefillRow {
   completed: number;
   /** Responses returned through this prefill and held for review. */
   held: number;
+  /** Every response that has come back through this prefill (any send), for the accordion. */
+  returned: number;
   /** Raw answer to the form's chosen identifying field (first column), if one is set. */
   label_value: unknown;
   /** Corrections sent back to the recipient that haven't come back yet. */
@@ -109,12 +111,17 @@ export async function listPrefills(
            COALESCE(u.name, u.email) AS created_by_name,
            p.answers -> ${labelFieldId}::text AS label_value,
            (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
-              WHERE (f.id = p.id OR f.parent_id = p.id) AND s.status <> 'in_progress') AS completed,
+              WHERE (f.id = p.id OR f.parent_id = p.id) AND s.status <> 'in_progress'
+                AND s.created_at >= COALESCE(f.sent_at, f.created_at)) AS completed,
+           (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
+              WHERE (f.id = p.id OR f.parent_id = p.id)
+                AND (s.prefill_held OR s.status <> 'in_progress')) AS returned,
            (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
               WHERE (f.id = p.id OR f.parent_id = p.id) AND s.prefill_held
                 AND s.sent_back_at IS NULL) AS held,
            (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
-              WHERE (f.id = p.id OR f.parent_id = p.id) AND NOT s.prefill_held) AS responses,
+              WHERE (f.id = p.id OR f.parent_id = p.id) AND NOT s.prefill_held
+                AND s.created_at >= COALESCE(f.sent_at, f.created_at)) AS responses,
            (SELECT count(*)::int FROM form_prefills c
               WHERE c.parent_id = p.id
                 AND NOT EXISTS (SELECT 1 FROM submissions s WHERE s.prefill_id = c.id

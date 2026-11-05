@@ -9,7 +9,7 @@ import { requireOrganizationId } from '@/lib/session';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ draft?: string; from?: string }>;
+  searchParams?: Promise<{ draft?: string; from?: string; open?: string }>;
 }
 
 // Admin-only page for sending a prefilled form: renders the live form, the admin fills in
@@ -20,20 +20,21 @@ export default async function FormPrefillPage({ params, searchParams }: PageProp
   const query = await searchParams;
   const draftParam = query?.draft;
   const fromParam = query?.from;
+  const openParam = query?.open;
 
   const session = await getServerSession(authOptions);
   if (!session?.user?.organizationId) {
     notFound();
   }
 
-  const { form, version, draft, from } = await withOrgContext(
+  const { form, version, draft, from, reopen } = await withOrgContext(
     session.user.organizationId,
     async (tx) => {
       const form = await tx.form.findFirst({
         where: { slug, organizationId: requireOrganizationId(session) },
       });
       if (!form?.currentVersionId) {
-        return { form: null, version: null, draft: null, from: null };
+        return { form: null, version: null, draft: null, from: null, reopen: null };
       }
       const version = await tx.formVersion.findFirst({
         where: { id: form.currentVersionId, organizationId: requireOrganizationId(session) },
@@ -53,7 +54,20 @@ export default async function FormPrefillPage({ params, searchParams }: PageProp
             SELECT answers, COALESCE(recipient_name, recipient_email) AS label FROM form_prefills
             WHERE id = ${fromParam}::uuid AND form_id = ${form.id}::uuid`
           : [];
-      return { form, version, draft: draftRows[0] ?? null, from: fromRows[0] ?? null };
+      // "Open" on a sent prefill: edit that same prefill and send it again.
+      const reopenRows =
+        openParam && /^[0-9a-f-]{36}$/i.test(openParam)
+          ? await tx.$queryRaw<{ id: string; answers: unknown; label: string | null }[]>`
+            SELECT id, answers, COALESCE(recipient_name, recipient_email) AS label FROM form_prefills
+            WHERE id = ${openParam}::uuid AND form_id = ${form.id}::uuid AND NOT is_draft`
+          : [];
+      return {
+        form,
+        version,
+        draft: draftRows[0] ?? null,
+        from: fromRows[0] ?? null,
+        reopen: reopenRows[0] ?? null,
+      };
     },
   );
 
@@ -70,9 +84,11 @@ export default async function FormPrefillPage({ params, searchParams }: PageProp
   return (
     <div className="form-preview-shell">
       <div className="form-preview-banner">
-        {from
-          ? `Starting from ${from.label ?? 'another'} prefill — change what you need, then send it to someone else. The original stays as it was sent.`
-          : 'Fill in the answers you want pre-populated, then send the form. Nothing here is submitted as a response.'}
+        {reopen
+          ? `Editing ${reopen.label ?? 'this'} prefill — change what you need, then send it again. Responses already returned stay in the Prefills tab.`
+          : from
+            ? `Starting from ${from.label ?? 'another'} prefill — change what you need, then send it to someone else. The original stays as it was sent.`
+            : 'Fill in the answers you want pre-populated, then send the form. Nothing here is submitted as a response.'}
       </div>
       <FormRendererClient
         slug={form.slug}
@@ -83,12 +99,15 @@ export default async function FormPrefillPage({ params, searchParams }: PageProp
         previewMode
         prefillBuilder
         draftId={draft?.id}
+        reopenId={reopen?.id}
         prefillAnswers={
           draft
             ? sanitizePrefillAnswers(schema, draft.answers)
-            : from
-              ? sanitizePrefillAnswers(schema, from.answers)
-              : undefined
+            : reopen
+              ? sanitizePrefillAnswers(schema, reopen.answers)
+              : from
+                ? sanitizePrefillAnswers(schema, from.answers)
+                : undefined
         }
       />
     </div>

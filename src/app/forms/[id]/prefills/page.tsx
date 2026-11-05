@@ -82,11 +82,11 @@ export default async function PrefillsPage({ params }: PageProps) {
           url: prefillUrl(subdomain, form.slug, row.token),
           continueHref: `/f/${form.slug}/prefill?draft=${row.id}`,
           detailHref: `/forms/${form.id}/prefills/${row.id}`,
-          sendAgainHref: `/f/${form.slug}/prefill?from=${row.id}`,
+          sendAgainHref: `/f/${form.slug}/prefill?open=${row.id}`,
           status: prefillStatus(row),
           sentAt: (row.sent_at ?? row.created_at).toISOString(),
           createdBy: row.created_by_name,
-          responses: row.completed,
+          responses: row.returned,
         }))}
       />
     </div>

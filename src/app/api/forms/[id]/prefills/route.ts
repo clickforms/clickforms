@@ -25,6 +25,8 @@ const bodySchema = z.object({
   delivery: z.enum(['email', 'link', 'draft']).default('email'),
   /** An existing draft being continued — updated in place rather than creating a new row. */
   draftId: z.string().uuid().optional(),
+  /** A sent prefill being edited in place and sent again (new link, same row). */
+  reopenId: z.string().uuid().optional(),
   recipientEmail: z.string().trim().email('Enter a valid email address').optional(),
   /** Several recipients at once — one separate prefill (own link, own response) per address. */
   recipientEmails: z
@@ -141,6 +143,19 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
             WHERE id = ${body.draftId}::uuid AND form_id = ${form.id}::uuid AND is_draft`;
           if (finished === 0) throw new NotFoundError('Draft');
           created.push({ id: body.draftId, token, email: emailTo });
+          continue;
+        }
+        if (index === 0 && body.reopenId) {
+          // Re-sending an existing prefill: same row, updated answers, a fresh link and clock.
+          // Responses that already came back stay linked to it.
+          const reopened = await tx.$executeRaw`
+            UPDATE form_prefills
+            SET answers = ${JSON.stringify(answers)}::jsonb, recipient_email = ${emailTo},
+                recipient_name = ${body.recipientName || null}, token = ${token},
+                sent_at = now(), opened_at = NULL, expires_at = ${expiresAt}
+            WHERE id = ${body.reopenId}::uuid AND form_id = ${form.id}::uuid AND NOT is_draft`;
+          if (reopened === 0) throw new NotFoundError('Prefill');
+          created.push({ id: body.reopenId, token, email: emailTo });
           continue;
         }
         // Each recipient gets their own row with a frozen copy of the answers as sent.

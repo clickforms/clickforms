@@ -177,7 +177,7 @@ export function OrganisationDetailsClient({
   // that default explicitly — used when redirecting back from /forms/organisation/plan
   // after a switch, since the switch may have just graduated the org from 'trial' to
   // 'active', which would otherwise silently default back to General on return.
-  const [activeTab, setActiveTab] = useState<'general' | 'preheader' | 'billing'>(
+  const [activeTab, setActiveTab] = useState<'general' | 'system' | 'billing'>(
     searchParams.get('tab') === 'billing' || plan.status !== 'active' ? 'billing' : 'general',
   );
   // Actually changing plans now happens on its own page (/forms/organisation/plan —
@@ -452,11 +452,11 @@ export function OrganisationDetailsClient({
           <button
             type="button"
             role="tab"
-            aria-selected={activeTab === 'preheader'}
-            className={`org-settings-tab${activeTab === 'preheader' ? ' org-settings-tab--active' : ''}`}
-            onClick={() => setActiveTab('preheader')}
+            aria-selected={activeTab === 'system'}
+            className={`org-settings-tab${activeTab === 'system' ? ' org-settings-tab--active' : ''}`}
+            onClick={() => setActiveTab('system')}
           >
-            Pre-header
+            System
           </button>
           <button
             type="button"
@@ -732,8 +732,9 @@ export function OrganisationDetailsClient({
         </form>
       ) : null}
 
-      {activeTab === 'preheader' ? (
+      {activeTab === 'system' ? (
         <div className="org-settings-stack">
+          <p className="org-settings-lead">Workspace-wide defaults that apply across your forms.</p>
           <PreheaderPanel
             orgName={name.trim() || initialOrganization.name}
             logoUrl={logoUrl}

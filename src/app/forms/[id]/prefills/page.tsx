@@ -33,9 +33,14 @@ export default async function PrefillsPage({ params }: PageProps) {
     const labelRows = await tx.$queryRaw<{ response_label_field_id: string | null }[]>`
       SELECT response_label_field_id FROM forms WHERE id = ${form.id}::uuid`;
     const labelFieldId = labelRows[0]?.response_label_field_id ?? null;
+    // An offline form has no current version, so fall back to the newest one: the first column
+    // and the field picker still need the schema to read answers like Full Name.
     const version = form.currentVersionId
       ? await tx.formVersion.findFirst({ where: { id: form.currentVersionId } })
-      : null;
+      : await tx.formVersion.findFirst({
+          where: { formId: form.id },
+          orderBy: { versionNumber: 'desc' },
+        });
     return {
       form,
       labelFieldId,

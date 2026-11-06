@@ -41,7 +41,15 @@ export function formatResponseLabel(
     );
     return text || null;
   }
-  if (typeof value === 'string') return value.trim() || null;
+  if (typeof value === 'string') {
+    // A Full Name answer is stored as a JSON string. If the schema isn't available (a form that's
+    // offline has no current version), still show a readable name instead of the raw JSON.
+    if (!field && value.trim().startsWith('{') && value.includes('"first"')) {
+      const text = formatFullNameAnswer(parseFullNameAnswer(value));
+      if (text) return text;
+    }
+    return value.trim() || null;
+  }
   if (typeof value === 'number') return String(value);
   if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
     return value.join(', ') || null;

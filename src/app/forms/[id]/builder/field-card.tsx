@@ -439,6 +439,8 @@ function FieldPreview({
         <input
           className="text-input field-preview-input"
           type="text"
+          key={field.defaultValue ?? ''}
+          defaultValue={field.defaultValue}
           placeholder={field.placeholder || 'Short answer'}
           disabled
           style={inputStyle}
@@ -449,6 +451,8 @@ function FieldPreview({
         <textarea
           className="text-input field-preview-input"
           rows={field.rows ?? 3}
+          key={field.defaultValue ?? ''}
+          defaultValue={field.defaultValue}
           placeholder={field.placeholder || 'Long answer'}
           disabled
           style={inputStyle}
@@ -531,6 +535,8 @@ function FieldPreview({
         <input
           className="text-input field-preview-input"
           type="email"
+          key={field.defaultValue ?? ''}
+          defaultValue={field.defaultValue}
           placeholder="name@example.com"
           disabled
           style={inputStyle}
@@ -1154,6 +1160,8 @@ function FieldPreview({
           <input
             className="text-input field-preview-input"
             type="tel"
+            key={field.defaultValue ?? ''}
+            defaultValue={field.defaultValue}
             placeholder={field.placeholder || '+61 4XX XXX XXX'}
             disabled
             style={inputStyle}
@@ -1165,6 +1173,8 @@ function FieldPreview({
         <input
           className="text-input field-preview-input"
           type="url"
+          key={field.defaultValue ?? ''}
+          defaultValue={field.defaultValue}
           placeholder={field.placeholder || 'https://example.com'}
           disabled
           style={inputStyle}

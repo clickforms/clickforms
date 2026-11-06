@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+export type Tone = 'green' | 'violet' | 'amber' | 'blue';
+
 export type IconName = 'building' | 'user' | 'bell' | 'layout' | 'chart' | 'card';
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
@@ -63,6 +65,7 @@ export function OrgIcon({ name, size = 16 }: { name: IconName; size?: number }) 
 
 interface PanelHeadProps {
   icon: IconName;
+  tone?: Tone;
   title: string;
   description?: string;
   /** Optional trailing control (e.g. a help tip or an action). */
@@ -70,11 +73,11 @@ interface PanelHeadProps {
 }
 
 /** Header for an org settings panel: icon tile, title, one-line description. */
-export function PanelHead({ icon, title, description, aside }: PanelHeadProps) {
+export function PanelHead({ icon, tone = 'green', title, description, aside }: PanelHeadProps) {
   return (
     <header className="org-panel-head">
       <div className="org-panel-head-main">
-        <span className="org-panel-icon" aria-hidden="true">
+        <span className="org-panel-icon" data-tone={tone} aria-hidden="true">
           <OrgIcon name={icon} />
         </span>
         <div>

@@ -453,7 +453,9 @@ export function OrganisationDetailsClient({
             className={`org-ws-nav-item${activeTab === 'general' ? ' org-ws-nav-item--active' : ''}`}
             onClick={() => setActiveTab('general')}
           >
-            <OrgIcon name="building" />
+            <span className="org-ws-nav-icon" data-tone="green">
+              <OrgIcon name="building" size={15} />
+            </span>
             General
           </button>
           <button
@@ -463,7 +465,9 @@ export function OrganisationDetailsClient({
             className={`org-ws-nav-item${activeTab === 'system' ? ' org-ws-nav-item--active' : ''}`}
             onClick={() => setActiveTab('system')}
           >
-            <OrgIcon name="layout" />
+            <span className="org-ws-nav-icon" data-tone="violet">
+              <OrgIcon name="layout" size={15} />
+            </span>
             System
           </button>
           <button
@@ -473,7 +477,9 @@ export function OrganisationDetailsClient({
             className={`org-ws-nav-item${activeTab === 'billing' ? ' org-ws-nav-item--active' : ''}`}
             onClick={() => setActiveTab('billing')}
           >
-            <OrgIcon name="card" />
+            <span className="org-ws-nav-icon" data-tone="amber">
+              <OrgIcon name="card" size={15} />
+            </span>
             Billing
             {planInfo.status !== 'active' ? (
               <span className="org-ws-nav-dot" aria-hidden="true" />
@@ -588,6 +594,7 @@ export function OrganisationDetailsClient({
               <section className="org-panel">
                 <PanelHead
                   icon="building"
+                  tone="green"
                   title="Profile"
                   description="How your organisation appears across Clickforms."
                 />
@@ -650,6 +657,7 @@ export function OrganisationDetailsClient({
               <section className="org-panel">
                 <PanelHead
                   icon="user"
+                  tone="violet"
                   title="Contact"
                   description="Who we reach out to about this workspace."
                 />
@@ -709,6 +717,7 @@ export function OrganisationDetailsClient({
               <section className="org-panel org-panel--wide">
                 <PanelHead
                   icon="bell"
+                  tone="amber"
                   title="Notifications"
                   description="Organisation-wide default when someone submits a form. Individual forms can override this in their own settings."
                 />
@@ -862,6 +871,7 @@ export function OrganisationDetailsClient({
               <section className="org-panel org-panel--wide">
                 <PanelHead
                   icon="chart"
+                  tone="blue"
                   title="Usage"
                   description="This month against your current plan's limits."
                 />

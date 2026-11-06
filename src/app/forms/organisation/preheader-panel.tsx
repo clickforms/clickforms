@@ -48,6 +48,7 @@ export function PreheaderPanel({ orgName, logoUrl, initial }: PreheaderPanelProp
     <form className="org-panel org-panel--wide" onSubmit={handleSubmit}>
       <PanelHead
         icon="layout"
+        tone="violet"
         title="Form pre-header"
         description="Your logo and details, offered at the top of forms created from a template."
       />

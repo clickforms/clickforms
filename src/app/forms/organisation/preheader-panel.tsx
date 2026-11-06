@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+import { useState } from 'react';
 import { PreheaderPreview } from '@/components/preheader-preview';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
@@ -22,8 +22,7 @@ export function PreheaderPanel({ orgName, logoUrl, initial }: PreheaderPanelProp
   const [isSaving, setIsSaving] = useState(false);
   const dirty = JSON.stringify(value) !== saved;
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  async function handleSave() {
     setIsSaving(true);
     try {
       const res = await fetch('/api/organization/preheader', {
@@ -45,7 +44,7 @@ export function PreheaderPanel({ orgName, logoUrl, initial }: PreheaderPanelProp
   }
 
   return (
-    <form className="org-panel org-panel--wide" onSubmit={handleSubmit}>
+    <section className="org-panel org-panel--wide">
       <PanelHead
         icon="layout"
         tone="violet"
@@ -96,13 +95,18 @@ export function PreheaderPanel({ orgName, logoUrl, initial }: PreheaderPanelProp
             />
           </label>
           <div className="preheader-panel-actions">
-            <button type="submit" className="button button--dark" disabled={isSaving || !dirty}>
+            <button
+              type="button"
+              className="button button--dark"
+              disabled={isSaving || !dirty}
+              onClick={() => void handleSave()}
+            >
               {isSaving ? 'Saving…' : 'Save pre-header'}
             </button>
           </div>
         </div>
         <PreheaderPreview preheader={value} logoUrl={logoUrl} orgName={orgName} />
       </div>
-    </form>
+    </section>
   );
 }

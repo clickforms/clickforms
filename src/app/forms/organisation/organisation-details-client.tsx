@@ -487,159 +487,59 @@ export function OrganisationDetailsClient({
           </button>
         </div>
         <div className="org-ws-content">
-          {activeTab === 'general' ? (
+          {activeTab === 'general' || activeTab === 'system' ? (
             <form id="org-general-form" className="org-settings-stack" onSubmit={handleSubmit}>
               {error ? (
                 <p className="form-error org-settings-error" role="alert">
                   {error}
                 </p>
               ) : null}
-
-              <section className="org-panel org-identity">
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept={LOGO_ACCEPT}
-                  className="org-file-input"
-                  onChange={(event) => void handleLogoFileChange(event)}
-                  disabled={isUploadingLogo || isRemovingLogo}
-                />
-                <button
-                  type="button"
-                  className="org-identity-logo"
-                  disabled={isUploadingLogo || isRemovingLogo}
-                  onClick={() => logoInputRef.current?.click()}
-                  aria-label={logoUrl ? 'Replace organisation logo' : 'Upload organisation logo'}
-                >
-                  {logoUrl ? (
-                    // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
-                    <img src={logoUrl} alt="" />
-                  ) : (
-                    <span className="org-identity-initials">
-                      {orgInitials(name || 'Organisation')}
-                    </span>
-                  )}
-                  <span className="org-identity-logo-overlay">
-                    {isUploadingLogo ? '…' : <CameraIcon />}
-                  </span>
-                </button>
-                <div className="org-identity-copy">
-                  <div className="org-identity-name-row">
-                    <h2 className="org-identity-name">{name.trim() || 'Untitled organisation'}</h2>
-                    <HelpTip id="org-help-logo" label="About the organisation logo">
-                      PNG, JPEG, WebP, GIF, or SVG. Up to {MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB.
-                      Shown in the workspace and on share-link previews.
-                    </HelpTip>
-                  </div>
-                  <div className="org-identity-url">
-                    <span className="org-identity-url-text" title={publicOrigin}>
-                      {publicHost}
-                    </span>
+              {activeTab === 'general' ? (
+                <>
+                  <section className="org-panel org-identity">
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept={LOGO_ACCEPT}
+                      className="org-file-input"
+                      onChange={(event) => void handleLogoFileChange(event)}
+                      disabled={isUploadingLogo || isRemovingLogo}
+                    />
                     <button
                       type="button"
-                      className="org-icon-button"
-                      onClick={() => void copyPublicHost()}
-                      aria-label="Copy public URL"
-                    >
-                      <CopyIcon />
-                    </button>
-                  </div>
-                  <div className="org-identity-actions">
-                    <button
-                      type="button"
-                      className="button button--secondary button--small"
+                      className="org-identity-logo"
                       disabled={isUploadingLogo || isRemovingLogo}
                       onClick={() => logoInputRef.current?.click()}
+                      aria-label={
+                        logoUrl ? 'Replace organisation logo' : 'Upload organisation logo'
+                      }
                     >
-                      {isUploadingLogo ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
+                      {logoUrl ? (
+                        // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
+                        <img src={logoUrl} alt="" />
+                      ) : (
+                        <span className="org-identity-initials">
+                          {orgInitials(name || 'Organisation')}
+                        </span>
+                      )}
+                      <span className="org-identity-logo-overlay">
+                        {isUploadingLogo ? '…' : <CameraIcon />}
+                      </span>
                     </button>
-                    {logoUrl ? (
-                      <>
-                        <button
-                          type="button"
-                          className="button button--ghost button--small"
-                          disabled={isUploadingLogo || isRemovingLogo}
-                          onClick={() => void handleEditExistingLogo()}
-                        >
-                          Crop
-                        </button>
-                        <button
-                          type="button"
-                          className="button button--ghost button--small"
-                          disabled={isUploadingLogo || isRemovingLogo}
-                          onClick={() => void handleRemoveLogo()}
-                        >
-                          {isRemovingLogo ? 'Removing…' : 'Remove'}
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-                <dl className="org-identity-stats">
-                  <div>
-                    <dt>Plan</dt>
-                    <dd>{PLAN_LABELS[planInfo.plan]}</dd>
-                  </div>
-                  <div>
-                    <dt>Forms</dt>
-                    <dd>{planInfo.usage.forms}</dd>
-                  </div>
-                  <div>
-                    <dt>Team</dt>
-                    <dd>{planInfo.usage.users}</dd>
-                  </div>
-                </dl>
-              </section>
-
-              <section className="org-panel">
-                <PanelHead
-                  icon="building"
-                  tone="green"
-                  title="Profile"
-                  description="How your organisation appears across Clickforms."
-                />
-                <div className="org-rows">
-                  <div className="org-row">
-                    <div className="org-row-copy">
-                      <label htmlFor="org-name">Organisation name</label>
-                      <p>Shown on your forms, emails and share links.</p>
-                    </div>
-                    <div className="org-row-control">
-                      <input
-                        id="org-name"
-                        className="text-input org-input"
-                        required
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        disabled={isSaving}
-                      />
-                    </div>
-                  </div>
-                  <div className="org-row">
-                    <div className="org-row-copy">
-                      <label htmlFor="org-abn">ABN</label>
-                      <p>Optional. 11 digits, spaces allowed.</p>
-                    </div>
-                    <div className="org-row-control">
-                      <input
-                        id="org-abn"
-                        className="text-input org-input"
-                        value={abn}
-                        onChange={(event) => setAbn(event.target.value)}
-                        placeholder="11 222 333 444"
-                        inputMode="numeric"
-                        disabled={isSaving}
-                      />
-                    </div>
-                  </div>
-                  <div className="org-row">
-                    <div className="org-row-copy">
-                      <span className="org-row-label">Public URL</span>
-                      <p>Where respondents open your forms.</p>
-                    </div>
-                    <div className="org-row-control">
-                      <div className="org-readonly">
-                        <span>{publicHost}</span>
+                    <div className="org-identity-copy">
+                      <div className="org-identity-name-row">
+                        <h2 className="org-identity-name">
+                          {name.trim() || 'Untitled organisation'}
+                        </h2>
+                        <HelpTip id="org-help-logo" label="About the organisation logo">
+                          PNG, JPEG, WebP, GIF, or SVG. Up to {MAX_LOGO_SIZE_BYTES / (1024 * 1024)}
+                          MB. Shown in the workspace and on share-link previews.
+                        </HelpTip>
+                      </div>
+                      <div className="org-identity-url">
+                        <span className="org-identity-url-text" title={publicOrigin}>
+                          {publicHost}
+                        </span>
                         <button
                           type="button"
                           className="org-icon-button"
@@ -649,118 +549,237 @@ export function OrganisationDetailsClient({
                           <CopyIcon />
                         </button>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="org-panel">
-                <PanelHead
-                  icon="user"
-                  tone="violet"
-                  title="Contact"
-                  description="Who we reach out to about this workspace."
-                />
-                <div className="org-rows">
-                  <div className="org-row">
-                    <div className="org-row-copy">
-                      <label htmlFor="org-contact-name">Contact person</label>
-                      <p>Main person for account matters.</p>
-                    </div>
-                    <div className="org-row-control">
-                      <input
-                        id="org-contact-name"
-                        className="text-input org-input"
-                        value={contactName}
-                        onChange={(event) => setContactName(event.target.value)}
-                        disabled={isSaving}
-                      />
-                    </div>
-                  </div>
-                  <div className="org-row">
-                    <div className="org-row-copy">
-                      <label htmlFor="org-contact-email">Contact email</label>
-                      <p>Billing and service notices go here.</p>
-                    </div>
-                    <div className="org-row-control">
-                      <input
-                        id="org-contact-email"
-                        className="text-input org-input"
-                        type="email"
-                        value={contactEmail}
-                        onChange={(event) => setContactEmail(event.target.value)}
-                        placeholder="contact@yourorg.com"
-                        disabled={isSaving}
-                      />
-                    </div>
-                  </div>
-                  <div className="org-row">
-                    <div className="org-row-copy">
-                      <label htmlFor="org-contact-phone">Contact phone</label>
-                      <p>Optional.</p>
-                    </div>
-                    <div className="org-row-control">
-                      <input
-                        id="org-contact-phone"
-                        className="text-input org-input"
-                        type="tel"
-                        value={contactPhone}
-                        onChange={(event) => setContactPhone(event.target.value)}
-                        placeholder="0400 000 000"
-                        disabled={isSaving}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="org-panel org-panel--wide">
-                <PanelHead
-                  icon="bell"
-                  tone="amber"
-                  title="Notifications"
-                  description="Organisation-wide default when someone submits a form. Individual forms can override this in their own settings."
-                />
-                <div className="org-rows">
-                  <div className="org-row org-row--toggle">
-                    <div className="org-row-copy">
-                      <span className="org-row-label org-label-with-help">
-                        Email me new responses
-                        <HelpTip id="org-help-notify-toggle" label="About response emails">
-                          Sends a PDF copy of each submission to the address below.
-                        </HelpTip>
-                      </span>
-                    </div>
-                    <div className="org-row-control org-row-control--end">
-                      <Toggle
-                        checked={notificationsEnabled}
-                        onChange={setNotificationsEnabled}
-                        disabled={isSaving}
-                        label="Response notification email"
-                      />
-                    </div>
-                  </div>
-                  {notificationsEnabled ? (
-                    <div className="org-row">
-                      <div className="org-row-copy">
-                        <label htmlFor="org-notify-email">Notification email</label>
-                      </div>
-                      <div className="org-row-control">
-                        <input
-                          id="org-notify-email"
-                          className="text-input org-input"
-                          type="email"
-                          value={notificationEmail}
-                          onChange={(event) => setNotificationEmail(event.target.value)}
-                          placeholder="responses@yourorg.com"
-                          disabled={isSaving}
-                          required
-                        />
+                      <div className="org-identity-actions">
+                        <button
+                          type="button"
+                          className="button button--secondary button--small"
+                          disabled={isUploadingLogo || isRemovingLogo}
+                          onClick={() => logoInputRef.current?.click()}
+                        >
+                          {isUploadingLogo
+                            ? 'Uploading…'
+                            : logoUrl
+                              ? 'Replace logo'
+                              : 'Upload logo'}
+                        </button>
+                        {logoUrl ? (
+                          <>
+                            <button
+                              type="button"
+                              className="button button--ghost button--small"
+                              disabled={isUploadingLogo || isRemovingLogo}
+                              onClick={() => void handleEditExistingLogo()}
+                            >
+                              Crop
+                            </button>
+                            <button
+                              type="button"
+                              className="button button--ghost button--small"
+                              disabled={isUploadingLogo || isRemovingLogo}
+                              onClick={() => void handleRemoveLogo()}
+                            >
+                              {isRemovingLogo ? 'Removing…' : 'Remove'}
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </div>
-                  ) : null}
-                </div>
-              </section>
+                    <dl className="org-identity-stats">
+                      <div>
+                        <dt>Plan</dt>
+                        <dd>{PLAN_LABELS[planInfo.plan]}</dd>
+                      </div>
+                      <div>
+                        <dt>Forms</dt>
+                        <dd>{planInfo.usage.forms}</dd>
+                      </div>
+                      <div>
+                        <dt>Team</dt>
+                        <dd>{planInfo.usage.users}</dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <section className="org-panel">
+                    <PanelHead
+                      icon="building"
+                      tone="green"
+                      title="Profile"
+                      description="How your organisation appears across Clickforms."
+                    />
+                    <div className="org-rows">
+                      <div className="org-row">
+                        <div className="org-row-copy">
+                          <label htmlFor="org-name">Organisation name</label>
+                          <p>Shown on your forms, emails and share links.</p>
+                        </div>
+                        <div className="org-row-control">
+                          <input
+                            id="org-name"
+                            className="text-input org-input"
+                            required
+                            value={name}
+                            onChange={(event) => setName(event.target.value)}
+                            disabled={isSaving}
+                          />
+                        </div>
+                      </div>
+                      <div className="org-row">
+                        <div className="org-row-copy">
+                          <label htmlFor="org-abn">ABN</label>
+                          <p>Optional. 11 digits, spaces allowed.</p>
+                        </div>
+                        <div className="org-row-control">
+                          <input
+                            id="org-abn"
+                            className="text-input org-input"
+                            value={abn}
+                            onChange={(event) => setAbn(event.target.value)}
+                            placeholder="11 222 333 444"
+                            inputMode="numeric"
+                            disabled={isSaving}
+                          />
+                        </div>
+                      </div>
+                      <div className="org-row">
+                        <div className="org-row-copy">
+                          <span className="org-row-label">Public URL</span>
+                          <p>Where respondents open your forms.</p>
+                        </div>
+                        <div className="org-row-control">
+                          <div className="org-readonly">
+                            <span>{publicHost}</span>
+                            <button
+                              type="button"
+                              className="org-icon-button"
+                              onClick={() => void copyPublicHost()}
+                              aria-label="Copy public URL"
+                            >
+                              <CopyIcon />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="org-panel">
+                    <PanelHead
+                      icon="user"
+                      tone="violet"
+                      title="Contact"
+                      description="Who we reach out to about this workspace."
+                    />
+                    <div className="org-rows">
+                      <div className="org-row">
+                        <div className="org-row-copy">
+                          <label htmlFor="org-contact-name">Contact person</label>
+                          <p>Main person for account matters.</p>
+                        </div>
+                        <div className="org-row-control">
+                          <input
+                            id="org-contact-name"
+                            className="text-input org-input"
+                            value={contactName}
+                            onChange={(event) => setContactName(event.target.value)}
+                            disabled={isSaving}
+                          />
+                        </div>
+                      </div>
+                      <div className="org-row">
+                        <div className="org-row-copy">
+                          <label htmlFor="org-contact-email">Contact email</label>
+                          <p>Billing and service notices go here.</p>
+                        </div>
+                        <div className="org-row-control">
+                          <input
+                            id="org-contact-email"
+                            className="text-input org-input"
+                            type="email"
+                            value={contactEmail}
+                            onChange={(event) => setContactEmail(event.target.value)}
+                            placeholder="contact@yourorg.com"
+                            disabled={isSaving}
+                          />
+                        </div>
+                      </div>
+                      <div className="org-row">
+                        <div className="org-row-copy">
+                          <label htmlFor="org-contact-phone">Contact phone</label>
+                          <p>Optional.</p>
+                        </div>
+                        <div className="org-row-control">
+                          <input
+                            id="org-contact-phone"
+                            className="text-input org-input"
+                            type="tel"
+                            value={contactPhone}
+                            onChange={(event) => setContactPhone(event.target.value)}
+                            placeholder="0400 000 000"
+                            disabled={isSaving}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </>
+              ) : null}
+              {activeTab === 'system' ? (
+                <>
+                  <section className="org-panel org-panel--wide">
+                    <PanelHead
+                      icon="bell"
+                      tone="amber"
+                      title="Notifications"
+                      description="Organisation-wide default when someone submits a form. Individual forms can override this in their own settings."
+                    />
+                    <div className="org-rows">
+                      <div className="org-row org-row--toggle">
+                        <div className="org-row-copy">
+                          <span className="org-row-label org-label-with-help">
+                            Email me new responses
+                            <HelpTip id="org-help-notify-toggle" label="About response emails">
+                              Sends a PDF copy of each submission to the address below.
+                            </HelpTip>
+                          </span>
+                        </div>
+                        <div className="org-row-control org-row-control--end">
+                          <Toggle
+                            checked={notificationsEnabled}
+                            onChange={setNotificationsEnabled}
+                            disabled={isSaving}
+                            label="Response notification email"
+                          />
+                        </div>
+                      </div>
+                      {notificationsEnabled ? (
+                        <div className="org-row">
+                          <div className="org-row-copy">
+                            <label htmlFor="org-notify-email">Notification email</label>
+                          </div>
+                          <div className="org-row-control">
+                            <input
+                              id="org-notify-email"
+                              className="text-input org-input"
+                              type="email"
+                              value={notificationEmail}
+                              onChange={(event) => setNotificationEmail(event.target.value)}
+                              placeholder="responses@yourorg.com"
+                              disabled={isSaving}
+                              required
+                            />
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </section>
+                  <PreheaderPanel
+                    orgName={name.trim() || initialOrganization.name}
+                    logoUrl={logoUrl}
+                    initial={initialOrganization.preheader}
+                  />
+                </>
+              ) : null}
 
               <div className={`org-savebar${isDirty ? ' org-savebar--visible' : ''}`}>
                 <p>{isDirty ? 'You have unsaved changes' : 'All changes saved'}</p>
@@ -773,19 +792,6 @@ export function OrganisationDetailsClient({
                 </button>
               </div>
             </form>
-          ) : null}
-
-          {activeTab === 'system' ? (
-            <div className="org-settings-stack">
-              <p className="org-settings-lead">
-                Workspace-wide defaults that apply across your forms.
-              </p>
-              <PreheaderPanel
-                orgName={name.trim() || initialOrganization.name}
-                logoUrl={logoUrl}
-                initial={initialOrganization.preheader}
-              />
-            </div>
           ) : null}
 
           {activeTab === 'billing' ? (

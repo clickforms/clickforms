@@ -6,8 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema } from '@/lib/forms/schema';
 import { slugify, uniqueSlug } from '@/lib/forms/slug';
-import { preheaderInfoHtml } from '@/lib/org-preheader';
-import { readOrgPreheader } from '@/lib/org-preheader-db';
+import { parsePreheader, preheaderInfoHtml } from '@/lib/org-preheader';
 import { buildFormFieldImageKey, copyObject } from '@/lib/s3';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { formsListWhere } from '@/lib/user-roles';
@@ -117,9 +116,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       if (usePreheader) {
         const org = await tx.organization.findUnique({
           where: { id: requireOrganizationId(session) },
-          select: { logoStorageKey: true },
+          select: { logoStorageKey: true, preheader: true },
         });
-        const preheader = await readOrgPreheader(tx, requireOrganizationId(session));
+        const preheader = parsePreheader(org?.preheader);
         const firstPage = initialSchema.pages[0];
         if (preheader && firstPage) {
           const rowId = crypto.randomUUID();
@@ -133,18 +132,24 @@ export async function POST(request: Request): Promise<NextResponse> {
               fieldId: logoId,
               filename,
             });
-            await copyObject(org.logoStorageKey, key);
-            initialSchema.fields[logoId] = {
-              id: logoId,
-              type: 'image',
-              label: '',
-              required: false,
-              imageStorageKey: key,
-              alt: 'Organisation logo',
-              align: 'left',
-              imageSpacing: 'none',
-            };
-            slots[0] = logoId;
+            // A storage hiccup must not block form creation: without the copy the logo
+            // is simply omitted and the info block still goes in.
+            try {
+              await copyObject(org.logoStorageKey, key);
+              initialSchema.fields[logoId] = {
+                id: logoId,
+                type: 'image',
+                label: '',
+                required: false,
+                imageStorageKey: key,
+                alt: 'Organisation logo',
+                align: 'left',
+                imageSpacing: 'none',
+              };
+              slots[0] = logoId;
+            } catch (error) {
+              console.error('[forms] could not copy org logo into new form', error);
+            }
           }
           const infoHtml = preheaderInfoHtml(preheader);
           if (infoHtml) {

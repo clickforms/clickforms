@@ -16,7 +16,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
 
     await withOrgContext(session.user.organizationId, async (tx) => {
       await assertOrgActionsAllowed(tx, orgId);
-      await tx.$executeRaw`UPDATE organizations SET preheader = ${JSON.stringify(body)}::jsonb WHERE id = ${orgId}::uuid`;
+      await tx.organization.update({ where: { id: orgId }, data: { preheader: body } });
       await logAudit(
         {
           organizationId: orgId,

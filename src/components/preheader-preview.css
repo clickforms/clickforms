@@ -369,3 +369,10 @@
   font-weight: 600;
   color: var(--color-warning);
 }
+.preheader-section-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}

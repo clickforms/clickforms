@@ -367,7 +367,7 @@ export function PreheaderPanel({
           <Section
             step={3}
             title="Content"
-            description="Name, address, contact details, anything you want shown in the header."
+            description="Name, address and contact details, plus background colour and a divider line."
           >
             <div className="preheader-editor">
               <RichTextEditor
@@ -379,25 +379,24 @@ export function PreheaderPanel({
                 ariaLabel="Pre-header content"
               />
             </div>
-          </Section>
-
-          <Section step={4} title="Style" description="Optional finishing touches.">
-            <BackgroundField
-              value={value.backgroundColor}
-              onChange={(backgroundColor) => patch({ backgroundColor })}
-            />
-            <div className="preheader-field-row">
-              <span className="preheader-field-label">Divider line below</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={value.showDivider}
-                aria-label="Show divider line"
-                className="settings-toggle"
-                onClick={() => patch({ showDivider: !value.showDivider })}
-              >
-                <span className="settings-toggle-thumb" />
-              </button>
+            <div className="preheader-section-options">
+              <BackgroundField
+                value={value.backgroundColor}
+                onChange={(backgroundColor) => patch({ backgroundColor })}
+              />
+              <div className="preheader-field-row">
+                <span className="preheader-field-label">Divider line below</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={value.showDivider}
+                  aria-label="Show divider line"
+                  className="settings-toggle"
+                  onClick={() => patch({ showDivider: !value.showDivider })}
+                >
+                  <span className="settings-toggle-thumb" />
+                </button>
+              </div>
             </div>
           </Section>
 

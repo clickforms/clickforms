@@ -1,21 +1,21 @@
 .preheader-preview {
   border: 1px solid var(--color-border-strong);
   border-radius: 0.75rem;
-  background: #f1f5f9;
+  background: color-mix(in srgb, var(--color-primary) 6%, #fff);
   overflow: hidden;
 }
 .preheader-preview-bar {
   display: flex;
   gap: 0.3rem;
   padding: 0.5rem 0.75rem;
-  background: #e8edf3;
+  background: color-mix(in srgb, var(--color-primary) 10%, #fff);
   border-bottom: 1px solid var(--color-border);
 }
 .preheader-preview-bar span {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: #cbd5e1;
+  background: color-mix(in srgb, var(--color-primary) 45%, #fff);
 }
 .preheader-preview-page {
   margin: 1rem;
@@ -92,12 +92,12 @@
 .preheader-preview-sample-field span {
   display: block;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: color-mix(in srgb, var(--color-primary) 14%, #fff);
 }
 .preheader-preview-sample > .preheader-preview-sample-title {
   width: 52%;
   height: 1rem;
-  background: #cbd5e1;
+  background: color-mix(in srgb, var(--color-primary) 40%, #fff);
 }
 .preheader-preview-sample-field {
   display: flex;
@@ -111,8 +111,8 @@
 .preheader-preview-sample-field span:last-child {
   height: 1.9rem;
   border-radius: 0.5rem;
-  background: #f1f5f9;
-  box-shadow: inset 0 0 0 1px #e2e8f0;
+  background: color-mix(in srgb, var(--color-primary) 5%, #fff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 14%, #fff);
 }
 .preheader-preview-sample > .preheader-preview-sample-button {
   width: 5.5rem;

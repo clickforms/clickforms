@@ -13,6 +13,11 @@
   --org-accent: color-mix(in srgb, var(--color-primary) 55%, #0f7a3d);
   --org-focus: color-mix(in srgb, var(--color-primary) 30%, transparent);
   --org-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 28px rgba(15, 23, 42, 0.05);
+  /* Less grey: warm the neutrals with a faint green wash, keep borders light, make secondary
+   * text darker so it reads as crisp rather than washed out. */
+  --color-surface-sunken: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+  --color-border: color-mix(in srgb, var(--color-border-strong) 45%, var(--color-surface));
+  --color-text-muted: color-mix(in srgb, var(--color-text) 72%, var(--color-surface));
   --tone-green: #16a34a;
   --tone-violet: #7c5cfa;
   --tone-amber: #d97706;
@@ -106,7 +111,7 @@
 }
 
 .org-ws-nav-item:hover {
-  background: var(--color-surface);
+  background: var(--color-surface-sunken);
   color: var(--color-text);
 }
 
@@ -117,9 +122,9 @@
 
 .org-ws-nav-item--active,
 .org-ws-nav-item--active:hover {
-  border-color: var(--color-border);
-  background: var(--color-surface);
-  box-shadow: var(--org-shadow);
+  border-color: color-mix(in srgb, var(--tone) 22%, var(--color-surface));
+  background: color-mix(in srgb, var(--tone) 8%, var(--color-surface));
+  box-shadow: none;
   color: var(--color-text);
   font-weight: 750;
 }
@@ -709,4 +714,16 @@
   .org-ws .org-panel-head {
     padding-inline: 1.25rem;
   }
+}
+
+/* White canvas behind the Organisation pages instead of the shell's grey. */
+.admin-main:has(.org-ws) {
+  background: var(--color-surface);
+}
+
+.org-ws .org-panel {
+  border-color: var(--color-border);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 18px rgba(15, 23, 42, 0.04);
 }

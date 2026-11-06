@@ -140,7 +140,7 @@
 }
 
 .ph-diagram-line {
-  fill: var(--color-border-strong);
+  fill: color-mix(in srgb, var(--color-lavender-strong) 22%, var(--color-surface));
 }
 
 .ph-tile:hover {

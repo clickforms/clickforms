@@ -66,10 +66,17 @@ export function PreheaderPreview({ preheader, logoUrl, orgName, children }: Preh
           <div className="preheader-preview-rule" />
         ) : null}
         {children ?? (
-          <div className="preheader-preview-skeleton" aria-hidden="true">
-            <span style={{ width: '46%' }} />
-            <span style={{ width: '100%' }} />
-            <span style={{ width: '82%' }} />
+          <div className="preheader-preview-sample" aria-hidden="true">
+            <span className="preheader-preview-sample-title" />
+            <div className="preheader-preview-sample-field">
+              <span />
+              <span />
+            </div>
+            <div className="preheader-preview-sample-field">
+              <span />
+              <span />
+            </div>
+            <span className="preheader-preview-sample-button" />
           </div>
         )}
       </div>

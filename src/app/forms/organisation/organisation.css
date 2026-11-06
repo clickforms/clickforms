@@ -655,16 +655,6 @@
 
 /* ---- System ------------------------------------------------------------------------ */
 
-.org-ws .preheader-panel-grid {
-  padding: 1.75rem;
-  gap: 2.5rem;
-  align-items: start;
-}
-
-.org-ws .preheader-preview {
-  border-radius: 1rem;
-}
-
 /* ---- Responsive -------------------------------------------------------------------- */
 
 @media (max-width: 1200px) {

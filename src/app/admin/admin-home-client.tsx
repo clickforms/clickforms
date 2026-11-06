@@ -3,6 +3,7 @@
 import type { OrgPlan, OrgStatus } from '@prisma/client';
 import Link from 'next/link';
 import { PLAN_LABELS } from '@/lib/admin/plan-limits';
+import { formatDayMonth } from '@/lib/format-date';
 
 interface AdminHomeStats {
   organizationCount: number;
@@ -102,7 +103,7 @@ function formatRelativeTime(iso: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.round(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  return formatDayMonth(iso);
 }
 
 function orgInitial(name: string): string {

@@ -4,6 +4,7 @@ import type { FormStatus } from '@prisma/client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { LiveStatusBadge } from '@/components/live-status-badge';
+import { formatDayMonth } from '@/lib/format-date';
 
 interface DashboardStats {
   liveForms: number;
@@ -42,7 +43,7 @@ function formatRelativeTime(iso: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.round(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return formatDayMonth(iso);
 }
 
 function LiveIcon() {

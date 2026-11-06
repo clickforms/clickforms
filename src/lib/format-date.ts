@@ -16,6 +16,12 @@ function parts(iso: string, local: boolean) {
   };
 }
 
+/** "12 Jul" */
+export function formatDayMonth(iso: string, local = false): string {
+  const p = parts(iso, local);
+  return `${p.day} ${MONTHS[p.month]}`;
+}
+
 /** "12 Jul 2026" */
 export function formatShortDate(iso: string, local = false): string {
   const p = parts(iso, local);

@@ -4,6 +4,7 @@ import type { UserRole } from '@prisma/client';
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import { DropdownMenu } from '@/components/dropdown-menu';
+import { LocalDate } from '@/components/local-date';
 import { useToast } from '@/components/toast';
 import { extractApiError, readApiError } from '@/lib/error-message';
 import { formatUserRole } from '@/lib/user-roles';
@@ -36,14 +37,6 @@ function getInitials(name: string | null, email: string): string {
   const first = parts[0]?.[0] ?? '';
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : (parts[0]?.[1] ?? '');
   return `${first}${last}`.toUpperCase();
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function SearchIcon() {
@@ -355,7 +348,9 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: PlatformUserR
                         {user.twoFactorEnabled ? 'On' : 'Off'}
                       </span>
                     </td>
-                    <td data-label="Joined">{formatDate(user.createdAt)}</td>
+                    <td data-label="Joined">
+                      <LocalDate iso={user.createdAt} />
+                    </td>
                     <td data-label="Actions">
                       <div className="admin-orgs-actions">
                         <UserRowMenu

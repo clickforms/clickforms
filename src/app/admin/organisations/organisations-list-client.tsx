@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
 import { DeleteOrganisationModal } from '@/app/admin/organisations/delete-organisation-modal';
 import { DropdownMenu } from '@/components/dropdown-menu';
+import { LocalDate } from '@/components/local-date';
 import { useToast } from '@/components/toast';
 import { PLAN_LABELS } from '@/lib/admin/plan-limits';
 import { readApiError } from '@/lib/error-message';
@@ -101,14 +102,6 @@ function getInitials(name: string): string {
   const first = parts[0]?.[0] ?? '';
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : (parts[0]?.[1] ?? '');
   return `${first}${last}`.toUpperCase();
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function getTrialDaysRemaining(trialEndsAt: string | null, status: OrgStatus): number | null {
@@ -451,7 +444,9 @@ export function OrganisationsListClient({
                           ) : null}
                         </span>
                       </td>
-                      <td data-label="Created">{formatDate(org.createdAt)}</td>
+                      <td data-label="Created">
+                        <LocalDate iso={org.createdAt} />
+                      </td>
                       <td
                         data-label="Actions"
                         onClick={(event) => event.stopPropagation()}

@@ -21,6 +21,7 @@ import type { OrgPreheader } from '@/lib/org-preheader';
 import { HelpTip } from './help-tip';
 import { PreheaderPanel } from './preheader-panel';
 import './organisation.css';
+import { formatShortDate } from '@/lib/format-date';
 
 /** Keep in sync with MAX_LOGO_SIZE_BYTES / the logo MIME allowlist in src/lib/s3.ts —
  * not imported from there because that module is `server-only` (mirrors the same
@@ -67,12 +68,7 @@ const TAB_LEADS: Record<'general' | 'system' | 'billing', string> = {
 };
 
 function formatPlanDate(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  return formatShortDate(`${iso.slice(0, 10)}T00:00:00.000Z`);
 }
 
 /** Calendar days from today to `iso`, using the date portion only so a trial set for

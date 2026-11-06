@@ -6,6 +6,7 @@ import { type FormEvent, useMemo, useRef, useState } from 'react';
 import { NewTemplateModal } from '@/app/admin/templates/new-template-modal';
 import { TaxonomyField } from '@/app/admin/templates/taxonomy-field';
 import { DropdownMenu } from '@/components/dropdown-menu';
+import { LocalDate } from '@/components/local-date';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
 
@@ -55,14 +56,6 @@ const STATUS_LABELS: Record<TemplateStatus, string> = {
   published: 'Published',
   archived: 'Archived',
 };
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 function taxonomyLine(template: TemplateRow): string {
   const parts = [template.industry, template.category, template.formType].filter(Boolean);
@@ -987,7 +980,9 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                             {STATUS_LABELS[template.status]}
                           </span>
                         </td>
-                        <td data-label="Updated">{formatDate(template.updatedAt)}</td>
+                        <td data-label="Updated">
+                          <LocalDate iso={template.updatedAt} />
+                        </td>
                         <td
                           data-label="Actions"
                           onClick={(event) => event.stopPropagation()}

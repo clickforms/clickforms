@@ -16,3 +16,9 @@ export function LocalDate({ iso }: { iso: string }) {
   const mounted = useMounted();
   return <span title={formatDateTime(iso, mounted)}>{formatShortDate(iso, mounted)}</span>;
 }
+
+/** Date and time like "12 Jul 2026, 7:51 AM" in the viewer's timezone (UTC until mounted). */
+export function LocalDateTime({ iso }: { iso: string }) {
+  const mounted = useMounted();
+  return <span>{formatDateTime(iso, mounted)}</span>;
+}

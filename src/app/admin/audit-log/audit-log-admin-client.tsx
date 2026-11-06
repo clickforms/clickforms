@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { formatDayMonth } from '@/lib/format-date';
+import { useMounted } from '@/components/local-date';
+import { formatDateTime, formatDayMonth } from '@/lib/format-date';
 
 export interface AuditLogRow {
   id: string;
@@ -92,16 +93,6 @@ function formatRelativeTime(iso: string): string {
   return formatDayMonth(iso);
 }
 
-function formatExactTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
 function SearchIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -112,6 +103,7 @@ function SearchIcon() {
 }
 
 export function AuditLogAdminClient({ initialEntries }: { initialEntries: AuditLogRow[] }) {
+  const mounted = useMounted();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('all');
   const [page, setPage] = useState(1);
@@ -242,7 +234,7 @@ export function AuditLogAdminClient({ initialEntries }: { initialEntries: AuditL
                     <time
                       className="admin-audit-time"
                       dateTime={entry.createdAt}
-                      title={formatExactTime(entry.createdAt)}
+                      title={formatDateTime(entry.createdAt, mounted)}
                     >
                       {formatRelativeTime(entry.createdAt)}
                     </time>

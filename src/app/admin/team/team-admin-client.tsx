@@ -4,6 +4,7 @@ import type { PlatformAdminRole } from '@prisma/client';
 import { useMemo, useRef, useState } from 'react';
 import { InviteTeamMemberModal } from '@/app/admin/team/invite-team-member-modal';
 import { DropdownMenu } from '@/components/dropdown-menu';
+import { LocalDate } from '@/components/local-date';
 import { useToast } from '@/components/toast';
 import { PLATFORM_ADMIN_ROLE_LABELS } from '@/lib/admin/platform-admin-roles';
 import { readApiError } from '@/lib/error-message';
@@ -25,14 +26,6 @@ function getInitials(name: string | null, email: string): string {
   const first = parts[0]?.[0] ?? '';
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : (parts[0]?.[1] ?? '');
   return `${first}${last}`.toUpperCase();
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function PlusIcon() {
@@ -349,7 +342,9 @@ export function TeamAdminClient({
                           {PLATFORM_ADMIN_ROLE_LABELS[admin.role]}
                         </span>
                       </td>
-                      <td data-label="Joined">{formatDate(admin.createdAt)}</td>
+                      <td data-label="Joined">
+                        <LocalDate iso={admin.createdAt} />
+                      </td>
                       <td data-label="Actions">
                         {admin.isSelf ? (
                           <span className="admin-templates-facet-empty">—</span>
@@ -390,7 +385,9 @@ export function TeamAdminClient({
                         </span>{' '}
                         <span className="badge badge--draft">Pending</span>
                       </td>
-                      <td data-label="Joined">Invited {formatDate(invite.createdAt)}</td>
+                      <td data-label="Joined">
+                        Invited <LocalDate iso={invite.createdAt} />
+                      </td>
                       <td data-label="Actions">
                         <TeamRowMenu
                           label={invite.name ?? invite.email}

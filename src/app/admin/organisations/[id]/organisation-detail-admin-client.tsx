@@ -11,9 +11,11 @@ import {
 } from '@/app/admin/organisations/[id]/join-organisation-button';
 import { DeleteOrganisationModal } from '@/app/admin/organisations/delete-organisation-modal';
 import { DropdownMenu } from '@/components/dropdown-menu';
+import { LocalDate } from '@/components/local-date';
 import { useToast } from '@/components/toast';
 import { PLAN_LABELS, PLAN_ORDER } from '@/lib/admin/plan-limits';
 import { readApiError } from '@/lib/error-message';
+import { formatShortDate } from '@/lib/format-date';
 import { formatUserRole } from '@/lib/user-roles';
 
 const STATUS_LABELS: Record<OrgStatus, string> = {
@@ -116,21 +118,8 @@ function getInitials(name: string | null, email: string): string {
   return `${first}${last}`.toUpperCase();
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 function formatTrialDate(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  return formatShortDate(`${iso.slice(0, 10)}T00:00:00.000Z`);
 }
 
 function getTrialNotice(trialEndsAt: string | null, status: OrgStatus) {
@@ -580,7 +569,7 @@ function OrganisationDetailInner({
               <span aria-hidden="true"> · </span>
               {PLAN_LABELS[organization.plan]}
               <span aria-hidden="true"> · </span>
-              Created {formatDate(organization.createdAt)}
+              Created <LocalDate iso={organization.createdAt} />
             </p>
           </div>
         </div>
@@ -830,7 +819,7 @@ function OrganisationDetailInner({
                     </button>
                   ) : (
                     <time className="admin-org-person-time" dateTime={user.createdAt}>
-                      {formatDate(user.createdAt)}
+                      <LocalDate iso={user.createdAt} />
                     </time>
                   )}
                 </li>
@@ -843,7 +832,7 @@ function OrganisationDetailInner({
                   <span className="admin-org-person-copy">
                     <span className="admin-org-person-name">{invite.name ?? invite.email}</span>
                     <span className="admin-org-person-meta">
-                      {invite.email} · Invite expires {formatDate(invite.expiresAt)}
+                      {invite.email} · Invite expires <LocalDate iso={invite.expiresAt} />
                     </span>
                   </span>
                   <span className="admin-org-person-role">

@@ -98,20 +98,35 @@ function isWholeMonth(value: SubmissionsDateRangeValue): Date | null {
   return fromDate;
 }
 
+// Hand-built month names (no Intl): Intl output can differ between Node and browsers, and this
+// label is part of the server-rendered HTML, so it must match exactly to hydrate cleanly.
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 function formatRangeLabel(value: SubmissionsDateRangeValue): string {
   const wholeMonth = isWholeMonth(value);
   if (wholeMonth) {
-    return wholeMonth.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
+    return `${MONTH_NAMES[wholeMonth.getMonth()]} ${wholeMonth.getFullYear()}`;
   }
 
   const fromDate = parseIsoDate(value.from ?? undefined);
   const toDate = parseIsoDate(value.to ?? undefined);
   if (!fromDate && !toDate) return 'All time';
 
-  const short = (date: Date) =>
-    date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const long = (date: Date) =>
-    date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const short = (date: Date) => `${MONTH_NAMES[date.getMonth()]?.slice(0, 3)} ${date.getDate()}`;
+  const long = (date: Date) => `${short(date)}, ${date.getFullYear()}`;
 
   if (fromDate && toDate) return `${short(fromDate)} – ${long(toDate)}`;
   if (fromDate) return `From ${long(fromDate)}`;

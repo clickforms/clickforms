@@ -6,6 +6,7 @@ import { AddUserModal } from '@/app/forms/users/add-user-modal';
 import { EditUserModal } from '@/app/forms/users/edit-user-modal';
 import { RemoveUserModal } from '@/app/forms/users/remove-user-modal';
 import { DropdownMenu } from '@/components/dropdown-menu';
+import { LocalDate } from '@/components/local-date';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
 import { formatUserRole } from '@/lib/user-roles';
@@ -386,7 +387,7 @@ export function UsersClient({
               <div className="users-mobile-role-row">
                 <span className="users-role-pill">{formatUserRole(user.role)}</span>
                 <span className="users-mobile-created">
-                  Joined {new Date(user.createdAt).toLocaleDateString('en-GB')}
+                  Joined <LocalDate iso={user.createdAt} />
                 </span>
               </div>
               <dl className="users-mobile-stats">
@@ -440,7 +441,7 @@ export function UsersClient({
             <div className="users-mobile-role-row">
               <span className="users-role-pill">{formatUserRole(invite.role)}</span>
               <span className="users-mobile-created">
-                Invited {new Date(invite.createdAt).toLocaleDateString('en-GB')}
+                Invited <LocalDate iso={invite.createdAt} />
               </span>
             </div>
           </article>
@@ -496,7 +497,7 @@ export function UsersClient({
                           <span className="users-2fa-pill">Off</span>
                         </td>
                         <td data-label="Created">
-                          {new Date(user.createdAt).toLocaleDateString('en-GB')}
+                          <LocalDate iso={user.createdAt} />
                         </td>
                         <td className="users-actions-cell">
                           <UserRowMenu
@@ -543,7 +544,7 @@ export function UsersClient({
                         —
                       </td>
                       <td data-label="Created">
-                        {new Date(invite.createdAt).toLocaleDateString('en-GB')}
+                        <LocalDate iso={invite.createdAt} />
                       </td>
                       <td className="users-actions-cell">
                         <UserRowMenu

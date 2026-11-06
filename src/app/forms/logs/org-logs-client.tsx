@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
+import { LocalDateTime } from '@/components/local-date';
 
 export interface OrgLogRow {
   id: string;
@@ -181,7 +182,7 @@ export function OrgLogsClient({ initialEntries }: { initialEntries: OrgLogRow[] 
                         </td>
                         <td data-label="Actor">{entry.actorName}</td>
                         <td data-label="When">
-                          {new Date(entry.createdAt).toLocaleString('en-AU')}
+                          <LocalDateTime iso={entry.createdAt} />
                         </td>
                       </tr>
                       {isExpanded ? (

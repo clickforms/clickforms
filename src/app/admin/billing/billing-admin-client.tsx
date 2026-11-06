@@ -12,6 +12,7 @@ import {
   PLAN_ORDER,
 } from '@/lib/admin/plan-limits';
 import { readApiError } from '@/lib/error-message';
+import { formatShortDate } from '@/lib/format-date';
 
 export interface BillingOrgRow {
   id: string;
@@ -53,12 +54,7 @@ const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
 
 function formatDate(iso: string | null): string {
   if (!iso) return '';
-  return new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  return formatShortDate(`${iso.slice(0, 10)}T00:00:00.000Z`);
 }
 
 function getInitials(name: string): string {

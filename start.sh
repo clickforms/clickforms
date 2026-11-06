@@ -46,4 +46,15 @@ export SECRETS_INJECTED=1
 
 docker compose pull
 docker compose up -d --remove-orphans
+
+# Caddy reads its Caddyfile only when its container starts, and a deploy replaces the file
+# without touching the container — so recreate Caddy whenever the file's contents changed.
+# (Certificates live in the caddy_data volume and survive this; it's a few seconds of restart.)
+CADDY_FILE="${CADDYFILE:-Caddyfile.production}"
+NEW_SUM="$(sha256sum "${CADDY_FILE}" | cut -d' ' -f1)"
+if [ "$(cat .caddyfile.sha 2>/dev/null || true)" != "${NEW_SUM}" ]; then
+  echo "start.sh: ${CADDY_FILE} changed — recreating Caddy"
+  docker compose up -d --force-recreate caddy
+  echo "${NEW_SUM}" > .caddyfile.sha
+fi
 echo "start.sh: done"

@@ -1,12 +1,26 @@
-# Staging Caddyfile — used when docker-compose.yml's CADDYFILE=Caddyfile.staging on the
-# staging EC2 instance. Same TLS/security setup as production, different hostname. DNS
-# needs an A record for staging.clickforms.com.au pointed at the staging Elastic IP.
+# Staging Caddyfile — used when CADDYFILE=Caddyfile.staging on the staging EC2 instance (the value
+# lives in Infisical, see DEPLOYMENT.md). Same security headers as production, different hostnames.
+#
+# DNS (Cloudflare):
+#   staging.clickforms.com.au    A  -> staging Elastic IP   (may be proxied)
+#   *.staging.clickforms.com.au  A  -> staging Elastic IP   (MUST be "DNS only" / grey cloud:
+#                                                            Cloudflare's free certificate does not
+#                                                            cover a two-level wildcard like this)
+#
+# Certificates: the bare hostname gets a normal automatic Let's Encrypt certificate. Organisation
+# subdomains (`<org>.staging.clickforms.com.au`, which is what the app links to) get one each the
+# first time they are visited — "on-demand TLS". The `ask` endpoint (src/app/tls-check/route.ts)
+# makes Caddy only issue for hostnames of organisations that really exist.
+
+{
+	on_demand_tls {
+		ask http://app:3000/tls-check
+	}
+}
 
 staging.clickforms.com.au {
 	reverse_proxy app:3000
-
 	encode zstd gzip
-
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
@@ -16,7 +30,21 @@ staging.clickforms.com.au {
 		X-Frame-Options "SAMEORIGIN"
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
-
 	# Discourage search engines from indexing staging.
+	header X-Robots-Tag "noindex, nofollow"
+}
+
+*.staging.clickforms.com.au {
+	tls {
+		on_demand
+	}
+	reverse_proxy app:3000
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
 	header X-Robots-Tag "noindex, nofollow"
 }

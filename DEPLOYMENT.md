@@ -101,8 +101,13 @@ switched over at the registrar (Hostinger).
   This directory is **not created by any script and not committed** (gitignored) — it must
   be created and populated by hand on the box before the first deploy, or Caddy will fail
   to start (see Troubleshooting).
-- Staging (`Caddyfile.staging`) has no wildcard requirement, so it just uses Caddy's
-  automatic Let's Encrypt HTTP-01 flow — nothing to set up manually there.
+- Staging (`Caddyfile.staging`) serves `staging.clickforms.com.au` with a normal automatic
+  Let's Encrypt certificate, and `<org>.staging.clickforms.com.au` (the links the app builds)
+  with Caddy's on-demand TLS: one Let's Encrypt certificate per organisation subdomain, issued on
+  first visit, only for subdomains of organisations that exist (`/tls-check`, called by Caddy over
+  the docker network). Needs a `*.staging.clickforms.com.au` A record at the staging Elastic IP set
+  to **DNS only** (grey cloud) in Cloudflare — Cloudflare's free certificate doesn't cover a
+  two-level wildcard, so that traffic must reach Caddy directly.
 
 ## 4. Environment configuration — where each value lives
 

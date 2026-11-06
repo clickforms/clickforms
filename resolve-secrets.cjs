@@ -21,7 +21,9 @@ async function fetchJson(url, init, attempts = 3) {
       if (response.ok) return await response.json();
       // 4xx (bad credentials, wrong project/environment) will not fix itself on retry.
       const body = await response.text();
-      const error = new Error(`HTTP ${response.status} from ${new URL(url).pathname}: ${body.slice(0, 300)}`);
+      const error = new Error(
+        `HTTP ${response.status} from ${new URL(url).pathname}: ${body.slice(0, 300)}`,
+      );
       if (response.status < 500) throw Object.assign(error, { fatal: true });
       lastError = error;
     } catch (err) {
@@ -76,9 +78,10 @@ async function main() {
     if (!names.has(required)) throw new Error(`${required} is missing from Infisical`);
   }
   // Names only, never values.
-  console.error(`resolve-secrets: loaded ${names.size} secrets from Infisical (${process.env.INFISICAL_ENV})`);
+  console.error(
+    `resolve-secrets: loaded ${names.size} secrets from Infisical (${process.env.INFISICAL_ENV})`,
+  );
 }
-
 
 main().catch((err) => {
   console.error(

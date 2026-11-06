@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
+import { revokeTwoFactorTrust } from '@/lib/auth/two-factor';
 import { prisma, withOrgContext } from '@/lib/db';
 import { requirePlatformAdmin, requireSession } from '@/lib/session';
 
@@ -43,6 +44,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
       );
     });
 
+    await revokeTwoFactorTrust(id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return toErrorResponse(error);

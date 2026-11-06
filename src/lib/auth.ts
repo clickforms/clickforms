@@ -12,12 +12,7 @@
 
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import {
-  grantTwoFactorTrust,
-  hasTwoFactorTrust,
-  issueTwoFactorCode,
-  verifyTwoFactorCode,
-} from '@/lib/auth/two-factor';
+import { hasTwoFactorTrust, issueTwoFactorCode, verifyTwoFactorCode } from '@/lib/auth/two-factor';
 import { prisma, withOrgContext } from '@/lib/db';
 import { hashPassword, needsRehash, verifyPassword } from '@/lib/users/password';
 
@@ -137,8 +132,8 @@ export const authOptions: NextAuthOptions = {
         // login form to ask for it ('TwoFactorRequired'); the form then re-submits the same
         // credentials plus the code. Placed after the password and suspension checks so a
         // wrong password never triggers an email.
-        // Skipped when this browser already passed the check in the last 24 hours (see
-        // hasTwoFactorTrust) — the code is asked for once a day, not on every sign-in.
+        // Skipped when this user already passed the check in the last 24 hours on ANY
+        // browser or device (see hasTwoFactorTrust) — a code is asked for once a day.
         if (user.twoFactorEnabled && !(await hasTwoFactorTrust(user))) {
           const submittedCode = credentials.code?.trim();
           if (!submittedCode) {
@@ -148,7 +143,6 @@ export const authOptions: NextAuthOptions = {
           if (!(await verifyTwoFactorCode(user.id, 'login', submittedCode))) {
             throw new Error('InvalidTwoFactorCode');
           }
-          await grantTwoFactorTrust(user);
         }
 
         // Opportunistic rehash: this account's hash predates the BCRYPT_COST speedup in

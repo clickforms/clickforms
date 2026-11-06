@@ -1,7 +1,6 @@
 import 'server-only';
 
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { twoFactorCodeEmail } from '@/lib/emails/templates';
@@ -100,66 +99,26 @@ export async function verifyTwoFactorCode(
   return true;
 }
 
-// "Trusted for 24 hours": once a user has passed the emailed-code check on this browser, a
-// signed cookie lets them sign in again with just their password until it expires. The cookie
-// is bound to the user and to their current password hash, so it stops working if they change
-// their password, and it can't be used for anyone else's account.
-// One cookie per user: signing in as a second account on the same browser (e.g. an admin and a
-// staff account) must not overwrite the first account's trust and force a code again.
-const trustCookieName = (userId: string) => `cf_2fa_trust_${userId}`;
-const TRUST_TTL_MS = 24 * 60 * 60 * 1000;
-
-function trustSignature(userId: string, expiresAt: number, passwordHash: string): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    throw new Error('SESSION_SECRET must be set for two-step verification');
-  }
-  return createHmac('sha256', secret)
-    .update(`trust:${userId}:${expiresAt}:${passwordHash.slice(-16)}`)
-    .digest('hex');
+// "Trusted for 24 hours": once a user has passed the emailed-code check, they can sign in with
+// just their password, from ANY browser or machine, until 24 hours after that check. The
+// record of the check is the used login code itself (used_at), so the trust lives on the
+// server, not in a cookie: switching browsers or devices does not ask for a code again.
+// It is a fixed window from the last verified code (not extended by trusted sign-ins), and
+// revokeTwoFactorTrust() ends it early when the password changes or two-step is reset.
+/** True when this user passed two-step verification within the last 24 hours, anywhere. */
+export async function hasTwoFactorTrust(user: { id: string }): Promise<boolean> {
+  const rows = await prisma.$queryRaw<{ ok: number }[]>`
+    SELECT 1 AS ok FROM two_factor_codes
+    WHERE user_id = ${user.id}::uuid AND purpose = 'login'
+      AND used_at IS NOT NULL
+      AND used_at > now() - interval '24 hours'
+    LIMIT 1`;
+  return rows.length > 0;
 }
 
-/** True when this browser passed two-step verification for this user within the last 24 hours. */
-export async function hasTwoFactorTrust(user: {
-  id: string;
-  passwordHash: string;
-}): Promise<boolean> {
-  try {
-    const value = (await cookies()).get(trustCookieName(user.id))?.value;
-    if (!value) return false;
-    const [userId, expires, signature] = value.split('.');
-    const expiresAt = Number(expires);
-    if (userId !== user.id || !signature || !Number.isFinite(expiresAt)) return false;
-    if (expiresAt < Date.now()) return false;
-    const expected = Buffer.from(trustSignature(user.id, expiresAt, user.passwordHash));
-    const actual = Buffer.from(signature);
-    return expected.length === actual.length && timingSafeEqual(expected, actual);
-  } catch {
-    return false;
-  }
-}
-
-/** Remembers a successful verification on this browser for 24 hours. */
-export async function grantTwoFactorTrust(user: {
-  id: string;
-  passwordHash: string;
-}): Promise<void> {
-  try {
-    const expiresAt = Date.now() + TRUST_TTL_MS;
-    (await cookies()).set(
-      trustCookieName(user.id),
-      `${user.id}.${expiresAt}.${trustSignature(user.id, expiresAt, user.passwordHash)}`,
-      {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        path: '/',
-        maxAge: TRUST_TTL_MS / 1000,
-      },
-    );
-  } catch (error) {
-    // Never block a successful sign-in because the trust cookie couldn't be written — the
-    // user just gets asked for a code again next time.
-    console.error('[2fa] could not set trust cookie', error);
-  }
+/** Ends the 24-hour trust immediately (password changed/reset, two-step reset or disabled),
+ * so the next sign-in asks for a code. */
+export async function revokeTwoFactorTrust(userId: string): Promise<void> {
+  await prisma.$executeRaw`
+    DELETE FROM two_factor_codes WHERE user_id = ${userId}::uuid AND purpose = 'login'`;
 }

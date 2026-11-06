@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
+import { revokeTwoFactorTrust } from '@/lib/auth/two-factor';
 import { prisma, withOrgContext } from '@/lib/db';
 import { requireOrganizationId, requireSession } from '@/lib/session';
 import { hashPassword, passwordSchema, verifyPassword } from '@/lib/users/password';
@@ -45,6 +46,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         where: { id: session.user.id },
         data: { passwordHash },
       });
+      await revokeTwoFactorTrust(session.user.id);
       return NextResponse.json({ ok: true });
     }
 
@@ -66,6 +68,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     });
 
+    // A new password ends the 24-hour two-step trust: the next sign-in asks for a code.
+    await revokeTwoFactorTrust(session.user.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return toErrorResponse(error);

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
+import { revokeTwoFactorTrust } from '@/lib/auth/two-factor';
 import { withUserScope } from '@/lib/auth/user-scope';
 import { requireSession } from '@/lib/session';
 import { verifyPassword } from '@/lib/users/password';
@@ -35,6 +36,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         );
       }
     });
+    await revokeTwoFactorTrust(session.user.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return toErrorResponse(error);

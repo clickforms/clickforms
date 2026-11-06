@@ -1,0 +1,81 @@
+/* Loading placeholders. Pages' real layout classes provide structure; these only supply the
+ * shimmering shapes that stand in for text, images and controls. */
+
+.sk {
+  display: block;
+  max-width: 100%;
+  border-radius: 0.375rem;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-text) 7%, var(--color-surface)) 0%,
+    color-mix(in srgb, var(--color-text) 3.5%, var(--color-surface)) 50%,
+    color-mix(in srgb, var(--color-text) 7%, var(--color-surface)) 100%
+  );
+  background-size: 220% 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+}
+
+.sk--inline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.sk-lines {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.sk-region {
+  display: contents;
+}
+
+.sk-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes sk-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk {
+    animation: none;
+  }
+}
+
+/* Placeholders drawn on top of a coloured surface (e.g. the green dashboard hero). */
+.sk--tint {
+  background: linear-gradient(
+    90deg,
+    rgba(17, 17, 17, 0.1) 0%,
+    rgba(17, 17, 17, 0.05) 50%,
+    rgba(17, 17, 17, 0.1) 100%
+  );
+  background-size: 220% 100%;
+}
+
+.sk-cell-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sk-cell-actions {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.sk-toolbar-icon {
+  flex-shrink: 0;
+}

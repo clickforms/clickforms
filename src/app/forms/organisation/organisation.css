@@ -413,6 +413,7 @@
   background: #0f172a;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.32);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transform: translateY(0.75rem);
 }
@@ -421,12 +422,14 @@
   .org-ws .org-savebar {
     transition:
       opacity 0.2s ease,
-      transform 0.2s ease;
+      transform 0.2s ease,
+      visibility 0.2s;
   }
 }
 
 .org-ws .org-savebar--visible {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
   transform: none;
 }

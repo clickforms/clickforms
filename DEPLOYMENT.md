@@ -391,3 +391,24 @@ environment, then `sudo /srv/clickforms/start.sh`.
 
 Rotating a secret: change it in Infisical, then `sudo /srv/clickforms/start.sh` (it recreates
 the app container because its environment changed). Secrets are read only at start.
+
+### Production cutover to Infisical (one-off)
+
+Production started life on a temporary workaround: `docker-compose.override.yml` (sets
+`SSM_PARAM_PREFIX: ""`) plus `secrets.env` (DATABASE_URL, SESSION_SECRET, RESEND_API_KEY and the
+static `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` of a temporary IAM user, used because the EC2
+instance role was unusable). Both files are replaced by Infisical:
+
+1. Infisical → project `clickforms` → **Production** environment: add `ENVIRONMENT=production`,
+   `CADDYFILE=Caddyfile.production`, `S3_BUCKET=clickforms-prod`, `ROOT_DOMAIN=clickforms.com.au`,
+   `NEXTAUTH_URL=https://clickforms.com.au`, `AWS_REGION=ap-southeast-2`, `RESEND_FROM`,
+   and the **rotated** `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, plus
+   `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` for as long as the instance role is unusable.
+2. Machine identity `clickforms-prod` (Universal Auth), Viewer on the project.
+3. On the box: stop the stack, `sudo mv /opt/clickforms /srv/clickforms`, delete
+   `docker-compose.override.yml` and `secrets.env` (they hold the old, exposed values), rewrite
+   `.env` to only `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_ID`,
+   `INFISICAL_ENV=prod` and `ECR_IMAGE`, `chmod 600 .env`.
+4. Rotate the database password and start immediately: `sudo /srv/clickforms/start.sh`.
+5. Fix the instance role, then remove the two `AWS_*` keys from Infisical and delete the
+   temporary IAM user. The compose file leaves them unset when they're absent.

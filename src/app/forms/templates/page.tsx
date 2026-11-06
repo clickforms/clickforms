@@ -3,8 +3,9 @@ import { getServerSession } from 'next-auth';
 import type { GalleryTemplate } from '@/app/forms/templates/gallery-template';
 import { TemplatesGalleryClient } from '@/app/forms/templates/templates-gallery-client';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { prisma, withOrgContext } from '@/lib/db';
 import { formSchemaSchema } from '@/lib/forms/schema';
+import { isPreheaderEmpty, parsePreheader } from '@/lib/org-preheader';
 import { createPresignedDownloadUrl } from '@/lib/s3';
 
 const STRUCTURAL_FIELD_TYPES = new Set(['column_layout', 'section_break', 'divider', 'hidden']);
@@ -90,5 +91,35 @@ export default async function TemplatesGalleryPage() {
     }),
   );
 
-  return <TemplatesGalleryClient templates={galleryTemplates} />;
+  let preheaderInfo: {
+    preheader: NonNullable<ReturnType<typeof parsePreheader>>;
+    logoUrl: string | null;
+    orgName: string;
+  } | null = null;
+  if (session.user.organizationId) {
+    const org = await withOrgContext(session.user.organizationId, (tx) =>
+      tx.organization.findFirst({
+        where: { id: session.user.organizationId ?? undefined },
+        select: { name: true, preheader: true, logoStorageKey: true },
+      }),
+    );
+    const preheader = parsePreheader(org?.preheader);
+    if (org && preheader && !isPreheaderEmpty(preheader, Boolean(org.logoStorageKey))) {
+      let logoUrl: string | null = null;
+      if (preheader.showLogo && org.logoStorageKey) {
+        try {
+          logoUrl = await createPresignedDownloadUrl({
+            storageKey: org.logoStorageKey,
+            filename: 'logo',
+            inline: true,
+          });
+        } catch {
+          // Soft-fail like the template thumbnails above.
+        }
+      }
+      preheaderInfo = { preheader, logoUrl, orgName: org.name };
+    }
+  }
+
+  return <TemplatesGalleryClient templates={galleryTemplates} preheaderInfo={preheaderInfo} />;
 }

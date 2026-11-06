@@ -4,6 +4,7 @@ import { OrganisationDetailsClient } from '@/app/forms/organisation/organisation
 import { startOfCurrentMonth } from '@/lib/admin/plan-limits';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { parsePreheader } from '@/lib/org-preheader';
 import { createPresignedDownloadUrl } from '@/lib/s3';
 import { requireOrganizationId } from '@/lib/session';
 import { buildOrgOrigin } from '@/lib/tenant';
@@ -42,6 +43,7 @@ export default async function OrganisationSettingsPage() {
         contactPhone: true,
         notificationEmail: true,
         logoStorageKey: true,
+        preheader: true,
         plan: true,
         status: true,
         trialEndsAt: true,
@@ -106,6 +108,7 @@ export default async function OrganisationSettingsPage() {
         contactPhone: organization.contactPhone,
         notificationEmail: organization.notificationEmail,
         logoUrl,
+        preheader: parsePreheader(organization.preheader),
       }}
       plan={{
         plan: organization.plan,

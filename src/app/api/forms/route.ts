@@ -6,6 +6,8 @@ import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema } from '@/lib/forms/schema';
 import { slugify, uniqueSlug } from '@/lib/forms/slug';
+import { parsePreheader, preheaderInfoHtml } from '@/lib/org-preheader';
+import { buildFormFieldImageKey, copyObject } from '@/lib/s3';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { formsListWhere } from '@/lib/user-roles';
 
@@ -31,6 +33,8 @@ const createFormBodySchema = z.object({
   // template library is admin-managed data, not a compile-time list. Looked up below
   // rather than trusted as-is, same defense-in-depth as any other client-supplied id.
   templateId: z.string().uuid().optional(),
+  // Prepend the organisation pre-header (logo + info) to the first page.
+  usePreheader: z.boolean().optional(),
 });
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -38,7 +42,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const session = await requireSession();
     requireRole(session, ['admin', 'editor', 'member']);
 
-    const { name, templateId } = createFormBodySchema.parse(await request.json());
+    const { name, templateId, usePreheader } = createFormBodySchema.parse(await request.json());
 
     let initialSchema = createEmptyFormSchema();
     if (templateId) {
@@ -108,6 +112,65 @@ export async function POST(request: Request): Promise<NextResponse> {
           createdBy: session.user.id,
         },
       });
+
+      if (usePreheader) {
+        const org = await tx.organization.findUnique({
+          where: { id: requireOrganizationId(session) },
+          select: { preheader: true, logoStorageKey: true },
+        });
+        const preheader = parsePreheader(org?.preheader);
+        const firstPage = initialSchema.pages[0];
+        if (preheader && firstPage) {
+          const rowId = crypto.randomUUID();
+          const slots: (string | null)[] = [null, null];
+          if (preheader.showLogo && org?.logoStorageKey) {
+            const logoId = crypto.randomUUID();
+            const filename = org.logoStorageKey.split('/').pop() ?? 'logo';
+            const key = buildFormFieldImageKey({
+              organizationId: requireOrganizationId(session),
+              formId: form.id,
+              fieldId: logoId,
+              filename,
+            });
+            await copyObject(org.logoStorageKey, key);
+            initialSchema.fields[logoId] = {
+              id: logoId,
+              type: 'image',
+              label: '',
+              required: false,
+              imageStorageKey: key,
+              alt: 'Organisation logo',
+              align: 'left',
+              imageSpacing: 'none',
+            };
+            slots[0] = logoId;
+          }
+          const infoHtml = preheaderInfoHtml(preheader);
+          if (infoHtml) {
+            const infoId = crypto.randomUUID();
+            initialSchema.fields[infoId] = {
+              id: infoId,
+              type: 'static_text',
+              required: false,
+              body: infoHtml,
+              bodyAlign: 'right',
+              bodyFontSize: 13,
+            };
+            slots[1] = infoId;
+          }
+          if (slots[0] || slots[1]) {
+            initialSchema.fields[rowId] = {
+              id: rowId,
+              type: 'column_layout',
+              label: 'Pre-header',
+              required: false,
+              columns: 2,
+              fieldIds: slots,
+            };
+            firstPage.fields.unshift(rowId);
+          }
+        }
+      }
 
       // Every form starts life with one unpublished draft version — the builder always
       // has something to edit, and getOrCreateDraftVersion (src/lib/forms/versions.ts)

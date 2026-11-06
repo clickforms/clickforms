@@ -17,6 +17,8 @@ import { useToast } from '@/components/toast';
 import { buildUsageBars, PLAN_LABELS, type PlanUsage } from '@/lib/admin/plan-limits';
 import { getErrorMessage, readApiError } from '@/lib/error-message';
 import { isCroppableImage } from '@/lib/forms/crop-image';
+import type { OrgPreheader } from '@/lib/org-preheader';
+import { PreheaderPanel } from './preheader-panel';
 
 /** Keep in sync with MAX_LOGO_SIZE_BYTES / the logo MIME allowlist in src/lib/s3.ts —
  * not imported from there because that module is `server-only` (mirrors the same
@@ -36,6 +38,7 @@ export interface OrganizationProfile {
   /** Presigned GET URL, regenerated on every page load — never stored. Null when no
    * logo has been uploaded, or S3 isn't configured (soft-fails, see page.tsx). */
   logoUrl: string | null;
+  preheader: OrgPreheader | null;
 }
 
 export interface OrganizationPlanInfo {
@@ -174,7 +177,7 @@ export function OrganisationDetailsClient({
   // that default explicitly — used when redirecting back from /forms/organisation/plan
   // after a switch, since the switch may have just graduated the org from 'trial' to
   // 'active', which would otherwise silently default back to General on return.
-  const [activeTab, setActiveTab] = useState<'general' | 'billing'>(
+  const [activeTab, setActiveTab] = useState<'general' | 'preheader' | 'billing'>(
     searchParams.get('tab') === 'billing' || plan.status !== 'active' ? 'billing' : 'general',
   );
   // Actually changing plans now happens on its own page (/forms/organisation/plan —
@@ -449,6 +452,15 @@ export function OrganisationDetailsClient({
           <button
             type="button"
             role="tab"
+            aria-selected={activeTab === 'preheader'}
+            className={`org-settings-tab${activeTab === 'preheader' ? ' org-settings-tab--active' : ''}`}
+            onClick={() => setActiveTab('preheader')}
+          >
+            Pre-header
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={activeTab === 'billing'}
             className={`org-settings-tab${activeTab === 'billing' ? ' org-settings-tab--active' : ''}`}
             onClick={() => setActiveTab('billing')}
@@ -718,6 +730,16 @@ export function OrganisationDetailsClient({
             </button>
           </div>
         </form>
+      ) : null}
+
+      {activeTab === 'preheader' ? (
+        <div className="org-settings-stack">
+          <PreheaderPanel
+            orgName={name.trim() || initialOrganization.name}
+            logoUrl={logoUrl}
+            initial={initialOrganization.preheader}
+          />
+        </div>
       ) : null}
 
       {activeTab === 'billing' ? (

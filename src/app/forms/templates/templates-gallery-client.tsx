@@ -5,9 +5,11 @@ import { type FormEvent, type RefObject, useEffect, useMemo, useRef, useState } 
 import type { GalleryTemplate } from '@/app/forms/templates/gallery-template';
 import { TemplatePreviewModal } from '@/app/forms/templates/template-preview-modal';
 import { DropdownMenu } from '@/components/dropdown-menu';
+import { PreheaderPreview } from '@/components/preheader-preview';
 import { useToast } from '@/components/toast';
 import { getErrorMessage, readApiError } from '@/lib/error-message';
 import type { LayoutStyle } from '@/lib/forms/schema';
+import type { OrgPreheader } from '@/lib/org-preheader';
 
 export type { GalleryTemplate };
 
@@ -236,7 +238,19 @@ function FacetSelect({
   );
 }
 
-export function TemplatesGalleryClient({ templates }: { templates: GalleryTemplate[] }) {
+export interface PreheaderInfo {
+  preheader: OrgPreheader;
+  logoUrl: string | null;
+  orgName: string;
+}
+
+export function TemplatesGalleryClient({
+  templates,
+  preheaderInfo,
+}: {
+  templates: GalleryTemplate[];
+  preheaderInfo: PreheaderInfo | null;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [search, setSearch] = useState('');
@@ -251,10 +265,12 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
   const [naming, setNaming] = useState<{ templateId?: string; suggestedName: string } | null>(null);
   const [formName, setFormName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [usePreheader, setUsePreheader] = useState(true);
 
   useEffect(() => {
     if (!naming) return;
     setFormName(naming.suggestedName);
+    setUsePreheader(true);
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape' && !isCreating) setNaming(null);
     }
@@ -357,7 +373,7 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
       .map((entry) => entry.template);
   }, [templates, previewingTemplate]);
 
-  async function createForm(body: { name: string; templateId?: string }) {
+  async function createForm(body: { name: string; templateId?: string; usePreheader?: boolean }) {
     setIsCreating(true);
     try {
       const response = await fetch('/api/forms', {
@@ -379,7 +395,11 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
   function handleNameSubmit(event: FormEvent) {
     event.preventDefault();
     if (!naming || !formName.trim()) return;
-    void createForm({ name: formName.trim(), templateId: naming.templateId });
+    void createForm({
+      name: formName.trim(),
+      templateId: naming.templateId,
+      usePreheader: Boolean(preheaderInfo && naming.templateId && usePreheader),
+    });
   }
 
   function goBack() {
@@ -651,6 +671,51 @@ export function TemplatesGalleryClient({ templates }: { templates: GalleryTempla
                   disabled={isCreating}
                 />
               </label>
+              {preheaderInfo && naming.templateId ? (
+                <fieldset className="modal-name-field" disabled={isCreating}>
+                  <span>Organisation pre-header</span>
+                  <div className="preheader-choice">
+                    <button
+                      type="button"
+                      aria-pressed={usePreheader}
+                      onClick={() => setUsePreheader(true)}
+                    >
+                      <strong>Use pre-header info</strong>
+                      <span>Add your logo and details to the top</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={!usePreheader}
+                      onClick={() => setUsePreheader(false)}
+                    >
+                      <strong>Skip</strong>
+                      <span>Use the template as it is</span>
+                    </button>
+                  </div>
+                  {(previewingTemplate ?? templates.find((t) => t.id === naming.templateId)) ? (
+                    <PreheaderPreview
+                      preheader={
+                        usePreheader
+                          ? preheaderInfo.preheader
+                          : { showLogo: false, title: '', details: '' }
+                      }
+                      logoUrl={preheaderInfo.logoUrl}
+                      orgName={preheaderInfo.orgName}
+                    >
+                      <div className="preheader-preview-real">
+                        <h3>{formName.trim() || naming.suggestedName}</h3>
+                        <ul>
+                          {(templates.find((t) => t.id === naming.templateId)?.fieldLabels ?? [])
+                            .slice(0, 4)
+                            .map((label) => (
+                              <li key={label}>{label}</li>
+                            ))}
+                        </ul>
+                      </div>
+                    </PreheaderPreview>
+                  ) : null}
+                </fieldset>
+              ) : null}
               <div className="modal-footer">
                 <button
                   type="button"

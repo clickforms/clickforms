@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-type IconName = 'building' | 'user' | 'bell' | 'layout' | 'chart' | 'card';
+export type IconName = 'building' | 'user' | 'bell' | 'layout' | 'chart' | 'card';
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   building: (
@@ -42,6 +42,25 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
   ),
 };
 
+/** Small line icon used by panel headers and the section nav. */
+export function OrgIcon({ name, size = 16 }: { name: IconName; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {ICON_PATHS[name]}
+    </svg>
+  );
+}
+
 interface PanelHeadProps {
   icon: IconName;
   title: string;
@@ -56,19 +75,7 @@ export function PanelHead({ icon, title, description, aside }: PanelHeadProps) {
     <header className="org-panel-head">
       <div className="org-panel-head-main">
         <span className="org-panel-icon" aria-hidden="true">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            {ICON_PATHS[icon]}
-          </svg>
+          <OrgIcon name={icon} />
         </span>
         <div>
           <h2 className="org-panel-title">{title}</h2>

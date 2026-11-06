@@ -2,81 +2,117 @@
  *
  * Scoped under .org-ws on purpose: the base .org-* rules in globals.css are shared with the
  * platform admin pages (admin billing, organisation detail, template settings), which must
- * keep their current look. Everything here refines those rules for the workspace pages only. */
+ * keep their current look. Everything here refines those rules for the workspace pages only.
+ * Visual language: full-width layout, section nav on the left, flat bordered cards,
+ * stacked field labels, restrained shadows (Monday.com-style admin settings). */
 
 .org-ws {
-  --org-radius: 0.9rem;
+  --org-radius: 0.65rem;
   --org-accent: color-mix(in srgb, var(--color-primary) 55%, #0f7a3d);
-  --org-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 20px rgba(15, 23, 42, 0.04);
-  max-width: 74rem;
-  margin-inline: auto;
+  --org-focus: color-mix(in srgb, var(--color-primary) 32%, transparent);
+  --org-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  width: 100%;
+  max-width: none;
 }
 
-/* ---- Header + underline tabs ------------------------------------------------------- */
+/* ---- Page header ------------------------------------------------------------------- */
 
 .org-ws .org-settings-header {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 1.5rem;
   margin-bottom: 1.75rem;
 }
 
 .org-ws .org-settings-title {
-  font-size: 1.9rem;
-  letter-spacing: -0.04em;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.045em;
 }
 
 .org-ws .org-settings-lead {
-  max-width: 40rem;
+  font-size: 0.95rem;
 }
 
-.org-ws .org-settings-tabs {
+/* ---- Left section nav + content ---------------------------------------------------- */
+
+.org-ws-layout {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 2.25rem;
+  align-items: start;
+}
+
+.org-ws-nav {
+  position: sticky;
+  top: 1rem;
   display: flex;
-  gap: 1.75rem;
-  padding: 0;
-  background: none;
-  border: none;
-  border-bottom: 1px solid var(--color-border);
-  border-radius: 0;
-  box-shadow: none;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-right: 0.5rem;
 }
 
-.org-ws .org-settings-tab {
-  margin-bottom: -1px;
-  padding: 0.7rem 0.1rem;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
+.org-ws-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: none;
+  border-radius: 0.5rem;
   background: none;
   color: var(--color-text-muted);
+  font: inherit;
   font-size: 0.9rem;
   font-weight: 600;
+  text-align: left;
+  cursor: pointer;
 }
 
-.org-ws .org-settings-tab:hover {
+.org-ws-nav-item svg {
+  flex-shrink: 0;
+  color: var(--color-text-subtle);
+}
+
+.org-ws-nav-item:hover {
+  background: var(--color-surface-sunken);
   color: var(--color-text);
 }
 
-.org-ws .org-settings-tab--active {
-  border-bottom-color: var(--org-accent);
-  background: none;
+.org-ws-nav-item:focus-visible {
+  outline: 2px solid var(--org-accent);
+  outline-offset: 1px;
+}
+
+.org-ws-nav-item--active,
+.org-ws-nav-item--active:hover {
+  background: var(--color-primary-soft);
   color: var(--color-text);
   font-weight: 700;
 }
 
-.org-ws .org-settings-tab:focus-visible {
-  outline: 2px solid var(--org-accent);
-  outline-offset: 2px;
-  border-radius: 0.3rem;
+.org-ws-nav-item--active svg {
+  color: var(--org-accent);
+}
+
+.org-ws-nav-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--color-warning);
+}
+
+.org-ws-content {
+  min-width: 0;
 }
 
 .org-ws .org-settings-stack {
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
 }
 
-/* ---- Panels ------------------------------------------------------------------------ */
+/* ---- Cards ------------------------------------------------------------------------- */
 
 .org-ws .org-panel {
-  border-color: var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--org-radius);
   box-shadow: var(--org-shadow);
 }
@@ -84,7 +120,7 @@
 .org-ws .org-panel-head {
   flex-wrap: nowrap;
   align-items: flex-start;
-  padding: 1.15rem 1.5rem;
+  padding: 1.25rem 1.6rem 1.1rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   border-radius: var(--org-radius) var(--org-radius) 0 0;
@@ -102,16 +138,17 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.65rem;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.5rem;
   background: var(--color-primary-soft);
   color: var(--org-accent);
 }
 
 .org-ws .org-panel-title {
-  font-size: 0.975rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.015em;
 }
 
 .org-ws .org-panel-lead {
@@ -119,16 +156,16 @@
   font-size: 0.8125rem;
 }
 
-/* ---- Identity hero ----------------------------------------------------------------- */
+/* ---- Identity ---------------------------------------------------------------------- */
 
 .org-ws .org-identity {
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: end;
-  column-gap: 1.5rem;
-  row-gap: 1rem;
-  padding: 5.75rem 1.75rem 1.6rem;
+  align-items: center;
+  column-gap: 1.75rem;
+  row-gap: 1.25rem;
+  padding: 1.75rem 1.75rem 1.6rem;
   overflow: hidden;
 }
 
@@ -136,47 +173,34 @@
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: 5rem;
-  background:
-    radial-gradient(
-      18rem 8rem at 85% 0%,
-      color-mix(in srgb, var(--color-lavender-strong) 16%, transparent),
-      transparent
-    ),
-    linear-gradient(
-      120deg,
-      color-mix(in srgb, var(--color-primary) 34%, var(--color-surface)),
-      color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
-    );
-  border-bottom: 1px solid var(--color-border);
+  height: 0.3rem;
+  background: linear-gradient(
+    90deg,
+    var(--color-primary),
+    var(--org-accent) 55%,
+    var(--color-lavender-strong)
+  );
 }
 
 .org-ws .org-identity-logo {
-  z-index: 1;
-  width: 6.25rem;
-  height: 6.25rem;
-  margin-top: -3.25rem;
-  border: 4px solid var(--color-surface);
-  border-radius: 1.25rem;
-  box-shadow:
-    0 0 0 1px var(--color-border),
-    0 8px 20px rgba(15, 23, 42, 0.12);
-}
-
-.org-ws .org-identity-copy {
-  z-index: 1;
+  width: 5.5rem;
+  height: 5.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: var(--org-shadow);
 }
 
 .org-ws .org-identity-name {
   margin: 0;
-  font-size: 1.55rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.035em;
 }
 
 .org-ws .org-identity-url {
   display: inline-flex;
   width: fit-content;
-  margin-top: 0.5rem;
-  padding: 0.15rem 0.2rem 0.15rem 0.7rem;
+  margin-top: 0.45rem;
+  padding: 0.12rem 0.2rem 0.12rem 0.65rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   background: var(--color-surface-sunken);
@@ -184,61 +208,110 @@
 
 .org-ws .org-identity-url-text {
   color: var(--color-text-muted);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .org-ws .org-identity-actions {
-  margin-top: 1rem;
+  margin-top: 0.9rem;
 }
 
 .org-ws .org-identity-stats {
-  z-index: 1;
   display: flex;
-  gap: 0.6rem;
   margin: 0;
 }
 
 .org-ws .org-identity-stats > div {
-  min-width: 5.25rem;
-  padding: 0.65rem 0.95rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  background: var(--color-surface-sunken);
+  min-width: 6rem;
+  padding: 0.2rem 1.5rem;
+  border-left: 1px solid var(--color-border);
+}
+
+.org-ws .org-identity-stats > div:first-child {
+  border-left: none;
 }
 
 .org-ws .org-identity-stats dt {
   color: var(--color-text-muted);
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
 .org-ws .org-identity-stats dd {
-  margin: 0.15rem 0 0;
-  font-size: 1.05rem;
-  font-weight: 750;
-  letter-spacing: -0.02em;
+  margin: 0.2rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
-/* ---- Rows + inputs ----------------------------------------------------------------- */
+/* ---- Fields: stacked label, input, hint -------------------------------------------- */
+
+.org-ws .org-rows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.4rem 1.75rem;
+  padding: 1.5rem 1.6rem 1.7rem;
+}
 
 .org-ws .org-row {
-  grid-template-columns: minmax(11rem, 17rem) minmax(0, 1fr);
-  padding: 1.15rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0;
+  border: none;
+}
+
+.org-ws .org-row + .org-row {
+  border-top: none;
+}
+
+.org-ws .org-row-copy {
+  display: contents;
+}
+
+.org-ws .org-row-copy label,
+.org-ws .org-row-copy .org-row-label {
+  order: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.org-ws .org-row-control {
+  order: 1;
 }
 
 .org-ws .org-row-copy p {
-  margin-top: 0.2rem;
-  font-size: 0.78rem;
+  order: 2;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.775rem;
+  line-height: 1.4;
+}
+
+/* The notifications toggle stays a horizontal row. */
+.org-ws .org-row--toggle {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.org-ws .org-row--toggle .org-row-copy {
+  display: block;
+}
+
+.org-ws .org-row--toggle .org-row-control {
+  order: 0;
 }
 
 .org-ws .org-input {
-  height: 2.6rem;
-  padding: 0 0.9rem;
-  border-color: var(--color-border-strong);
-  border-radius: 0.6rem;
+  height: 2.65rem;
+  padding: 0 0.95rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.5rem;
   font-size: 0.9rem;
+  font-weight: 500;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -250,27 +323,27 @@
 
 .org-ws .org-input:focus {
   border-color: var(--org-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  box-shadow: 0 0 0 3px var(--org-focus);
   outline: none;
 }
 
 .org-ws .org-readonly {
-  min-height: 2.6rem;
-  border-radius: 0.6rem;
+  min-height: 2.65rem;
+  border-radius: 0.5rem;
   border-color: var(--color-border);
 }
 
-/* ---- Sticky save bar --------------------------------------------------------------- */
+/* ---- Save bar ---------------------------------------------------------------------- */
 
 .org-ws .org-savebar {
   position: sticky;
   bottom: 1rem;
   z-index: 5;
-  border-color: var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--org-radius);
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.06),
-    0 12px 32px rgba(15, 23, 42, 0.12);
+    0 14px 34px rgba(15, 23, 42, 0.14);
 }
 
 .org-ws .org-savebar--visible {
@@ -300,7 +373,7 @@
 .org-ws .org-plan-summary {
   position: relative;
   overflow: hidden;
-  padding: 1.6rem 1.75rem 1.6rem 2rem;
+  padding: 1.75rem 1.75rem 1.75rem 2.1rem;
 }
 
 .org-ws .org-plan-summary::before {
@@ -312,19 +385,20 @@
 }
 
 .org-ws .org-plan-name {
-  font-size: 1.7rem;
+  font-size: 1.8rem;
+  letter-spacing: -0.04em;
 }
 
 .org-ws .org-usage-grid {
   gap: 1rem;
-  padding: 1.25rem 1.5rem 1.5rem;
+  padding: 1.4rem 1.6rem 1.6rem;
 }
 
 .org-ws .org-usage-card {
-  padding: 1.1rem 1.15rem;
+  padding: 1.15rem 1.2rem;
   border-color: var(--color-border);
-  border-radius: 0.8rem;
-  background: var(--color-surface-sunken);
+  border-radius: 0.6rem;
+  background: var(--color-surface);
 }
 
 .org-ws .org-usage-card-head strong {
@@ -333,15 +407,16 @@
 }
 
 .org-ws .org-usage-card-value {
-  margin: 0.5rem 0 0.8rem;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  margin: 0.55rem 0 0.85rem;
+  font-size: 1.15rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
 }
 
 .org-ws .org-usage-track {
-  height: 0.45rem;
-  background: var(--color-border);
+  height: 0.5rem;
+  background: var(--color-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--color-border);
 }
 
 .org-ws .org-usage-fill {
@@ -355,16 +430,16 @@
 /* ---- Change plan ------------------------------------------------------------------- */
 
 .org-ws .org-plan-grid {
-  grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr));
-  gap: 1rem;
-  padding: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.1rem;
+  padding: 1.6rem;
 }
 
 .org-ws .org-plan-card {
   gap: 0.5rem;
-  padding: 1.35rem 1.35rem 1.45rem;
-  border-color: var(--color-border);
-  border-radius: 1rem;
+  padding: 1.5rem 1.5rem 1.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.8rem;
   box-shadow: var(--org-shadow);
 }
 
@@ -380,7 +455,7 @@
 .org-ws .org-plan-card:hover {
   border-color: var(--color-text-subtle);
   transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
 }
 
 .org-ws .org-plan-card:focus-visible {
@@ -391,14 +466,14 @@
 .org-ws .org-plan-card--selected,
 .org-ws .org-plan-card--selected:hover {
   border-color: var(--org-accent);
-  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
   box-shadow:
     0 0 0 2px var(--org-accent),
-    0 10px 28px rgba(15, 23, 42, 0.1);
+    0 12px 30px rgba(15, 23, 42, 0.1);
 }
 
 .org-ws .org-plan-card-name {
-  font-size: 1rem;
+  font-size: 1.05rem;
 }
 
 .org-ws .org-plan-card-badge {
@@ -407,8 +482,9 @@
 }
 
 .org-ws .org-plan-card-price {
-  margin-top: 0.15rem;
-  font-size: 1.9rem;
+  margin-top: 0.2rem;
+  font-size: 2.1rem;
+  letter-spacing: -0.04em;
 }
 
 .org-ws .org-plan-card-period {
@@ -416,15 +492,15 @@
 }
 
 .org-ws .org-plan-card-limits {
-  margin-top: 0.5rem;
-  padding-top: 0.85rem;
+  margin-top: 0.6rem;
+  padding-top: 0.9rem;
   border-top: 1px solid var(--color-border);
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
 }
 
 .org-ws .org-plan-card-features {
-  gap: 0.4rem;
-  font-size: 0.8rem;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
 }
 
 .org-ws .org-plan-card-feature--on {
@@ -437,20 +513,21 @@
 }
 
 .org-ws .org-plan-warning {
-  margin: 0 1.5rem 1rem;
+  margin: 0 1.6rem 1rem;
 }
 
 .org-ws .org-plan-confirm {
   gap: 0.6rem;
-  padding: 1rem 1.5rem 1.4rem;
+  padding: 1.1rem 1.6rem 1.5rem;
   border-top: 1px solid var(--color-border);
 }
 
-/* ---- System tab -------------------------------------------------------------------- */
+/* ---- System ------------------------------------------------------------------------ */
 
 .org-ws .preheader-panel-grid {
-  padding: 1.5rem;
-  gap: 2rem;
+  padding: 1.6rem;
+  gap: 2.25rem;
+  align-items: start;
 }
 
 .org-ws .preheader-panel-fields label span {
@@ -459,22 +536,47 @@
 
 /* ---- Responsive -------------------------------------------------------------------- */
 
+@media (max-width: 1200px) {
+  .org-ws .org-rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
+  .org-ws-layout {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .org-ws-nav {
+    position: static;
+    flex-direction: row;
+    gap: 0.35rem;
+    padding: 0 0 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    overflow-x: auto;
+  }
+
+  .org-ws-nav-item {
+    width: auto;
+    white-space: nowrap;
+  }
+
   .org-ws .org-identity {
     grid-template-columns: 1fr;
     padding-inline: 1.25rem;
   }
 
-  .org-ws .org-identity-stats {
-    flex-wrap: wrap;
+  .org-ws .org-identity-stats > div:first-child {
+    padding-left: 0;
   }
 
-  .org-ws .org-panel-head,
-  .org-ws .org-row {
-    padding-inline: 1.15rem;
+  .org-ws .org-rows {
+    grid-template-columns: 1fr;
+    padding-inline: 1.25rem;
   }
 
-  .org-ws .org-settings-tabs {
-    overflow-x: auto;
+  .org-ws .org-panel-head {
+    padding-inline: 1.25rem;
   }
 }

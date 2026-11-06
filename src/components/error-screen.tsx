@@ -14,8 +14,8 @@ export function ErrorScreen({ code, title, message, reference, actions }: ErrorS
   return (
     <main className="error-screen">
       <div className="error-screen-card">
-        <div className="error-screen-icon" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <div className="error-screen-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
               d="M12 3.5 2.8 19.5h18.4L12 3.5Z"
               stroke="currentColor"

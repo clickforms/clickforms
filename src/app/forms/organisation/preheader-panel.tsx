@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { type ChangeEvent, useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import { PreheaderPreview } from '@/components/preheader-preview';
 import { useToast } from '@/components/toast';
@@ -108,6 +108,36 @@ function BackgroundField({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function Section({
+  step,
+  title,
+  description,
+  aside,
+  children,
+}: {
+  step: number;
+  title: string;
+  description: string;
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="preheader-section">
+      <header className="preheader-section-head">
+        <span className="preheader-section-step" aria-hidden="true">
+          {step}
+        </span>
+        <div className="preheader-section-copy">
+          <h3>{title}</h3>
+          <p>{description}</p>
+        </div>
+        {aside}
+      </header>
+      <div className="preheader-section-body">{children}</div>
+    </section>
   );
 }
 
@@ -242,19 +272,23 @@ export function PreheaderPanel({
       />
       <div className="preheader-panel-grid">
         <div className="preheader-panel-fields">
-          <Segmented<PreheaderLayout>
-            label="Layout"
-            value={value.layout}
-            options={PREHEADER_LAYOUTS.map((layout) => ({
-              value: layout,
-              label: PREHEADER_LAYOUT_LABEL[layout],
-            }))}
-            onChange={(layout) => patch({ layout })}
-          />
+          <Section step={1} title="Layout" description="Where the logo sits relative to your text.">
+            <Segmented<PreheaderLayout>
+              label="Arrangement"
+              value={value.layout}
+              options={PREHEADER_LAYOUTS.map((layout) => ({
+                value: layout,
+                label: PREHEADER_LAYOUT_LABEL[layout],
+              }))}
+              onChange={(layout) => patch({ layout })}
+            />
+          </Section>
 
-          <div className="preheader-field">
-            <div className="preheader-field-row">
-              <span className="preheader-field-label">Logo</span>
+          <Section
+            step={2}
+            title="Logo"
+            description="Your organisation logo, or a different one just for this header."
+            aside={
               <button
                 type="button"
                 role="switch"
@@ -265,71 +299,76 @@ export function PreheaderPanel({
               >
                 <span className="settings-toggle-thumb" />
               </button>
-            </div>
+            }
+          >
             {value.showLogo ? (
-              <div className="preheader-logo-card">
-                <div className="preheader-logo-thumb">
-                  {logoUrl ? (
-                    // biome-ignore lint/performance/noImgElement: presigned S3 URL or local object URL
-                    <img src={logoUrl} alt="" />
-                  ) : (
-                    <span>No logo</span>
-                  )}
-                </div>
-                <div className="preheader-logo-actions">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept={LOGO_ACCEPT}
-                    className="org-file-input"
-                    onChange={(event) => void uploadLogo(event)}
-                    disabled={isUploading}
-                  />
-                  <button
-                    type="button"
-                    className="button button--secondary button--small"
-                    disabled={isUploading}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {isUploading ? 'Uploading…' : customLogoUrl ? 'Replace logo' : 'Upload logo'}
-                  </button>
-                  {customLogoUrl ? (
+              <>
+                <div className="preheader-logo-card">
+                  <div className="preheader-logo-thumb">
+                    {logoUrl ? (
+                      // biome-ignore lint/performance/noImgElement: presigned S3 URL or local object URL
+                      <img src={logoUrl} alt="" />
+                    ) : (
+                      <span>No logo</span>
+                    )}
+                  </div>
+                  <div className="preheader-logo-actions">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={LOGO_ACCEPT}
+                      className="org-file-input"
+                      onChange={(event) => void uploadLogo(event)}
+                      disabled={isUploading}
+                    />
                     <button
                       type="button"
-                      className="button button--ghost button--small"
-                      onClick={() => {
-                        setCustomLogoUrl(null);
-                        patch({ logoStorageKey: undefined });
-                      }}
+                      className="button button--secondary button--small"
+                      disabled={isUploading}
+                      onClick={() => fileInputRef.current?.click()}
                     >
-                      Use organisation logo
+                      {isUploading ? 'Uploading…' : customLogoUrl ? 'Replace logo' : 'Upload logo'}
                     </button>
-                  ) : (
-                    <p className="preheader-panel-hint">
-                      {orgLogoUrl
-                        ? 'Using your organisation logo. Upload a different one for this header only.'
-                        : 'No organisation logo set. Upload one for this header.'}
-                    </p>
-                  )}
+                    {customLogoUrl ? (
+                      <button
+                        type="button"
+                        className="button button--ghost button--small"
+                        onClick={() => {
+                          setCustomLogoUrl(null);
+                          patch({ logoStorageKey: undefined });
+                        }}
+                      >
+                        Use organisation logo
+                      </button>
+                    ) : (
+                      <p className="preheader-panel-hint">
+                        {orgLogoUrl
+                          ? 'Using your organisation logo.'
+                          : 'No organisation logo set. Upload one for this header.'}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </div>
+                <Segmented<PreheaderLogoSize>
+                  label="Size"
+                  value={value.logoSize}
+                  options={PREHEADER_LOGO_SIZES.map((size) => ({
+                    value: size,
+                    label: SIZE_LABEL[size],
+                  }))}
+                  onChange={(logoSize) => patch({ logoSize })}
+                />
+              </>
+            ) : (
+              <p className="preheader-panel-hint">The logo is hidden in this header.</p>
+            )}
+          </Section>
 
-          {value.showLogo ? (
-            <Segmented<PreheaderLogoSize>
-              label="Logo size"
-              value={value.logoSize}
-              options={PREHEADER_LOGO_SIZES.map((size) => ({
-                value: size,
-                label: SIZE_LABEL[size],
-              }))}
-              onChange={(logoSize) => patch({ logoSize })}
-            />
-          ) : null}
-
-          <div className="preheader-field">
-            <span className="preheader-field-label">Content</span>
+          <Section
+            step={3}
+            title="Content"
+            description="Name, address, contact details, anything you want shown in the header."
+          >
             <div className="preheader-editor">
               <RichTextEditor
                 value={value.body}
@@ -340,9 +379,9 @@ export function PreheaderPanel({
                 ariaLabel="Pre-header content"
               />
             </div>
-          </div>
+          </Section>
 
-          <div className="preheader-field preheader-field--split">
+          <Section step={4} title="Style" description="Optional finishing touches.">
             <BackgroundField
               value={value.backgroundColor}
               onChange={(backgroundColor) => patch({ backgroundColor })}
@@ -360,7 +399,7 @@ export function PreheaderPanel({
                 <span className="settings-toggle-thumb" />
               </button>
             </div>
-          </div>
+          </Section>
 
           <div className="preheader-panel-actions">
             <button
@@ -371,6 +410,7 @@ export function PreheaderPanel({
             >
               {isSaving ? 'Saving…' : 'Save pre-header'}
             </button>
+            {dirty ? <span className="preheader-unsaved">Unsaved changes</span> : null}
           </div>
         </div>
 

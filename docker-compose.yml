@@ -59,13 +59,6 @@ services:
       MESSAGEMEDIA_API_KEY: ${MESSAGEMEDIA_API_KEY:-}
       MESSAGEMEDIA_API_SECRET: ${MESSAGEMEDIA_API_SECRET:-}
       MESSAGEMEDIA_SENDER_ID: ${MESSAGEMEDIA_SENDER_ID:-}
-      # Static AWS keys — ONLY for a box whose EC2 instance role can't be used (production, until
-      # that is fixed). Written without a value on purpose: compose then passes them through
-      # when start.sh has them (i.e. they exist in Infisical) and leaves them completely unset
-      # otherwise, so a box that uses its instance role (staging) never sees an empty key that
-      # would break the AWS credential chain.
-      AWS_ACCESS_KEY_ID:
-      AWS_SECRET_ACCESS_KEY:
     expose:
       - '3000'
     networks:

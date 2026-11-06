@@ -2,6 +2,7 @@
 
 import type { OrgPlan } from '@prisma/client';
 import Link from 'next/link';
+import '../organisation.css';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import type { OrganizationPlanInfo } from '@/app/forms/organisation/organisation-details-client';
@@ -136,7 +137,7 @@ export function ChangePlanClient({ planInfo: initialPlanInfo }: ChangePlanClient
   }
 
   return (
-    <div className="org-settings">
+    <div className="org-settings org-ws">
       <header className="org-settings-header">
         <div>
           <Link href="/forms/organisation?tab=billing" className="org-plan-back-link">

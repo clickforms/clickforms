@@ -1,0 +1,480 @@
+/* Workspace Organisation pages (/forms/organisation and /forms/organisation/plan).
+ *
+ * Scoped under .org-ws on purpose: the base .org-* rules in globals.css are shared with the
+ * platform admin pages (admin billing, organisation detail, template settings), which must
+ * keep their current look. Everything here refines those rules for the workspace pages only. */
+
+.org-ws {
+  --org-radius: 0.9rem;
+  --org-accent: color-mix(in srgb, var(--color-primary) 55%, #0f7a3d);
+  --org-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 20px rgba(15, 23, 42, 0.04);
+  max-width: 74rem;
+  margin-inline: auto;
+}
+
+/* ---- Header + underline tabs ------------------------------------------------------- */
+
+.org-ws .org-settings-header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
+}
+
+.org-ws .org-settings-title {
+  font-size: 1.9rem;
+  letter-spacing: -0.04em;
+}
+
+.org-ws .org-settings-lead {
+  max-width: 40rem;
+}
+
+.org-ws .org-settings-tabs {
+  display: flex;
+  gap: 1.75rem;
+  padding: 0;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.org-ws .org-settings-tab {
+  margin-bottom: -1px;
+  padding: 0.7rem 0.1rem;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.org-ws .org-settings-tab:hover {
+  color: var(--color-text);
+}
+
+.org-ws .org-settings-tab--active {
+  border-bottom-color: var(--org-accent);
+  background: none;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.org-ws .org-settings-tab:focus-visible {
+  outline: 2px solid var(--org-accent);
+  outline-offset: 2px;
+  border-radius: 0.3rem;
+}
+
+.org-ws .org-settings-stack {
+  gap: 1.5rem;
+}
+
+/* ---- Panels ------------------------------------------------------------------------ */
+
+.org-ws .org-panel {
+  border-color: var(--color-border);
+  border-radius: var(--org-radius);
+  box-shadow: var(--org-shadow);
+}
+
+.org-ws .org-panel-head {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  padding: 1.15rem 1.5rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: var(--org-radius) var(--org-radius) 0 0;
+}
+
+.org-ws .org-panel-head-main {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.org-ws .org-panel-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.65rem;
+  background: var(--color-primary-soft);
+  color: var(--org-accent);
+}
+
+.org-ws .org-panel-title {
+  font-size: 0.975rem;
+  font-weight: 700;
+}
+
+.org-ws .org-panel-lead {
+  margin: 0.15rem 0 0;
+  font-size: 0.8125rem;
+}
+
+/* ---- Identity hero ----------------------------------------------------------------- */
+
+.org-ws .org-identity {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  column-gap: 1.5rem;
+  row-gap: 1rem;
+  padding: 5.75rem 1.75rem 1.6rem;
+  overflow: hidden;
+}
+
+.org-ws .org-identity::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5rem;
+  background:
+    radial-gradient(
+      18rem 8rem at 85% 0%,
+      color-mix(in srgb, var(--color-lavender-strong) 16%, transparent),
+      transparent
+    ),
+    linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--color-primary) 34%, var(--color-surface)),
+      color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))
+    );
+  border-bottom: 1px solid var(--color-border);
+}
+
+.org-ws .org-identity-logo {
+  z-index: 1;
+  width: 6.25rem;
+  height: 6.25rem;
+  margin-top: -3.25rem;
+  border: 4px solid var(--color-surface);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 0 0 1px var(--color-border),
+    0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.org-ws .org-identity-copy {
+  z-index: 1;
+}
+
+.org-ws .org-identity-name {
+  margin: 0;
+  font-size: 1.55rem;
+}
+
+.org-ws .org-identity-url {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 0.5rem;
+  padding: 0.15rem 0.2rem 0.15rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}
+
+.org-ws .org-identity-url-text {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.org-ws .org-identity-actions {
+  margin-top: 1rem;
+}
+
+.org-ws .org-identity-stats {
+  z-index: 1;
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.org-ws .org-identity-stats > div {
+  min-width: 5.25rem;
+  padding: 0.65rem 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface-sunken);
+}
+
+.org-ws .org-identity-stats dt {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.org-ws .org-identity-stats dd {
+  margin: 0.15rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+/* ---- Rows + inputs ----------------------------------------------------------------- */
+
+.org-ws .org-row {
+  grid-template-columns: minmax(11rem, 17rem) minmax(0, 1fr);
+  padding: 1.15rem 1.5rem;
+}
+
+.org-ws .org-row-copy p {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.org-ws .org-input {
+  height: 2.6rem;
+  padding: 0 0.9rem;
+  border-color: var(--color-border-strong);
+  border-radius: 0.6rem;
+  font-size: 0.9rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.org-ws .org-input:hover {
+  border-color: var(--color-text-subtle);
+}
+
+.org-ws .org-input:focus {
+  border-color: var(--org-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  outline: none;
+}
+
+.org-ws .org-readonly {
+  min-height: 2.6rem;
+  border-radius: 0.6rem;
+  border-color: var(--color-border);
+}
+
+/* ---- Sticky save bar --------------------------------------------------------------- */
+
+.org-ws .org-savebar {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 5;
+  border-color: var(--color-border);
+  border-radius: var(--org-radius);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+.org-ws .org-savebar--visible {
+  border-color: var(--org-accent);
+}
+
+.org-ws .org-savebar p {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.org-ws .org-savebar--visible p::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-warning);
+}
+
+/* ---- Billing ----------------------------------------------------------------------- */
+
+.org-ws .org-banner {
+  border-radius: var(--org-radius);
+}
+
+.org-ws .org-plan-summary {
+  position: relative;
+  overflow: hidden;
+  padding: 1.6rem 1.75rem 1.6rem 2rem;
+}
+
+.org-ws .org-plan-summary::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.3rem;
+  background: linear-gradient(180deg, var(--color-primary), var(--org-accent));
+}
+
+.org-ws .org-plan-name {
+  font-size: 1.7rem;
+}
+
+.org-ws .org-usage-grid {
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.org-ws .org-usage-card {
+  padding: 1.1rem 1.15rem;
+  border-color: var(--color-border);
+  border-radius: 0.8rem;
+  background: var(--color-surface-sunken);
+}
+
+.org-ws .org-usage-card-head strong {
+  color: var(--color-text);
+  font-size: 0.8rem;
+}
+
+.org-ws .org-usage-card-value {
+  margin: 0.5rem 0 0.8rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.org-ws .org-usage-track {
+  height: 0.45rem;
+  background: var(--color-border);
+}
+
+.org-ws .org-usage-fill {
+  background: linear-gradient(90deg, var(--color-primary), var(--org-accent));
+}
+
+.org-ws .org-usage-fill--over {
+  background: var(--color-danger);
+}
+
+/* ---- Change plan ------------------------------------------------------------------- */
+
+.org-ws .org-plan-grid {
+  grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr));
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.org-ws .org-plan-card {
+  gap: 0.5rem;
+  padding: 1.35rem 1.35rem 1.45rem;
+  border-color: var(--color-border);
+  border-radius: 1rem;
+  box-shadow: var(--org-shadow);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .org-ws .org-plan-card {
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      border-color 0.15s ease;
+  }
+}
+
+.org-ws .org-plan-card:hover {
+  border-color: var(--color-text-subtle);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.1);
+}
+
+.org-ws .org-plan-card:focus-visible {
+  outline: 2px solid var(--org-accent);
+  outline-offset: 2px;
+}
+
+.org-ws .org-plan-card--selected,
+.org-ws .org-plan-card--selected:hover {
+  border-color: var(--org-accent);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  box-shadow:
+    0 0 0 2px var(--org-accent),
+    0 10px 28px rgba(15, 23, 42, 0.1);
+}
+
+.org-ws .org-plan-card-name {
+  font-size: 1rem;
+}
+
+.org-ws .org-plan-card-badge {
+  background: var(--color-primary-soft);
+  color: var(--org-accent);
+}
+
+.org-ws .org-plan-card-price {
+  margin-top: 0.15rem;
+  font-size: 1.9rem;
+}
+
+.org-ws .org-plan-card-period {
+  font-size: 0.85rem;
+}
+
+.org-ws .org-plan-card-limits {
+  margin-top: 0.5rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.8rem;
+}
+
+.org-ws .org-plan-card-features {
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.org-ws .org-plan-card-feature--on {
+  color: var(--color-text);
+}
+
+.org-ws .org-plan-card-feature--on svg {
+  flex-shrink: 0;
+  color: var(--org-accent);
+}
+
+.org-ws .org-plan-warning {
+  margin: 0 1.5rem 1rem;
+}
+
+.org-ws .org-plan-confirm {
+  gap: 0.6rem;
+  padding: 1rem 1.5rem 1.4rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ---- System tab -------------------------------------------------------------------- */
+
+.org-ws .preheader-panel-grid {
+  padding: 1.5rem;
+  gap: 2rem;
+}
+
+.org-ws .preheader-panel-fields label span {
+  font-size: 0.8125rem;
+}
+
+/* ---- Responsive -------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .org-ws .org-identity {
+    grid-template-columns: 1fr;
+    padding-inline: 1.25rem;
+  }
+
+  .org-ws .org-identity-stats {
+    flex-wrap: wrap;
+  }
+
+  .org-ws .org-panel-head,
+  .org-ws .org-row {
+    padding-inline: 1.15rem;
+  }
+
+  .org-ws .org-settings-tabs {
+    overflow-x: auto;
+  }
+}

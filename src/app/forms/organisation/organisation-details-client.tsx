@@ -18,7 +18,9 @@ import { buildUsageBars, PLAN_LABELS, type PlanUsage } from '@/lib/admin/plan-li
 import { getErrorMessage, readApiError } from '@/lib/error-message';
 import { isCroppableImage } from '@/lib/forms/crop-image';
 import type { OrgPreheader } from '@/lib/org-preheader';
+import { PanelHead } from './panel-head';
 import { PreheaderPanel } from './preheader-panel';
+import './organisation.css';
 
 /** Keep in sync with MAX_LOGO_SIZE_BYTES / the logo MIME allowlist in src/lib/s3.ts —
  * not imported from there because that module is `server-only` (mirrors the same
@@ -426,7 +428,7 @@ export function OrganisationDetailsClient({
   const trialDays = planInfo.trialEndsAt ? daysUntil(planInfo.trialEndsAt) : 0;
 
   return (
-    <div className="org-settings">
+    <div className="org-settings org-ws">
       <header className="org-settings-header">
         <div>
           <p className="settings-page-kicker">Workspace</p>
@@ -559,16 +561,33 @@ export function OrganisationDetailsClient({
                 ) : null}
               </div>
             </div>
+            <dl className="org-identity-stats">
+              <div>
+                <dt>Plan</dt>
+                <dd>{PLAN_LABELS[planInfo.plan]}</dd>
+              </div>
+              <div>
+                <dt>Forms</dt>
+                <dd>{planInfo.usage.forms}</dd>
+              </div>
+              <div>
+                <dt>Team</dt>
+                <dd>{planInfo.usage.users}</dd>
+              </div>
+            </dl>
           </section>
 
           <section className="org-panel">
-            <header className="org-panel-head">
-              <h2 className="org-panel-title">Profile</h2>
-            </header>
+            <PanelHead
+              icon="building"
+              title="Profile"
+              description="How your organisation appears across Clickforms."
+            />
             <div className="org-rows">
               <div className="org-row">
                 <div className="org-row-copy">
                   <label htmlFor="org-name">Organisation name</label>
+                  <p>Shown on your forms, emails and share links.</p>
                 </div>
                 <div className="org-row-control">
                   <input
@@ -584,6 +603,7 @@ export function OrganisationDetailsClient({
               <div className="org-row">
                 <div className="org-row-copy">
                   <label htmlFor="org-abn">ABN</label>
+                  <p>Optional. 11 digits, spaces allowed.</p>
                 </div>
                 <div className="org-row-control">
                   <input
@@ -600,6 +620,7 @@ export function OrganisationDetailsClient({
               <div className="org-row">
                 <div className="org-row-copy">
                   <span className="org-row-label">Public URL</span>
+                  <p>Where respondents open your forms.</p>
                 </div>
                 <div className="org-row-control">
                   <div className="org-readonly">
@@ -619,13 +640,16 @@ export function OrganisationDetailsClient({
           </section>
 
           <section className="org-panel">
-            <header className="org-panel-head">
-              <h2 className="org-panel-title">Contact</h2>
-            </header>
+            <PanelHead
+              icon="user"
+              title="Contact"
+              description="Who we reach out to about this workspace."
+            />
             <div className="org-rows">
               <div className="org-row">
                 <div className="org-row-copy">
                   <label htmlFor="org-contact-name">Contact person</label>
+                  <p>Main person for account matters.</p>
                 </div>
                 <div className="org-row-control">
                   <input
@@ -640,6 +664,7 @@ export function OrganisationDetailsClient({
               <div className="org-row">
                 <div className="org-row-copy">
                   <label htmlFor="org-contact-email">Contact email</label>
+                  <p>Billing and service notices go here.</p>
                 </div>
                 <div className="org-row-control">
                   <input
@@ -656,6 +681,7 @@ export function OrganisationDetailsClient({
               <div className="org-row">
                 <div className="org-row-copy">
                   <label htmlFor="org-contact-phone">Contact phone</label>
+                  <p>Optional.</p>
                 </div>
                 <div className="org-row-control">
                   <input
@@ -673,15 +699,11 @@ export function OrganisationDetailsClient({
           </section>
 
           <section className="org-panel org-panel--wide">
-            <header className="org-panel-head">
-              <h2 className="org-panel-title">
-                Notifications
-                <HelpTip id="org-help-notifications" label="About notifications">
-                  Organisation-wide default when someone submits a form. Individual forms can still
-                  override this from their own Settings page.
-                </HelpTip>
-              </h2>
-            </header>
+            <PanelHead
+              icon="bell"
+              title="Notifications"
+              description="Organisation-wide default when someone submits a form. Individual forms can override this in their own settings."
+            />
             <div className="org-rows">
               <div className="org-row org-row--toggle">
                 <div className="org-row-copy">
@@ -821,14 +843,11 @@ export function OrganisationDetailsClient({
           </section>
 
           <section className="org-panel org-panel--wide">
-            <header className="org-panel-head">
-              <h2 className="org-panel-title">
-                Usage
-                <HelpTip id="org-help-usage" label="About usage">
-                  This month against your current plan&apos;s limits.
-                </HelpTip>
-              </h2>
-            </header>
+            <PanelHead
+              icon="chart"
+              title="Usage"
+              description="This month against your current plan's limits."
+            />
             <div className="org-usage-grid">
               {buildUsageBars(planInfo.plan, planInfo.usage).map((bar) => {
                 const overLimit = bar.limit !== null && bar.used > bar.limit;

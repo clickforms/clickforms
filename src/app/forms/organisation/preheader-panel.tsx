@@ -5,6 +5,7 @@ import { PreheaderPreview } from '@/components/preheader-preview';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
 import type { OrgPreheader } from '@/lib/org-preheader';
+import { PanelHead } from './panel-head';
 
 interface PreheaderPanelProps {
   orgName: string;
@@ -45,14 +46,16 @@ export function PreheaderPanel({ orgName, logoUrl, initial }: PreheaderPanelProp
 
   return (
     <form className="org-panel org-panel--wide" onSubmit={handleSubmit}>
-      <header className="org-panel-head">
-        <h2 className="org-panel-title">Form pre-header</h2>
-      </header>
+      <PanelHead
+        icon="layout"
+        title="Form pre-header"
+        description="Your logo and details, offered at the top of forms created from a template."
+      />
       <div className="preheader-panel-grid">
         <div className="preheader-panel-fields">
           <p className="preheader-panel-hint">
-            Shown at the top of forms you create from a template. You choose to use it or skip it
-            each time, and can edit it in the builder afterwards.
+            You choose to use it or skip it each time you use a template, and can edit it in the
+            builder afterwards.
           </p>
           <div className="preheader-panel-toggle">
             <span>

@@ -1,5 +1,5 @@
-import { PageSkeleton } from '@/components/page-skeleton';
+import { FormsRouteSkeleton } from '@/components/skeletons/form-route-skeleton';
 
 export default function Loading() {
-  return <PageSkeleton />;
+  return <FormsRouteSkeleton />;
 }

@@ -18,7 +18,7 @@ import { buildUsageBars, PLAN_LABELS, type PlanUsage } from '@/lib/admin/plan-li
 import { getErrorMessage, readApiError } from '@/lib/error-message';
 import { isCroppableImage } from '@/lib/forms/crop-image';
 import type { OrgPreheader } from '@/lib/org-preheader';
-import { OrgIcon, PanelHead } from './panel-head';
+import { HelpTip } from './help-tip';
 import { PreheaderPanel } from './preheader-panel';
 import './organisation.css';
 
@@ -60,10 +60,10 @@ interface OrganisationDetailsClientProps {
   publicOrigin: string;
 }
 
-const PLAN_STATUS_BADGE_CLASS: Record<OrgStatus, string> = {
-  active: 'badge--success',
-  trial: 'badge--draft',
-  suspended: 'badge--error',
+const TAB_LEADS: Record<'general' | 'system' | 'billing', string> = {
+  general: 'Your organisation’s identity and contact details.',
+  system: 'Response notifications and the header shown at the top of new forms.',
+  billing: 'Your current plan, renewal date and what you’ve used this month.',
 };
 
 function formatPlanDate(iso: string): string {
@@ -90,29 +90,6 @@ function orgInitials(name: string): string {
   if (parts.length === 0) return '?';
   if (parts.length === 1) return (parts[0]?.slice(0, 2) ?? '?').toUpperCase();
   return `${parts[0]?.[0] ?? ''}${parts[parts.length - 1]?.[0] ?? ''}`.toUpperCase();
-}
-
-function InfoIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M8 7.2v3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <circle cx="8" cy="5.2" r="0.7" fill="currentColor" />
-    </svg>
-  );
-}
-
-function HelpTip({ id, label, children }: { id: string; label: string; children: ReactNode }) {
-  return (
-    <span className="org-help">
-      <button type="button" className="org-help-button" aria-describedby={id} aria-label={label}>
-        <InfoIcon />
-      </button>
-      <span id={id} role="tooltip" className="org-help-tooltip">
-        {children}
-      </span>
-    </span>
-  );
 }
 
 function CameraIcon() {
@@ -168,6 +145,66 @@ function Toggle({
   );
 }
 
+function Section({
+  branded,
+  title,
+  description,
+  aside,
+  children,
+}: {
+  /** System-tab styling: white head instead of the tinted strip. */
+  branded?: boolean;
+  title: string;
+  /** Shown as an ⓘ tooltip beside the title rather than a line of text. */
+  description?: string;
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`org-section${branded ? ' org-section--branded' : ''}`}>
+      <header className="org-section-head">
+        <h2 className="org-section-title org-title-with-help">
+          {title}
+          {description ? <HelpTip label={`About ${title}`}>{description}</HelpTip> : null}
+        </h2>
+        {aside ? <div className="org-section-aside">{aside}</div> : null}
+      </header>
+      <div className="org-section-body">{children}</div>
+    </section>
+  );
+}
+
+function Row({
+  label,
+  htmlFor,
+  hint,
+  action,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  hint?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="org-row">
+      <div className="org-row-copy">
+        <span className="org-label-with-help">
+          {htmlFor ? (
+            <label htmlFor={htmlFor}>{label}</label>
+          ) : (
+            <span className="org-row-label">{label}</span>
+          )}
+          {hint ? <HelpTip label={`About ${label}`}>{hint}</HelpTip> : null}
+        </span>
+      </div>
+      <div className="org-row-control">{children}</div>
+      {action ? <div className="org-row-action">{action}</div> : null}
+    </div>
+  );
+}
+
 export function OrganisationDetailsClient({
   initialOrganization,
   plan,
@@ -175,15 +212,21 @@ export function OrganisationDetailsClient({
 }: OrganisationDetailsClientProps) {
   const toast = useToast();
   const searchParams = useSearchParams();
-  // Defaults to Billing when there's something to act on (trial/suspended) so the
-  // organisation's own admin lands straight on the thing that needs attention, rather
-  // than General's identity fields they weren't looking for. ?tab=billing overrides
-  // that default explicitly — used when redirecting back from /forms/organisation/plan
-  // after a switch, since the switch may have just graduated the org from 'trial' to
-  // 'active', which would otherwise silently default back to General on return.
-  const [activeTab, setActiveTab] = useState<'general' | 'system' | 'billing'>(
-    searchParams.get('tab') === 'billing' || plan.status !== 'active' ? 'billing' : 'general',
+  // Opens on the tab named in ?tab= (kept in sync below, so a refresh stays put), else
+  // General. The trial reminder lives in the header badge and the Billing tab's dot rather
+  // than forcing every visit onto Billing. /forms/organisation/plan redirects back with
+  // ?tab=billing after a switch.
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTabState] = useState<'general' | 'system' | 'billing'>(
+    tabParam === 'billing' || tabParam === 'system' ? tabParam : 'general',
   );
+  function setActiveTab(next: 'general' | 'system' | 'billing') {
+    setActiveTabState(next);
+    const url = new URL(window.location.href);
+    if (next === 'general') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', next);
+    window.history.replaceState(window.history.state, '', url);
+  }
   // Actually changing plans now happens on its own page (/forms/organisation/plan —
   // see ChangePlanClient), which re-fetches fresh org data from the server on the way
   // back rather than patching this state in place, so `plan` no longer needs to be
@@ -240,6 +283,29 @@ export function OrganisationDetailsClient({
       if (cropSession) URL.revokeObjectURL(cropSession.imageSrc);
     };
   }, [cropSession]);
+
+  // Safari can restore a stale sideways scroll offset on the (scrollbar-less) app frame
+  // after a refresh, pushing the sidebar off-screen. Snap everything back to the left edge
+  // once on mount, and again after the browser's own scroll restoration has run.
+  useEffect(() => {
+    const reset = () => {
+      for (const el of [
+        document.documentElement,
+        document.body,
+        document.querySelector('.admin-shell'),
+        document.querySelector('.admin-main'),
+      ]) {
+        if (el && el.scrollLeft !== 0) el.scrollLeft = 0;
+      }
+    };
+    reset();
+    const frame = requestAnimationFrame(reset);
+    const timer = window.setTimeout(reset, 300);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   const closeCropSession = useCallback(() => {
     setCropSession((prev) => {
@@ -427,121 +493,176 @@ export function OrganisationDetailsClient({
     }
   }
 
+  function discardChanges() {
+    setName(savedSnapshot.name);
+    setAbn(savedSnapshot.abn);
+    setContactName(savedSnapshot.contactName);
+    setContactEmail(savedSnapshot.contactEmail);
+    setContactPhone(savedSnapshot.contactPhone);
+    setNotificationEmail(savedSnapshot.notificationEmail);
+    setNotificationsEnabled(savedSnapshot.notificationsEnabled);
+    setError(null);
+  }
+
   const trialDays = planInfo.trialEndsAt ? daysUntil(planInfo.trialEndsAt) : 0;
+  const statusLabel =
+    planInfo.status === 'trial'
+      ? 'Trial'
+      : planInfo.status === 'suspended'
+        ? 'Suspended'
+        : 'Active';
+  const busyLogo = isUploadingLogo || isRemovingLogo;
+  const tabs: { id: 'general' | 'system' | 'billing'; label: string }[] = [
+    { id: 'general', label: 'General' },
+    { id: 'system', label: 'System' },
+    { id: 'billing', label: 'Billing' },
+  ];
 
   return (
     <div className="org-settings org-ws">
       <header className="org-settings-header">
         <div>
-          <p className="settings-page-kicker">Workspace</p>
           <h1 className="org-settings-title">Organisation</h1>
-          <p className="org-settings-lead">
-            Identity, contact details, and the plan this workspace is on.
-          </p>
+          <p className="org-settings-lead">{TAB_LEADS[activeTab]}</p>
+        </div>
+        <div className="org-tabs" role="tablist" aria-label="Organisation settings sections">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`org-tab${activeTab === tab.id ? ' org-tab--active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+              {tab.id === 'billing' && planInfo.status !== 'active' ? (
+                <span className="org-tab-dot" aria-hidden="true" />
+              ) : null}
+            </button>
+          ))}
         </div>
       </header>
 
-      <div className="org-ws-layout">
-        <div
-          className="org-ws-nav"
-          role="tablist"
-          aria-orientation="vertical"
-          aria-label="Organisation settings sections"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'general'}
-            className={`org-ws-nav-item${activeTab === 'general' ? ' org-ws-nav-item--active' : ''}`}
-            onClick={() => setActiveTab('general')}
-          >
-            <span className="org-ws-nav-icon" data-tone="green">
-              <OrgIcon name="building" size={15} />
-            </span>
-            General
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'system'}
-            className={`org-ws-nav-item${activeTab === 'system' ? ' org-ws-nav-item--active' : ''}`}
-            onClick={() => setActiveTab('system')}
-          >
-            <span className="org-ws-nav-icon" data-tone="violet">
-              <OrgIcon name="layout" size={15} />
-            </span>
-            System
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'billing'}
-            className={`org-ws-nav-item${activeTab === 'billing' ? ' org-ws-nav-item--active' : ''}`}
-            onClick={() => setActiveTab('billing')}
-          >
-            <span className="org-ws-nav-icon" data-tone="amber">
-              <OrgIcon name="card" size={15} />
-            </span>
-            Billing
-            {planInfo.status !== 'active' ? (
-              <span className="org-ws-nav-dot" aria-hidden="true" />
+      <div className="org-ws-content">
+        {activeTab === 'general' || activeTab === 'system' ? (
+          <form id="org-general-form" className="org-settings-stack" onSubmit={handleSubmit}>
+            {error ? (
+              <p className="form-error org-settings-error" role="alert">
+                {error}
+              </p>
             ) : null}
-          </button>
-        </div>
-        <div className="org-ws-content">
-          {activeTab === 'general' || activeTab === 'system' ? (
-            <form id="org-general-form" className="org-settings-stack" onSubmit={handleSubmit}>
-              {error ? (
-                <p className="form-error org-settings-error" role="alert">
-                  {error}
-                </p>
-              ) : null}
-              {activeTab === 'general' ? (
-                <>
-                  <section className="org-panel org-identity">
-                    <input
-                      ref={logoInputRef}
-                      type="file"
-                      accept={LOGO_ACCEPT}
-                      className="org-file-input"
-                      onChange={(event) => void handleLogoFileChange(event)}
-                      disabled={isUploadingLogo || isRemovingLogo}
-                    />
-                    <button
-                      type="button"
-                      className="org-identity-logo"
-                      disabled={isUploadingLogo || isRemovingLogo}
-                      onClick={() => logoInputRef.current?.click()}
-                      aria-label={
-                        logoUrl ? 'Replace organisation logo' : 'Upload organisation logo'
-                      }
-                    >
-                      {logoUrl ? (
-                        // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
-                        <img src={logoUrl} alt="" />
-                      ) : (
-                        <span className="org-identity-initials">
-                          {orgInitials(name || 'Organisation')}
-                        </span>
-                      )}
-                      <span className="org-identity-logo-overlay">
-                        {isUploadingLogo ? '…' : <CameraIcon />}
+
+            {activeTab === 'general' ? (
+              <>
+                <section className="org-card org-identity-card">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept={LOGO_ACCEPT}
+                    className="org-file-input"
+                    onChange={(event) => void handleLogoFileChange(event)}
+                    disabled={busyLogo}
+                  />
+                  <button
+                    type="button"
+                    className="org-logo"
+                    disabled={busyLogo}
+                    onClick={() => logoInputRef.current?.click()}
+                    aria-label={logoUrl ? 'Replace organisation logo' : 'Upload organisation logo'}
+                  >
+                    {logoUrl ? (
+                      // biome-ignore lint/performance/noImgElement: presigned S3 URL, not a static asset next/image can optimize
+                      <img src={logoUrl} alt="" />
+                    ) : (
+                      <span className="org-logo-initials">
+                        {orgInitials(name || 'Organisation')}
                       </span>
-                    </button>
-                    <div className="org-identity-copy">
-                      <div className="org-identity-name-row">
-                        <h2 className="org-identity-name">
-                          {name.trim() || 'Untitled organisation'}
-                        </h2>
-                        <HelpTip id="org-help-logo" label="About the organisation logo">
-                          PNG, JPEG, WebP, GIF, or SVG. Up to {MAX_LOGO_SIZE_BYTES / (1024 * 1024)}
-                          MB. Shown in the workspace and on share-link previews.
-                        </HelpTip>
-                      </div>
-                      <div className="org-identity-url">
-                        <span className="org-identity-url-text" title={publicOrigin}>
-                          {publicHost}
-                        </span>
+                    )}
+                    <span className="org-logo-overlay">
+                      {isUploadingLogo ? '…' : <CameraIcon />}
+                    </span>
+                  </button>
+                  <div className="org-identity-copy">
+                    <div className="org-card-name-row">
+                      <h2 className="org-card-name">{name.trim() || 'Untitled organisation'}</h2>
+                      <span className="org-status-pill" data-status={planInfo.status}>
+                        {PLAN_LABELS[planInfo.plan]} · {statusLabel}
+                      </span>
+                    </div>
+                    <div className="org-card-url">
+                      <span title={publicOrigin}>{publicHost}</span>
+                      <button
+                        type="button"
+                        className="org-icon-button"
+                        onClick={() => void copyPublicHost()}
+                        aria-label="Copy public URL"
+                      >
+                        <CopyIcon />
+                      </button>
+                    </div>
+                    <div className="org-identity-actions">
+                      <button
+                        type="button"
+                        className="button button--small org-button-primary"
+                        disabled={busyLogo}
+                        onClick={() => logoInputRef.current?.click()}
+                      >
+                        {isUploadingLogo ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
+                      </button>
+                      {logoUrl ? (
+                        <>
+                          <button
+                            type="button"
+                            className="button button--ghost button--small"
+                            disabled={busyLogo}
+                            onClick={() => void handleEditExistingLogo()}
+                          >
+                            Crop
+                          </button>
+                          <button
+                            type="button"
+                            className="button button--ghost button--small org-button-danger"
+                            disabled={busyLogo}
+                            onClick={() => void handleRemoveLogo()}
+                          >
+                            {isRemovingLogo ? 'Removing…' : 'Remove'}
+                          </button>
+                        </>
+                      ) : null}
+                      <HelpTip label="Logo file types">
+                        PNG, JPG, WebP, GIF or SVG, up to {MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB.
+                      </HelpTip>
+                    </div>
+                  </div>
+                </section>
+
+                <div className="org-grid-2">
+                  <Section title="Profile">
+                    <Row label="Organisation name" htmlFor="org-name">
+                      <input
+                        id="org-name"
+                        className="text-input org-input"
+                        required
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        disabled={isSaving}
+                      />
+                    </Row>
+                    <Row label="ABN" htmlFor="org-abn">
+                      <input
+                        id="org-abn"
+                        className="text-input org-input"
+                        value={abn}
+                        onChange={(event) => setAbn(event.target.value)}
+                        placeholder="11 222 333 444"
+                        inputMode="numeric"
+                        disabled={isSaving}
+                      />
+                    </Row>
+                    <Row label="Public URL">
+                      <div className="org-readonly">
+                        <span title={publicOrigin}>{publicHost}</span>
                         <button
                           type="button"
                           className="org-icon-button"
@@ -551,366 +672,239 @@ export function OrganisationDetailsClient({
                           <CopyIcon />
                         </button>
                       </div>
-                      <div className="org-identity-actions">
+                    </Row>
+                  </Section>
+
+                  <Section title="Contact">
+                    <Row label="Contact person" htmlFor="org-contact-name">
+                      <input
+                        id="org-contact-name"
+                        className="text-input org-input"
+                        value={contactName}
+                        onChange={(event) => setContactName(event.target.value)}
+                        placeholder="Full name"
+                        disabled={isSaving}
+                      />
+                    </Row>
+                    <Row label="Contact email" htmlFor="org-contact-email">
+                      <input
+                        id="org-contact-email"
+                        className="text-input org-input"
+                        type="email"
+                        value={contactEmail}
+                        onChange={(event) => setContactEmail(event.target.value)}
+                        placeholder="contact@yourorg.com"
+                        disabled={isSaving}
+                      />
+                    </Row>
+                    <Row label="Contact phone" htmlFor="org-contact-phone">
+                      <input
+                        id="org-contact-phone"
+                        className="text-input org-input"
+                        type="tel"
+                        value={contactPhone}
+                        onChange={(event) => setContactPhone(event.target.value)}
+                        placeholder="0400 000 000"
+                        disabled={isSaving}
+                      />
+                    </Row>
+                  </Section>
+                </div>
+
+                <div className={`org-savebar${isDirty ? ' org-savebar--dirty' : ''}`}>
+                  <p>{isDirty ? 'You have unsaved changes' : 'All changes saved'}</p>
+                  <div className="org-savebar-actions">
+                    {isDirty ? (
+                      <button
+                        type="button"
+                        className="button button--ghost button--small"
+                        disabled={isSaving}
+                        onClick={discardChanges}
+                      >
+                        Discard
+                      </button>
+                    ) : null}
+                    <button
+                      type="submit"
+                      className="button button--small org-button-primary"
+                      disabled={isSaving || !isDirty}
+                    >
+                      {isSaving ? 'Saving…' : 'Save changes'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            {activeTab === 'system' ? (
+              <>
+                <Section
+                  branded
+                  title="Notifications"
+                  description="Default for every form when someone submits. Forms can override this."
+                >
+                  <Row label="Email me new responses" hint="Sends a PDF copy of each submission.">
+                    <div className="org-toggle-value">
+                      <Toggle
+                        checked={notificationsEnabled}
+                        onChange={setNotificationsEnabled}
+                        disabled={isSaving}
+                        label="Response notification email"
+                      />
+                      <span>{notificationsEnabled ? 'On' : 'Off'}</span>
+                    </div>
+                  </Row>
+                  {notificationsEnabled ? (
+                    <Row label="Notification email" htmlFor="org-notify-email">
+                      <input
+                        id="org-notify-email"
+                        className="text-input org-input"
+                        type="email"
+                        value={notificationEmail}
+                        onChange={(event) => setNotificationEmail(event.target.value)}
+                        placeholder="responses@yourorg.com"
+                        disabled={isSaving}
+                        required
+                      />
+                    </Row>
+                  ) : null}
+                </Section>
+                {isDirty ? (
+                  <div className={`org-savebar${isDirty ? ' org-savebar--dirty' : ''}`}>
+                    <p>{isDirty ? 'You have unsaved changes' : 'All changes saved'}</p>
+                    <div className="org-savebar-actions">
+                      {isDirty ? (
                         <button
                           type="button"
-                          className="button button--secondary button--small"
-                          disabled={isUploadingLogo || isRemovingLogo}
-                          onClick={() => logoInputRef.current?.click()}
+                          className="button button--ghost button--small"
+                          disabled={isSaving}
+                          onClick={discardChanges}
                         >
-                          {isUploadingLogo
-                            ? 'Uploading…'
-                            : logoUrl
-                              ? 'Replace logo'
-                              : 'Upload logo'}
+                          Discard
                         </button>
-                        {logoUrl ? (
-                          <>
-                            <button
-                              type="button"
-                              className="button button--ghost button--small"
-                              disabled={isUploadingLogo || isRemovingLogo}
-                              onClick={() => void handleEditExistingLogo()}
-                            >
-                              Crop
-                            </button>
-                            <button
-                              type="button"
-                              className="button button--ghost button--small"
-                              disabled={isUploadingLogo || isRemovingLogo}
-                              onClick={() => void handleRemoveLogo()}
-                            >
-                              {isRemovingLogo ? 'Removing…' : 'Remove'}
-                            </button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                    <dl className="org-identity-stats">
-                      <div>
-                        <dt>Plan</dt>
-                        <dd>{PLAN_LABELS[planInfo.plan]}</dd>
-                      </div>
-                      <div>
-                        <dt>Forms</dt>
-                        <dd>{planInfo.usage.forms}</dd>
-                      </div>
-                      <div>
-                        <dt>Team</dt>
-                        <dd>{planInfo.usage.users}</dd>
-                      </div>
-                    </dl>
-                  </section>
-
-                  <section className="org-panel">
-                    <PanelHead
-                      icon="building"
-                      tone="green"
-                      title="Profile"
-                      description="How your organisation appears across Clickforms."
-                    />
-                    <div className="org-rows">
-                      <div className="org-row">
-                        <div className="org-row-copy">
-                          <label htmlFor="org-name">Organisation name</label>
-                          <p>Shown on your forms, emails and share links.</p>
-                        </div>
-                        <div className="org-row-control">
-                          <input
-                            id="org-name"
-                            className="text-input org-input"
-                            required
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                            disabled={isSaving}
-                          />
-                        </div>
-                      </div>
-                      <div className="org-row">
-                        <div className="org-row-copy">
-                          <label htmlFor="org-abn">ABN</label>
-                          <p>Optional. 11 digits, spaces allowed.</p>
-                        </div>
-                        <div className="org-row-control">
-                          <input
-                            id="org-abn"
-                            className="text-input org-input"
-                            value={abn}
-                            onChange={(event) => setAbn(event.target.value)}
-                            placeholder="11 222 333 444"
-                            inputMode="numeric"
-                            disabled={isSaving}
-                          />
-                        </div>
-                      </div>
-                      <div className="org-row">
-                        <div className="org-row-copy">
-                          <span className="org-row-label">Public URL</span>
-                          <p>Where respondents open your forms.</p>
-                        </div>
-                        <div className="org-row-control">
-                          <div className="org-readonly">
-                            <span>{publicHost}</span>
-                            <button
-                              type="button"
-                              className="org-icon-button"
-                              onClick={() => void copyPublicHost()}
-                              aria-label="Copy public URL"
-                            >
-                              <CopyIcon />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="org-panel">
-                    <PanelHead
-                      icon="user"
-                      tone="violet"
-                      title="Contact"
-                      description="Who we reach out to about this workspace."
-                    />
-                    <div className="org-rows">
-                      <div className="org-row">
-                        <div className="org-row-copy">
-                          <label htmlFor="org-contact-name">Contact person</label>
-                          <p>Main person for account matters.</p>
-                        </div>
-                        <div className="org-row-control">
-                          <input
-                            id="org-contact-name"
-                            className="text-input org-input"
-                            value={contactName}
-                            onChange={(event) => setContactName(event.target.value)}
-                            disabled={isSaving}
-                          />
-                        </div>
-                      </div>
-                      <div className="org-row">
-                        <div className="org-row-copy">
-                          <label htmlFor="org-contact-email">Contact email</label>
-                          <p>Billing and service notices go here.</p>
-                        </div>
-                        <div className="org-row-control">
-                          <input
-                            id="org-contact-email"
-                            className="text-input org-input"
-                            type="email"
-                            value={contactEmail}
-                            onChange={(event) => setContactEmail(event.target.value)}
-                            placeholder="contact@yourorg.com"
-                            disabled={isSaving}
-                          />
-                        </div>
-                      </div>
-                      <div className="org-row">
-                        <div className="org-row-copy">
-                          <label htmlFor="org-contact-phone">Contact phone</label>
-                          <p>Optional.</p>
-                        </div>
-                        <div className="org-row-control">
-                          <input
-                            id="org-contact-phone"
-                            className="text-input org-input"
-                            type="tel"
-                            value={contactPhone}
-                            onChange={(event) => setContactPhone(event.target.value)}
-                            placeholder="0400 000 000"
-                            disabled={isSaving}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                </>
-              ) : null}
-              {activeTab === 'system' ? (
-                <>
-                  <section className="org-panel org-panel--wide">
-                    <PanelHead
-                      icon="bell"
-                      tone="amber"
-                      title="Notifications"
-                      description="Organisation-wide default when someone submits a form. Individual forms can override this in their own settings."
-                    />
-                    <div className="org-rows">
-                      <div className="org-row org-row--toggle">
-                        <div className="org-row-copy">
-                          <span className="org-row-label org-label-with-help">
-                            Email me new responses
-                            <HelpTip id="org-help-notify-toggle" label="About response emails">
-                              Sends a PDF copy of each submission to the address below.
-                            </HelpTip>
-                          </span>
-                        </div>
-                        <div className="org-row-control org-row-control--end">
-                          <Toggle
-                            checked={notificationsEnabled}
-                            onChange={setNotificationsEnabled}
-                            disabled={isSaving}
-                            label="Response notification email"
-                          />
-                        </div>
-                      </div>
-                      {notificationsEnabled ? (
-                        <div className="org-row">
-                          <div className="org-row-copy">
-                            <label htmlFor="org-notify-email">Notification email</label>
-                          </div>
-                          <div className="org-row-control">
-                            <input
-                              id="org-notify-email"
-                              className="text-input org-input"
-                              type="email"
-                              value={notificationEmail}
-                              onChange={(event) => setNotificationEmail(event.target.value)}
-                              placeholder="responses@yourorg.com"
-                              disabled={isSaving}
-                              required
-                            />
-                          </div>
-                        </div>
                       ) : null}
-                    </div>
-                  </section>
-                  <PreheaderPanel
-                    orgName={name.trim() || initialOrganization.name}
-                    orgLogoUrl={logoUrl}
-                    initialCustomLogoUrl={initialOrganization.preheaderLogoUrl}
-                    initial={initialOrganization.preheader}
-                  />
-                </>
-              ) : null}
-
-              <div className={`org-savebar${isDirty ? ' org-savebar--visible' : ''}`}>
-                <p>{isDirty ? 'You have unsaved changes' : 'All changes saved'}</p>
-                <button
-                  type="submit"
-                  className="button button--dark"
-                  disabled={isSaving || !isDirty}
-                >
-                  {isSaving ? 'Saving…' : 'Save changes'}
-                </button>
-              </div>
-            </form>
-          ) : null}
-
-          {activeTab === 'billing' ? (
-            <div className="org-settings-stack">
-              {planInfo.status !== 'active' ? (
-                <div
-                  className={`org-banner${planInfo.status === 'suspended' ? ' org-banner--danger' : ' org-banner--warning'}`}
-                  role="status"
-                >
-                  <div>
-                    <p className="org-banner-title">
-                      {planInfo.status === 'trial'
-                        ? trialDays > 0
-                          ? `Trial ends in ${trialDays} day${trialDays === 1 ? '' : 's'}`
-                          : trialDays === 0
-                            ? 'Trial ends today'
-                            : 'Trial ended'
-                        : 'Organisation suspended'}
-                    </p>
-                    <p className="org-banner-body">
-                      {planInfo.status === 'trial' && planInfo.trialEndsAt ? (
-                        trialDays >= 0 ? (
-                          <>
-                            Pick a plan before {formatPlanDate(planInfo.trialEndsAt)} to keep using
-                            Clickforms without interruption.
-                          </>
-                        ) : (
-                          <>
-                            Your trial ended on {formatPlanDate(planInfo.trialEndsAt)}. Choose a
-                            plan below to continue — sign-in is paused until then.
-                          </>
-                        )
-                      ) : (
-                        'This organisation is suspended. Contact us to reactivate it.'
-                      )}
-                    </p>
-                  </div>
-                  {planInfo.status === 'suspended' ? (
-                    <Link href="/contact" className="button button--dark button--small">
-                      Contact us
-                    </Link>
-                  ) : null}
-                </div>
-              ) : null}
-
-              <section className="org-panel org-plan-summary">
-                <div>
-                  <p className="org-plan-kicker">Current plan</p>
-                  <div className="org-plan-summary-title-row">
-                    <h2 className="org-plan-name">{PLAN_LABELS[planInfo.plan]}</h2>
-                    <span className={`badge ${PLAN_STATUS_BADGE_CLASS[planInfo.status]}`}>
-                      {planInfo.status === 'trial'
-                        ? 'Trial'
-                        : planInfo.status === 'suspended'
-                          ? 'Suspended'
-                          : 'Active'}
-                    </span>
-                  </div>
-                  {planInfo.status === 'active' && planInfo.renewsAt ? (
-                    <p className="org-plan-meta">Renews {formatPlanDate(planInfo.renewsAt)}</p>
-                  ) : planInfo.status === 'trial' && planInfo.trialEndsAt ? (
-                    <p className="org-plan-meta">
-                      Trial through {formatPlanDate(planInfo.trialEndsAt)}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="org-plan-summary-actions">
-                  {/* Deliberately a separate page (/forms/organisation/plan) rather than the
-                   * grid of every tier's price sitting inline here — a subscribed org that
-                   * checks this page regularly (to see usage, say) would otherwise be shown
-                   * cheaper/other plans on every visit even when they're not looking to
-                   * switch, which nudges toward downgrading rather than just informing. This
-                   * button is the deliberate "I want to change plan" action instead. */}
-                  <Link
-                    href="/forms/organisation/plan"
-                    className="button button--dark button--small"
-                  >
-                    {planInfo.status === 'trial' ? 'Choose a plan' : 'Change plan'}
-                  </Link>
-                </div>
-              </section>
-
-              <section className="org-panel org-panel--wide">
-                <PanelHead
-                  icon="chart"
-                  tone="blue"
-                  title="Usage"
-                  description="This month against your current plan's limits."
-                />
-                <div className="org-usage-grid">
-                  {buildUsageBars(planInfo.plan, planInfo.usage).map((bar) => {
-                    const overLimit = bar.limit !== null && bar.used > bar.limit;
-                    return (
-                      <div
-                        key={bar.label}
-                        className={`org-usage-card${overLimit ? ' org-usage-card--over' : ''}`}
+                      <button
+                        type="submit"
+                        className="button button--small org-button-primary"
+                        disabled={isSaving || !isDirty}
                       >
-                        <div className="org-usage-card-head">
-                          <span>{bar.label}</span>
-                          <strong>{bar.percent === null ? 'Unlimited' : `${bar.percent}%`}</strong>
-                        </div>
-                        <p className="org-usage-card-value">{bar.formatted}</p>
-                        <div className="org-usage-track">
-                          <div
-                            className={`org-usage-fill${overLimit ? ' org-usage-fill--over' : ''}`}
-                            style={{ width: `${bar.percent ?? 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
+                        {isSaving ? 'Saving…' : 'Save changes'}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                <PreheaderPanel
+                  orgName={name.trim() || initialOrganization.name}
+                  orgLogoUrl={logoUrl}
+                  initialCustomLogoUrl={initialOrganization.preheaderLogoUrl}
+                  initial={initialOrganization.preheader}
+                />
+              </>
+            ) : null}
+          </form>
+        ) : null}
+
+        {activeTab === 'billing' ? (
+          <div className="org-settings-stack">
+            {planInfo.status !== 'active' ? (
+              <div
+                className={`org-banner${planInfo.status === 'suspended' ? ' org-banner--danger' : ' org-banner--warning'}`}
+                role="status"
+              >
+                <div>
+                  <p className="org-banner-title">
+                    {planInfo.status === 'trial'
+                      ? trialDays > 0
+                        ? `Trial ends in ${trialDays} day${trialDays === 1 ? '' : 's'}`
+                        : trialDays === 0
+                          ? 'Trial ends today'
+                          : 'Trial ended'
+                      : 'Organisation suspended'}
+                  </p>
+                  <p className="org-banner-body">
+                    {planInfo.status === 'trial' && planInfo.trialEndsAt ? (
+                      trialDays >= 0 ? (
+                        <>
+                          Pick a plan before {formatPlanDate(planInfo.trialEndsAt)} to keep using
+                          Clickforms without interruption.
+                        </>
+                      ) : (
+                        <>
+                          Your trial ended on {formatPlanDate(planInfo.trialEndsAt)}. Choose a plan
+                          below to continue — sign-in is paused until then.
+                        </>
+                      )
+                    ) : (
+                      'This organisation is suspended. Contact us to reactivate it.'
+                    )}
+                  </p>
                 </div>
-              </section>
-            </div>
-          ) : null}
-        </div>
+                {planInfo.status === 'suspended' ? (
+                  <Link href="/contact" className="button button--dark button--small">
+                    Contact us
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
+
+            <section className="org-card org-plan-card-summary">
+              <div>
+                <p className="org-plan-kicker">Current plan</p>
+                <div className="org-card-name-row">
+                  <h2 className="org-card-name org-card-name--lg">{PLAN_LABELS[planInfo.plan]}</h2>
+                  <span className="org-status-pill" data-status={planInfo.status}>
+                    {statusLabel}
+                  </span>
+                </div>
+                {planInfo.status === 'active' && planInfo.renewsAt ? (
+                  <p className="org-plan-meta">Renews {formatPlanDate(planInfo.renewsAt)}</p>
+                ) : planInfo.status === 'trial' && planInfo.trialEndsAt ? (
+                  <p className="org-plan-meta">
+                    Trial through {formatPlanDate(planInfo.trialEndsAt)}
+                  </p>
+                ) : null}
+              </div>
+              {/* Deliberately a separate page (/forms/organisation/plan) rather than every
+               * tier's price inline — see the note in change-plan-client.tsx. */}
+              <Link
+                href="/forms/organisation/plan"
+                className="button button--small org-button-primary"
+              >
+                {planInfo.status === 'trial' ? 'Choose a plan' : 'Change plan'}
+              </Link>
+            </section>
+
+            <Section title="Usage" description="This month against your current plan's limits.">
+              {buildUsageBars(planInfo.plan, planInfo.usage).map((bar) => {
+                const overLimit = bar.limit !== null && bar.used > bar.limit;
+                return (
+                  <Row
+                    key={bar.label}
+                    label={bar.label}
+                    action={
+                      <span
+                        className={`org-usage-percent${overLimit ? ' org-usage-percent--over' : ''}`}
+                      >
+                        {bar.percent === null ? 'Unlimited' : `${bar.percent}%`}
+                      </span>
+                    }
+                  >
+                    <div className="org-usage">
+                      <div className="org-usage-track">
+                        <div
+                          className={`org-usage-fill${overLimit ? ' org-usage-fill--over' : ''}`}
+                          style={{ width: `${bar.percent ?? 100}%` }}
+                          data-unlimited={bar.percent === null || undefined}
+                        />
+                      </div>
+                      <span className="org-usage-value">{bar.formatted}</span>
+                    </div>
+                  </Row>
+                );
+              })}
+            </Section>
+          </div>
+        ) : null}
       </div>
 
       {cropSession ? (

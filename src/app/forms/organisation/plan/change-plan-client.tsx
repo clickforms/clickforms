@@ -248,7 +248,7 @@ export function ChangePlanClient({ planInfo: initialPlanInfo }: ChangePlanClient
           </Link>
           <button
             type="button"
-            className="button button--dark"
+            className="button org-button-primary"
             disabled={
               isChangingPlan || (selectedPlan === planInfo.plan && planInfo.status !== 'trial')
             }

@@ -1,38 +1,10 @@
-/* Pre-header designer (System tab). Flat sections divided by hairlines rather than nested
- * cards; selection tiles with drawn diagrams; sticky live preview. */
+/* Template header designer (System tab): layout tiles with drawn diagrams, logo row, size
+ * switch, colour swatches, and the live preview — inside one "Template header" card. */
 .ph-reset {
   min-width: 0;
   margin: 0;
   padding: 0;
   border: none;
-}
-
-.ph .org-panel-head {
-  align-items: center;
-}
-
-.ph-head-actions {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 0.9rem;
-}
-
-.ph-unsaved {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  color: var(--color-warning);
-  font-size: 0.8125rem;
-  font-weight: 650;
-}
-
-.ph-unsaved::before {
-  content: "";
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: currentColor;
 }
 
 .ph-grid {
@@ -43,65 +15,6 @@
 
 .ph-controls {
   min-width: 0;
-}
-
-.ph-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.95rem;
-  padding: 1.25rem 1.4rem;
-}
-
-.ph-block + .ph-block {
-  border-top: 1px solid var(--color-border);
-}
-
-.ph-block-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.ph-block-head h3 {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 750;
-  letter-spacing: -0.015em;
-  color: var(--color-text);
-}
-
-.ph-block-head p {
-  margin: 0.15rem 0 0;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-.ph-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.ph-muted {
-  margin: 0.15rem 0 0;
-  font-size: 0.74rem;
-  color: var(--color-text-muted);
-}
-
-.ph-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.ph-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-top: 1rem;
-  border-top: 1px dashed var(--color-border);
 }
 
 /* Layout tiles */
@@ -206,30 +119,6 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-
-.ph-logo-copy {
-  min-width: 0;
-}
-
-.ph-logo-name {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 0.45rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.ph-chip {
-  padding: 0.12rem 0.5rem;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-lavender-strong) 14%, var(--color-surface));
-  color: var(--color-lavender-strong);
-  font-size: 0.66rem;
-  font-weight: 750;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .ph-logo-actions {
@@ -363,58 +252,140 @@
   box-shadow: 0 18px 44px rgba(15, 23, 42, 0.2);
 }
 
-/* Preview column */
-.ph-preview {
-  position: sticky;
-  top: 1rem;
-  align-self: start;
-  margin: 1.25rem 1.4rem 1.25rem 0;
-  padding: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  background:
-    radial-gradient(
-      18rem 10rem at 100% 0%,
-      color-mix(in srgb, var(--color-lavender-strong) 10%, transparent),
-      transparent
-    ),
-    var(--color-surface-sunken);
-}
-
-.ph-preview-head {
-  margin-bottom: 0.9rem;
-}
-
-.ph-preview-head h3 {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 750;
-}
-
-.ph-preview-head p {
-  margin: 0.15rem 0 0;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
+/* Responsive */
 
 @media (max-width: 1100px) {
   .ph-grid {
     grid-template-columns: 1fr;
   }
-
-  .ph-preview {
-    position: static;
-    margin: 0 1.75rem 1.6rem;
-  }
 }
 
 @media (max-width: 700px) {
-  .ph-head-actions {
-    flex-direction: column;
-    align-items: flex-end;
-  }
-
   .ph-tiles {
     grid-template-columns: 1fr;
   }
+}
+
+/* System-tab card heads are white rather than General's tinted strip. */
+.org-ws .ph .org-section-head,
+.org-ws .org-section--branded .org-section-head {
+  padding: 1.15rem 1.5rem 1rem;
+  background: var(--color-surface);
+}
+
+/* Same heading type as General's Profile / Contact: Inter 700. */
+.org-ws .ph .org-section-title,
+.org-ws .org-section--branded .org-section-title {
+  font-family: var(--font-inter), var(--font-body);
+  font-size: 0.975rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--org-ink);
+}
+
+/* Template header: one outer card (like Notifications) holding the inner cards and preview. */
+.org-ws .ph > .ph-grid {
+  padding: 1.25rem;
+}
+
+.org-ws .ph .ph-card,
+.org-ws .ph .ph-preview-card {
+  box-shadow: none;
+}
+
+.org-ws .ph .ph-card .org-section-head,
+.org-ws .ph .ph-preview-card .org-section-head {
+  padding: 1rem 1.25rem 0.85rem;
+}
+
+.org-ws .ph .ph-card .org-section-title,
+.org-ws .ph .ph-preview-card .org-section-title {
+  font-size: 0.9rem;
+}
+
+.ph-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--org-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ph-status::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--org-mint);
+}
+
+.ph-status--dirty {
+  color: #b54708;
+}
+
+.ph-status--dirty::before {
+  background: #f79009;
+}
+
+/* ⓘ tooltips beside titles and labels (replace the old description lines). */
+.org-ws .org-title-with-help,
+.org-ws .org-label-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.org-ws .org-help-button {
+  color: var(--org-subtle);
+}
+
+.org-ws .org-help-button:hover,
+.org-ws .org-help-button:focus-visible {
+  color: var(--org-purple);
+}
+
+.org-ws .org-help-tooltip {
+  z-index: 30;
+  font-family: var(--font-inter), var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 450;
+  letter-spacing: 0;
+  line-height: 1.5;
+  color: var(--org-text);
+}
+
+.org-ws .org-identity-actions {
+  align-items: center;
+}
+
+/* Nothing on the Organisation pages may widen the app frame. .admin-shell is
+ * overflow: hidden, which still lets the browser scroll it sideways (e.g. to reveal a
+ * focused element) with no scrollbar to scroll back — that shifted the whole shell left,
+ * hiding the sidebar. clip never scrolls. Hidden tooltips near the right edge were the
+ * likely source of the extra width; they now open leftwards in the right half. */
+.org-ws {
+  overflow-x: clip;
+}
+
+.admin-shell:has(.org-ws) {
+  overflow: clip;
+}
+
+.org-ws .org-section-aside .org-help-tooltip,
+.org-ws .org-row-action .org-help-tooltip {
+  right: 0;
+  left: auto;
+}
+
+.org-ws .org-help-tooltip {
+  max-width: min(18rem, calc(100vw - 2rem));
+}
+
+/* The viewport itself (body is overflow-x: hidden, which propagates to it) can also be
+ * scrolled sideways with no scrollbar; Safari then restores that offset after a refresh.
+ * clip makes it unscrollable horizontally. */
+html:has(.org-ws),
+body:has(.org-ws) {
+  overflow-x: clip;
 }

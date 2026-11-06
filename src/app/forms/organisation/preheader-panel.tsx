@@ -15,7 +15,7 @@ import {
   type PreheaderLayout,
   type PreheaderLogoSize,
 } from '@/lib/org-preheader';
-import { PanelHead } from './panel-head';
+import { HelpTip } from './help-tip';
 import './preheader-designer.css';
 
 // Tiptap + lowlight are a large chunk; load the shared builder editor on demand.
@@ -31,7 +31,7 @@ const SIZE_LABEL: Record<PreheaderLogoSize, string> = {
   medium: 'Medium',
   large: 'Large',
 };
-const SIZE_BAR_PX: Record<PreheaderLogoSize, number> = { small: 10, medium: 16, large: 24 };
+const SIZE_BAR_PX: Record<PreheaderLogoSize, number> = { small: 6, medium: 9, large: 12 };
 
 /** Quick background choices; anything else goes through the custom picker. */
 const BACKGROUND_PRESETS: { value: string; label: string }[] = [
@@ -95,21 +95,38 @@ function Block({
   children,
 }: {
   title: string;
-  description: string;
+  description?: string;
   aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="ph-block">
-      <header className="ph-block-head">
+    <section className="org-section ph-card">
+      <header className="org-section-head">
         <div>
-          <h3>{title}</h3>
-          <p>{description}</p>
+          <h3 className="org-section-title org-title-with-help">
+            {title}
+            {description ? <HelpTip label={`About ${title}`}>{description}</HelpTip> : null}
+          </h3>
         </div>
-        {aside}
+        {aside ? <div className="org-section-aside">{aside}</div> : null}
       </header>
-      {children}
+      <div className="org-section-body">{children}</div>
     </section>
+  );
+}
+
+/** Same label · control row as the General tab. */
+function PhRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div className="org-row">
+      <div className="org-row-copy">
+        <span className="org-label-with-help">
+          <span className="org-row-label">{label}</span>
+          {hint ? <HelpTip label={`About ${label}`}>{hint}</HelpTip> : null}
+        </span>
+      </div>
+      <div className="org-row-control">{children}</div>
+    </div>
   );
 }
 
@@ -230,6 +247,7 @@ export function PreheaderPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const dirty = JSON.stringify(value) !== saved;
+  const neverSaved = saved === JSON.stringify(null) || saved === undefined;
   const logoUrl = customLogoUrl ?? orgLogoUrl;
 
   function patch(next: Partial<OrgPreheader>) {
@@ -303,75 +321,72 @@ export function PreheaderPanel({
   }
 
   return (
-    <section className="org-panel org-panel--wide ph">
-      <PanelHead
-        icon="layout"
-        tone="violet"
-        title="Form pre-header"
-        description="A header offered at the top of forms created from a template. You choose to use it or skip it each time, and can still edit it in the builder."
-        aside={
-          <div className="ph-head-actions">
-            {dirty ? <span className="ph-unsaved">Unsaved changes</span> : null}
-            <button
-              type="button"
-              className="button button--dark"
-              disabled={isSaving || isUploading || !dirty}
-              onClick={() => void handleSave()}
-            >
-              {isSaving ? 'Saving…' : 'Save pre-header'}
-            </button>
-          </div>
-        }
-      />
-
+    <section className="org-section org-section--branded ph">
+      <header className="org-section-head">
+        <div>
+          <h2 className="org-section-title org-title-with-help">
+            Template header
+            <HelpTip label="About the template header">
+              Offered at the top of new forms made from a template. Use it or skip it each time, and
+              edit it in the builder.
+            </HelpTip>
+          </h2>
+        </div>
+        <div className="org-section-aside">
+          <span className={`ph-status${dirty ? ' ph-status--dirty' : ''}`}>
+            {dirty ? (neverSaved ? 'Not saved yet' : 'Unsaved changes') : 'Saved'}
+          </span>
+          <button
+            type="button"
+            className="button button--small org-button-primary"
+            disabled={isSaving || isUploading || !dirty}
+            onClick={() => void handleSave()}
+          >
+            {isSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </header>
       <div className="ph-grid">
         <div className="ph-controls">
-          <Block title="Layout" description="Where the logo sits relative to your text.">
-            <fieldset className="ph-tiles ph-reset" aria-label="Layout">
-              {PREHEADER_LAYOUTS.map((layout) => (
-                <button
-                  key={layout}
-                  type="button"
-                  aria-pressed={value.layout === layout}
-                  className="ph-tile"
-                  onClick={() => patch({ layout })}
-                >
-                  <LayoutDiagram layout={layout} />
-                  <span>{PREHEADER_LAYOUT_LABEL[layout]}</span>
-                </button>
-              ))}
-            </fieldset>
-          </Block>
-
-          <Block
-            title="Logo"
-            description="Your organisation logo, or a different one just for this header."
-            aside={
-              <Toggle
-                checked={value.showLogo}
-                onChange={(showLogo) => patch({ showLogo })}
-                label="Show logo"
-              />
-            }
-          >
+          <Block title="Layout & logo">
+            <PhRow label="Layout">
+              <fieldset className="ph-tiles ph-reset" aria-label="Layout">
+                {PREHEADER_LAYOUTS.map((layout) => (
+                  <button
+                    key={layout}
+                    type="button"
+                    aria-pressed={value.layout === layout}
+                    className="ph-tile"
+                    onClick={() => patch({ layout })}
+                  >
+                    <LayoutDiagram layout={layout} />
+                    <span>{PREHEADER_LAYOUT_LABEL[layout]}</span>
+                  </button>
+                ))}
+              </fieldset>
+            </PhRow>
+            <PhRow label="Show logo">
+              <div className="org-toggle-value">
+                <Toggle
+                  checked={value.showLogo}
+                  onChange={(showLogo) => patch({ showLogo })}
+                  label="Show logo"
+                />
+                <span>{value.showLogo ? 'On' : 'Off'}</span>
+              </div>
+            </PhRow>
             {value.showLogo ? (
               <>
-                <div className="ph-logo">
-                  <div className="ph-logo-thumb">
-                    {logoUrl ? (
-                      // biome-ignore lint/performance/noImgElement: presigned S3 URL or local object URL
-                      <img src={logoUrl} alt="" />
-                    ) : (
-                      <span>No logo</span>
-                    )}
-                  </div>
-                  <div className="ph-logo-copy">
-                    <p className="ph-logo-name">
-                      {customLogoUrl ? 'Custom logo' : 'Organisation logo'}
-                      <span className="ph-chip">
-                        {customLogoUrl ? 'This header only' : 'Default'}
-                      </span>
-                    </p>
+                <PhRow label="Logo">
+                  <div className="ph-logo">
+                    <div className="ph-logo-thumb">
+                      {logoUrl ? (
+                        // biome-ignore lint/performance/noImgElement: presigned S3 URL or local object URL
+                        <img src={logoUrl} alt="" />
+                      ) : (
+                        <span>No logo</span>
+                      )}
+                    </div>
                     <div className="ph-logo-actions">
                       <input
                         ref={fileInputRef}
@@ -383,7 +398,7 @@ export function PreheaderPanel({
                       />
                       <button
                         type="button"
-                        className="button button--secondary button--small"
+                        className="button button--ghost button--small"
                         disabled={isUploading}
                         onClick={() => fileInputRef.current?.click()}
                       >
@@ -407,10 +422,8 @@ export function PreheaderPanel({
                       ) : null}
                     </div>
                   </div>
-                </div>
-
-                <div className="ph-field">
-                  <span className="ph-label">Size</span>
+                </PhRow>
+                <PhRow label="Logo size">
                   <fieldset className="ph-segmented ph-reset" aria-label="Logo size">
                     {PREHEADER_LOGO_SIZES.map((size) => (
                       <button
@@ -429,17 +442,12 @@ export function PreheaderPanel({
                       </button>
                     ))}
                   </fieldset>
-                </div>
+                </PhRow>
               </>
-            ) : (
-              <p className="ph-muted">The logo is hidden in this header.</p>
-            )}
+            ) : null}
           </Block>
 
-          <Block
-            title="Content"
-            description="Name, address and contact details. Format it however you like."
-          >
+          <Block title="Content" description="Your name, address and contact details.">
             <div className="ph-editor">
               <RichTextEditor
                 value={value.body}
@@ -452,34 +460,35 @@ export function PreheaderPanel({
             </div>
           </Block>
 
-          <Block title="Appearance" description="Background colour and an optional divider line.">
-            <div className="ph-field">
-              <span className="ph-label">Background</span>
+          <Block title="Appearance">
+            <PhRow label="Background">
               <BackgroundField
                 value={value.backgroundColor}
                 onChange={(backgroundColor) => patch({ backgroundColor })}
               />
-            </div>
-            <div className="ph-row">
-              <div>
-                <span className="ph-label">Divider line</span>
-                <p className="ph-muted">A thin rule between the header and the form.</p>
+            </PhRow>
+            <PhRow label="Divider line" hint="A thin line between the header and the form.">
+              <div className="org-toggle-value">
+                <Toggle
+                  checked={value.showDivider}
+                  onChange={(showDivider) => patch({ showDivider })}
+                  label="Show divider line"
+                />
+                <span>{value.showDivider ? 'On' : 'Off'}</span>
               </div>
-              <Toggle
-                checked={value.showDivider}
-                onChange={(showDivider) => patch({ showDivider })}
-                label="Show divider line"
-              />
-            </div>
+            </PhRow>
           </Block>
         </div>
 
-        <aside className="ph-preview">
-          <div className="ph-preview-head">
-            <h3>Live preview</h3>
-            <p>How it appears at the top of a new form.</p>
+        <aside className="org-section ph-preview-card">
+          <header className="org-section-head">
+            <div>
+              <h3 className="org-section-title">Preview</h3>
+            </div>
+          </header>
+          <div className="ph-preview-body">
+            <PreheaderPreview preheader={value} logoUrl={logoUrl} orgName={orgName} />
           </div>
-          <PreheaderPreview preheader={value} logoUrl={logoUrl} orgName={orgName} />
         </aside>
       </div>
     </section>

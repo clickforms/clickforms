@@ -2,6 +2,7 @@
 
 import type { FormStatus } from '@prisma/client';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { LiveStatusBadge } from '@/components/live-status-badge';
 
 interface DashboardStats {
@@ -123,8 +124,10 @@ export function DashboardClient({
   canEdit: boolean;
 }) {
   const firstName = displayName.split(/\s+/)[0] ?? displayName;
-  const now = new Date();
-  const greeting = greetingForHour(now.getHours());
+  // Set after mount so the server-rendered date can't mismatch the client's (hydration).
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => setNow(new Date()), []);
+  const greeting = now ? greetingForHour(now.getHours()) : 'Welcome';
   const isEmpty = stats.formCount === 0;
 
   return (
@@ -134,7 +137,7 @@ export function DashboardClient({
       <section className="dashboard-hero dashboard-in dashboard-in--1">
         <div className="dashboard-hero-grid">
           <div className="dashboard-hero-copy">
-            <p className="dashboard-hero-kicker">{formatTodayLabel(now)}</p>
+            <p className="dashboard-hero-kicker">{now ? formatTodayLabel(now) : '\u00a0'}</p>
             <h2 className="dashboard-hero-title">
               {greeting}, {firstName}
             </h2>

@@ -661,10 +661,6 @@
   align-items: start;
 }
 
-.org-ws .preheader-panel-fields label span {
-  font-size: 0.8375rem;
-}
-
 .org-ws .preheader-preview {
   border-radius: 1rem;
 }

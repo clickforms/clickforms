@@ -697,7 +697,12 @@ export function TemplatesGalleryClient({
                       preheader={
                         usePreheader
                           ? preheaderInfo.preheader
-                          : { showLogo: false, title: '', details: '' }
+                          : {
+                              ...preheaderInfo.preheader,
+                              showLogo: false,
+                              body: '',
+                              showDivider: false,
+                            }
                       }
                       logoUrl={preheaderInfo.logoUrl}
                       orgName={preheaderInfo.orgName}

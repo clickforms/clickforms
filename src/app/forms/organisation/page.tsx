@@ -96,6 +96,20 @@ export default async function OrganisationSettingsPage() {
     }
   }
 
+  const preheader = parsePreheader(organization.preheader);
+  let preheaderLogoUrl: string | null = null;
+  if (preheader?.logoStorageKey) {
+    try {
+      preheaderLogoUrl = await createPresignedDownloadUrl({
+        storageKey: preheader.logoStorageKey,
+        filename: 'logo',
+        inline: true,
+      });
+    } catch {
+      // Soft-fail, same as the workspace logo above.
+    }
+  }
+
   return (
     <OrganisationDetailsClient
       initialOrganization={{
@@ -108,7 +122,8 @@ export default async function OrganisationSettingsPage() {
         contactPhone: organization.contactPhone,
         notificationEmail: organization.notificationEmail,
         logoUrl,
-        preheader: parsePreheader(organization.preheader),
+        preheader,
+        preheaderLogoUrl,
       }}
       plan={{
         plan: organization.plan,

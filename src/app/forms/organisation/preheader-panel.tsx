@@ -1,26 +1,142 @@
 'use client';
 
-import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import { type ChangeEvent, useRef, useState } from 'react';
+import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import { PreheaderPreview } from '@/components/preheader-preview';
 import { useToast } from '@/components/toast';
 import { readApiError } from '@/lib/error-message';
-import type { OrgPreheader } from '@/lib/org-preheader';
+import {
+  defaultPreheader,
+  type OrgPreheader,
+  PREHEADER_LAYOUT_LABEL,
+  PREHEADER_LAYOUTS,
+  PREHEADER_LOGO_SIZES,
+  type PreheaderLayout,
+  type PreheaderLogoSize,
+} from '@/lib/org-preheader';
 import { PanelHead } from './panel-head';
+
+// Tiptap + lowlight are a large chunk; load the shared builder editor on demand.
+const RichTextEditor = dynamic(
+  () => import('@/app/forms/[id]/builder/rich-text-editor').then((mod) => mod.RichTextEditor),
+  { ssr: false, loading: () => <div className="rich-text-editor-loading">Loading editor…</div> },
+);
+
+const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
+const LOGO_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
+const SIZE_LABEL: Record<PreheaderLogoSize, string> = {
+  small: 'Small',
+  medium: 'Medium',
+  large: 'Large',
+};
 
 interface PreheaderPanelProps {
   orgName: string;
-  logoUrl: string | null;
+  /** Workspace logo URL (fallback when no pre-header logo is uploaded). */
+  orgLogoUrl: string | null;
+  /** URL of the pre-header's own uploaded logo, if any. */
+  initialCustomLogoUrl: string | null;
   initial: OrgPreheader | null;
 }
 
-export function PreheaderPanel({ orgName, logoUrl, initial }: PreheaderPanelProps) {
-  const toast = useToast();
-  const [value, setValue] = useState<OrgPreheader>(
-    initial ?? { showLogo: true, title: orgName, details: '' },
+function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (next: T) => void;
+}) {
+  return (
+    <div className="preheader-field">
+      <span className="preheader-field-label" id={`seg-${label}`}>
+        {label}
+      </span>
+      <div className="preheader-segmented" role="radiogroup" aria-labelledby={`seg-${label}`}>
+        {options.map((option) => (
+          // biome-ignore lint/a11y/useSemanticElements: styled segmented control, radio semantics via role
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={value === option.value}
+            className="preheader-segmented-option"
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
+}
+
+export function PreheaderPanel({
+  orgName,
+  orgLogoUrl,
+  initialCustomLogoUrl,
+  initial,
+}: PreheaderPanelProps) {
+  const toast = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState<OrgPreheader>(initial ?? defaultPreheader(orgName));
+  const [customLogoUrl, setCustomLogoUrl] = useState(initialCustomLogoUrl);
   const [saved, setSaved] = useState(JSON.stringify(initial));
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const dirty = JSON.stringify(value) !== saved;
+  const logoUrl = customLogoUrl ?? orgLogoUrl;
+
+  function patch(next: Partial<OrgPreheader>) {
+    setValue((current) => ({ ...current, ...next }));
+  }
+
+  async function uploadLogo(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.size > MAX_LOGO_SIZE_BYTES) {
+      toast.error(`Logo exceeds the ${MAX_LOGO_SIZE_BYTES / (1024 * 1024)}MB limit.`);
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const mimeType = file.type || 'application/octet-stream';
+      const presignRes = await fetch('/api/organization/logo/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, mimeType, sizeBytes: file.size }),
+      });
+      if (!presignRes.ok) {
+        toast.error(await readApiError(presignRes, 'Could not start logo upload'));
+        return;
+      }
+      const { uploadUrl, storageKey } = (await presignRes.json()) as {
+        uploadUrl: string;
+        storageKey: string;
+      };
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimeType },
+        body: file,
+      });
+      if (!putRes.ok) {
+        toast.error('Upload to storage failed. Check S3 configuration and try again.');
+        return;
+      }
+      // Shown immediately from the local file; the saved URL replaces it after Save.
+      setCustomLogoUrl(URL.createObjectURL(file));
+      patch({ logoStorageKey: storageKey, showLogo: true });
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  }
 
   async function handleSave() {
     setIsSaving(true);
@@ -34,6 +150,8 @@ export function PreheaderPanel({ orgName, logoUrl, initial }: PreheaderPanelProp
         toast.error(await readApiError(res, 'Could not save pre-header'));
         return;
       }
+      const data = (await res.json()) as { logoUrl: string | null };
+      if (value.logoStorageKey && data.logoUrl) setCustomLogoUrl(data.logoUrl);
       setSaved(JSON.stringify(value));
       toast.success('Pre-header saved');
     } catch {
@@ -49,63 +167,149 @@ export function PreheaderPanel({ orgName, logoUrl, initial }: PreheaderPanelProp
         icon="layout"
         tone="violet"
         title="Form pre-header"
-        description="Your logo and details, offered at the top of forms created from a template."
+        description="Design the header offered at the top of forms created from a template. You choose to use it or skip it each time, and can edit it in the builder afterwards."
       />
       <div className="preheader-panel-grid">
         <div className="preheader-panel-fields">
-          <p className="preheader-panel-hint">
-            You choose to use it or skip it each time you use a template, and can edit it in the
-            builder afterwards.
-          </p>
-          <div className="preheader-panel-toggle">
-            <span>
-              Show organisation logo
-              {logoUrl ? '' : ' (upload a logo on the General tab first)'}
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={value.showLogo}
-              aria-label="Show organisation logo"
-              className="settings-toggle"
-              disabled={!logoUrl}
-              onClick={() => setValue({ ...value, showLogo: !value.showLogo })}
-            >
-              <span className="settings-toggle-thumb" />
-            </button>
+          <Segmented<PreheaderLayout>
+            label="Layout"
+            value={value.layout}
+            options={PREHEADER_LAYOUTS.map((layout) => ({
+              value: layout,
+              label: PREHEADER_LAYOUT_LABEL[layout],
+            }))}
+            onChange={(layout) => patch({ layout })}
+          />
+
+          <div className="preheader-field">
+            <div className="preheader-field-row">
+              <span className="preheader-field-label">Logo</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={value.showLogo}
+                aria-label="Show logo"
+                className="settings-toggle"
+                onClick={() => patch({ showLogo: !value.showLogo })}
+              >
+                <span className="settings-toggle-thumb" />
+              </button>
+            </div>
+            {value.showLogo ? (
+              <div className="preheader-logo-card">
+                <div className="preheader-logo-thumb">
+                  {logoUrl ? (
+                    // biome-ignore lint/performance/noImgElement: presigned S3 URL or local object URL
+                    <img src={logoUrl} alt="" />
+                  ) : (
+                    <span>No logo</span>
+                  )}
+                </div>
+                <div className="preheader-logo-actions">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={LOGO_ACCEPT}
+                    className="org-file-input"
+                    onChange={(event) => void uploadLogo(event)}
+                    disabled={isUploading}
+                  />
+                  <button
+                    type="button"
+                    className="button button--secondary button--small"
+                    disabled={isUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {isUploading ? 'Uploading…' : customLogoUrl ? 'Replace logo' : 'Upload logo'}
+                  </button>
+                  {customLogoUrl ? (
+                    <button
+                      type="button"
+                      className="button button--ghost button--small"
+                      onClick={() => {
+                        setCustomLogoUrl(null);
+                        patch({ logoStorageKey: undefined });
+                      }}
+                    >
+                      Use organisation logo
+                    </button>
+                  ) : (
+                    <p className="preheader-panel-hint">
+                      {orgLogoUrl
+                        ? 'Using your organisation logo. Upload a different one for this header only.'
+                        : 'No organisation logo set. Upload one for this header.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
-          <label>
-            <span>Headline</span>
-            <input
-              className="text-input"
-              value={value.title}
-              maxLength={120}
-              placeholder="Organisation name"
-              onChange={(event) => setValue({ ...value, title: event.target.value })}
+
+          {value.showLogo ? (
+            <Segmented<PreheaderLogoSize>
+              label="Logo size"
+              value={value.logoSize}
+              options={PREHEADER_LOGO_SIZES.map((size) => ({
+                value: size,
+                label: SIZE_LABEL[size],
+              }))}
+              onChange={(logoSize) => patch({ logoSize })}
             />
-          </label>
-          <label>
-            <span>Details (one per line)</span>
-            <textarea
-              className="text-input"
-              value={value.details}
-              maxLength={600}
-              placeholder={'ABN 12 345 678 901\n1 Example St, Sydney NSW\n1300 000 000'}
-              onChange={(event) => setValue({ ...value, details: event.target.value })}
+          ) : null}
+
+          <div className="preheader-field">
+            <span className="preheader-field-label">Content</span>
+            <div className="preheader-editor">
+              <RichTextEditor
+                value={value.body}
+                onChange={(body) => patch({ body })}
+                disabled={isSaving}
+                fields={{}}
+                excludeFieldId="org-preheader"
+                ariaLabel="Pre-header content"
+              />
+            </div>
+          </div>
+
+          <div className="preheader-field preheader-field--split">
+            <FieldColorPicker
+              label="Background"
+              value={value.backgroundColor}
+              defaultColor="#ffffff"
+              canEdit
+              onChange={(backgroundColor) => patch({ backgroundColor })}
             />
-          </label>
+            <div className="preheader-field-row">
+              <span className="preheader-field-label">Divider line below</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={value.showDivider}
+                aria-label="Show divider line"
+                className="settings-toggle"
+                onClick={() => patch({ showDivider: !value.showDivider })}
+              >
+                <span className="settings-toggle-thumb" />
+              </button>
+            </div>
+          </div>
+
           <div className="preheader-panel-actions">
             <button
               type="button"
               className="button button--dark"
-              disabled={isSaving || !dirty}
+              disabled={isSaving || isUploading || !dirty}
               onClick={() => void handleSave()}
             >
               {isSaving ? 'Saving…' : 'Save pre-header'}
             </button>
           </div>
         </div>
-        <PreheaderPreview preheader={value} logoUrl={logoUrl} orgName={orgName} />
+
+        <div className="preheader-panel-preview">
+          <p className="preheader-field-label">Live preview</p>
+          <PreheaderPreview preheader={value} logoUrl={logoUrl} orgName={orgName} />
+        </div>
       </div>
     </section>
   );

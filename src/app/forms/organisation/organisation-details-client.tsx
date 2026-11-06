@@ -41,6 +41,8 @@ export interface OrganizationProfile {
    * logo has been uploaded, or S3 isn't configured (soft-fails, see page.tsx). */
   logoUrl: string | null;
   preheader: OrgPreheader | null;
+  /** Presigned URL of the pre-header's own uploaded logo, if any. */
+  preheaderLogoUrl: string | null;
 }
 
 export interface OrganizationPlanInfo {
@@ -775,7 +777,8 @@ export function OrganisationDetailsClient({
                   </section>
                   <PreheaderPanel
                     orgName={name.trim() || initialOrganization.name}
-                    logoUrl={logoUrl}
+                    orgLogoUrl={logoUrl}
+                    initialCustomLogoUrl={initialOrganization.preheaderLogoUrl}
                     initial={initialOrganization.preheader}
                   />
                 </>

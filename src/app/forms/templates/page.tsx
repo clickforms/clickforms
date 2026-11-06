@@ -5,7 +5,12 @@ import { TemplatesGalleryClient } from '@/app/forms/templates/templates-gallery-
 import { authOptions } from '@/lib/auth';
 import { prisma, withOrgContext } from '@/lib/db';
 import { formSchemaSchema } from '@/lib/forms/schema';
-import { isPreheaderEmpty, type OrgPreheader, parsePreheader } from '@/lib/org-preheader';
+import {
+  isPreheaderEmpty,
+  type OrgPreheader,
+  parsePreheader,
+  resolvePreheaderLogoKey,
+} from '@/lib/org-preheader';
 import { createPresignedDownloadUrl } from '@/lib/s3';
 
 const STRUCTURAL_FIELD_TYPES = new Set(['column_layout', 'section_break', 'divider', 'hidden']);
@@ -105,12 +110,13 @@ export default async function TemplatesGalleryPage() {
       }),
     );
     const preheader = parsePreheader(org?.preheader);
-    if (org && preheader && !isPreheaderEmpty(preheader, Boolean(org.logoStorageKey))) {
+    const logoKey = resolvePreheaderLogoKey(preheader, org?.logoStorageKey);
+    if (org && preheader && !isPreheaderEmpty(preheader, Boolean(logoKey))) {
       let logoUrl: string | null = null;
-      if (preheader.showLogo && org.logoStorageKey) {
+      if (logoKey) {
         try {
           logoUrl = await createPresignedDownloadUrl({
-            storageKey: org.logoStorageKey,
+            storageKey: logoKey,
             filename: 'logo',
             inline: true,
           });

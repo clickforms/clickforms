@@ -6,7 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema } from '@/lib/forms/schema';
 import { slugify, uniqueSlug } from '@/lib/forms/slug';
-import { parsePreheader, preheaderInfoHtml } from '@/lib/org-preheader';
+import { buildPreheaderFields, parsePreheader, resolvePreheaderLogoKey } from '@/lib/org-preheader';
 import { buildFormFieldImageKey, copyObject } from '@/lib/s3';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { formsListWhere } from '@/lib/user-roles';
@@ -121,60 +121,30 @@ export async function POST(request: Request): Promise<NextResponse> {
         const preheader = parsePreheader(org?.preheader);
         const firstPage = initialSchema.pages[0];
         if (preheader && firstPage) {
-          const rowId = crypto.randomUUID();
-          const slots: (string | null)[] = [null, null];
-          if (preheader.showLogo && org?.logoStorageKey) {
-            const logoId = crypto.randomUUID();
-            const filename = org.logoStorageKey.split('/').pop() ?? 'logo';
+          // Copy the logo (pre-header upload, else workspace logo) into a form-scoped key so
+          // later edits/removal of either never break forms already created.
+          let logo: { fieldId: string; storageKey: string } | null = null;
+          const sourceKey = resolvePreheaderLogoKey(preheader, org?.logoStorageKey);
+          if (sourceKey) {
+            const fieldId = crypto.randomUUID();
             const key = buildFormFieldImageKey({
               organizationId: requireOrganizationId(session),
               formId: form.id,
-              fieldId: logoId,
-              filename,
+              fieldId,
+              filename: sourceKey.split('/').pop() ?? 'logo',
             });
-            // A storage hiccup must not block form creation: without the copy the logo
-            // is simply omitted and the info block still goes in.
+            // A storage hiccup must not block form creation: the logo is simply omitted
+            // and the rest of the pre-header still goes in.
             try {
-              await copyObject(org.logoStorageKey, key);
-              initialSchema.fields[logoId] = {
-                id: logoId,
-                type: 'image',
-                label: '',
-                required: false,
-                imageStorageKey: key,
-                alt: 'Organisation logo',
-                align: 'left',
-                imageSpacing: 'none',
-              };
-              slots[0] = logoId;
+              await copyObject(sourceKey, key);
+              logo = { fieldId, storageKey: key };
             } catch (error) {
-              console.error('[forms] could not copy org logo into new form', error);
+              console.error('[forms] could not copy pre-header logo into new form', error);
             }
           }
-          const infoHtml = preheaderInfoHtml(preheader);
-          if (infoHtml) {
-            const infoId = crypto.randomUUID();
-            initialSchema.fields[infoId] = {
-              id: infoId,
-              type: 'static_text',
-              required: false,
-              body: infoHtml,
-              bodyAlign: 'right',
-              bodyFontSize: 13,
-            };
-            slots[1] = infoId;
-          }
-          if (slots[0] || slots[1]) {
-            initialSchema.fields[rowId] = {
-              id: rowId,
-              type: 'column_layout',
-              label: 'Pre-header',
-              required: false,
-              columns: 2,
-              fieldIds: slots,
-            };
-            firstPage.fields.unshift(rowId);
-          }
+          const built = buildPreheaderFields(preheader, logo);
+          Object.assign(initialSchema.fields, built.fields);
+          firstPage.fields.unshift(...built.order);
         }
       }
 

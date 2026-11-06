@@ -4,7 +4,7 @@ import { OrganisationDetailsClient } from '@/app/forms/organisation/organisation
 import { startOfCurrentMonth } from '@/lib/admin/plan-limits';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
-import { parsePreheader } from '@/lib/org-preheader';
+import { readOrgPreheader } from '@/lib/org-preheader-db';
 import { createPresignedDownloadUrl } from '@/lib/s3';
 import { requireOrganizationId } from '@/lib/session';
 import { buildOrgOrigin } from '@/lib/tenant';
@@ -29,58 +29,63 @@ export default async function OrganisationSettingsPage() {
     redirect('/admin');
   }
 
-  const { organization, usage } = await withOrgContext(session.user.organizationId, async (tx) => {
-    const orgId = requireOrganizationId(session);
-    const org = await tx.organization.findFirstOrThrow({
-      where: { id: orgId },
-      select: {
-        id: true,
-        name: true,
-        subdomain: true,
-        abn: true,
-        contactName: true,
-        contactEmail: true,
-        contactPhone: true,
-        notificationEmail: true,
-        logoStorageKey: true,
-        preheader: true,
-        plan: true,
-        status: true,
-        trialEndsAt: true,
-        renewsAt: true,
-      },
-    });
+  const { organization, usage, preheader } = await withOrgContext(
+    session.user.organizationId,
+    async (tx) => {
+      const orgId = requireOrganizationId(session);
+      const org = await tx.organization.findFirstOrThrow({
+        where: { id: orgId },
+        select: {
+          id: true,
+          name: true,
+          subdomain: true,
+          abn: true,
+          contactName: true,
+          contactEmail: true,
+          contactPhone: true,
+          notificationEmail: true,
+          logoStorageKey: true,
+          plan: true,
+          status: true,
+          trialEndsAt: true,
+          renewsAt: true,
+        },
+      });
 
-    // Same four numbers /admin/billing shows for this org, computed the same way
-    // (buildUsageBars in plan-limits.ts) — an org admin sees exactly what a platform
-    // admin would see for them, not a separately-derived approximation.
-    const [formCount, userCount, orgFileSum, submissionFileSum, submissionCount] =
-      await Promise.all([
-        tx.form.count({ where: { organizationId: orgId } }),
-        tx.user.count({ where: { organizationId: orgId } }),
-        tx.organizationFile.aggregate({
-          where: { organizationId: orgId },
-          _sum: { sizeBytes: true },
-        }),
-        tx.submissionFile.aggregate({
-          where: { organizationId: orgId },
-          _sum: { sizeBytes: true },
-        }),
-        tx.submission.count({
-          where: { organizationId: orgId, submittedAt: { gte: startOfCurrentMonth() } },
-        }),
-      ]);
+      // Same four numbers /admin/billing shows for this org, computed the same way
+      // (buildUsageBars in plan-limits.ts) — an org admin sees exactly what a platform
+      // admin would see for them, not a separately-derived approximation.
+      const [formCount, userCount, orgFileSum, submissionFileSum, submissionCount] =
+        await Promise.all([
+          tx.form.count({ where: { organizationId: orgId } }),
+          tx.user.count({ where: { organizationId: orgId } }),
+          tx.organizationFile.aggregate({
+            where: { organizationId: orgId },
+            _sum: { sizeBytes: true },
+          }),
+          tx.submissionFile.aggregate({
+            where: { organizationId: orgId },
+            _sum: { sizeBytes: true },
+          }),
+          tx.submission.count({
+            where: { organizationId: orgId, submittedAt: { gte: startOfCurrentMonth() } },
+          }),
+        ]);
 
-    return {
-      organization: org,
-      usage: {
-        forms: formCount,
-        users: userCount,
-        storageBytes: (orgFileSum._sum.sizeBytes ?? 0) + (submissionFileSum._sum.sizeBytes ?? 0),
-        submissionsThisMonth: submissionCount,
-      },
-    };
-  });
+      const preheader = await readOrgPreheader(tx, orgId);
+
+      return {
+        organization: org,
+        preheader,
+        usage: {
+          forms: formCount,
+          users: userCount,
+          storageBytes: (orgFileSum._sum.sizeBytes ?? 0) + (submissionFileSum._sum.sizeBytes ?? 0),
+          submissionsThisMonth: submissionCount,
+        },
+      };
+    },
+  );
 
   let logoUrl: string | null = null;
   if (organization.logoStorageKey) {
@@ -108,7 +113,7 @@ export default async function OrganisationSettingsPage() {
         contactPhone: organization.contactPhone,
         notificationEmail: organization.notificationEmail,
         logoUrl,
-        preheader: parsePreheader(organization.preheader),
+        preheader: preheader,
       }}
       plan={{
         plan: organization.plan,

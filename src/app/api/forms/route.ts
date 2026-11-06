@@ -6,7 +6,8 @@ import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema } from '@/lib/forms/schema';
 import { slugify, uniqueSlug } from '@/lib/forms/slug';
-import { parsePreheader, preheaderInfoHtml } from '@/lib/org-preheader';
+import { preheaderInfoHtml } from '@/lib/org-preheader';
+import { readOrgPreheader } from '@/lib/org-preheader-db';
 import { buildFormFieldImageKey, copyObject } from '@/lib/s3';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { formsListWhere } from '@/lib/user-roles';
@@ -116,9 +117,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       if (usePreheader) {
         const org = await tx.organization.findUnique({
           where: { id: requireOrganizationId(session) },
-          select: { preheader: true, logoStorageKey: true },
+          select: { logoStorageKey: true },
         });
-        const preheader = parsePreheader(org?.preheader);
+        const preheader = await readOrgPreheader(tx, requireOrganizationId(session));
         const firstPage = initialSchema.pages[0];
         if (preheader && firstPage) {
           const rowId = crypto.randomUUID();

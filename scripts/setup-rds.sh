@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Creates the staging (or production) RDS Postgres instance, per specs/00-infrastructure.md's
-# "RDS Postgres 16, encrypted, automated backups" plan, and stores the resulting connection
-# string directly in SSM Parameter Store as a SecureString.
+# "RDS Postgres 16, encrypted, automated backups" plan.
 #
-# The master password is generated locally with openssl and never printed to this terminal
-# or typed by hand anywhere — it goes straight from this script into SSM. Retrieve it later
-# with the `aws ssm get-parameter ... --with-decryption` command this script prints at the end.
+# The master password is generated locally with openssl. The resulting DATABASE_URL is shown
+# exactly once, when the instance is first created (copied to the macOS clipboard if pbcopy
+# exists, otherwise printed): paste it straight into the environment's Infisical secrets as
+# DATABASE_URL. It is not stored anywhere else — if you lose it, reset the master password
+# with `aws rds modify-db-instance --master-user-password ...` and update Infisical.
 #
 # NOTE on networking: this creates the RDS security group open to *your current IP only*
 # (not 0.0.0.0/0), so you can connect directly and run migrations before any EC2 instance
@@ -36,7 +37,6 @@ BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
 DB_INSTANCE_ID="clickforms-${ENVIRONMENT}"
 DB_NAME="clickforms_${ENVIRONMENT}"
 MASTER_USERNAME="clickforms_admin"
-SSM_PREFIX="/clickforms/${ENVIRONMENT}"
 
 echo "==> Environment:     ${ENVIRONMENT}"
 echo "==> Region:          ${REGION}"
@@ -106,11 +106,6 @@ ENGINE_VERSION="$(aws rds describe-db-engine-versions \
 echo "==> Postgres engine version: ${ENGINE_VERSION}"
 
 # --- RDS instance ---------------------------------------------------------------------------
-# entrypoint.sh reads secrets as {prefix}/database-url and {prefix}/session-secret
-# (lowercase, hyphenated) — matching that exactly, not DATABASE_URL/SESSION_SECRET.
-DB_URL_PARAM="${SSM_PREFIX}/database-url"
-SESSION_SECRET_PARAM="${SSM_PREFIX}/session-secret"
-
 INSTANCE_EXISTS=false
 if aws rds describe-db-instances --db-instance-identifier "${DB_INSTANCE_ID}" --region "${REGION}" >/dev/null 2>&1; then
   INSTANCE_EXISTS=true
@@ -143,42 +138,22 @@ ENDPOINT="$(aws rds describe-db-instances \
   --db-instance-identifier "${DB_INSTANCE_ID}" \
   --query 'DBInstances[0].Endpoint.Address' --output text --region "${REGION}")"
 
-# Only write DATABASE_URL to SSM if we just created the instance (so we know the real
-# password) — re-running this script against an already-existing instance must NOT
-# overwrite a working credential with a freshly-generated password that the DB doesn't
-# actually have.
+# The password is only known when we just created the instance — re-running this script
+# against an existing instance cannot recover it (and must not invent a new one).
 if [[ "${INSTANCE_EXISTS}" == false ]]; then
   DATABASE_URL="postgresql://${MASTER_USERNAME}:${MASTER_PASSWORD}@${ENDPOINT}:5432/${DB_NAME}"
-  echo "==> Storing DATABASE_URL in SSM Parameter Store at ${DB_URL_PARAM}..."
-  aws ssm put-parameter \
-    --name "${DB_URL_PARAM}" \
-    --value "${DATABASE_URL}" \
-    --type SecureString \
-    --overwrite \
-    --region "${REGION}" >/dev/null
-elif aws ssm get-parameter --name "${DB_URL_PARAM}" --region "${REGION}" >/dev/null 2>&1; then
-  echo "==> SSM param ${DB_URL_PARAM} already present — leaving it as-is."
+  if command -v pbcopy >/dev/null 2>&1; then
+    printf '%s' "${DATABASE_URL}" | pbcopy
+    echo "==> DATABASE_URL copied to your clipboard — paste it into Infisical now (${ENVIRONMENT} → DATABASE_URL)."
+  else
+    echo "==> DATABASE_URL (shown once — paste it into Infisical as DATABASE_URL):"
+    echo "${DATABASE_URL}"
+  fi
 else
   echo
-  echo "WARNING: instance ${DB_INSTANCE_ID} already existed but no DATABASE_URL is stored at" >&2
-  echo "${DB_URL_PARAM}. This script cannot recover an existing master password. Reset it and" >&2
-  echo "store the new value manually:" >&2
+  echo "NOTE: instance ${DB_INSTANCE_ID} already existed, so its master password is unknown here." >&2
+  echo "If you need a new one, reset it and update DATABASE_URL in Infisical:" >&2
   echo "  aws rds modify-db-instance --db-instance-identifier ${DB_INSTANCE_ID} --master-user-password '<new-password>' --apply-immediately --region ${REGION}" >&2
-  echo "  aws ssm put-parameter --name ${DB_URL_PARAM} --value 'postgresql://${MASTER_USERNAME}:<new-password>@${ENDPOINT}:5432/${DB_NAME}' --type SecureString --overwrite --region ${REGION}" >&2
-fi
-
-# App session secret — generated once per environment, same "don't clobber on re-run" rule
-# (regenerating this invalidates every existing session for that environment).
-if aws ssm get-parameter --name "${SESSION_SECRET_PARAM}" --region "${REGION}" >/dev/null 2>&1; then
-  echo "==> SSM param ${SESSION_SECRET_PARAM} already present — leaving it as-is."
-else
-  echo "==> Generating SESSION_SECRET and storing at ${SESSION_SECRET_PARAM}..."
-  aws ssm put-parameter \
-    --name "${SESSION_SECRET_PARAM}" \
-    --value "$(openssl rand -base64 48)" \
-    --type SecureString \
-    --overwrite \
-    --region "${REGION}" >/dev/null
 fi
 
 cat <<EOF
@@ -188,20 +163,16 @@ Done.
   Instance:   ${DB_INSTANCE_ID} (${DB_INSTANCE_CLASS}, Postgres ${ENGINE_VERSION})
   Endpoint:   ${ENDPOINT}:5432
   Database:   ${DB_NAME}
-  SSM params: ${DB_URL_PARAM}, ${SESSION_SECRET_PARAM} (SecureString)
-
-Neither secret was ever printed here. Retrieve the DB URL later with:
-
-  aws ssm get-parameter --name "${DB_URL_PARAM}" --with-decryption \\
-    --query 'Parameter.Value' --output text --region ${REGION}
 
 Next steps:
-  1. Run migrations against this instance:
-       DATABASE_URL="\$(aws ssm get-parameter --name ${DB_URL_PARAM} --with-decryption --query Parameter.Value --output text --region ${REGION})" \\
-         yarn prisma migrate deploy
-  2. Once the ${ENVIRONMENT} EC2 instance exists: swap the security group rule that allows
+  1. Add to the "${ENVIRONMENT}" environment in Infisical (project clickforms):
+       DATABASE_URL    (see above; append ?sslmode=no-verify)
+       SESSION_SECRET  (generate with: openssl rand -base64 48)
+  2. Once the ${ENVIRONMENT} EC2 instance exists and its Infisical identity is set up, run
+     migrations on the box: sudo /srv/clickforms/migrate.sh
+  3. Once the ${ENVIRONMENT} EC2 instance exists: swap the security group rule that allows
      your IP for one allowing only the EC2 instance's SG, and run
      'aws rds modify-db-instance --db-instance-identifier ${DB_INSTANCE_ID} --no-publicly-accessible --apply-immediately'.
-  3. For the other environment, re-run with ENVIRONMENT=production (and consider a bigger
+  4. For the other environment, re-run with ENVIRONMENT=production (and consider a bigger
      DB_INSTANCE_CLASS if prod traffic warrants it).
 EOF

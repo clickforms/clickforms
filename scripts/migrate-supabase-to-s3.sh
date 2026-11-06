@@ -63,7 +63,7 @@ Done. ${FILE_COUNT} objects synced from Supabase Storage to s3://${AWS_BUCKET}.
 Next steps:
   1. Spot-check a few keys in the AWS console (or a submission's file field in the app,
      pointed temporarily at the new bucket) to confirm they open correctly.
-  2. Update S3_BUCKET to "${AWS_BUCKET}" and unset S3_ENDPOINT in .env.local / prod SSM params.
+  2. Update S3_BUCKET to "${AWS_BUCKET}" and unset S3_ENDPOINT in .env.local / the prod Infisical environment.
   3. Once confirmed, this script is safe to re-run to pick up any files added to Supabase
      Storage in between (e.g. if the app kept taking uploads during migration) — then cut over.
   4. After cutover, the Supabase Storage bucket can be deleted whenever you're comfortable

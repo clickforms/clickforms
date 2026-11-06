@@ -41,9 +41,9 @@ Admin Browser ────────┘             │        │            
                                         notifications, the public contact form)
 
 IAM: EC2 instance role scoped to this S3 bucket + SNS send — no long-lived credentials on
-the box. Resend is reached over its HTTPS API with an API key (SSM-stored, see below), not
+the box. Resend is reached over its HTTPS API with an API key (stored in Infisical), not
 an AWS IAM permission — there's nothing to scope on the instance role for it.
-Secrets: SSM Parameter Store (SecureString) for DB creds, session secret, RESEND_API_KEY, etc. — pulled at container start.
+Secrets: Infisical (project `clickforms`, one environment per deployment) for DB creds, session secret, RESEND_API_KEY, etc. — fetched by `start.sh` at deploy time and injected into the container's environment.
 ```
 
 One deployable app container behind Caddy on a single EC2 instance. No separate backend service — Next.js API routes serve both the admin UI and the public form-fill API; a separate service would be operational overhead with no benefit at this scale.
@@ -66,7 +66,7 @@ Everything — compute, database, storage, email — now sits in one AWS account
 | Email | Resend | Chosen over AWS SES for a simpler API, better local-dev ergonomics, and no need to request production access out of a sending sandbox — trades "no separate vendor account" for materially less setup friction. Domain verification (SPF/DKIM/DMARC) still required regardless of provider. See DEPLOYMENT.md's "Email (Resend)" section. |
 | SMS | AWS SNS (optional, opt-in per form) | AWS-native; flagged as not AU-guaranteed data-resident like everything else — use sparingly. |
 | PDF generation | `@react-pdf/renderer` or Puppeteer | Render submission + signature certificate as PDF server-side. |
-| Secrets | AWS SSM Parameter Store (SecureString) | Free tier covers this at our scale; no credentials baked into images or `.env` files on disk. |
+| Secrets | Infisical Cloud (Universal Auth machine identity per environment) | Central secret management with audit trail and rotation; secrets are fetched at start and never baked into images or written to disk (only the Infisical bootstrap credentials live in `/srv/clickforms/.env`). |
 | Networking | VPC, EC2 in public subnet (locked-down security group), RDS in private subnet reachable only from that security group | Standard AWS baseline — RDS is never internet-reachable. |
 | CI/CD | GitHub Actions → build → push to ECR → SSH to EC2 → `docker compose pull && up -d` | ECR keeps this AWS-native and sets up a clean path to ECS Fargate later without changing how images are built. |
 | Monitoring | CloudWatch (EC2/RDS metrics + alarms) + Sentry (app errors) | CloudWatch is free-tier infra monitoring already included with AWS; Sentry stays for application-level error tracking. |
@@ -190,7 +190,7 @@ Using RDS instead of self-hosted Postgres removes the biggest risk (backups/PITR
 - **OS hardening** — security group locked to 22/80/443, SSH key-only auth (no passwords), `fail2ban`, unattended security upgrades on the instance.
 - **TLS renewal** — Caddy handles this automatically; alert on renewal failures rather than discovering an expired cert from a user report.
 - **Patching cadence** — Docker base images and host OS packages need a regular update rhythm. This was previously a platform SLA; now it's a recurring task on your calendar.
-- **IAM hygiene** — the EC2 instance role should hold only S3/SNS permissions it actually needs, nothing account-wide. Rotate/review periodically. (Email/Resend isn't IAM-scoped — see §2 — but its API key in SSM should be rotated on the same cadence.)
+- **IAM hygiene** — the EC2 instance role should hold only S3/SNS permissions it actually needs, nothing account-wide. Rotate/review periodically. (Email/Resend isn't IAM-scoped — see §2 — but its API key in Infisical should be rotated on the same cadence.)
 - **Single point of failure (compute)** — one EC2 instance means the app goes down if that box does, though RDS can be Multi-AZ independently if that risk matters before the app does. Acceptable at internal-only scale; revisit (ECS Fargate with 2+ tasks behind a load balancer) if this becomes customer-facing SaaS.
 
 ## 11. Path to ECS Fargate (later, if traffic/reliability demands it)

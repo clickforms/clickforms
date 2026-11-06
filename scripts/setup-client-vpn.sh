@@ -31,7 +31,6 @@ CLIENT_CIDR="${CLIENT_CIDR:-10.100.0.0/22}"
 CLIENT_NAME="${CLIENT_NAME:-mo}"
 ENVIRONMENTS="${ENVIRONMENTS:-staging production}"
 ENDPOINT_NAME="clickforms-vpn"
-SSM_PREFIX="/clickforms/vpn"
 OUT_DIR="${OUT_DIR:-.vpn}"
 
 echo "==> Region:        ${REGION}"
@@ -70,9 +69,17 @@ fi
 # "server" fails CreateClientVpnEndpoint with "does not have a domain") — the name below
 # doesn't need to resolve to anything, it just needs to look like a hostname.
 SERVER_CN="${SERVER_CN:-vpn.clickforms.internal}"
-SERVER_CERT_ARN="$(aws ssm get-parameter --name "${SSM_PREFIX}/server-cert-arn" --query 'Parameter.Value' --output text --region "${REGION}" 2>/dev/null || true)"
-if [[ -n "${SERVER_CERT_ARN}" && "${SERVER_CERT_ARN}" != "None" ]]; then
-  echo "==> Server certificate already imported (${SERVER_CERT_ARN}) — reusing."
+
+# State lives in AWS itself, not in a side store: the endpoint is found by its Name tag, and the
+# certificate ARNs it uses are read back from the endpoint. Certificates are only (re)issued
+# when no endpoint exists yet.
+ENDPOINT_ID="$(aws ec2 describe-client-vpn-endpoints \
+  --filters "Name=tag:Name,Values=${ENDPOINT_NAME}" \
+  --query 'ClientVpnEndpoints[?Status.Code!=`deleted` && Status.Code!=`deleting`] | [0].ClientVpnEndpointId' \
+  --output text --region "${REGION}" 2>/dev/null || true)"
+
+if [[ -n "${ENDPOINT_ID}" && "${ENDPOINT_ID}" != "None" ]]; then
+  echo "==> Client VPN endpoint already exists (${ENDPOINT_ID}) — reusing (certificates unchanged)."
 else
   echo "==> Issuing server certificate (CN=${SERVER_CN})..."
   openssl req -newkey rsa:2048 -keyout "${OUT_DIR}/pki/server.key" -out "${OUT_DIR}/pki/server.csr" \
@@ -86,32 +93,19 @@ else
     --certificate "fileb://${OUT_DIR}/pki/server.crt" \
     --private-key "fileb://${OUT_DIR}/pki/server.key" \
     --certificate-chain "fileb://${CA_CRT}" \
+    --tags "Key=Name,Value=${ENDPOINT_NAME}-server" \
     --region "${REGION}" --query CertificateArn --output text)"
-  aws ssm put-parameter --name "${SSM_PREFIX}/server-cert-arn" --value "${SERVER_CERT_ARN}" \
-    --type String --overwrite --region "${REGION}" >/dev/null
-fi
 
-# --- Client root CA: the CA cert (+ its own key — this is how ACM's import API works even
-# though the key is only used to validate, never to decrypt) imported so Client VPN can
-# verify client certs presented during connection. ------------------------------------------
-CLIENT_CA_ARN="$(aws ssm get-parameter --name "${SSM_PREFIX}/client-ca-cert-arn" --query 'Parameter.Value' --output text --region "${REGION}" 2>/dev/null || true)"
-if [[ -n "${CLIENT_CA_ARN}" && "${CLIENT_CA_ARN}" != "None" ]]; then
-  echo "==> Client root CA already imported (${CLIENT_CA_ARN}) — reusing."
-else
+  # Client root CA: the CA cert (+ its own key — this is how ACM's import API works even
+  # though the key is only used to validate, never to decrypt) imported so Client VPN can
+  # verify client certs presented during connection.
   echo "==> Importing client root CA into ACM..."
   CLIENT_CA_ARN="$(aws acm import-certificate \
     --certificate "fileb://${CA_CRT}" \
     --private-key "fileb://${CA_KEY}" \
+    --tags "Key=Name,Value=${ENDPOINT_NAME}-client-ca" \
     --region "${REGION}" --query CertificateArn --output text)"
-  aws ssm put-parameter --name "${SSM_PREFIX}/client-ca-cert-arn" --value "${CLIENT_CA_ARN}" \
-    --type String --overwrite --region "${REGION}" >/dev/null
-fi
 
-# --- Client VPN endpoint ---------------------------------------------------------------------
-ENDPOINT_ID="$(aws ssm get-parameter --name "${SSM_PREFIX}/endpoint-id" --query 'Parameter.Value' --output text --region "${REGION}" 2>/dev/null || true)"
-if [[ -n "${ENDPOINT_ID}" && "${ENDPOINT_ID}" != "None" ]]; then
-  echo "==> Client VPN endpoint already exists (${ENDPOINT_ID}) — reusing."
-else
   echo "==> Creating Client VPN endpoint (mutual TLS, split-tunnel — only VPC traffic routes through the VPN)..."
   ENDPOINT_ID="$(aws ec2 create-client-vpn-endpoint \
     --client-cidr-block "${CLIENT_CIDR}" \
@@ -122,8 +116,6 @@ else
     --split-tunnel \
     --tag-specifications "ResourceType=client-vpn-endpoint,Tags=[{Key=Name,Value=${ENDPOINT_NAME}}]" \
     --region "${REGION}" --query ClientVpnEndpointId --output text)"
-  aws ssm put-parameter --name "${SSM_PREFIX}/endpoint-id" --value "${ENDPOINT_ID}" \
-    --type String --overwrite --region "${REGION}" >/dev/null
 fi
 
 # --- Subnet association: gives the endpoint a foothold in the VPC; local routing then covers

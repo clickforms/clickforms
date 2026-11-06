@@ -45,15 +45,14 @@ anything that already exists).
      (`clickforms-staging` / `clickforms-prod` — note production is `-prod`, not
      `-production`, see the script's comment).
    - `setup-rds.sh` creates a Postgres 16 instance, generates a master password with
-     `openssl` (never printed to your terminal), and writes it straight to SSM as
-     `/clickforms/<env>/database-url`. It also writes `/clickforms/<env>/session-secret`.
+     `openssl` and shows the resulting `DATABASE_URL` once (copied to your clipboard on
+     macOS) so you can paste it into the environment's Infisical secrets.
      Initially opens port 5432 to *your current IP only* so you can run the first migration
      before EC2 exists.
    - `setup-ec2.sh` launches the instance (Amazon Linux 2023, arm64, `t4g.small`, 30GB gp3),
      installs Docker + Compose via user-data, allocates an Elastic IP, writes
-     `/srv/clickforms/.env` on the box (`ENVIRONMENT`, `CADDYFILE`, `AWS_REGION`, `S3_BUCKET`,
-     `DOMAIN`), and creates a scoped instance IAM role (S3 access to that bucket only, SSM
-     read under that env's path only, ECR pull — email goes through Resend's HTTPS API, not
+     an empty `/srv/clickforms/.env` on the box, and creates a scoped instance IAM role (S3
+     access to that bucket only, ECR pull — email goes through Resend's HTTPS API, not
      an AWS service, so there's no SES permission to grant here; see "Email (Resend) setup"
      under §4). It also **reconciles RDS
      networking**: swaps the "your IP" rule for "this EC2 instance's security group only"
@@ -62,6 +61,10 @@ anything that already exists).
 
    `setup-ec2.sh` prints the new instance's public IP and the SSH key path
    (`~/.ssh/clickforms-<env>.pem`) — keep both, you'll need them for §2 and §5.
+
+   After provisioning, create the Infisical environment and machine identity and write the
+   `INFISICAL_*` bootstrap to `/srv/clickforms/.env` as described in "Secrets from Infisical
+   via `start.sh`" below.
 
 ## 2. GitHub Actions secrets
 
@@ -113,26 +116,21 @@ switched over at the registrar (Hostinger).
 
 Three separate places, don't confuse them:
 
-- **`/srv/clickforms/.env`** on each EC2 box (root-owned, not in git) — written once by
-  `setup-ec2.sh`'s user-data, then `ECR_IMAGE` is added/updated by every deploy:
+- **`/srv/clickforms/.env`** on each EC2 box (root-owned, mode 600, not in git) — only the
+  bootstrap values; `ECR_IMAGE` is updated by every deploy:
   ```
+  INFISICAL_CLIENT_ID=...
+  INFISICAL_CLIENT_SECRET=...
+  INFISICAL_PROJECT_ID=...
+  INFISICAL_ENV=staging          # or prod
   ECR_IMAGE=<account>.dkr.ecr.ap-southeast-2.amazonaws.com/clickforms:<tag>
-  ENVIRONMENT=staging            # or production
-  CADDYFILE=Caddyfile.staging    # or Caddyfile.production
-  S3_BUCKET=clickforms-staging   # or clickforms-prod
-  DOMAIN=staging.clickforms.com.au   # or clickforms.com.au
   ```
-  `docker-compose.yml` reads these to fill in `NEXTAUTH_URL`, `ROOT_DOMAIN`,
-  `SSM_PARAM_PREFIX`, and which Caddyfile to mount.
 
-- **AWS SSM Parameter Store**, `SecureString`, under `/clickforms/<environment>/` — currently
-  `database-url`, `session-secret`, `resend-api-key`, `messagemedia-api-key`, and
-  `messagemedia-api-secret` (lowercase, hyphenated —
-  `entrypoint.sh` reads these exact names via `ssm-deps/resolve-secrets.cjs`, using the EC2
-  instance role, no AWS keys). Resolved into the container's environment at container start,
-  never baked into the image. `RESEND_FROM` and `CONTACT_EMAIL` aren't secrets — set them as
-  plain (non-Secure) values in `/srv/clickforms/.env` alongside `S3_BUCKET`/`DOMAIN` instead
-  of adding them to SSM.
+- **Infisical** (project `clickforms`, environments `dev` / `staging` / `prod`) holds every
+  secret and setting: `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`,
+  `MESSAGEMEDIA_*`, `S3_BUCKET`, `ROOT_DOMAIN`, `CADDYFILE`, etc. `start.sh` fetches them at
+  start (see "Secrets from Infisical via `start.sh`" below) and they are never baked into the
+  image or written to disk.
 
 - **`.env.local`** — local dev only, copy from `.env.example`. Never used in staging or
   production; production secrets never touch a `.env.local`-shaped file.
@@ -150,12 +148,11 @@ One-time, per environment (staging and production can share a domain if you want
    `DMARC` `TXT` record if you don't already have one. Add all of them, then click "Verify"
    in Resend. Propagation is usually fast but can take a few hours.
 3. Create an API key (**API Keys** → new key, scoped to "Sending access" and, if offered,
-   restricted to the verified domain) and store it in SSM:
-   ```
-   aws ssm put-parameter --name /clickforms/<env>/resend-api-key --type SecureString --value <key>
-   ```
-4. Add `RESEND_FROM="Clickforms <no-reply@clickforms.com.au>"` (matching the verified
-   domain) to `/srv/clickforms/.env` on the box.
+   restricted to the verified domain) and add it to the environment in Infisical as
+   `RESEND_API_KEY`.
+4. Add `RESEND_FROM=Clickforms <no-reply@clickforms.com.au>` (matching the verified
+   domain, no quotes) to the same Infisical environment, then run
+   `sudo /srv/clickforms/start.sh` on the box.
 
 Until this is done, `sendEmail()` (`src/lib/email.ts`) just logs every email to the
 container's stdout instead of sending — the app keeps working (signup/invite/reset links
@@ -172,13 +169,10 @@ One-time, per environment, for the live-form Share panel's "Send via SMS" action
    MessageMedia has rebranded to **Sinch Engage**, so the signup flow is under that name
    now, but it's the same underlying Messages REST API.
 2. Create an API key + secret pair (this is HTTP Basic Auth, not a single bearer token —
-   the key is the username, the secret is the password) and store both in SSM:
-   ```
-   aws ssm put-parameter --name /clickforms/<env>/messagemedia-api-key --type SecureString --value <key>
-   aws ssm put-parameter --name /clickforms/<env>/messagemedia-api-secret --type SecureString --value <secret>
-   ```
-3. Optionally set `MESSAGEMEDIA_SENDER_ID` in `/srv/clickforms/.env` (a plain, non-secret
-   value, alongside `S3_BUCKET`/`DOMAIN`) if messages should show a name like
+   the key is the username, the secret is the password) and add both to the environment in
+   Infisical as `MESSAGEMEDIA_API_KEY` and `MESSAGEMEDIA_API_SECRET`.
+3. Optionally set `MESSAGEMEDIA_SENDER_ID` in Infisical (a plain, non-secret
+   value) if messages should show a name like
    `"Clickforms"` instead of a shared/numeric sender. An alphanumeric sender ID in
    Australia needs its own registration/approval with Sinch first — having API
    credentials alone isn't enough to send under a custom name.
@@ -314,12 +308,6 @@ never deleted except via the 7-day untagged-image lifecycle rule).
   for `prisma migrate deploy` only), RLS provides no actual protection — the app's own
   `withOrgContext` query-scoping is the only thing enforcing tenant isolation right now.
 
-- **SSM parameter names are lowercase-hyphenated, not the env var names.** `entrypoint.sh`
-  reads `/clickforms/<env>/database-url` and `/clickforms/<env>/session-secret`, not
-  `DATABASE_URL`/`SESSION_SECRET`. Older RDS instances provisioned before this convention was
-  fixed may still have the old uppercase param — `scripts/fix-ssm-param-names.sh` migrates it
-  in place.
-
 - **RDS requires an explicit TLS config in `db.ts`**, not just `sslmode` in the connection
   string — a bare `?sslmode=require` fails certificate verification against RDS's cert chain.
 
@@ -334,7 +322,7 @@ never deleted except via the 7-day untagged-image lifecycle rule).
 | Domain | staging.clickforms.com.au | clickforms.com.au + \*.clickforms.com.au |
 | TLS | Caddy automatic (Let's Encrypt) | Cloudflare Origin Certificate (`./certs`) |
 | S3 bucket | clickforms-staging | clickforms-prod |
-| SSM path | /clickforms/staging/\* | /clickforms/production/\* |
+| Infisical env | `staging` | `prod` |
 | RDS instance | clickforms-staging | clickforms-production |
 
 ## Secrets from Infisical via `start.sh`
@@ -353,8 +341,10 @@ workflow runs the same script). It:
 Nothing fetched is written to disk, and the Infisical credentials are not passed to the app
 container. There is **no fallback**: if the credentials are missing or wrong, or Infisical is
 unreachable, start.sh exits non-zero before touching the running containers and the problem
-has to be fixed by hand (a failed deploy in GitHub Actions means exactly this). SSM is no longer
-read by anything.
+has to be fixed by hand (a failed deploy in GitHub Actions means exactly this).
+
+Migrations: `sudo /srv/clickforms/migrate.sh` (same Infisical bootstrap, fetches `DATABASE_URL`
+and runs `prisma migrate deploy`).
 
 Infisical keys (project `clickforms`, environments `dev` / `staging` / `prod`): `ENVIRONMENT`,
 `CADDYFILE`, `S3_BUCKET`, `ROOT_DOMAIN` (also used as `DOMAIN`), `NEXTAUTH_URL`, `AWS_REGION`,
@@ -368,24 +358,3 @@ environment, then `sudo /srv/clickforms/start.sh`.
 
 Rotating a secret: change it in Infisical, then `sudo /srv/clickforms/start.sh` (it recreates
 the app container because its environment changed). Secrets are read only at start.
-
-### Production cutover to Infisical (one-off)
-
-Production started life on a temporary workaround: `docker-compose.override.yml` (sets
-`SSM_PARAM_PREFIX: ""`) plus `secrets.env` (DATABASE_URL, SESSION_SECRET, RESEND_API_KEY and the
-static `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` of a temporary IAM user). The EC2 instance
-role (`clickforms-production-ec2-role`) now works, so no static AWS keys are used any more — S3
-access comes from the role, exactly as on staging. Both temporary files are replaced by Infisical:
-
-1. Infisical → project `clickforms` → **Production** environment: `ENVIRONMENT=production`,
-   `CADDYFILE=Caddyfile.production`, `S3_BUCKET=clickforms-prod`, `ROOT_DOMAIN=clickforms.com.au`,
-   `NEXTAUTH_URL=https://clickforms.com.au`, `AWS_REGION=ap-southeast-2`, `RESEND_FROM`, and the
-   **rotated** `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`. No `AWS_ACCESS_KEY_ID` /
-   `AWS_SECRET_ACCESS_KEY`.
-2. Machine identity `clickforms-prod` (Universal Auth), Viewer on the project.
-3. On the box: stop the stack, `sudo mv /opt/clickforms /srv/clickforms`, delete
-   `docker-compose.override.yml` and `secrets.env` (they hold the old, exposed values), rewrite
-   `.env` to only `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_ID`,
-   `INFISICAL_ENV=prod` and `ECR_IMAGE`, `chmod 600 .env`.
-4. Rotate the database password and start immediately: `sudo /srv/clickforms/start.sh`.
-5. Once production is confirmed healthy, delete the temporary IAM user and its access keys.

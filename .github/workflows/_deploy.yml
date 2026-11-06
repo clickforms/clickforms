@@ -7,7 +7,7 @@ name: Deploy (reusable)
 #
 # No AWS credentials are used by this job at all: the target EC2 instance already
 # has its own IAM instance role (see scripts/setup-ec2.sh) with ECR-pull and
-# SSM-read permissions, so ECR auth happens ON the box using that role, not via
+# S3 permissions, so ECR auth happens ON the box using that role, not via
 # GitHub Actions OIDC. OIDC is only used once, in deploy-staging.yml's build job,
 # to push the image.
 
@@ -15,7 +15,7 @@ on:
   workflow_call:
     inputs:
       environment:
-        description: "staging or production — selects Caddyfile.<environment> and the SSM path"
+        description: "staging or production — selects Caddyfile.<environment>"
         required: true
         type: string
       image:
@@ -70,9 +70,9 @@ jobs:
           sudo chmod 755 /srv/clickforms/start.sh /srv/clickforms/migrate.sh
           cd /srv/clickforms
 
-          # ECR_IMAGE is the only value this workflow needs to set — ENVIRONMENT,
-          # CADDYFILE, AWS_REGION, S3_BUCKET were already written to .env by user-data
-          # when the instance was first created (see scripts/setup-ec2.sh).
+          # ECR_IMAGE is the only value this workflow sets in .env. The INFISICAL_*
+          # bootstrap values are written once by hand per box; every other setting
+          # (ENVIRONMENT, CADDYFILE, S3_BUCKET, ...) comes from Infisical at start.
           sudo touch .env
           sudo sed -i '/^ECR_IMAGE=/d' .env
           echo "ECR_IMAGE=${IMAGE}" | sudo tee -a .env >/dev/null
@@ -91,8 +91,8 @@ jobs:
           # (caddy_data/caddy_config) since -af only targets images/containers/networks.
           sudo docker system prune -af
 
-          # start.sh pulls, fetches secrets from Infisical (or falls back to the legacy SSM
-          # mode when the box has no INFISICAL_* in .env) and runs `docker compose up -d`.
+          # start.sh pulls the image, fetches all secrets from Infisical (no fallback — it
+          # exits non-zero if that fails) and runs `docker compose up -d`.
           sudo ./start.sh
           REMOTE
 

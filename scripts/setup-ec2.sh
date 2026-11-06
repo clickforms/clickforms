@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Creates one environment's EC2 instance per specs/00-infrastructure.md: Amazon Linux
 # 2023 (arm64), Docker installed via user-data, Elastic IP, an instance role scoped to
-# just that environment's S3 bucket / SSM path / ECR repo (no long-lived AWS keys on
+# just that environment's S3 bucket / ECR repo (no long-lived AWS keys on
 # the box). Also reconciles the RDS security group created by setup-rds.sh: once this
 # instance's SG exists, RDS access is switched from "your current IP" to "this EC2 SG
 # only", and the DB is taken off public accessibility — matching the target architecture
@@ -102,7 +102,7 @@ else
   chmod 400 "${SSH_KEY_PATH}"
 fi
 
-# --- IAM instance role: scoped to this environment's bucket, SSM path, and ECR pull -------
+# --- IAM instance role: scoped to this environment's bucket and ECR pull -------------------
 TRUST_POLICY='{
   "Version": "2012-10-17",
   "Statement": [{ "Effect": "Allow", "Principal": { "Service": "ec2.amazonaws.com" }, "Action": "sts:AssumeRole" }]
@@ -129,19 +129,6 @@ PERMISSIONS_POLICY=$(cat <<EOF
       "Resource": "arn:aws:s3:::${S3_BUCKET_NAME}/*"
     },
     {
-      "Sid": "SSMReadOwnParams",
-      "Effect": "Allow",
-      "Action": ["ssm:GetParameter", "ssm:GetParameters"],
-      "Resource": "arn:aws:ssm:${REGION}:${ACCOUNT_ID}:parameter/clickforms/${ENVIRONMENT}/*"
-    },
-    {
-      "Sid": "SSMDecrypt",
-      "Effect": "Allow",
-      "Action": "kms:Decrypt",
-      "Resource": "*",
-      "Condition": { "StringEquals": { "kms:ViaService": "ssm.${REGION}.amazonaws.com" } }
-    },
-    {
       "Sid": "ECRAuth",
       "Effect": "Allow",
       "Action": "ecr:GetAuthorizationToken",
@@ -152,19 +139,13 @@ PERMISSIONS_POLICY=$(cat <<EOF
       "Effect": "Allow",
       "Action": ["ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer", "ecr:BatchGetImage"],
       "Resource": "arn:aws:ecr:${REGION}:${ACCOUNT_ID}:repository/${REPO_NAME}"
-    },
-    {
-      "Sid": "SES",
-      "Effect": "Allow",
-      "Action": ["ses:SendEmail", "ses:SendRawEmail"],
-      "Resource": "*"
     }
   ]
 }
 EOF
 )
 
-echo "==> Attaching instance permissions (S3 ${S3_BUCKET_NAME} only, SSM /clickforms/${ENVIRONMENT}/* only, ECR pull, SES)..."
+echo "==> Attaching instance permissions (S3 ${S3_BUCKET_NAME} only, ECR pull)..."
 aws iam put-role-policy --role-name "${ROLE_NAME}" --policy-name "clickforms-${ENVIRONMENT}-app-access" --policy-document "${PERMISSIONS_POLICY}" >/dev/null
 
 if aws iam get-instance-profile --instance-profile-name "${INSTANCE_PROFILE_NAME}" >/dev/null 2>&1; then
@@ -200,7 +181,6 @@ else
 fi
 
 # --- User-data: prepares the box, does not deploy the app -----------------------------------
-CADDYFILE_NAME="Caddyfile.${ENVIRONMENT}"
 USER_DATA_FILE="$(mktemp)"
 cat > "${USER_DATA_FILE}" <<USERDATA
 #!/bin/bash
@@ -217,13 +197,9 @@ curl -sL "https://github.com/docker/compose/releases/latest/download/docker-comp
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 mkdir -p /srv/clickforms
-cat > /srv/clickforms/.env <<ENVFILE
-ENVIRONMENT=${ENVIRONMENT}
-CADDYFILE=${CADDYFILE_NAME}
-AWS_REGION=${REGION}
-S3_BUCKET=${S3_BUCKET_NAME}
-DOMAIN=${DOMAIN_NAME}
-ENVFILE
+# Bootstrap file for start.sh — fill in the INFISICAL_* values by hand (see DEPLOYMENT.md,
+# "Secrets from Infisical via start.sh"). Everything else lives in Infisical.
+install -m 600 /dev/null /srv/clickforms/.env
 
 echo "clickforms-${ENVIRONMENT} box ready for first deploy" > /srv/clickforms/READY
 USERDATA
@@ -308,7 +284,7 @@ Done.
   Instance:    ${INSTANCE_ID} (${EC2_INSTANCE_TYPE}, ${AMI_ID})
   Public IP:   ${PUBLIC_IP}
   SSH:         ssh -i ${SSH_KEY_PATH} ec2-user@${PUBLIC_IP}
-  Role:        ${ROLE_NAME} (S3: ${S3_BUCKET_NAME} only, SSM: /clickforms/${ENVIRONMENT}/* only, ECR pull, SES)
+  Role:        ${ROLE_NAME} (S3: ${S3_BUCKET_NAME} only, ECR pull)
 
 Next steps:
   1. Point DNS at this IP:
@@ -316,8 +292,11 @@ Next steps:
   2. Add this instance's SSH private key as a GitHub Actions secret so CI can deploy to it:
        gh secret set $(echo ${ENVIRONMENT} | tr '[:lower:]' '[:upper:]')_SSH_PRIVATE_KEY < ${SSH_KEY_PATH} --repo <org>/<repo>
        gh secret set $(echo ${ENVIRONMENT} | tr '[:lower:]' '[:upper:]')_HOST --body "${PUBLIC_IP}" --repo <org>/<repo>
-  3. Repeat for the other environment: ENVIRONMENT=$( [ "${ENVIRONMENT}" = "production" ] && echo staging || echo production ) ./scripts/setup-ec2.sh
-  4. Once .github/workflows/deploy-staging.yml (or promote-production.yml) exists and both
+  3. Create the Infisical machine identity for this box and write INFISICAL_CLIENT_ID,
+     INFISICAL_CLIENT_SECRET, INFISICAL_PROJECT_ID and INFISICAL_ENV to /srv/clickforms/.env
+     (see DEPLOYMENT.md, "Secrets from Infisical via start.sh").
+  4. Repeat for the other environment: ENVIRONMENT=$( [ "${ENVIRONMENT}" = "production" ] && echo staging || echo production ) ./scripts/setup-ec2.sh
+  5. Once .github/workflows/deploy-staging.yml (or promote-production.yml) exists and both
      secrets above are set, pushing to main (or promoting) will scp docker-compose.yml +
      Caddyfile.${ENVIRONMENT} to /srv/clickforms on this box and bring the app up.
 EOF

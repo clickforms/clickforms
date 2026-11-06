@@ -37,14 +37,13 @@ Keep it connected for any of the steps below — DBeaver, `psql`, and SSH by pri
 | Username | `clickforms_admin` | `clickforms_admin` |
 | RDS security group | `sg-0f23e168222db87c4` | `sg-0290a1592117aaf0a` |
 | EC2 security group (app access) | `sg-0787a574b8e775f43` | `sg-02673b21617df6510` |
-| SSM password param | `/clickforms/staging/database-url` | `/clickforms/production/database-url` |
+| Password / full URL | Infisical → `staging` → `DATABASE_URL` | Infisical → `prod` → `DATABASE_URL` |
 
-Fetch the full connection string (never printed to chat/logs — pull it yourself):
+Get the full connection string from the matching Infisical environment (never paste it into chat/logs):
 
 ```bash
-DATABASE_URL=$(aws ssm get-parameter --name /clickforms/staging/database-url \
-  --with-decryption --query Parameter.Value --output text --region ap-southeast-2)
-# swap "staging" for "production" as needed
+DATABASE_URL=$(infisical secrets get DATABASE_URL --env=staging --plain)
+# use --env=prod for production
 ```
 
 ### Quick connectivity test

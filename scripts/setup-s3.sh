@@ -69,7 +69,7 @@ aws s3api put-bucket-cors \
 
 cat <<EOF
 
-Done. Add to .env.local (dev) or the EC2 instance's SSM parameters (prod):
+Done. Add to .env.local (dev) or the environment's Infisical secrets (staging/prod):
 
   S3_BUCKET="${BUCKET}"
   AWS_REGION="${REGION}"

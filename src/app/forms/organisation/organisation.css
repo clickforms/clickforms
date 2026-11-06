@@ -41,21 +41,21 @@
 }
 
 .org-ws .org-settings-title {
-  font-size: 2.1rem;
+  font-size: 1.75rem;
   font-weight: 800;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.04em;
 }
 
 .org-ws .org-settings-lead {
-  font-size: 0.975rem;
+  font-size: 0.875rem;
 }
 
 /* ---- Section nav + content --------------------------------------------------------- */
 
 .org-ws-layout {
   display: grid;
-  grid-template-columns: 16rem minmax(0, 1fr);
-  gap: 2.5rem;
+  grid-template-columns: 13.5rem minmax(0, 1fr);
+  gap: 2rem;
   align-items: start;
 }
 
@@ -72,13 +72,13 @@
   align-items: center;
   gap: 0.8rem;
   width: 100%;
-  padding: 0.55rem 0.7rem;
+  padding: 0.4rem 0.55rem;
   border: 1px solid transparent;
-  border-radius: 0.9rem;
+  border-radius: 0.75rem;
   background: none;
   color: var(--color-text-muted);
   font: inherit;
-  font-size: 0.925rem;
+  font-size: 0.85rem;
   font-weight: 650;
   text-align: left;
   cursor: pointer;
@@ -98,9 +98,9 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  border-radius: 0.65rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
   background: color-mix(in srgb, var(--tone) 14%, var(--color-surface));
   color: var(--tone);
 }
@@ -157,7 +157,7 @@
 .org-ws .org-panel-head {
   flex-wrap: nowrap;
   align-items: flex-start;
-  padding: 1.4rem 1.75rem 1.2rem;
+  padding: 1.05rem 1.4rem 0.95rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   border-radius: var(--org-radius) var(--org-radius) 0 0;
@@ -175,27 +175,27 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 0.85rem;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.65rem;
   background: color-mix(in srgb, var(--tone) 14%, var(--color-surface));
   color: var(--tone);
 }
 
 .org-ws .org-panel-icon svg {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1rem;
+  height: 1rem;
 }
 
 .org-ws .org-panel-title {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 750;
   letter-spacing: -0.02em;
 }
 
 .org-ws .org-panel-lead {
-  margin: 0.2rem 0 0;
-  font-size: 0.8375rem;
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
 }
 
 /* ---- Identity hero ----------------------------------------------------------------- */
@@ -206,7 +206,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   column-gap: 1.75rem;
-  padding: 6.1rem 2rem 1.9rem;
+  padding: 4.9rem 1.6rem 1.4rem;
   overflow: hidden;
 }
 
@@ -214,7 +214,7 @@
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: 8.5rem;
+  height: 6.6rem;
   background:
     radial-gradient(circle at 12% 120%, rgba(255, 255, 255, 0.28) 0 6rem, transparent 6.05rem),
     radial-gradient(circle at 62% -30%, rgba(255, 255, 255, 0.22) 0 7rem, transparent 7.05rem),
@@ -224,14 +224,14 @@
 
 .org-ws .org-identity-logo {
   z-index: 1;
-  width: 7rem;
-  height: 7rem;
-  margin-top: -3.4rem;
-  border: 5px solid var(--color-surface);
-  border-radius: 1.6rem;
+  width: 5.5rem;
+  height: 5.5rem;
+  margin-top: -2.9rem;
+  border: 4px solid var(--color-surface);
+  border-radius: 1.3rem;
   box-shadow:
     0 0 0 1px var(--color-border),
-    0 12px 28px rgba(15, 23, 42, 0.18);
+    0 10px 24px rgba(15, 23, 42, 0.18);
 }
 
 .org-ws .org-identity-copy {
@@ -241,8 +241,8 @@
 
 .org-ws .org-identity-name {
   margin: 0;
-  font-size: 1.7rem;
-  letter-spacing: -0.04em;
+  font-size: 1.4rem;
+  letter-spacing: -0.035em;
 }
 
 .org-ws .org-identity-url {
@@ -267,8 +267,8 @@
 /* Stat tiles float over the gradient banner as frosted glass. */
 .org-ws .org-identity-stats {
   position: absolute;
-  top: 1.2rem;
-  right: 1.75rem;
+  top: 0.9rem;
+  right: 1.4rem;
   z-index: 1;
   display: flex;
   gap: 0.65rem;
@@ -276,10 +276,10 @@
 }
 
 .org-ws .org-identity-stats > div {
-  min-width: 6rem;
-  padding: 0.6rem 1rem;
+  min-width: 5rem;
+  padding: 0.4rem 0.8rem;
   border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 0.9rem;
+  border-radius: 0.75rem;
   background: rgba(255, 255, 255, 0.26);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
@@ -295,8 +295,8 @@
 }
 
 .org-ws .org-identity-stats dd {
-  margin: 0.1rem 0 0;
-  font-size: 1.35rem;
+  margin: 0.05rem 0 0;
+  font-size: 1.1rem;
   font-weight: 800;
   letter-spacing: -0.03em;
 }
@@ -306,8 +306,8 @@
 .org-ws .org-rows {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.6rem 2rem;
-  padding: 1.75rem 1.75rem 2rem;
+  gap: 1.25rem 1.5rem;
+  padding: 1.3rem 1.4rem 1.5rem;
 }
 
 .org-ws .org-row {
@@ -330,7 +330,7 @@
 .org-ws .org-row-copy label,
 .org-ws .org-row-copy .org-row-label {
   order: 0;
-  font-size: 0.8375rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-align: left;
 }
@@ -344,7 +344,7 @@
   order: 2;
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   line-height: 1.4;
   text-align: left;
 }
@@ -367,12 +367,12 @@
 
 .org-ws .org-input {
   width: 100%;
-  height: 2.9rem;
-  padding: 0 1rem;
+  height: 2.4rem;
+  padding: 0 0.85rem;
   border: 1.5px solid var(--color-border-strong);
-  border-radius: 0.8rem;
+  border-radius: 0.65rem;
   background: var(--color-surface);
-  font-size: 0.925rem;
+  font-size: 0.85rem;
   font-weight: 500;
   text-align: left;
 }
@@ -396,8 +396,8 @@
 }
 
 .org-ws .org-readonly {
-  min-height: 2.9rem;
-  border-radius: 0.8rem;
+  min-height: 2.4rem;
+  border-radius: 0.65rem;
   border-color: var(--color-border);
 }
 
@@ -472,7 +472,7 @@
 .org-ws .org-plan-summary {
   position: relative;
   overflow: hidden;
-  padding: 2rem 2.25rem;
+  padding: 1.5rem 1.75rem;
   border: none;
   background:
     radial-gradient(circle at 92% -20%, rgba(139, 124, 246, 0.55) 0 9rem, transparent 9.05rem),
@@ -486,8 +486,8 @@
 }
 
 .org-ws .org-plan-name {
-  font-size: 2.1rem;
-  letter-spacing: -0.045em;
+  font-size: 1.7rem;
+  letter-spacing: -0.04em;
   color: #fff;
 }
 
@@ -514,9 +514,9 @@
 }
 
 .org-ws .org-usage-card {
-  padding: 1.25rem 1.3rem;
+  padding: 1rem 1.05rem;
   border: 1px solid var(--color-border);
-  border-radius: 1rem;
+  border-radius: 0.85rem;
   background: var(--color-surface);
 }
 
@@ -540,7 +540,7 @@
 
 .org-ws .org-usage-card-value {
   margin: 0.6rem 0 0.9rem;
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -0.03em;
 }
@@ -561,16 +561,16 @@
 /* ---- Change plan ------------------------------------------------------------------- */
 
 .org-ws .org-plan-grid {
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 1.25rem;
-  padding: 1.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+  padding: 1.4rem;
 }
 
 .org-ws .org-plan-card {
   gap: 0.5rem;
-  padding: 1.6rem 1.6rem 1.75rem;
+  padding: 1.25rem 1.25rem 1.4rem;
   border: 1.5px solid var(--color-border);
-  border-radius: 1.2rem;
+  border-radius: 1rem;
   box-shadow: var(--org-shadow);
 }
 
@@ -614,8 +614,8 @@
 
 .org-ws .org-plan-card-price {
   margin-top: 0.25rem;
-  font-size: 2.3rem;
-  letter-spacing: -0.045em;
+  font-size: 1.85rem;
+  letter-spacing: -0.04em;
 }
 
 .org-ws .org-plan-card-period {

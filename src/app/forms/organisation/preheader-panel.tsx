@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { type ChangeEvent, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { FieldColorPicker } from '@/app/forms/[id]/builder/field-color-picker';
 import { PreheaderPreview } from '@/components/preheader-preview';
 import { useToast } from '@/components/toast';
@@ -38,6 +38,77 @@ interface PreheaderPanelProps {
   /** URL of the pre-header's own uploaded logo, if any. */
   initialCustomLogoUrl: string | null;
   initial: OrgPreheader | null;
+}
+
+/** Colour setting collapsed to a swatch row; the full picker opens in a popover on demand. */
+function BackgroundField({
+  value,
+  onChange,
+}: {
+  value: string | undefined;
+  onChange: (next: string | undefined) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="preheader-field-row preheader-color" ref={rootRef}>
+      <span className="preheader-field-label">Background</span>
+      <button
+        type="button"
+        className="preheader-color-trigger"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span
+          className="preheader-color-swatch"
+          style={value ? { backgroundColor: value } : undefined}
+          data-empty={value ? undefined : ''}
+        />
+        <span>{value ?? 'None'}</span>
+      </button>
+      {open ? (
+        <div className="preheader-color-popover" role="dialog" aria-label="Background colour">
+          <FieldColorPicker
+            label="Background"
+            value={value}
+            defaultColor="#ffffff"
+            canEdit
+            onChange={onChange}
+          />
+          {value ? (
+            <button
+              type="button"
+              className="button button--ghost button--small"
+              onClick={() => {
+                onChange(undefined);
+                setOpen(false);
+              }}
+            >
+              Remove background
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function Segmented<T extends string>({
@@ -272,11 +343,8 @@ export function PreheaderPanel({
           </div>
 
           <div className="preheader-field preheader-field--split">
-            <FieldColorPicker
-              label="Background"
+            <BackgroundField
               value={value.backgroundColor}
-              defaultColor="#ffffff"
-              canEdit
               onChange={(backgroundColor) => patch({ backgroundColor })}
             />
             <div className="preheader-field-row">

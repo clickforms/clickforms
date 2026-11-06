@@ -63,15 +63,18 @@ export function SkTable({
   columns,
   rows = 8,
   tableClassName,
+  baseClass = 'admin-table',
 }: {
   columns: SkColumn[];
   rows?: number;
   tableClassName?: string;
+  /** Base table class; the Users table uses its own `users-table` instead of `admin-table`. */
+  baseClass?: string;
 }) {
   const cols = columns.map((column, id) => ({ ...column, id }));
   return (
     <div className="admin-table-scroll">
-      <table className={`admin-table${tableClassName ? ` ${tableClassName}` : ''}`}>
+      <table className={`${baseClass}${tableClassName ? ` ${tableClassName}` : ''}`}>
         <thead>
           <tr>
             {cols.map((column) => (

@@ -149,10 +149,10 @@
 }
 
 .ph-tile[aria-pressed="true"] {
-  border-color: var(--color-lavender-strong);
-  background: color-mix(in srgb, var(--color-lavender-strong) 6%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-lavender-strong) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-lavender-strong) 3%, var(--color-surface));
   color: var(--color-text);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-lavender-strong) 18%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-lavender-strong) 7%, transparent);
 }
 
 .ph-tile[aria-pressed="true"]::after {
@@ -172,7 +172,7 @@
 .ph-tile:focus-visible,
 .ph-segmented-option:focus-visible,
 .ph-swatch:focus-visible {
-  outline: 2px solid var(--color-lavender-strong);
+  outline: 2px solid color-mix(in srgb, var(--color-lavender-strong) 45%, transparent);
   outline-offset: 2px;
 }
 
@@ -307,7 +307,7 @@
 .ph-swatch[aria-pressed="true"] {
   box-shadow:
     0 0 0 2px var(--color-surface),
-    0 0 0 4px var(--color-lavender-strong);
+    0 0 0 3.5px color-mix(in srgb, var(--color-lavender-strong) 55%, var(--color-border));
 }
 
 .ph-swatch--none {
@@ -326,7 +326,7 @@
 .ph-swatch--custom-active {
   box-shadow:
     0 0 0 2px var(--color-surface),
-    0 0 0 4px var(--color-lavender-strong);
+    0 0 0 3.5px color-mix(in srgb, var(--color-lavender-strong) 55%, var(--color-border));
 }
 
 .ph-swatch-plus {

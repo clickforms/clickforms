@@ -5,14 +5,12 @@
 #
 # Shared by both staging and production — everything that differs between them is an
 # env var, not a separate file, so the exact same compose config runs both places.
-# Each EC2 instance has its own .env in this file's directory (not committed) setting:
-#   ECR_IMAGE=<account>.dkr.ecr.ap-southeast-2.amazonaws.com/clickforms:<tag>
-#   ENVIRONMENT=staging            # or production
-#   CADDYFILE=Caddyfile.staging    # or Caddyfile.production
-#   S3_BUCKET=clickforms-staging   # or clickforms-prod — src/lib/s3.ts reads this directly,
-#                                  # it is NOT one of the SSM-backed secrets below
-# CI (scripts referenced in specs/00-infrastructure.md) updates ECR_IMAGE on deploy and
-# runs `docker compose pull && docker compose up -d`.
+# On the boxes the stack is started with `sudo /srv/clickforms/start.sh`, never with bare
+# `docker compose`: start.sh reads the Infisical credentials + ECR_IMAGE from this
+# directory's .env, fetches every other value (ENVIRONMENT, CADDYFILE, DOMAIN/ROOT_DOMAIN,
+# S3_BUCKET, DATABASE_URL, ...) from Infisical into its own environment, then runs compose.
+# The `:?` guards below therefore fail loudly if compose is run without start.sh.
+# The deploy workflow updates ECR_IMAGE in .env and runs start.sh.
 
 services:
   app:
@@ -27,13 +25,9 @@ services:
     container_name: clickforms-app
     restart: unless-stopped
     environment:
-      # entrypoint.sh resolves database-url / session-secret from these at container
-      # start (AWS SSM Parameter Store, SecureString) — no secrets live in this file.
-      # AWS credentials come from the EC2 instance role via instance metadata; no
-      # long-lived keys are configured here. ENVIRONMENT must be "staging" or
-      # "production" to match the SSM path each environment's setup-rds.sh wrote to.
+      # Secrets are injected by start.sh (see the SECRETS_INJECTED block below); nothing
+      # secret lives in this file. AWS access for S3 comes from the EC2 instance role.
       AWS_REGION: ap-southeast-2
-      SSM_PARAM_PREFIX: /clickforms/${ENVIRONMENT:?Set ENVIRONMENT=staging or production in .env}
       # Not a secret — the bucket name itself, read directly by src/lib/s3.ts. Differs from
       # ENVIRONMENT-based derivation because the prod bucket is named clickforms-prod, not
       # clickforms-production (see scripts/setup-s3.sh).
@@ -50,15 +44,13 @@ services:
       # sending the browser to http://<subdomain>.localhost:3000 instead of the real domain.
       # Same value as DOMAIN in both environments today (no separate staging-under-root setup).
       ROOT_DOMAIN: ${DOMAIN:?Set DOMAIN=staging.clickforms.com.au or clickforms.com.au in .env}
-      # Not secrets (the key itself comes from SSM via resolve-secrets.cjs, see above) —
-      # DEPLOYMENT.md §4 has these set as plain values in this box's .env. Both are
+      # Not secrets — plain values that come from Infisical via start.sh. Both are
       # optional: src/lib/email.ts and src/app/api/contact/route.ts fall back to a
       # placeholder sender / admin@clickforms.com.au respectively when unset, so this
       # doesn't need a `:?` guard like the required vars above.
       RESEND_FROM: ${RESEND_FROM:-}
       CONTACT_EMAIL: ${CONTACT_EMAIL:-}
       # Secrets handed over by start.sh (fetched from Infisical into its environment).
-      # Empty when running in legacy SSM mode, where entrypoint.sh fills them in instead.
       # A new secret in Infisical must be listed here to reach the container.
       SECRETS_INJECTED: ${SECRETS_INJECTED:-}
       DATABASE_URL: ${DATABASE_URL:-}

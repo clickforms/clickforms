@@ -7,8 +7,8 @@
 # fetched is ever written to disk. The deploy workflow calls this script too, so there is a
 # single way the stack starts.
 #
-# If INFISICAL_CLIENT_ID is not set in .env, falls back to the old behaviour (plain
-# `docker compose`, container reads SSM itself) so an un-migrated box keeps working.
+# No fallback: if Infisical can't be reached or the credentials are wrong this exits
+# non-zero before touching the running containers, and it has to be fixed by hand.
 set -euo pipefail
 
 [ "$(id -u)" -eq 0 ] || exec sudo -E "$0" "$@"
@@ -20,14 +20,7 @@ set -a
 . ./.env
 set +a
 
-if [ -z "${INFISICAL_CLIENT_ID:-}" ]; then
-  echo "start.sh: INFISICAL_CLIENT_ID not set — starting in legacy SSM mode"
-  docker compose pull
-  docker compose up -d --remove-orphans
-  exit 0
-fi
-
-for name in INFISICAL_CLIENT_SECRET INFISICAL_PROJECT_ID INFISICAL_ENV ECR_IMAGE; do
+for name in INFISICAL_CLIENT_ID INFISICAL_CLIENT_SECRET INFISICAL_PROJECT_ID INFISICAL_ENV ECR_IMAGE; do
   [ -n "${!name:-}" ] || { echo "start.sh: $name is missing from .env" >&2; exit 1; }
 done
 
@@ -39,7 +32,7 @@ echo "start.sh: fetching secrets from Infisical (${INFISICAL_ENV})"
 SECRETS="$(docker run --rm --entrypoint node \
   -e INFISICAL_CLIENT_ID -e INFISICAL_CLIENT_SECRET -e INFISICAL_PROJECT_ID \
   -e INFISICAL_ENV -e INFISICAL_URL \
-  "${ECR_IMAGE}" /app/ssm-deps/resolve-secrets.cjs)"
+  "${ECR_IMAGE}" /app/resolve-secrets.cjs)"
 
 set -a
 eval "${SECRETS}"
@@ -48,7 +41,7 @@ unset SECRETS INFISICAL_CLIENT_SECRET
 
 # compose needs DOMAIN; Infisical keeps it as ROOT_DOMAIN.
 export DOMAIN="${DOMAIN:-${ROOT_DOMAIN:-}}"
-# Tells entrypoint.sh the secrets are already in the environment — skip SSM.
+# Tells entrypoint.sh the secrets are already in the environment — skip the check.
 export SECRETS_INJECTED=1
 
 docker compose pull

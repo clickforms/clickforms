@@ -374,10 +374,10 @@ workflow runs the same script). It:
 3. exports them into its own environment and runs `docker compose pull && up -d`.
 
 Nothing fetched is written to disk, and the Infisical credentials are not passed to the app
-container. If `INFISICAL_CLIENT_ID` is absent from `.env`, start.sh falls back to the legacy mode
-(`entrypoint.sh` reads SSM itself), so a box that hasn't been migrated keeps working. If
-Infisical is configured but unreachable, start.sh exits non-zero and leaves the running
-containers alone.
+container. There is **no fallback**: if the credentials are missing or wrong, or Infisical is
+unreachable, start.sh exits non-zero before touching the running containers and the problem
+has to be fixed by hand (a failed deploy in GitHub Actions means exactly this). SSM is no longer
+read by anything.
 
 Infisical keys (project `clickforms`, environments `dev` / `staging` / `prod`): `ENVIRONMENT`,
 `CADDYFILE`, `S3_BUCKET`, `ROOT_DOMAIN` (also used as `DOMAIN`), `NEXTAUTH_URL`, `AWS_REGION`,
@@ -387,8 +387,7 @@ only if listed under `environment:` in `docker-compose.yml`, so adding a new one
 
 Migrating a box: one machine identity per environment (Universal Auth, Viewer on the project),
 add the four `INFISICAL_*` lines to `.env`, add `ENVIRONMENT` and `CADDYFILE` to the Infisical
-environment, then `sudo /srv/clickforms/start.sh`. Rollback: delete `INFISICAL_CLIENT_ID` from
-`.env` and run start.sh again.
+environment, then `sudo /srv/clickforms/start.sh`.
 
 Rotating a secret: change it in Infisical, then `sudo /srv/clickforms/start.sh` (it recreates
 the app container because its environment changed). Secrets are read only at start.

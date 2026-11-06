@@ -18,7 +18,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 # generate` call — including the "postinstall" hook that `yarn install` fires below.
 # Build-time-only placeholder — generate never connects to it, it just needs to parse
 # as a Postgres URL. The real DATABASE_URL is injected at container start by
-# entrypoint.sh from SSM, not baked into the image.
+# entrypoint.sh from Infisical via start.sh, not baked into the image.
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
@@ -41,19 +41,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN node .yarn/releases/yarn-4.17.1.cjs prisma:generate
 RUN node .yarn/releases/yarn-4.17.1.cjs build
-
-# ---- ssm-deps: isolated install for entrypoint's SSM GetParameter calls ----
-# Previously this used the apt `awscli` package, on the theory that the CLI alone was
-# lighter than pulling in the full AWS SDK. In practice awscli's Debian package drags in
-# a whole Python runtime (python3 + docutils + sgml-base, ~150-250MB with
-# --no-install-recommends) just to run `aws ssm get-parameter` a handful of times.
-# @aws-sdk/client-ssm
-# is pure JS with no native bindings (~15-20MB with transitive deps) — installed here in
-# its own throwaway node_modules, completely separate from the app's yarn dependency
-# tree, so it can't interact with the postinstall/prisma-generate machinery above.
-FROM node:22-bookworm-slim AS ssm-deps
-WORKDIR /app
-RUN npm install --omit=dev @aws-sdk/client-ssm@^3.700.0
 
 # ---- runtime: minimal image containing only what `node server.js` needs ----
 FROM node:22-bookworm-slim AS runtime
@@ -97,12 +84,8 @@ COPY --from=builder /app/prisma ./prisma
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
-# Kept under ./ssm-deps/, not ./node_modules — the standalone COPY above already
-# populated ./node_modules with Next's own trimmed bundle, and copying here would
-# have clobbered it. Placing resolve-secrets.cjs alongside its node_modules means
-# plain `require()` resolution finds @aws-sdk/client-ssm without any NODE_PATH hacks.
-COPY --from=ssm-deps /app/node_modules ./ssm-deps/node_modules
-COPY resolve-secrets.cjs ./ssm-deps/resolve-secrets.cjs
+# Run by start.sh in a throwaway container to fetch secrets from Infisical (no dependencies).
+COPY resolve-secrets.cjs ./resolve-secrets.cjs
 
 USER nextjs
 

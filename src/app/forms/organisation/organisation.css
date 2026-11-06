@@ -10,15 +10,15 @@
 
 .org-ws {
   --org-radius: 1.1rem;
-  --org-accent: color-mix(in srgb, var(--color-primary) 55%, #0f7a3d);
-  --org-focus: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  --org-accent: var(--color-lavender-strong);
+  --org-focus: color-mix(in srgb, var(--color-lavender-strong) 22%, transparent);
   --org-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 28px rgba(15, 23, 42, 0.05);
   /* Less grey: warm the neutrals with a faint green wash, keep borders light, make secondary
    * text darker so it reads as crisp rather than washed out. */
-  --color-surface-sunken: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+  --color-surface-sunken: color-mix(in srgb, var(--color-text) 3%, var(--color-surface));
   --color-border: color-mix(in srgb, var(--color-border-strong) 45%, var(--color-surface));
   --color-text-muted: color-mix(in srgb, var(--color-text) 72%, var(--color-surface));
-  --tone-green: #16a34a;
+  --tone-green: #2563eb;
   --tone-violet: #7c5cfa;
   --tone-amber: #d97706;
   --tone-blue: #0284c7;
@@ -224,7 +224,7 @@
     radial-gradient(circle at 12% 120%, rgba(255, 255, 255, 0.28) 0 6rem, transparent 6.05rem),
     radial-gradient(circle at 62% -30%, rgba(255, 255, 255, 0.22) 0 7rem, transparent 7.05rem),
     radial-gradient(circle at 96% 110%, rgba(255, 255, 255, 0.2) 0 5rem, transparent 5.05rem),
-    linear-gradient(115deg, #55ea8c 0%, #2dd4bf 48%, #8b7cf6 100%);
+    linear-gradient(115deg, #4f46e5 0%, #7c5cfa 55%, #a78bfa 100%);
 }
 
 .org-ws .org-identity-logo {
@@ -288,7 +288,7 @@
   background: rgba(255, 255, 255, 0.26);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  color: #06281a;
+  color: #fff;
 }
 
 .org-ws .org-identity-stats dt {
@@ -481,13 +481,13 @@
   border: none;
   background:
     radial-gradient(circle at 92% -20%, rgba(139, 124, 246, 0.55) 0 9rem, transparent 9.05rem),
-    radial-gradient(circle at 70% 130%, rgba(85, 234, 140, 0.4) 0 8rem, transparent 8.05rem),
+    radial-gradient(circle at 70% 130%, rgba(96, 165, 250, 0.35) 0 8rem, transparent 8.05rem),
     linear-gradient(120deg, #0f172a 0%, #12342a 100%);
   color: #fff;
 }
 
 .org-ws .org-plan-kicker {
-  color: var(--color-primary);
+  color: #c4b5fd;
 }
 
 .org-ws .org-plan-name {
@@ -509,8 +509,8 @@
 }
 
 .org-ws .org-plan-summary .button--dark:hover:not(:disabled) {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: #e9e5ff;
+  border-color: #e9e5ff;
 }
 
 .org-ws .org-usage-grid {
@@ -602,7 +602,7 @@
 .org-ws .org-plan-card--selected,
 .org-ws .org-plan-card--selected:hover {
   border-color: var(--org-accent);
-  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-lavender-strong) 7%, var(--color-surface));
   box-shadow:
     0 0 0 3px var(--org-focus),
     0 16px 36px rgba(15, 23, 42, 0.12);
@@ -613,7 +613,7 @@
 }
 
 .org-ws .org-plan-card-badge {
-  background: var(--color-primary-soft);
+  background: color-mix(in srgb, var(--color-lavender-strong) 14%, var(--color-surface));
   color: var(--org-accent);
 }
 
@@ -726,4 +726,22 @@
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+/* Green is reserved for the primary action (Save) and "on" switches. Secondary buttons and
+ * the page kicker stay neutral/violet. */
+.org-ws .button--secondary {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: none;
+}
+
+.org-ws .button--secondary:hover:not(:disabled) {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-text-subtle);
+}
+
+.org-ws .settings-page-kicker {
+  color: var(--color-lavender-strong);
 }

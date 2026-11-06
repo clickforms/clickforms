@@ -320,7 +320,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: conic-gradient(#f87171, #fbbf24, #55ea8c, #38bdf8, #8b7cf6, #f472b6, #f87171);
+  background: conic-gradient(#f87171, #fbbf24, #4ade80, #38bdf8, #8b7cf6, #f472b6, #f87171);
 }
 
 .ph-swatch--custom-active {

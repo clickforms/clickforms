@@ -1,21 +1,21 @@
 .preheader-preview {
   border: 1px solid var(--color-border-strong);
   border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--color-primary) 6%, #fff);
+  background: #f8f9fb;
   overflow: hidden;
 }
 .preheader-preview-bar {
   display: flex;
   gap: 0.3rem;
   padding: 0.5rem 0.75rem;
-  background: color-mix(in srgb, var(--color-primary) 10%, #fff);
+  background: #f1f3f7;
   border-bottom: 1px solid var(--color-border);
 }
 .preheader-preview-bar span {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-primary) 45%, #fff);
+  background: #d5d9e2;
 }
 .preheader-preview-page {
   margin: 1rem;
@@ -92,12 +92,12 @@
 .preheader-preview-sample-field span {
   display: block;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-primary) 14%, #fff);
+  background: #eceef3;
 }
 .preheader-preview-sample > .preheader-preview-sample-title {
   width: 52%;
   height: 1rem;
-  background: color-mix(in srgb, var(--color-primary) 40%, #fff);
+  background: #d5d9e2;
 }
 .preheader-preview-sample-field {
   display: flex;
@@ -111,14 +111,14 @@
 .preheader-preview-sample-field span:last-child {
   height: 1.9rem;
   border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--color-primary) 5%, #fff);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 14%, #fff);
+  background: #f8f9fb;
+  box-shadow: inset 0 0 0 1px #eceef3;
 }
 .preheader-preview-sample > .preheader-preview-sample-button {
   width: 5.5rem;
   height: 1.9rem;
   border-radius: 0.5rem;
-  background: #55ea8c;
+  background: #0f172a;
 }
 .preheader-preview-real {
   display: flex;
@@ -162,7 +162,7 @@
   color: #64748b;
 }
 .preheader-choice button[aria-pressed="true"] {
-  border-color: var(--color-primary-hover);
-  background: var(--color-primary-soft);
-  box-shadow: 0 0 0 2px rgba(85, 234, 140, 0.35);
+  border-color: var(--color-lavender-strong);
+  background: color-mix(in srgb, var(--color-lavender-strong) 7%, #fff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-lavender-strong) 22%, transparent);
 }

@@ -19520,15 +19520,17 @@ textarea.form-field-input {
   margin-top: 1.15rem;
 }
 
-.template-detail-fact {
+/* Prefixed with .template-detail-facts so these out-rank `.template-detail-facts p` above
+   (the muted paragraph colour) on specificity, with no !important needed. */
+.template-detail-facts .template-detail-fact {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: color-mix(in srgb, var(--color-primary) 38%, var(--color-text)) !important;
+  color: color-mix(in srgb, var(--color-primary) 38%, var(--color-text));
 }
 
-.template-detail-creator {
-  color: var(--color-text) !important;
+.template-detail-facts .template-detail-creator {
+  color: var(--color-text);
   font-weight: 600;
 }
 

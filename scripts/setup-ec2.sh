@@ -216,8 +216,8 @@ curl -sL "https://github.com/docker/compose/releases/latest/download/docker-comp
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
-mkdir -p /opt/clickforms
-cat > /opt/clickforms/.env <<ENVFILE
+mkdir -p /srv/clickforms
+cat > /srv/clickforms/.env <<ENVFILE
 ENVIRONMENT=${ENVIRONMENT}
 CADDYFILE=${CADDYFILE_NAME}
 AWS_REGION=${REGION}
@@ -225,7 +225,7 @@ S3_BUCKET=${S3_BUCKET_NAME}
 DOMAIN=${DOMAIN_NAME}
 ENVFILE
 
-echo "clickforms-${ENVIRONMENT} box ready for first deploy" > /opt/clickforms/READY
+echo "clickforms-${ENVIRONMENT} box ready for first deploy" > /srv/clickforms/READY
 USERDATA
 
 # --- Launch instance (or reuse an existing one tagged for this environment) ---------------
@@ -319,5 +319,5 @@ Next steps:
   3. Repeat for the other environment: ENVIRONMENT=$( [ "${ENVIRONMENT}" = "production" ] && echo staging || echo production ) ./scripts/setup-ec2.sh
   4. Once .github/workflows/deploy-staging.yml (or promote-production.yml) exists and both
      secrets above are set, pushing to main (or promoting) will scp docker-compose.yml +
-     Caddyfile.${ENVIRONMENT} to /opt/clickforms on this box and bring the app up.
+     Caddyfile.${ENVIRONMENT} to /srv/clickforms on this box and bring the app up.
 EOF

@@ -47,7 +47,7 @@ jobs:
         env:
           HOST: ${{ secrets.host }}
         run: |
-          # Scp to /tmp first, not /opt/clickforms directly — that directory is
+          # Scp to /tmp first, not /srv/clickforms directly — that directory is
           # root-owned (created by EC2 user-data at boot), and ec2-user can't write
           # to it over plain scp. The remote step below moves it into place with sudo.
           scp -o StrictHostKeyChecking=no \
@@ -65,9 +65,9 @@ jobs:
           IMAGE="$1"
           ENVIRONMENT="$2"
 
-          sudo mkdir -p /opt/clickforms
-          sudo mv "/tmp/docker-compose.yml" "/tmp/Caddyfile.${ENVIRONMENT}" /opt/clickforms/
-          cd /opt/clickforms
+          sudo mkdir -p /srv/clickforms
+          sudo mv "/tmp/docker-compose.yml" "/tmp/Caddyfile.${ENVIRONMENT}" /srv/clickforms/
+          cd /srv/clickforms
 
           # ECR_IMAGE is the only value this workflow needs to set — ENVIRONMENT,
           # CADDYFILE, AWS_REGION, S3_BUCKET were already written to .env by user-data

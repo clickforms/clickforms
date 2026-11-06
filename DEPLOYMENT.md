@@ -51,7 +51,7 @@ anything that already exists).
      before EC2 exists.
    - `setup-ec2.sh` launches the instance (Amazon Linux 2023, arm64, `t4g.small`, 30GB gp3),
      installs Docker + Compose via user-data, allocates an Elastic IP, writes
-     `/opt/clickforms/.env` on the box (`ENVIRONMENT`, `CADDYFILE`, `AWS_REGION`, `S3_BUCKET`,
+     `/srv/clickforms/.env` on the box (`ENVIRONMENT`, `CADDYFILE`, `AWS_REGION`, `S3_BUCKET`,
      `DOMAIN`), and creates a scoped instance IAM role (S3 access to that bucket only, SSM
      read under that env's path only, ECR pull — email goes through Resend's HTTPS API, not
      an AWS service, so there's no SES permission to grant here; see "Email (Resend) setup"
@@ -95,8 +95,8 @@ switched over at the registrar (Hostinger).
   Server → Create Certificate; cover `clickforms.com.au` + `*.clickforms.com.au`, 15yr
   validity) and place it on the **production** box at:
   ```
-  /opt/clickforms/certs/cloudflare-origin-cert.pem
-  /opt/clickforms/certs/cloudflare-origin-key.pem
+  /srv/clickforms/certs/cloudflare-origin-cert.pem
+  /srv/clickforms/certs/cloudflare-origin-key.pem
   ```
   This directory is **not created by any script and not committed** (gitignored) — it must
   be created and populated by hand on the box before the first deploy, or Caddy will fail
@@ -108,7 +108,7 @@ switched over at the registrar (Hostinger).
 
 Three separate places, don't confuse them:
 
-- **`/opt/clickforms/.env`** on each EC2 box (root-owned, not in git) — written once by
+- **`/srv/clickforms/.env`** on each EC2 box (root-owned, not in git) — written once by
   `setup-ec2.sh`'s user-data, then `ECR_IMAGE` is added/updated by every deploy:
   ```
   ECR_IMAGE=<account>.dkr.ecr.ap-southeast-2.amazonaws.com/clickforms:<tag>
@@ -126,7 +126,7 @@ Three separate places, don't confuse them:
   `entrypoint.sh` reads these exact names via `ssm-deps/resolve-secrets.cjs`, using the EC2
   instance role, no AWS keys). Resolved into the container's environment at container start,
   never baked into the image. `RESEND_FROM` and `CONTACT_EMAIL` aren't secrets — set them as
-  plain (non-Secure) values in `/opt/clickforms/.env` alongside `S3_BUCKET`/`DOMAIN` instead
+  plain (non-Secure) values in `/srv/clickforms/.env` alongside `S3_BUCKET`/`DOMAIN` instead
   of adding them to SSM.
 
 - **`.env.local`** — local dev only, copy from `.env.example`. Never used in staging or
@@ -150,7 +150,7 @@ One-time, per environment (staging and production can share a domain if you want
    aws ssm put-parameter --name /clickforms/<env>/resend-api-key --type SecureString --value <key>
    ```
 4. Add `RESEND_FROM="Clickforms <no-reply@clickforms.com.au>"` (matching the verified
-   domain) to `/opt/clickforms/.env` on the box.
+   domain) to `/srv/clickforms/.env` on the box.
 
 Until this is done, `sendEmail()` (`src/lib/email.ts`) just logs every email to the
 container's stdout instead of sending — the app keeps working (signup/invite/reset links
@@ -172,7 +172,7 @@ One-time, per environment, for the live-form Share panel's "Send via SMS" action
    aws ssm put-parameter --name /clickforms/<env>/messagemedia-api-key --type SecureString --value <key>
    aws ssm put-parameter --name /clickforms/<env>/messagemedia-api-secret --type SecureString --value <secret>
    ```
-3. Optionally set `MESSAGEMEDIA_SENDER_ID` in `/opt/clickforms/.env` (a plain, non-secret
+3. Optionally set `MESSAGEMEDIA_SENDER_ID` in `/srv/clickforms/.env` (a plain, non-secret
    value, alongside `S3_BUCKET`/`DOMAIN`) if messages should show a name like
    `"Clickforms"` instead of a shared/numeric sender. An alphanumeric sender ID in
    Australia needs its own registration/approval with Sinch first — having API
@@ -190,7 +190,7 @@ model) for a `dev_logged`/`failed`/`sent` history per attempt.
    runs on `t4g.small`, which is arm64).
 3. Pushes to ECR as `sha-<shortsha>`.
 4. Calls the reusable `_deploy.yml`: scp's `docker-compose.yml` + `Caddyfile.staging` to the
-   staging box, updates `ECR_IMAGE` in `/opt/clickforms/.env`, `docker compose pull && up -d`,
+   staging box, updates `ECR_IMAGE` in `/srv/clickforms/.env`, `docker compose pull && up -d`,
    then polls `https://staging.clickforms.com.au/health` for up to 2 minutes.
 
 **Production** — manual, from an already-staging-deployed tag:
@@ -287,7 +287,7 @@ To roll back:
 - **Production:** re-run **Promote to production** with the previous known-good `image_tag`.
 - **Staging:** re-run `_deploy.yml`'s logic manually (or `workflow_dispatch` `deploy-staging.yml`
   won't help — it always builds the current `main`). Easiest is to SSH in, edit `ECR_IMAGE` in
-  `/opt/clickforms/.env` back to the previous tag, and run `sudo docker compose pull && sudo docker compose up -d`.
+  `/srv/clickforms/.env` back to the previous tag, and run `sudo docker compose pull && sudo docker compose up -d`.
 
 `docker system prune -af` runs on every deploy (see `_deploy.yml`), so old image layers on
 the box don't accumulate — but it also means you can't roll back to an old tag that's no
@@ -324,7 +324,7 @@ never deleted except via the 7-day untagged-image lifecycle rule).
 
 - **`./certs` must exist and be populated on the production box before first deploy.**
   `Caddyfile.production` references `/etc/caddy/certs/cloudflare-origin-cert.pem` and
-  `-key.pem`, mounted from `/opt/clickforms/certs` — nothing creates this directory or its
+  `-key.pem`, mounted from `/srv/clickforms/certs` — nothing creates this directory or its
   contents automatically (see §3). Caddy fails to start without it. Staging doesn't need
   this (uses Let's Encrypt automatically).
 
@@ -363,7 +363,7 @@ never deleted except via the 7-day untagged-image lifecycle rule).
 ## Secrets from Infisical (optional, replaces SSM per environment)
 
 `resolve-secrets.cjs` reads secrets from **Infisical** when `INFISICAL_CLIENT_ID` is set in the
-box's `/opt/clickforms/.env`; otherwise it reads SSM as described above. The two are never
+box's `/srv/clickforms/.env`; otherwise it reads SSM as described above. The two are never
 mixed: if Infisical is configured but unreachable, the container refuses to start rather than
 running on stale values.
 

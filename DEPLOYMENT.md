@@ -360,32 +360,35 @@ never deleted except via the 7-day untagged-image lifecycle rule).
 | SSM path | /clickforms/staging/\* | /clickforms/production/\* |
 | RDS instance | clickforms-staging | clickforms-production |
 
-## Secrets from Infisical (optional, replaces SSM per environment)
+## Secrets from Infisical via `start.sh`
 
-`resolve-secrets.cjs` reads secrets from **Infisical** when `INFISICAL_CLIENT_ID` is set in the
-box's `/srv/clickforms/.env`; otherwise it reads SSM as described above. The two are never
-mixed: if Infisical is configured but unreachable, the container refuses to start rather than
-running on stale values.
+The stack on each box is started with one command: `sudo /srv/clickforms/start.sh` (the deploy
+workflow runs the same script). It:
 
-Infisical project `clickforms`, environments `dev` / `staging` / `prod`. Keys are the app's
-env var names (`DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `NEXTAUTH_URL`,
-`ROOT_DOMAIN`, `S3_BUCKET`, `AWS_REGION`, `RESEND_FROM`, optionally `CONTACT_EMAIL` and the
-`MESSAGEMEDIA_*` trio). Do not set `S3_ENDPOINT` outside local dev.
+1. reads `/srv/clickforms/.env`, which holds only the bootstrap values: `INFISICAL_CLIENT_ID`,
+   `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_ID`, `INFISICAL_ENV` (`staging` / `prod`),
+   optionally `INFISICAL_URL` (only if the project isn't on the US cloud), and `ECR_IMAGE`
+   (written by the deploy workflow);
+2. fetches every secret and config value from that Infisical environment, using the app image's
+   own `resolve-secrets.cjs` in a throwaway container;
+3. exports them into its own environment and runs `docker compose pull && up -d`.
 
-One machine identity per environment (Universal Auth, Viewer on that environment only). Add
-to the box's `.env` (these four stay on the box; everything else comes from Infisical):
+Nothing fetched is written to disk, and the Infisical credentials are not passed to the app
+container. If `INFISICAL_CLIENT_ID` is absent from `.env`, start.sh falls back to the legacy mode
+(`entrypoint.sh` reads SSM itself), so a box that hasn't been migrated keeps working. If
+Infisical is configured but unreachable, start.sh exits non-zero and leaves the running
+containers alone.
 
-```
-INFISICAL_CLIENT_ID=...
-INFISICAL_CLIENT_SECRET=...
-INFISICAL_PROJECT_ID=...
-INFISICAL_ENV=staging        # or prod
-# INFISICAL_URL=https://eu.infisical.com   # only if the project isn't on the US cloud
-```
+Infisical keys (project `clickforms`, environments `dev` / `staging` / `prod`): `ENVIRONMENT`,
+`CADDYFILE`, `S3_BUCKET`, `ROOT_DOMAIN` (also used as `DOMAIN`), `NEXTAUTH_URL`, `AWS_REGION`,
+`DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`, optionally `CONTACT_EMAIL` and
+the `MESSAGEMEDIA_*` trio. Never set `S3_ENDPOINT` outside local dev. Secrets reach the container
+only if listed under `environment:` in `docker-compose.yml`, so adding a new one means editing both.
 
-Then `docker compose up -d` (recreate the app container). The startup log should say
-`resolving secrets from Infisical (<env>)` and `loaded N secrets`. Rollback = delete
-`INFISICAL_CLIENT_ID` from `.env` and recreate; SSM values are untouched.
+Migrating a box: one machine identity per environment (Universal Auth, Viewer on the project),
+add the four `INFISICAL_*` lines to `.env`, add `ENVIRONMENT` and `CADDYFILE` to the Infisical
+environment, then `sudo /srv/clickforms/start.sh`. Rollback: delete `INFISICAL_CLIENT_ID` from
+`.env` and run start.sh again.
 
-Rotating a secret: change it in Infisical, then `docker compose up -d --force-recreate app`
-(secrets are read once, at container start).
+Rotating a secret: change it in Infisical, then `sudo /srv/clickforms/start.sh` (it recreates
+the app container because its environment changed). Secrets are read only at start.

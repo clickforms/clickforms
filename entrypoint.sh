@@ -14,11 +14,13 @@ set -eu
 # SSM involved). Wire up the real parameter names under SSM_PARAM_PREFIX once specs
 # 04/05 need S3/SES and there's an actual parameter tree to read from.
 
-# Secret source: Infisical when INFISICAL_CLIENT_ID is set (see resolve-secrets.cjs),
-# otherwise SSM. Same script either way; it decides.
-if [ -n "${INFISICAL_CLIENT_ID:-}" ]; then
-  echo "entrypoint: resolving secrets from Infisical (${INFISICAL_ENV:-?})"
-  eval "$(node /app/ssm-deps/resolve-secrets.cjs)"
+# Secret source, in order:
+#   1. start.sh already injected everything via the environment (SECRETS_INJECTED=1) — the
+#      normal path on the boxes; nothing to fetch here.
+#   2. Legacy: read SSM under SSM_PARAM_PREFIX (boxes not yet moved to start.sh/Infisical).
+#   3. Neither: use the environment as-is (local dev).
+if [ -n "${SECRETS_INJECTED:-}" ]; then
+  echo "entrypoint: secrets injected by start.sh (Infisical)"
 elif [ -n "${SSM_PARAM_PREFIX:-}" ]; then
   echo "entrypoint: resolving secrets from SSM under ${SSM_PARAM_PREFIX}"
   eval "$(node /app/ssm-deps/resolve-secrets.cjs)"

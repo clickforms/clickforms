@@ -5,12 +5,14 @@ import { useEffect, useRef } from 'react';
 import './route-progress.css';
 
 // Top-of-page loading bar for client-side navigations. The App Router has no router events,
-// so this watches the one thing every navigation has in common: it fetches the next page's
-// React Server Component payload (`RSC: 1` header) from the server. The bar starts when such
-// a request begins and finishes when it settles or the URL changes. Prefetches (which are
-// invisible to the user) and server actions are ignored.
+// so it starts from two signals: a click on an internal link (covers <Link> navigation even
+// when the page data was already requested in the background) and a fetch of the next page's
+// React Server Component payload (`RSC: 1` header — covers router.push/replace/refresh from
+// code, e.g. clickable table rows). It finishes when the URL changes or the requests settle.
+// Prefetches (invisible to the user) and server actions are ignored.
 
-const SHOW_DELAY_MS = 120; // navigations that finish faster than this never flash the bar
+const SHOW_DELAY_MS = 60; // navigations that finish faster than this never flash the bar
+const CLICK_FAILSAFE_MS = 10_000; // a clicked link that never navigates must not leave the bar running
 const TRICKLE_MS = 200;
 
 /** True for a user-visible page navigation (or router.refresh) fetch, false for prefetches. */
@@ -38,7 +40,11 @@ export function RouteProgress() {
   const showTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trickleTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const controls = useRef<{ start: () => void; finish: () => void } | null>(null);
+  const clickPending = useRef(false);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controls = useRef<{ start: () => void; finish: () => void; endClick: () => void } | null>(
+    null,
+  );
 
   useEffect(() => {
     function render(next: number) {
@@ -81,7 +87,37 @@ export function RouteProgress() {
       }, 180);
     }
 
-    controls.current = { start, finish };
+    function endClick() {
+      if (clickTimer.current) clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+      if (!clickPending.current) return;
+      clickPending.current = false;
+      finish();
+    }
+
+    function onClick(event: MouseEvent) {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      const anchor = (event.target as Element | null)?.closest?.('a');
+      if (!anchor?.href || anchor.target === '_blank' || anchor.hasAttribute('download')) {
+        return;
+      }
+      const next = new URL(anchor.href, window.location.href);
+      if (next.origin !== window.location.origin) return;
+      // Same page (hash jump, or a link to where you already are): nothing will load.
+      if (next.pathname === window.location.pathname && next.search === window.location.search) {
+        return;
+      }
+      if (clickPending.current) return;
+      clickPending.current = true;
+      start();
+      clickTimer.current = setTimeout(endClick, CLICK_FAILSAFE_MS);
+    }
+
+    controls.current = { start, finish, endClick };
+    // Capture phase: runs before the link's own handlers, so it still sees clicks they cancel.
+    document.addEventListener('click', onClick, true);
 
     const originalFetch = window.fetch;
     window.fetch = function patchedFetch(input, init) {
@@ -91,6 +127,9 @@ export function RouteProgress() {
     };
 
     return () => {
+      document.removeEventListener('click', onClick, true);
+      if (clickTimer.current) clearTimeout(clickTimer.current);
+      clickPending.current = false;
       window.fetch = originalFetch;
       clearTimers();
       controls.current = null;
@@ -102,6 +141,7 @@ export function RouteProgress() {
   // even if the request bookkeeping above ended up out of step.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `url` is the trigger, not a value used inside
   useEffect(() => {
+    controls.current?.endClick();
     if (inFlight.current > 0) {
       inFlight.current = 1;
       controls.current?.finish();

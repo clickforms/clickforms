@@ -224,44 +224,16 @@ box, in a throwaway container, not inside the running `clickforms-app` container
 SSH session on the target box:
 
 ```bash
-mkdir -p /tmp/migrate
-
-# Always start from a clean copy. `docker cp` (like `mv`) silently nests SRC *inside*
-# DEST when DEST already exists as a directory, rather than replacing it — so on a box
-# that's already run migrations once before, skipping this rm and re-running `docker cp
-# clickforms-app:/app/prisma /tmp/migrate/prisma` produces /tmp/migrate/prisma/prisma
-# (or /tmp/migrate/prisma/<name-you-moved-in>), leaving the *old* prisma/migrations
-# untouched underneath and `migrate deploy` silently reading stale, already-applied
-# history as if it were current. This bit us for real on 2026-09-25: two migrations
-# looked "already applied" (no pending) purely because of this nesting, layered on top
-# of a separate stale-image bug (see the CI cache-from/cache-to note in
-# deploy-staging.yml). Only prisma/ needs to be wiped — node_modules/ below is still
-# safe to reuse.
-rm -rf /tmp/migrate/prisma
-docker cp clickforms-app:/app/prisma /tmp/migrate/prisma
-
-# Prisma 7's migrate deploy needs a config file, not just schema.prisma's datasource block.
-cat > /tmp/migrate/prisma.config.ts <<'EOF'
-import { defineConfig, env } from 'prisma/config';
-
-export default defineConfig({
-  schema: 'prisma/schema.prisma',
-  migrations: { path: 'prisma/migrations' },
-  datasource: { url: env('DATABASE_URL') },
-});
-EOF
-
-DATABASE_URL=$(aws ssm get-parameter --name /clickforms/<environment>/database-url \
-  --with-decryption --query Parameter.Value --output text --region ap-southeast-2)
-
-docker run --rm -v /tmp/migrate:/app -w /app \
-  -e DATABASE_URL="$DATABASE_URL" \
-  node:22-bookworm-slim bash -c "
-    apt-get update -qq && apt-get install -y --no-install-recommends openssl -qq &&
-    npm install prisma@7.8.0 --no-save --silent &&
-    npx prisma migrate deploy
-  "
+sudo /srv/clickforms/migrate.sh
 ```
+
+`migrate.sh` reads the same `.env` bootstrap as `start.sh` (Infisical credentials + `ECR_IMAGE`),
+fetches `DATABASE_URL` from Infisical, copies `prisma/` out of the `ECR_IMAGE` image (always a
+clean copy — `docker cp` into an existing directory nests instead of replacing, which once made
+migrations look "already applied" on 2026-09-25) and runs `prisma migrate deploy` in a throwaway
+`node:22` container. Set `ECR_IMAGE` in `.env` to the tag you are about to deploy first, and run
+it **before** `start.sh` when the release contains a migration. It is safe to run with nothing
+pending.
 
 `node_modules` installed with `--no-save` persists in the bind-mounted `/tmp/migrate` across
 separate `--rm` container runs, so subsequent migrations on the same box skip the reinstall —

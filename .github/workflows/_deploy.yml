@@ -51,7 +51,7 @@ jobs:
           # root-owned (created by EC2 user-data at boot), and ec2-user can't write
           # to it over plain scp. The remote step below moves it into place with sudo.
           scp -o StrictHostKeyChecking=no \
-            docker-compose.yml start.sh "Caddyfile.${{ inputs.environment }}" \
+            docker-compose.yml start.sh migrate.sh "Caddyfile.${{ inputs.environment }}" \
             "ec2-user@${HOST}:/tmp/"
 
       - name: Deploy on the instance
@@ -66,8 +66,8 @@ jobs:
           ENVIRONMENT="$2"
 
           sudo mkdir -p /srv/clickforms
-          sudo mv "/tmp/docker-compose.yml" "/tmp/start.sh" "/tmp/Caddyfile.${ENVIRONMENT}" /srv/clickforms/
-          sudo chmod 755 /srv/clickforms/start.sh
+          sudo mv "/tmp/docker-compose.yml" "/tmp/start.sh" "/tmp/migrate.sh" "/tmp/Caddyfile.${ENVIRONMENT}" /srv/clickforms/
+          sudo chmod 755 /srv/clickforms/start.sh /srv/clickforms/migrate.sh
           cd /srv/clickforms
 
           # ECR_IMAGE is the only value this workflow needs to set — ENVIRONMENT,

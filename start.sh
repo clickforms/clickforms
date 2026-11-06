@@ -27,7 +27,13 @@ done
 # Fetch with the app image itself: it already contains resolve-secrets.cjs (tested, no
 # host dependencies like jq). Credentials go in by name (-e NAME), so they never appear in
 # a process listing, and are NOT passed on to the app container.
-docker image inspect "${ECR_IMAGE}" >/dev/null 2>&1 || docker pull "${ECR_IMAGE}"
+if ! docker image inspect "${ECR_IMAGE}" >/dev/null 2>&1; then
+  # Not on the box yet (e.g. start.sh run by hand before the deploy workflow's ECR login).
+  REGISTRY="${ECR_IMAGE%%/*}"
+  REGION="$(echo "${REGISTRY}" | cut -d. -f4)"
+  aws ecr get-login-password --region "${REGION}" | docker login --username AWS --password-stdin "${REGISTRY}"
+  docker pull "${ECR_IMAGE}"
+fi
 echo "start.sh: fetching secrets from Infisical (${INFISICAL_ENV})"
 SECRETS="$(docker run --rm --entrypoint node \
   -e INFISICAL_CLIENT_ID -e INFISICAL_CLIENT_SECRET -e INFISICAL_PROJECT_ID \

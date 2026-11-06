@@ -57,6 +57,15 @@ services:
       # doesn't need a `:?` guard like the required vars above.
       RESEND_FROM: ${RESEND_FROM:-}
       CONTACT_EMAIL: ${CONTACT_EMAIL:-}
+      # Infisical bootstrap (optional). When INFISICAL_CLIENT_ID is set in this box's .env,
+      # entrypoint.sh pulls every secret from that Infisical project environment instead of
+      # SSM (see resolve-secrets.cjs). These four are the only secret-ish values that stay
+      # on the box; leave them unset to keep using SSM.
+      INFISICAL_CLIENT_ID: ${INFISICAL_CLIENT_ID:-}
+      INFISICAL_CLIENT_SECRET: ${INFISICAL_CLIENT_SECRET:-}
+      INFISICAL_PROJECT_ID: ${INFISICAL_PROJECT_ID:-}
+      INFISICAL_ENV: ${INFISICAL_ENV:-}
+      INFISICAL_URL: ${INFISICAL_URL:-}
     expose:
       - '3000'
     networks:

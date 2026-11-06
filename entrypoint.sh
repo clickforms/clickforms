@@ -14,7 +14,12 @@ set -eu
 # SSM involved). Wire up the real parameter names under SSM_PARAM_PREFIX once specs
 # 04/05 need S3/SES and there's an actual parameter tree to read from.
 
-if [ -n "${SSM_PARAM_PREFIX:-}" ]; then
+# Secret source: Infisical when INFISICAL_CLIENT_ID is set (see resolve-secrets.cjs),
+# otherwise SSM. Same script either way; it decides.
+if [ -n "${INFISICAL_CLIENT_ID:-}" ]; then
+  echo "entrypoint: resolving secrets from Infisical (${INFISICAL_ENV:-?})"
+  eval "$(node /app/ssm-deps/resolve-secrets.cjs)"
+elif [ -n "${SSM_PARAM_PREFIX:-}" ]; then
   echo "entrypoint: resolving secrets from SSM under ${SSM_PARAM_PREFIX}"
   eval "$(node /app/ssm-deps/resolve-secrets.cjs)"
 else

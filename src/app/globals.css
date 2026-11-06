@@ -22012,67 +22012,6 @@ textarea.form-field-input {
 /* Admin "Prefilled link" builder (/f/[slug]/prefill) — the generated link + copy button
    shown under the form's last-page button. */
 
-/* Route-level loading placeholder (components/page-skeleton.tsx, used by loading.tsx). */
-.page-skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  padding: 1.5rem;
-}
-
-.page-skeleton-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-
-.page-skeleton-bar,
-.page-skeleton-block {
-  border-radius: var(--radius-md, 8px);
-  background: linear-gradient(
-    90deg,
-    var(--color-surface-sunken, #eef0f4) 25%,
-    var(--color-surface, #f7f8fa) 50%,
-    var(--color-surface-sunken, #eef0f4) 75%
-  );
-  background-size: 200% 100%;
-  animation: page-skeleton-shimmer 1.4s ease-in-out infinite;
-}
-
-.page-skeleton-bar--title {
-  height: 1.5rem;
-  width: 14rem;
-}
-
-.page-skeleton-bar--sub {
-  height: 0.9rem;
-  width: 22rem;
-  max-width: 80%;
-}
-
-.page-skeleton-block {
-  height: 4.5rem;
-}
-
-.page-skeleton-block--short {
-  width: 60%;
-}
-
-@keyframes page-skeleton-shimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .page-skeleton-bar,
-  .page-skeleton-block {
-    animation: none;
-  }
-}
-
 /* Two-factor settings: inline code / password step under the toggle row. */
 .two-factor-step {
   display: flex;

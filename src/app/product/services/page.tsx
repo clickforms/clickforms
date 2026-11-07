@@ -20,7 +20,7 @@ const SERVICE_FEATURES = [
   {
     title: 'Signatures & uploads',
     description:
-      'Capture e-signatures and file uploads as built-in field types — no third-party tools to wire up.',
+      'Capture e-signatures and file uploads as built-in field types, no third-party tools to wire up.',
   },
   {
     title: 'Conditional logic',
@@ -38,7 +38,7 @@ export const metadata: Metadata = pageMetadata({
   path: '/product/services',
   title: 'Form Builder Features: E-Signatures, Logic & Approvals | Clickforms',
   description:
-    'Explore Clickforms features — e-signatures, file uploads, conditional logic, approval workflows, branding and audit trails for custom online forms.',
+    'Explore Clickforms features: e-signatures, file uploads, conditional logic, approval workflows, branding and audit trails for custom online forms.',
 });
 
 export default async function ServicesPage() {
@@ -65,7 +65,7 @@ export default async function ServicesPage() {
             <h2>Your priorities can&apos;t wait.</h2>
             <p>
               Leveraging a purpose-built form builder to make it easy, safe, and quick for teams to
-              collect intake, consent, and service agreements — including signatures, uploads, and
+              collect intake, consent, and service agreements, including signatures, uploads, and
               approval workflows your compliance review can trust.
             </p>
             <Link className="landing-btn landing-btn--primary landing-btn--lg" href={primaryHref}>
@@ -113,7 +113,7 @@ export default async function ServicesPage() {
             <div className="landing-band-showcase-intro">
               <p>What&apos;s included</p>
               <p>
-                No plugins to install and no separate tools to pay for — every service form starts
+                No plugins to install and no separate tools to pay for, every service form starts
                 here.
               </p>
             </div>
@@ -143,8 +143,8 @@ export default async function ServicesPage() {
             <p className="landing-promo-eyebrow">Invite your team</p>
             <h3>Bring coordinators, reviewers, and admins into one workspace</h3>
             <p>
-              Role-based access keeps everyone in the right lane — admins, editors, and reviewers
-              see exactly what their role allows.
+              Role-based access keeps everyone in the right lane: admins, editors, and reviewers see
+              exactly what their role allows.
             </p>
             <div className="landing-promo-flow" aria-hidden="true">
               <span className="landing-promo-flow-step">
@@ -170,7 +170,7 @@ export default async function ServicesPage() {
             <div className="landing-promo-deco landing-promo-deco--a" aria-hidden="true" />
             <div className="landing-promo-deco landing-promo-deco--b" aria-hidden="true" />
             <p className="landing-promo-eyebrow">Built for regulated workflows</p>
-            <h3>Signatures, uploads, and audit trails — out of the box</h3>
+            <h3>Signatures, uploads, and audit trails, out of the box</h3>
             <p>
               E-signatures, file uploads, conditional logic, and export-ready submissions without
               wiring together five different tools.

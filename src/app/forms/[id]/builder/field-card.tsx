@@ -1241,11 +1241,10 @@ function FieldPreview({
             Hidden from respondents
             {field.sourceParam ? (
               <>
-                {' '}
-                — filled from <code>?{field.sourceParam}=</code>
+                , filled from <code>?{field.sourceParam}=</code>
               </>
             ) : field.defaultValue ? (
-              <> — always "{field.defaultValue}"</>
+              <>, always "{field.defaultValue}"</>
             ) : null}
           </span>
         </div>

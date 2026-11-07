@@ -85,9 +85,9 @@ export default async function FormPrefillPage({ params, searchParams }: PageProp
     <div className="form-preview-shell">
       <div className="form-preview-banner">
         {reopen
-          ? `Editing ${reopen.label ?? 'this'} prefill — change what you need, then send it again. Responses already returned stay in the Prefills tab.`
+          ? `Editing ${reopen.label ?? 'this'} prefill: change what you need, then send it again. Responses already returned stay in the Prefills tab.`
           : from
-            ? `Starting from ${from.label ?? 'another'} prefill — change what you need, then send it to someone else. The original stays as it was sent.`
+            ? `Starting from ${from.label ?? 'another'} prefill: change what you need, then send it to someone else. The original stays as it was sent.`
             : 'Fill in the answers you want pre-populated, then send the form. Nothing here is submitted as a response.'}
       </div>
       <FormRendererClient

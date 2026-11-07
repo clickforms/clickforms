@@ -54,7 +54,7 @@ export default async function ContactPage() {
           <span className="landing-band-eyebrow">Looking for a quick answer?</span>
           <h2>Check the Help Center before you write in</h2>
           <p>
-            Branding, logic, access, and file uploads — the questions we hear most, answered without
+            Branding, logic, access, and file uploads: the questions we hear most, answered without
             waiting on a reply.
           </p>
           <div className="landing-band-actions">

@@ -386,7 +386,7 @@ export function PrefillsListClient({
                       </span>
                     </td>
                     <td className="pf-muted">{formatDate(item.sentAt)}</td>
-                    <td className="pf-muted">{item.createdBy ?? '—'}</td>
+                    <td className="pf-muted">{item.createdBy ?? '-'}</td>
                     <td>
                       {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row-expand clicks from the action buttons */}
                       <div

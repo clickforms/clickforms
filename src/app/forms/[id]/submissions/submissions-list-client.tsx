@@ -512,7 +512,7 @@ export function SubmissionsListClient({
                     }}
                   >
                     <td data-label={responseColumnLabel}>
-                      {labelById.get(submission.id) ?? '—'}
+                      {labelById.get(submission.id) ?? '-'}
                       {submission.prefillRecipient ? (
                         <span
                           className="prefill-badge"
@@ -557,7 +557,7 @@ export function SubmissionsListClient({
                       </button>
                     </td>
                     <td data-label="IP address" className="submissions-ip">
-                      {submission.ipAddress ?? '—'}
+                      {submission.ipAddress ?? '-'}
                     </td>
                     <td data-label="Actions">
                       {/* Row itself already navigates on click/Enter — stop these

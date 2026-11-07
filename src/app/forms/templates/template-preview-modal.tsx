@@ -174,16 +174,31 @@ export function TemplatePreviewModal({
             >
               {isCreating ? 'Creating…' : 'Use Template'}
             </button>
-            {categories.length > 0 ? (
-              <div className="template-detail-cats">
-                <p className="template-detail-cats-label">Categories</p>
-                <ul>
-                  {categories.map((category) => (
-                    <li key={category}>{category}</li>
-                  ))}
-                </ul>
+            <dl className="template-detail-specs">
+              <div className="template-detail-spec">
+                <dt>Fields</dt>
+                <dd>
+                  <CloneIcon />
+                  {template.fieldCount} field{template.fieldCount === 1 ? '' : 's'}
+                </dd>
               </div>
-            ) : null}
+              <div className="template-detail-spec">
+                <dt>Created by</dt>
+                <dd>{template.createdByName}</dd>
+              </div>
+              {categories.length > 0 ? (
+                <div className="template-detail-spec">
+                  <dt>Categories</dt>
+                  <dd>
+                    <ul className="template-detail-chips">
+                      {categories.map((category) => (
+                        <li key={category}>{category}</li>
+                      ))}
+                    </ul>
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
           </div>
         </div>
 
@@ -238,22 +253,13 @@ export function TemplatePreviewModal({
                 </>
               ) : null}
             </div>
-            <aside className="template-detail-facts">
-              <h3>Details</h3>
-              <p className="template-detail-fact">
-                <CloneIcon />
-                {template.fieldCount} field{template.fieldCount === 1 ? '' : 's'}
-              </p>
-              <h3>Created by</h3>
-              <p className="template-detail-creator">{template.createdByName}</p>
-            </aside>
           </div>
         ) : (
           <div className="template-detail-faq">
             <h3>How do I use this template?</h3>
             <p>
               Click Use Template, name your form, and you’ll land in the builder with every field
-              already in place. Change anything — fields, design, and logic are all yours after the
+              already in place. Change anything: fields, design, and logic are all yours after the
               copy.
             </p>
             <h3>Can I add or remove fields?</h3>

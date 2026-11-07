@@ -11,7 +11,7 @@ import { pageMetadata } from '@/lib/seo/site';
 
 export const metadata: Metadata = pageMetadata({
   path: '/pricing',
-  title: 'Form Builder Pricing in AUD — Free 7-Day Trial | Clickforms',
+  title: 'Form Builder Pricing in AUD: Free 7-Day Trial | Clickforms',
   description:
     'Simple Australian-dollar pricing for the Clickforms online form builder. Standard, Business, Professional and Enterprise plans, each with a 7-day free trial and no credit card.',
 });

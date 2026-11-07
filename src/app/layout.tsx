@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     template: '%s',
   },
   description:
-    'Build custom online forms in minutes — intake, consent and service agreement forms with e-signatures, conditional logic and approval workflows. Australian-hosted, with a 7-day free trial.',
+    'Build custom online forms in minutes: intake, consent and service agreement forms with e-signatures, conditional logic and approval workflows. Australian-hosted, with a 7-day free trial.',
   keywords: DEFAULT_KEYWORDS,
   applicationName: 'Clickforms',
   icons: {
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     type: 'website',
     title: 'Clickforms | Online Form Builder for Custom Forms in Australia',
     description:
-      'Build custom online forms in minutes — intake, consent and service agreement forms with e-signatures, conditional logic and approval workflows.',
+      'Build custom online forms in minutes: intake, consent and service agreement forms with e-signatures, conditional logic and approval workflows.',
     siteName: 'Clickforms',
     locale: 'en_AU',
     images: [{ url: '/brand/logo.png', width: 666, height: 184, alt: 'Clickforms' }],

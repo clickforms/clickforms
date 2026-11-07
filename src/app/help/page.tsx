@@ -25,7 +25,7 @@ const FAQS = [
   },
   {
     q: 'Does it handle multi-page forms with branching logic?',
-    a: 'Yes — build any number of pages, and show or hide individual fields or whole sections based on earlier answers, all without writing code.',
+    a: 'Yes, build any number of pages, and show or hide individual fields or whole sections based on earlier answers, all without writing code.',
   },
   {
     q: 'Who can see a submitted form?',
@@ -33,7 +33,7 @@ const FAQS = [
   },
   {
     q: 'Can we collect signatures and file uploads?',
-    a: 'Yes — e-signature capture and file/image uploads are both built-in field types, alongside 20+ others.',
+    a: 'Yes, e-signature capture and file/image uploads are both built-in field types, alongside 20+ others.',
   },
 ] as const;
 
@@ -75,7 +75,7 @@ export default async function HelpPage() {
           <aside className="landing-faq-aside">
             <h3>Still stuck?</h3>
             <p>
-              Sign in and ask your workspace admin, or send our team a message — we reply within one
+              Sign in and ask your workspace admin, or send our team a message. We reply within one
               business day.
             </p>
             <Link className="landing-btn landing-btn--dark landing-btn--sm" href="/contact">

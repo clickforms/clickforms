@@ -120,8 +120,8 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
           <div className="form-renderer-body form-success">
             <h1>This form has already been submitted</h1>
             <p>
-              Thank you — your response was received. If you need to change something, please
-              contact the organisation directly.
+              Thank you, your response was received. If you need to change something, please contact
+              the organisation directly.
             </p>
           </div>
         </div>

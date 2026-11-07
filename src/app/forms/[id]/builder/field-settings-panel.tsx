@@ -434,8 +434,8 @@ function ContentExtras({
                 ))}
               </select>
               <span className="settings-field-hint">
-                Appends the field to the end of the formula above — rearrange the text there to
-                build the exact expression you need.
+                Appends the field to the end of the formula above. Rearrange the text there to build
+                the exact expression you need.
               </span>
             </label>
           ) : (
@@ -893,8 +893,8 @@ function ContentExtras({
             <p className="settings-subsection-title">Extra answer columns</p>
             <p className="settings-field-hint">
               Every question already has one answer cell. Add columns here to give each question
-              extra cells alongside it (e.g. a "Notes" column next to every answer) — reuses the
-              same column types as the Input Table field.
+              extra cells alongside it (e.g. a "Notes" column next to every answer), reuses the same
+              column types as the Input Table field.
             </p>
             <TableColumnsEditor
               columns={field.columns ?? []}
@@ -1295,7 +1295,7 @@ function ContentExtras({
             />
             <span className="settings-field-hint">
               If the form URL includes <code>?{field.sourceParam || 'param'}=value</code>, that
-              value is captured automatically — useful for campaign/referral tracking.
+              value is captured automatically, useful for campaign/referral tracking.
             </span>
           </label>
           <label className="settings-field">
@@ -2181,8 +2181,7 @@ export function FieldSettingsPanel({
             />
             {isHidden ? (
               <span className="settings-field-hint">
-                Only shown to you in the builder and submission exports — respondents never see
-                this.
+                Only shown to you in the builder and submission exports. Respondents never see this.
               </span>
             ) : null}
           </label>

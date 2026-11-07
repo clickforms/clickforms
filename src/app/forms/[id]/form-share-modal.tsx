@@ -181,7 +181,7 @@ export function FormShareModal({
       await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
     } catch {
-      toast.error('Could not copy link — select and copy manually');
+      toast.error('Could not copy link. Select and copy manually');
     }
   }
 
@@ -214,7 +214,7 @@ export function FormShareModal({
         }),
       });
       if (!res.ok) {
-        toast.error(await readApiError(res, 'Could not send — please try again'));
+        toast.error(await readApiError(res, 'Could not send. Please try again'));
         return;
       }
       toast.success(channel === 'email' ? 'Email sent' : 'SMS sent');

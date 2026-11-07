@@ -447,7 +447,7 @@ function YesNoExportDisplay({
   value: FieldValue;
 }) {
   if (value !== 'yes' && value !== 'no') {
-    return <div className="export-input">—</div>;
+    return <div className="export-input">-</div>;
   }
   return (
     <div className="export-input">
@@ -660,7 +660,7 @@ function PictureChoiceExportDisplay({
   const selected =
     typeof value === 'string' ? field.options.find((o) => o.id === value) : undefined;
   if (!selected) {
-    return <div className="export-input">—</div>;
+    return <div className="export-input">-</div>;
   }
   return (
     <div className="export-picture-choice">
@@ -797,7 +797,7 @@ function QuestionTableExportDisplay({
             return (
               <tr key={row.id}>
                 <td className="export-question-table-label-cell">{row.label}</td>
-                <td style={valueStyle}>{text || '—'}</td>
+                <td style={valueStyle}>{text || '-'}</td>
                 {extraColumns.map((column) => {
                   const extraRaw = answer[questionTableExtraCellKey(row.id, column.id)] ?? '';
                   let extraText = extraRaw;
@@ -809,7 +809,7 @@ function QuestionTableExportDisplay({
                   }
                   return (
                     <td key={column.id} style={valueStyle}>
-                      {extraText || '—'}
+                      {extraText || '-'}
                     </td>
                   );
                 })}

@@ -439,7 +439,7 @@ export function BuilderClient({
           publish: `Published as v${result.version?.versionNumber ?? ''}`.trim(),
           unpublish:
             body?.intent === 'edit'
-              ? 'Form taken offline — you can edit it now'
+              ? 'Form taken offline. You can edit it now'
               : 'Form taken offline',
         };
         toast.success(messages[action] ?? 'Status updated');
@@ -1021,7 +1021,7 @@ export function BuilderClient({
                     <div className="field-settings-aside">
                       <div className="field-settings-aside-header">
                         <span className="field-settings-aside-title">
-                          {logicField ? `Logic — ${logicField.label || 'Untitled field'}` : 'Logic'}
+                          {logicField ? `Logic: ${logicField.label || 'Untitled field'}` : 'Logic'}
                         </span>
                       </div>
                       {logicField ? (
@@ -1230,8 +1230,8 @@ export function BuilderClient({
               </div>
 
               <p className="modal-body-text">
-                This form is live. Editing it will take it offline for new visitors — the public
-                link stops working until you publish again.
+                This form is live. Editing it will take it offline for new visitors, the public link
+                stops working until you publish again.
               </p>
               <p className="modal-body-text">
                 Anyone already filling it out can still finish and submit their response.
@@ -1346,7 +1346,7 @@ export function BuilderClient({
             >
               <div className="modal-header">
                 <h2 className="modal-title" id="mobile-logic-modal-title">
-                  {logicField ? `Logic — ${logicField.label || 'Untitled field'}` : 'Logic'}
+                  {logicField ? `Logic: ${logicField.label || 'Untitled field'}` : 'Logic'}
                 </h2>
                 <div className="modal-header-actions">
                   <button

@@ -206,7 +206,7 @@ function FacetSelect({
         onClick={() => setOpen((current) => !current)}
       >
         {valueLabel}
-        <TinyChevron />
+        <TinyChevron open={open} />
       </button>
       <DropdownMenu
         open={open}
@@ -439,6 +439,23 @@ export function TemplatesGalleryClient({
   const layoutLabel =
     LAYOUT_OPTIONS.find((option) => option.value === layoutFilter)?.label ?? 'All';
   const industryLabel = selectedIndustry ?? 'All';
+  const hasActiveFilters = Boolean(
+    term ||
+      layoutFilter !== 'all' ||
+      selectedIndustry ||
+      selectedFormType ||
+      selectedCategory ||
+      sortBy !== 'popular',
+  );
+
+  function resetFilters() {
+    setSearch('');
+    setSortBy('popular');
+    setLayoutFilter('all');
+    setSelectedIndustry(null);
+    setSelectedFormType(null);
+    setSelectedCategory(null);
+  }
 
   return (
     <div className="template-gallery-page">
@@ -451,6 +468,7 @@ export function TemplatesGalleryClient({
       </button>
 
       <header className="template-gallery-header">
+        <span className="template-gallery-eyebrow">Template library</span>
         <h1 className="template-gallery-title">Choose a template</h1>
         <p className="template-gallery-lead">
           Explore ready-made templates to create a form in minutes or{' '}
@@ -467,6 +485,17 @@ export function TemplatesGalleryClient({
 
       <div className="template-gallery-shell">
         <aside className="template-gallery-sidebar">
+          <div className="template-gallery-sidebar-header">
+            <div>
+              <span>Refine results</span>
+              <small>Find the right starting point</small>
+            </div>
+            {hasActiveFilters ? (
+              <button type="button" onClick={resetFilters}>
+                Reset
+              </button>
+            ) : null}
+          </div>
           <FacetSelect
             label="Sort by"
             valueLabel={sortLabel}
@@ -580,6 +609,14 @@ export function TemplatesGalleryClient({
             />
           </form>
 
+          <div className="template-gallery-results-bar" aria-live="polite">
+            <span>
+              <strong>{visibleTemplates.length}</strong>{' '}
+              {visibleTemplates.length === 1 ? 'template' : 'templates'}
+            </span>
+            <span>Preview any design before using it</span>
+          </div>
+
           <div className="template-gallery-grid">
             <button
               type="button"
@@ -638,7 +675,7 @@ export function TemplatesGalleryClient({
           onMouseDown={() => !isCreating && setNaming(null)}
         >
           <div
-            className="modal-card"
+            className="modal-card name-form-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="name-form-modal-title"
@@ -659,8 +696,8 @@ export function TemplatesGalleryClient({
               </button>
             </div>
             <form onSubmit={handleNameSubmit}>
-              <label className="modal-name-field">
-                <span>Form name</span>
+              <label className="modal-name-field name-form-field">
+                <span>Rename File</span>
                 <input
                   className="text-input"
                   placeholder="e.g. Intake assessment"
@@ -672,7 +709,7 @@ export function TemplatesGalleryClient({
                 />
               </label>
               {preheaderInfo && naming.templateId ? (
-                <fieldset className="modal-name-field" disabled={isCreating}>
+                <fieldset className="modal-name-field name-form-field" disabled={isCreating}>
                   <span>Organisation pre-header</span>
                   <div className="preheader-choice">
                     <button

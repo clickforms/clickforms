@@ -7,7 +7,7 @@ import { authOptions } from '@/lib/auth';
 import { isPlatformOnlyAdmin } from '@/lib/session';
 
 export const metadata = {
-  title: 'Sign in — Clickforms',
+  title: 'Sign in | Clickforms',
   description: 'Sign in to the Clickforms admin workspace.',
 };
 
@@ -68,8 +68,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <div className="signup-aside-copy">
             <h1 className="signup-aside-title">Welcome back to your workspace</h1>
             <p className="signup-aside-lead">
-              Sign in to manage your forms, responses, and team — everything&apos;s exactly where
-              you left it.
+              Sign in to manage your forms, responses, and team. Everything&apos;s exactly where you
+              left it.
             </p>
           </div>
 

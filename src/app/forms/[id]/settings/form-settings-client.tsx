@@ -645,7 +645,7 @@ export function FormSettingsClient({
                           onDragStart={(event) => handleFieldChipDragStart(event, field.id)}
                           onClick={() => insertTokenAtCaret(fieldToken(field.id))}
                           disabled={!canEdit}
-                          title={`${field.label} — click to insert`}
+                          title={`${field.label}, click to insert`}
                         >
                           <span className="filename-field-chip-label">
                             {'{'}
@@ -813,7 +813,7 @@ function NotificationSettingsCard({
         <span className="form-settings-card-toggle-copy">
           <span className="contact-details-title">Response notifications</span>
           <span className="contact-details-intro">
-            Choose who gets emailed — with a PDF of the response attached — every time this form
+            Choose who gets emailed, with a PDF of the response attached, every time this form
             receives a new response.
           </span>
         </span>

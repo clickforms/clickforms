@@ -291,7 +291,7 @@ function FormRendererInner({
         // rejected the cross-origin request (CORS) rather than anything the respondent
         // did wrong. Surface something actionable instead of the raw browser message.
         throw new Error(
-          'Could not upload the file — a connection problem on our end. Please try again in a moment.',
+          'Could not upload the file because of a connection problem on our end. Please try again in a moment.',
         );
       }
       if (!putRes.ok) {
@@ -541,7 +541,7 @@ function FormRendererInner({
           {previewMode ? (
             <>
               <h1>Preview complete</h1>
-              <p>Nothing was saved — this is only a preview.</p>
+              <p>Nothing was saved. This is only a preview.</p>
               <p className="form-field-help">
                 Use View form (or the published link) to submit a real response.
               </p>
@@ -819,7 +819,7 @@ function FormRendererInner({
               title={
                 prefillBuilder
                   ? 'Save this prefill as a draft'
-                  : 'Save and resume by email — coming soon'
+                  : 'Save and resume by email, coming soon'
               }
             >
               Save and Complete Later

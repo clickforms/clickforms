@@ -6,7 +6,7 @@ import { BrandMark } from '@/components/brand-mark';
 import { authOptions } from '@/lib/auth';
 
 export const metadata = {
-  title: 'Sign up — Clickforms',
+  title: 'Sign up | Clickforms',
   description: 'Create your organisation and start building forms.',
 };
 
@@ -35,7 +35,7 @@ const BENEFITS = [
   },
   {
     title: 'Invite your team later',
-    body: 'You start as admin — add colleagues when you are ready.',
+    body: 'You start as admin. Add colleagues when you are ready.',
   },
 ] as const;
 
@@ -60,7 +60,7 @@ export default async function SignupPage() {
             </h1>
             <p className="signup-aside-lead">
               Replace scattered PDFs and inbox chaos with structured intake, consent, and service
-              agreements — ready for your team.
+              agreements, ready for your team.
             </p>
           </div>
 

@@ -15,47 +15,27 @@ import { faqJsonLd, organizationJsonLd, softwareJsonLd, websiteJsonLd } from '@/
 import { SOLUTIONS } from '@/lib/seo/solutions';
 
 const TRUST_STATS = [
-  { value: '4.9', label: 'Avg. team rating', suffix: '★' },
+  { value: '4.7', label: 'Average customer rating', suffix: '★' },
   { value: '20+', label: 'Field types built in' },
   { value: '100%', label: 'Structured submissions' },
   { value: 'Full', label: 'Audit trail coverage' },
 ] as const;
 
-const TESTIMONIALS = [
-  {
-    quote:
-      'We stopped chasing PDFs in email. Intake and consent now arrive complete, signed, and searchable.',
-    name: 'Sarah M.',
-    role: 'Operations lead',
-  },
-  {
-    quote:
-      'The approval workflow alone saved us hours every week. Nothing goes live without a clear sign-off.',
-    name: 'James T.',
-    role: 'Compliance manager',
-  },
-  {
-    quote:
-      'Conditional logic means clients only see the questions that apply to them. Far fewer incomplete submissions.',
-    name: 'Priya K.',
-    role: 'Intake coordinator',
-  },
-  {
-    quote:
-      'Audit trails made our last review straightforward. We could show exactly who published what, and when.',
-    name: 'Daniel R.',
-    role: 'Quality & risk',
-  },
-] as const;
+/** Customers shown in the "Trusted by" strip. To show a real logo, save it under
+ * public/logos/ and set `logo` to its path (for example '/logos/care-circle.png'); until then
+ * the name is shown as a wordmark. */
+const CUSTOMERS: readonly { name: string; logo?: string }[] = [
+  { name: 'Care Circle', logo: '/logos/care-circle.png' },
+  { name: 'Harmony Home Disability Services', logo: '/logos/harmony-home.png' },
+  { name: 'Australian Care Foundation', logo: '/logos/australian-care-foundation.png' },
+  { name: 'Elevate Independence', logo: '/logos/elevate-independence.png' },
+  { name: 'Ability Driven Care', logo: '/logos/ability-driven-care.png' },
+];
 
 const HOME_FAQS = [
   {
     q: 'What is Clickforms?',
     a: 'Clickforms is an online form builder for teams that collect detailed, regulated information. Build custom multi-page forms, collect e-signatures and file uploads, route changes through approvals and keep every submission searchable.',
-  },
-  {
-    q: 'Can I create custom forms without coding?',
-    a: 'Yes. Forms are built visually with 20+ field types, conditional logic, multiple pages and your own branding — no code required.',
   },
   {
     q: 'Does Clickforms support e-signatures?',
@@ -68,6 +48,14 @@ const HOME_FAQS = [
   {
     q: 'Is Clickforms hosted in Australia?',
     a: 'Yes. Clickforms is hosted and supported from Australia.',
+  },
+  {
+    q: 'What happens when my trial ends?',
+    a: 'Your forms and submissions stay safe. To keep building and editing you choose a plan; until then your account is read-only and public forms keep accepting responses.',
+  },
+  {
+    q: 'Can I cancel at any time?',
+    a: 'Yes. You can cancel from the Billing tab and keep full access until the end of the period you have already paid for.',
   },
 ] as const;
 
@@ -102,7 +90,7 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
               </div>
               <p className="landing-hero-lead">
                 The Australian online form builder for custom intake, consent and service agreement
-                forms — with e-signatures, conditional logic and approvals for healthcare, NDIS and
+                forms, with e-signatures, conditional logic and approvals for healthcare, NDIS and
                 regulated teams.
               </p>
             </div>
@@ -183,7 +171,7 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
           <div className="landing-outcomes-copy">
             <h2>Helping teams create better outcomes.</h2>
             <p>
-              From intake to approval — workflows your organisation already runs, now in one place,
+              From intake to approval: workflows your organisation already runs, now in one place,
               with nothing left to chase down after the fact.
             </p>
             <Link
@@ -219,32 +207,38 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
         </div>
       </section>
 
-      <section className="landing-testimonials">
+      <section className="landing-trusted" aria-label="Customers">
+        <div className="landing-container landing-trusted-header">
+          <p className="landing-trusted-kicker">Trusted across Australian care</p>
+          <h2 className="landing-trusted-title">Trusted by care providers across Australia</h2>
+          <p className="landing-trusted-lead">
+            Disability and community care teams use Clickforms for intake, consent and approvals.
+          </p>
+        </div>
         <div className="landing-container">
-          <div className="landing-testimonials-head">
-            <span className="landing-page-hero-eyebrow">Trusted by care and compliance teams</span>
-            <h2 className="landing-testimonials-title">Echoes from the field</h2>
-          </div>
-
-          <div className="landing-testimonials-grid">
-            {TESTIMONIALS.map((item, index) => (
-              <div key={item.name} className="landing-testimonial-col">
-                <div className="landing-testimonial-card">
-                  <div className="landing-testimonial-bubble">
-                    <p>&ldquo;{item.quote}&rdquo;</p>
-                  </div>
-                </div>
-                <span className="landing-testimonial-number">{index + 1}</span>
-                <p className="landing-testimonial-name">{item.name}</p>
-                <p className="landing-testimonial-role">{item.role}</p>
+          <div className="landing-trusted-band">
+            <div className="landing-trusted-marquee">
+              <div className="landing-trusted-track">
+                {[0, 1].map((copy) => (
+                  <ul
+                    key={copy}
+                    className="landing-trusted-logos"
+                    aria-hidden={copy === 1 || undefined}
+                  >
+                    {CUSTOMERS.map((customer) => (
+                      <li key={customer.name} className="landing-trusted-item">
+                        {customer.logo ? (
+                          // biome-ignore lint/performance/noImgElement: small static partner logos
+                          <img src={customer.logo} alt={copy === 0 ? customer.name : ''} />
+                        ) : (
+                          <span className="landing-trusted-wordmark">{customer.name}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ))}
               </div>
-            ))}
-          </div>
-
-          <div className="landing-testimonials-cta">
-            <Link className="landing-btn landing-btn--soft landing-btn--lg" href="/contact">
-              Share your story
-            </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -270,17 +264,44 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
         </div>
       </section>
 
-      <section className="landing-form-types">
+      <section className="landing-faq" aria-labelledby="landing-faq-title">
         <div className="landing-container">
-          <div className="landing-section-head landing-section-head--center">
-            <h2>Frequently asked questions</h2>
-          </div>
-          <div className="landing-form-types-grid">
-            {HOME_FAQS.map((faq) => (
-              <article key={faq.q} className="landing-form-type">
-                <h3>{faq.q}</h3>
-                <p>{faq.a}</p>
-              </article>
+          <h2 className="landing-faq-title" id="landing-faq-title">
+            Frequently asked questions
+          </h2>
+          <div className="landing-faq-grid">
+            {[
+              { id: 'primary', items: HOME_FAQS.slice(0, 3) },
+              { id: 'secondary', items: HOME_FAQS.slice(3) },
+            ].map((column) => (
+              <div key={column.id} className="landing-faq-col">
+                {column.items.map((faq) => (
+                  <details key={faq.q} className="landing-faq-item">
+                    <summary>
+                      <span>{faq.q}</span>
+                      <span className="landing-faq-chevron" aria-hidden="true">
+                        <svg
+                          viewBox="0 0 20 20"
+                          width="14"
+                          height="14"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <title>Expand answer</title>
+                          <path
+                            d="m5 7.5 5 5 5-5"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </summary>
+                    <p>{faq.a}</p>
+                  </details>
+                ))}
+              </div>
             ))}
           </div>
         </div>

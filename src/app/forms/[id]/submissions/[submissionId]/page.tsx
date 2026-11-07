@@ -244,7 +244,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
       </div>
       <div className="submission-meta-row">
         <span className="submission-meta-label">IP address</span>
-        <span>{submission.ipAddress ?? '—'}</span>
+        <span>{submission.ipAddress ?? '-'}</span>
       </div>
     </div>
   );
@@ -285,8 +285,8 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                   className={changedRows.includes(row) ? 'pfd-row--changed' : undefined}
                 >
                   <td className="pfd-field">{row.label}</td>
-                  <td className={row.original ? undefined : 'pf-muted'}>{row.original ?? '—'}</td>
-                  <td className={row.returned ? undefined : 'pf-muted'}>{row.returned ?? '—'}</td>
+                  <td className={row.original ? undefined : 'pf-muted'}>{row.original ?? '-'}</td>
+                  <td className={row.returned ? undefined : 'pf-muted'}>{row.returned ?? '-'}</td>
                 </tr>
               ))}
             </tbody>

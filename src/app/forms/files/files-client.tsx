@@ -1002,7 +1002,7 @@ export function FilesClient({
                             {file.formName}
                           </Link>
                         ) : (
-                          <span className="users-table-muted">—</span>
+                          <span className="users-table-muted">-</span>
                         )}
                       </td>
                       <td data-label="Status">

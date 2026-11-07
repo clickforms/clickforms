@@ -26,8 +26,8 @@ export function LandingCta({ isAuthenticated = false }: { isAuthenticated?: bool
           <h2 className="landing-cta-title">Ready when your team is</h2>
           <p className="landing-cta-lead">
             {isAuthenticated
-              ? 'Continue to your portal to build forms, review submissions, and manage workflows — everything your team publishes stays branded, structured, and audit-ready.'
-              : 'Sign in to build forms, review submissions, and manage your organisation’s workflows — no setup calls, no lengthy onboarding, just a workspace that’s ready when you are.'}
+              ? 'Continue to your portal to build forms, review submissions, and manage workflows. Everything your team publishes stays branded, structured, and audit-ready.'
+              : 'Sign in to build forms, review submissions, and manage your organisation’s workflows, no setup calls, no lengthy onboarding, just a workspace that’s ready when you are.'}
           </p>
 
           <ul className="landing-cta-features">

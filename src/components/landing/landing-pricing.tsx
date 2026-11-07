@@ -4,7 +4,8 @@ import type { OrgPlan } from '@prisma/client';
 import Link from 'next/link';
 import { useState } from 'react';
 import { CheckIcon, StarIcon } from '@/components/landing/landing-icons';
-import { PLAN_PRICING } from '@/lib/admin/plan-limits';
+import { formatPrice, PLAN_PRICING } from '@/lib/admin/plan-limits';
+import { annualTotalCents } from '@/lib/billing/config';
 
 interface PricingTier {
   id: OrgPlan;
@@ -93,7 +94,7 @@ export function LandingPricing() {
               onClick={() => setAnnual(true)}
             >
               Annual
-              <span className="landing-pricing-toggle-save">Save ~15%</span>
+              <span className="landing-pricing-toggle-save">Save 10%</span>
             </button>
           </div>
         </div>
@@ -122,7 +123,7 @@ export function LandingPricing() {
                     <span className="landing-pricing-card-custom">Custom</span>
                   ) : (
                     <>
-                      <span className="landing-pricing-card-amount">${price}</span>
+                      <span className="landing-pricing-card-amount">${formatPrice(price)}</span>
                       <span className="landing-pricing-card-period">/mo AUD</span>
                     </>
                   )}
@@ -131,8 +132,8 @@ export function LandingPricing() {
                   {price === null
                     ? 'Contact us for a tailored quote'
                     : annual
-                      ? 'billed annually'
-                      : 'billed monthly'}
+                      ? `billed annually ($${formatPrice(annualTotalCents(PLAN_PRICING[tier.id].monthly ?? 0) / 100)} / year), incl. GST`
+                      : 'billed monthly, incl. GST'}
                 </p>
 
                 <Link
@@ -164,8 +165,8 @@ export function LandingPricing() {
         </div>
 
         <p className="landing-pricing-footnote">
-          Every plan starts with a 7-day free trial at Standard-level access — no credit card
-          required. Prices shown in AUD.
+          Every plan starts with a 7-day free trial at Standard-level access, no credit card
+          required. Prices are in AUD and include GST.
         </p>
       </div>
     </section>

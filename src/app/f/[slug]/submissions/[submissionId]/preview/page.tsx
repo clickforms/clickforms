@@ -124,7 +124,7 @@ export default async function SubmissionPreviewPage({ params, searchParams }: Pa
       <div className="form-preview-shell">
         {isPdfExport ? null : (
           <div className="form-preview-banner">
-            Submission preview — submitted {submittedLabel}. This is a read-only view of the
+            Submission preview: submitted {submittedLabel}. This is a read-only view of the
             response.
           </div>
         )}

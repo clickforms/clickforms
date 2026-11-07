@@ -20,7 +20,7 @@ const RESOURCE_STATS = [
 const FORM_TYPES = [
   {
     name: 'Client intake',
-    tags: 'We capture demographics, referrals, and consent in a single guided form, so new clients are fully onboarded before their first appointment — no chasing paperwork after the fact.',
+    tags: 'We capture demographics, referrals, and consent in a single guided form, so new clients are fully onboarded before their first appointment, no chasing paperwork after the fact.',
   },
   {
     name: 'Service agreements',
@@ -28,7 +28,7 @@ const FORM_TYPES = [
   },
   {
     name: 'Consent forms',
-    tags: 'Branded to match your organisation, with conditional logic that only shows the clauses that apply — every consent is recorded, timestamped, and easy to produce later.',
+    tags: 'Branded to match your organisation, with conditional logic that only shows the clauses that apply, every consent is recorded, timestamped, and easy to produce later.',
   },
   {
     name: 'Support plans',
@@ -48,7 +48,7 @@ const FORM_TYPES = [
   },
   {
     name: 'Participant reviews',
-    tags: 'Signatures and PDF export built in, so completed reviews are ready to file or share the moment they’re submitted — no separate export step required.',
+    tags: 'Signatures and PDF export built in, so completed reviews are ready to file or share the moment they’re submitted, no separate export step required.',
   },
 ] as const;
 
@@ -56,7 +56,7 @@ export const metadata: Metadata = pageMetadata({
   path: '/resources',
   title: 'Form Templates & Types: Intake, Consent, Agreements | Clickforms',
   description:
-    'Form types Clickforms teams run every day — client intake, consent, service agreements, incident reports, referrals and staff onboarding forms.',
+    'Form types Clickforms teams run every day: client intake, consent, service agreements, incident reports, referrals and staff onboarding forms.',
 });
 
 export default async function ResourcesPage() {
@@ -72,7 +72,7 @@ export default async function ResourcesPage() {
       <LandingPageHero
         eyebrow="Resources"
         title="Forms your team runs every day"
-        lead="Intake, consent, agreements, and reporting — built for detail-heavy, regulated workflows."
+        lead="Intake, consent, agreements, and reporting, built for detail-heavy, regulated workflows."
       />
 
       <section className="landing-form-types">
@@ -117,7 +117,7 @@ export default async function ResourcesPage() {
           <span className="landing-band-eyebrow">Don&apos;t see it here?</span>
           <h2>Start from a blank canvas instead</h2>
           <p>
-            Every field type above is available from scratch, too — build exactly the form your
+            Every field type above is available from scratch, too. Build exactly the form your
             workflow needs, then reuse it as a template next time.
           </p>
           <div className="landing-band-actions">

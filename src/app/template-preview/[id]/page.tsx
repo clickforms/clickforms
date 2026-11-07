@@ -76,7 +76,7 @@ export default async function TemplatePreviewPage({ params, searchParams }: Page
       ) : (
         <div className="form-preview-shell">
           <div className="form-preview-banner">
-            Template preview — this is how it'll look. Nothing here is saved.
+            Template preview: this is how it'll look. Nothing here is saved.
           </div>
           {renderer}
         </div>

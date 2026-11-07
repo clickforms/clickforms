@@ -247,7 +247,7 @@ export function FieldImageUpload({
       ) : null}
 
       <p className="field-image-upload-hint">
-        PNG, JPG, WebP, or GIF — crop and rotate before upload. SVG uploads as-is. Max 5 MB.
+        PNG, JPG, WebP, or GIF. Crop and rotate before upload. SVG uploads as-is. Max 5 MB.
       </p>
 
       {cropSession ? (

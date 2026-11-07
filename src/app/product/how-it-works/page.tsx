@@ -13,7 +13,7 @@ const STEPS = [
   {
     title: 'Build',
     description:
-      'Drag and drop from 20+ field types — signatures, uploads, conditional logic — and brand it with your colours and logo.',
+      'Drag and drop from 20+ field types (signatures, uploads, conditional logic) and brand it with your colours and logo.',
   },
   {
     title: 'Publish',
@@ -50,7 +50,7 @@ export default async function HowItWorksPage() {
       <LandingPageHero
         eyebrow="Product"
         title="How it works"
-        lead="From a blank canvas to a signed, structured submission — four steps, no code required."
+        lead="From a blank canvas to a signed, structured submission: four steps, no code required."
       />
 
       <section className="landing-steps">
@@ -58,7 +58,7 @@ export default async function HowItWorksPage() {
           <div className="landing-steps-head">
             <span className="landing-band-eyebrow">Four steps</span>
             <h2>From a blank canvas to a signed submission</h2>
-            <p>No code, no separate tools — just a form your team can trust end to end.</p>
+            <p>No code, no separate tools, just a form your team can trust end to end.</p>
           </div>
           <div className="landing-timeline">
             {STEPS.map((step, index) => (
@@ -77,7 +77,7 @@ export default async function HowItWorksPage() {
           <div className="landing-priority-copy">
             <h2>What your team sees, end to end.</h2>
             <p>
-              Publish a form once, and every submission arrives already structured — no more
+              Publish a form once, and every submission arrives already structured, no more
               re-typing PDF attachments into a spreadsheet, and no gap between what was submitted
               and what your review can trust.
             </p>

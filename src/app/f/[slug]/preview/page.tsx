@@ -102,7 +102,7 @@ export default async function FormPreviewPage({ params }: PageProps) {
   return (
     <div className="form-preview-shell">
       <div className="form-preview-banner">
-        Preview — this is how your form looks to respondents. Nothing here is saved.
+        Preview: this is how your form looks to respondents. Nothing here is saved.
       </div>
       <FormRendererClient
         slug={form.slug}

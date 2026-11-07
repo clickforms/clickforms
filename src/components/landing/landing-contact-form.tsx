@@ -63,7 +63,7 @@ export function LandingContactForm() {
   if (state === 'submitted') {
     return (
       <div className="landing-contact-form landing-contact-form--submitted">
-        <p>Thanks — your message has been sent. We'll get back to you soon.</p>
+        <p>Thanks, your message has been sent. We'll get back to you soon.</p>
       </div>
     );
   }

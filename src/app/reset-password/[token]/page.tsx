@@ -6,7 +6,7 @@ import { BrandMark } from '@/components/brand-mark';
 import { authOptions } from '@/lib/auth';
 
 export const metadata = {
-  title: 'Reset your password — Clickforms',
+  title: 'Reset your password | Clickforms',
 };
 
 interface ResetPasswordPageProps {

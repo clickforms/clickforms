@@ -6,7 +6,7 @@ import { BrandMark } from '@/components/brand-mark';
 import { authOptions } from '@/lib/auth';
 
 export const metadata = {
-  title: 'Verify your email — Clickforms',
+  title: 'Verify your email | Clickforms',
 };
 
 interface SignupVerifyPageProps {
@@ -48,7 +48,7 @@ export default async function SignupVerifyPage({ searchParams }: SignupVerifyPag
         <div className="login-card">
           <div className="login-card-header">
             <h1>Set your password</h1>
-            <p>Your email is verified — choose a password to finish setting up your workspace.</p>
+            <p>Your email is verified. Choose a password to finish setting up your workspace.</p>
           </div>
           <SignupVerifyForm token={token} />
         </div>

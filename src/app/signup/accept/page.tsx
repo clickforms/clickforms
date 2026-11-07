@@ -6,7 +6,7 @@ import { BrandMark } from '@/components/brand-mark';
 import { authOptions } from '@/lib/auth';
 
 export const metadata = {
-  title: 'Accept invite — Clickforms',
+  title: 'Accept invite | Clickforms',
 };
 
 interface AcceptInvitePageProps {

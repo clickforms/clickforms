@@ -285,7 +285,7 @@ export function FormsListClient({
       await navigator.clipboard.writeText(url);
       toast.success('Live link copied to clipboard');
     } catch {
-      toast.error('Could not copy link — select and copy manually');
+      toast.error('Could not copy link. Select and copy manually');
     }
   }
 

@@ -178,7 +178,7 @@ export function OrgLogsClient({ initialEntries }: { initialEntries: OrgLogRow[] 
                         <td data-label="Action">{formatAction(entry.action)}</td>
                         <td data-label="Entity">{entityTypeLabel(entry.entityType)}</td>
                         <td data-label="Details" className="admin-log-target">
-                          {entry.target ?? <span className="admin-log-target--empty">—</span>}
+                          {entry.target ?? <span className="admin-log-target--empty">-</span>}
                         </td>
                         <td data-label="Actor">{entry.actorName}</td>
                         <td data-label="When">

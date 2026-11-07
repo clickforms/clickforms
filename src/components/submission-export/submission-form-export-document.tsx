@@ -210,7 +210,7 @@ export function SubmissionFormExportDocument({
             {attachments.map(({ fieldId, fieldLabel, file, dataUrl }) => (
               <div key={`${fieldId}-${file.id}`} className="export-attachment-item">
                 <p className="export-attachment-caption">
-                  {fieldLabel} — {file.filename}
+                  {fieldLabel}: {file.filename}
                 </p>
                 {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
                 <img className="export-attachment-image" src={dataUrl} alt={file.filename} />

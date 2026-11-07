@@ -1511,7 +1511,7 @@ function CalculationControl({ field, value, onChange, answers }: CalculationCont
 
   return (
     <div className="form-calculation-field">
-      <span className="form-calculation-value">{display || '—'}</span>
+      <span className="form-calculation-value">{display || '-'}</span>
     </div>
   );
 }

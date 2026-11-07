@@ -228,11 +228,11 @@ export function UsersClient({
       await navigator.clipboard.writeText(url);
       toast.success(
         options?.alsoResent
-          ? 'Invite resent — link also copied to clipboard'
+          ? 'Invite resent, link also copied to clipboard'
           : 'Invite link copied to clipboard',
       );
     } catch {
-      toast.error('Could not copy link — select and copy manually');
+      toast.error('Could not copy link. Select and copy manually');
     }
   }
 
@@ -481,7 +481,7 @@ export function UsersClient({
                             <span className="admin-table-avatar" aria-hidden="true">
                               {getInitials(user.name, user.email)}
                             </span>
-                            <span className="users-name-text">{user.name ?? '—'}</span>
+                            <span className="users-name-text">{user.name ?? '-'}</span>
                             {isSelf ? (
                               <span className="badge badge--neutral users-you-badge">You</span>
                             ) : null}
@@ -538,10 +538,10 @@ export function UsersClient({
                         <span className="users-role-pill">{formatUserRole(invite.role)}</span>{' '}
                         <span className="badge badge--draft">Pending invite</span>
                       </td>
-                      <td data-label="Forms owned">—</td>
-                      <td data-label="Assigned">—</td>
+                      <td data-label="Forms owned">-</td>
+                      <td data-label="Assigned">-</td>
                       <td data-label="2FA" className="users-table-muted">
-                        —
+                        -
                       </td>
                       <td data-label="Created">
                         <LocalDate iso={invite.createdAt} />

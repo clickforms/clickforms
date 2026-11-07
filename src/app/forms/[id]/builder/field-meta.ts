@@ -360,7 +360,7 @@ export function describeFormSchemaValidationError(
   }
 
   if (lines.length === 0) {
-    return 'This form has validation errors — fix them before saving.';
+    return 'This form has validation errors. Fix them before saving.';
   }
 
   const shown = lines.slice(0, 3);

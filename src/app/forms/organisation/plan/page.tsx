@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { ChangePlanClient } from '@/app/forms/organisation/plan/change-plan-client';
-import { startOfCurrentMonth } from '@/lib/admin/plan-limits';
 import { authOptions } from '@/lib/auth';
+import { loadBillingInfo } from '@/lib/billing/info';
+import { getOrgPlanUsage } from '@/lib/billing/usage';
 import { withOrgContext } from '@/lib/db';
 import { requireOrganizationId } from '@/lib/session';
 import { canManageUsers } from '@/lib/user-roles';
@@ -12,7 +13,11 @@ import { canManageUsers } from '@/lib/user-roles';
 // cheaper/other tiers every time they check their usage — see the comment on
 // org-plan-summary-actions in organisation-details-client.tsx. This page is the
 // deliberate destination for "I want to change plan", not something shown by default.
-export default async function ChangePlanPage() {
+interface ChangePlanPageProps {
+  searchParams: Promise<{ interval?: string }>;
+}
+
+export default async function ChangePlanPage({ searchParams }: ChangePlanPageProps) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     redirect('/login');
@@ -27,41 +32,21 @@ export default async function ChangePlanPage() {
     redirect('/admin');
   }
 
-  const { plan, usage } = await withOrgContext(session.user.organizationId, async (tx) => {
+  const query = await searchParams;
+
+  const { plan, usage, billing } = await withOrgContext(session.user.organizationId, async (tx) => {
     const orgId = requireOrganizationId(session);
     const org = await tx.organization.findFirstOrThrow({
       where: { id: orgId },
       select: { plan: true, status: true, trialEndsAt: true, renewsAt: true },
     });
 
-    // Same four numbers the Billing tab and /admin/billing show — computed the same way
-    // (buildUsageBars in plan-limits.ts) so the over-limit warning on this page can't
-    // disagree with what the org admin already saw on the Billing tab.
-    const [formCount, userCount, orgFileSum, submissionFileSum, submissionCount] =
-      await Promise.all([
-        tx.form.count({ where: { organizationId: orgId } }),
-        tx.user.count({ where: { organizationId: orgId } }),
-        tx.organizationFile.aggregate({
-          where: { organizationId: orgId },
-          _sum: { sizeBytes: true },
-        }),
-        tx.submissionFile.aggregate({
-          where: { organizationId: orgId },
-          _sum: { sizeBytes: true },
-        }),
-        tx.submission.count({
-          where: { organizationId: orgId, submittedAt: { gte: startOfCurrentMonth() } },
-        }),
-      ]);
-
+    // Same four numbers the Billing tab and /admin/billing show (see getOrgPlanUsage), so the
+    // over-limit warning on this page can't disagree with what the org admin already saw.
     return {
       plan: org,
-      usage: {
-        forms: formCount,
-        users: userCount,
-        storageBytes: (orgFileSum._sum.sizeBytes ?? 0) + (submissionFileSum._sum.sizeBytes ?? 0),
-        submissionsThisMonth: submissionCount,
-      },
+      usage: await getOrgPlanUsage(tx, orgId),
+      billing: await loadBillingInfo(tx, orgId),
     };
   });
 
@@ -73,7 +58,11 @@ export default async function ChangePlanPage() {
         trialEndsAt: plan.trialEndsAt?.toISOString() ?? null,
         renewsAt: plan.renewsAt?.toISOString() ?? null,
         usage,
+        billing,
       }}
+      initialInterval={
+        query.interval === 'year' || query.interval === 'month' ? query.interval : null
+      }
     />
   );
 }

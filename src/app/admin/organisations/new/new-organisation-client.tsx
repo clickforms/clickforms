@@ -28,7 +28,7 @@ export function NewOrganisationClient() {
       await navigator.clipboard.writeText(url);
       toast.success('Invite link copied to clipboard');
     } catch {
-      toast.error('Could not copy link — select and copy manually');
+      toast.error('Could not copy link. Select and copy manually');
     }
   }
 
@@ -55,7 +55,7 @@ export function NewOrganisationClient() {
       }
 
       setResult({ organizationId: data.organizationId, inviteUrl: data.inviteUrl });
-      toast.success('Organisation created — invite link ready');
+      toast.success('Organisation created, invite link ready');
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -115,8 +115,8 @@ export function NewOrganisationClient() {
         <p className="settings-page-kicker">Clickforms Admin</p>
         <h1 className="settings-page-title">Onboard a new organisation</h1>
         <p className="settings-page-lead">
-          Create the organisation and invite its first admin — they'll set their own password via
-          the invite link.
+          Create the organisation and invite its first admin. They'll set their own password via the
+          invite link.
         </p>
       </header>
 

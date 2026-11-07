@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
+import { isStripeConfigured } from '@/lib/billing/stripe';
 import { withOrgContext } from '@/lib/db';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
@@ -10,7 +11,7 @@ const patchPlanBodySchema = z.object({
 });
 
 /**
- * Self-service plan change — an org admin picking a different tier directly from
+ * Self-service plan change (development only, see the isStripeConfigured() guard below) — an org admin picking a different tier directly from
  * Organisation settings' Billing tab, no payment step involved (see PLAN_LIMITS' doc
  * comment in plan-limits.ts: nothing charges anyone yet, this just moves the enum value).
  *
@@ -33,6 +34,15 @@ export async function PATCH(request: Request): Promise<NextResponse> {
     const session = await requireSession();
     requireRole(session, ['admin']);
     const body = patchPlanBodySchema.parse(await request.json());
+
+    // Once Stripe is configured, plans are bought through Checkout (/api/billing/checkout)
+    // and changed through /api/billing/change-plan. This free switch only remains for
+    // environments without billing (local development).
+    if (isStripeConfigured()) {
+      throw new InvalidRequestError(
+        'Plans are purchased and changed through billing. Use the Change plan page, or contact us for Enterprise.',
+      );
+    }
 
     const organization = await withOrgContext(session.user.organizationId, async (tx) => {
       const existing = await tx.organization.findFirstOrThrow({

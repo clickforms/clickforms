@@ -33,6 +33,7 @@ export default async function AdminOrganisationDetailPage({ params }: PageProps)
         contactPhone: true,
         plan: true,
         status: true,
+        billingMode: true,
         trialEndsAt: true,
         createdAt: true,
       },

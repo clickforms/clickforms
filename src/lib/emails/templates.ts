@@ -79,7 +79,7 @@ export function passwordResetEmail(params: {
     ],
     cta: { label: 'Reset password', url: params.resetUrl },
     footnote:
-      "This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email — your password won't be changed.",
+      "This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email. Your password won't be changed.",
   });
 
   return { subject: 'Reset your Clickforms password', html, text };
@@ -102,7 +102,7 @@ export function twoFactorCodeEmail(params: {
     ],
     messageCallout: `<div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; text-align: center; padding: 8px 0;">${params.code}</div>`,
     footnote:
-      "This code expires in 10 minutes. If you didn't try to sign in, someone may know your password — please change it.",
+      "This code expires in 10 minutes. If you didn't try to sign in, someone may know your password. Please change it.",
   });
 
   return {

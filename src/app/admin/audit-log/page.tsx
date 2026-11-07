@@ -37,7 +37,7 @@ export default async function AdminAuditLogPage() {
     entityId: entry.entityId,
     createdAt: entry.createdAt.toISOString(),
     organizationId: entry.organization?.id ?? null,
-    organizationName: entry.organization?.name ?? '—',
+    organizationName: entry.organization?.name ?? '-',
     actorName: entry.actor?.name ?? entry.actor?.email ?? 'System',
   }));
 

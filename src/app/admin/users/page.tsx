@@ -41,7 +41,7 @@ export default async function AdminUsersPage() {
     twoFactorEnabled: user.twoFactorEnabled,
     createdAt: user.createdAt.toISOString(),
     organizationId: user.organization?.id ?? null,
-    organizationName: user.organization?.name ?? '—',
+    organizationName: user.organization?.name ?? '-',
   }));
 
   return <UsersAdminClient initialUsers={initialUsers} />;

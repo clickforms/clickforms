@@ -358,3 +358,29 @@ environment, then `sudo /srv/clickforms/start.sh`.
 
 Rotating a secret: change it in Infisical, then `sudo /srv/clickforms/start.sh` (it recreates
 the app container because its environment changed). Secrets are read only at start.
+
+## Stripe billing
+
+Code and design: `specs/08-billing.md`. Per environment:
+
+1. Create the catalogue once per Stripe account (sandbox first, live at launch):
+   `STRIPE_SECRET_KEY=sk_test_... yarn billing:setup-prices`. It prints the Customer Portal
+   configuration id.
+2. Add to that environment in Infisical, then redeploy (`sudo /srv/clickforms/start.sh`):
+   `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PORTAL_CONFIGURATION_ID`, and either
+   `STRIPE_AUTOMATIC_TAX=true` (once GST registration is added in Stripe Tax) or
+   `STRIPE_GST_TAX_RATE_ID` (an inclusive 10% GST tax rate). Test keys on `dev` and `staging`, live
+   keys on `prod` only.
+3. In the Stripe dashboard, add a webhook endpoint `https://<root domain>/api/billing/webhook`
+   (staging: `https://staging.clickforms.com.au/api/billing/webhook`) for: `checkout.session.completed`,
+   `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`,
+   `invoice.paid`, `invoice.payment_failed`. Its signing secret is `STRIPE_WEBHOOK_SECRET`.
+4. Stripe dashboard settings: enable Smart Retries (retry for 14 days, then mark the subscription
+   unpaid), turn on customer emails for receipts and failed payments, restrict subscription payment
+   methods to cards, and add the ABN/GST registration under Tax settings.
+5. Run the migration (`sudo /srv/clickforms/migrate.sh`) before the first deploy that contains
+   billing; existing organisations stay on manual billing.
+
+Local development: `stripe listen --forward-to localhost:3000/api/billing/webhook` prints the
+webhook secret to use; with no `STRIPE_SECRET_KEY` set, billing is off and the free dev plan
+switch is used.

@@ -1,63 +1,116 @@
 'use client';
 
-import type { OrgPlan, OrgStatus } from '@prisma/client';
+import type { OrgPlan } from '@prisma/client';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { useToast } from '@/components/toast';
-import {
-  buildUsageBars,
-  PLAN_FEATURE_PILLS,
-  PLAN_LABELS,
-  PLAN_LIMITS,
-  PLAN_ORDER,
-} from '@/lib/admin/plan-limits';
-import { readApiError } from '@/lib/error-message';
-import { formatShortDate } from '@/lib/format-date';
+import { type ReactNode, useMemo, useState } from 'react';
+import { LocalDate } from '@/components/local-date';
+import { PLAN_LABELS, PLAN_ORDER } from '@/lib/admin/plan-limits';
+import type { Attention, BillingState } from '@/lib/billing/overview';
 
-export interface BillingOrgRow {
+export interface BillingOverviewRow {
   id: string;
   name: string;
   subdomain: string;
   plan: OrgPlan;
-  status: OrgStatus;
-  trialEndsAt: string | null;
-  renewsAt: string | null;
-  usage: {
-    forms: number;
-    users: number;
-    storageBytes: number;
-    submissionsThisMonth: number;
-  };
+  state: BillingState;
+  /** Null unless the organisation is billed through Stripe. */
+  interval: 'month' | 'year' | null;
+  /** Monthly recurring revenue in cents (GST inclusive, after running discounts). */
+  mrrCents: number;
+  discountLabel: string | null;
+  /** Trial end for trials, otherwise the next renewal / period end. */
+  date: string | null;
+  cancelAtPeriodEnd: boolean;
+  attention: Attention | null;
+  overLimit: string[];
+  nearLimit: string[];
+  /** The most-used plan resource, or null when the plan is unlimited. */
+  topUsage: { label: string; percent: number } | null;
 }
 
-const STATUS_BADGE_CLASS: Record<OrgStatus, string> = {
-  active: 'badge--success',
-  trial: 'badge--draft',
-  suspended: 'badge--error',
-};
+export interface BillingActivityItem {
+  id: string;
+  text: string;
+  organizationId: string | null;
+  organizationName: string;
+  actor: string;
+  at: string;
+}
 
-const STATUS_LABELS: Record<OrgStatus, string> = {
-  active: 'Active',
+const STATE_LABELS: Record<BillingState, string> = {
+  subscribed: 'Subscribed',
+  past_due: 'Payment failing',
+  ended: 'Ended',
   trial: 'Trial',
+  trial_expired: 'Trial expired',
+  manual: 'Manual billing',
   suspended: 'Suspended',
 };
 
-const STATUS_FILTERS = ['all', 'active', 'trial', 'suspended'] as const;
-type StatusFilter = (typeof STATUS_FILTERS)[number];
+const STATE_TONE: Record<BillingState, 'good' | 'warn' | 'bad' | 'muted'> = {
+  subscribed: 'good',
+  past_due: 'bad',
+  ended: 'bad',
+  trial: 'warn',
+  trial_expired: 'bad',
+  manual: 'muted',
+  suspended: 'muted',
+};
 
-const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
+const FILTERS = ['all', 'subscribed', 'trial', 'manual', 'attention', 'suspended'] as const;
+type Filter = (typeof FILTERS)[number];
+
+const FILTER_LABELS: Record<Filter, string> = {
   all: 'All',
-  active: 'Active',
-  trial: 'Trial',
+  subscribed: 'Subscribed',
+  trial: 'Trials',
+  manual: 'Manual billing',
+  attention: 'Needs attention',
   suspended: 'Suspended',
 };
 
-function formatDate(iso: string | null): string {
-  if (!iso) return '';
-  return formatShortDate(`${iso.slice(0, 10)}T00:00:00.000Z`);
+const SORTS = ['attention', 'name', 'mrr', 'date'] as const;
+type Sort = (typeof SORTS)[number];
+
+const SORT_LABELS: Record<Sort, string> = {
+  attention: 'Needs attention first',
+  name: 'Name',
+  mrr: 'Highest MRR',
+  date: 'Soonest date',
+};
+
+function matchesFilter(row: BillingOverviewRow, filter: Filter): boolean {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'subscribed':
+      return row.state === 'subscribed' || row.state === 'past_due' || row.state === 'ended';
+    case 'trial':
+      return row.state === 'trial' || row.state === 'trial_expired';
+    case 'manual':
+      return row.state === 'manual';
+    case 'attention':
+      return row.attention !== null;
+    case 'suspended':
+      return row.state === 'suspended';
+  }
 }
 
-function getInitials(name: string): string {
+function attentionRank(row: BillingOverviewRow): number {
+  if (row.attention?.severity === 'urgent') return 0;
+  if (row.attention) return 1;
+  return 2;
+}
+
+function money(cents: number): string {
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+}
+
+function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
   const first = parts[0]?.[0] ?? '';
@@ -65,410 +118,576 @@ function getInitials(name: string): string {
   return `${first}${last}`.toUpperCase();
 }
 
-function getTrialDaysRemaining(trialEndsAt: string | null, status: OrgStatus): number | null {
-  if (status !== 'trial' || !trialEndsAt) return null;
-  const now = new Date();
-  const [year, month, day] = trialEndsAt.slice(0, 10).split('-').map(Number);
-  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const trialUtc = Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
-  return Math.round((trialUtc - todayUtc) / (24 * 60 * 60 * 1000));
+function stateDateLabel(row: BillingOverviewRow): string {
+  if (row.state === 'trial') return 'Trial ends';
+  if (row.state === 'trial_expired') return 'Trial ended';
+  if (row.cancelAtPeriodEnd) return 'Cancels';
+  if (row.state === 'ended') return 'Ended';
+  return 'Renews';
 }
 
-function trialLabel(daysRemaining: number | null): string | null {
-  if (daysRemaining === null) return null;
-  if (daysRemaining < 0) return 'Expired';
-  if (daysRemaining === 0) return 'Expires today';
-  if (daysRemaining === 1) return '1 day left';
-  if (daysRemaining <= 7) return `${daysRemaining} days left`;
-  return null;
+function csvCell(value: string | number): string {
+  const text = String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-function toDateInputValue(iso: string | null): string {
-  return iso ? iso.slice(0, 10) : '';
+function exportCsv(rows: BillingOverviewRow[]) {
+  const header = [
+    'Organisation',
+    'Subdomain',
+    'Plan',
+    'Billing state',
+    'Interval',
+    'Discount',
+    'MRR (AUD, GST incl.)',
+    'Date label',
+    'Date',
+    'Top usage',
+    'Attention',
+  ];
+  const lines = rows.map((row) =>
+    [
+      row.name,
+      row.subdomain,
+      PLAN_LABELS[row.plan],
+      STATE_LABELS[row.state],
+      row.interval ?? '',
+      row.discountLabel ?? '',
+      (row.mrrCents / 100).toFixed(2),
+      row.date ? stateDateLabel(row) : '',
+      row.date ? row.date.slice(0, 10) : '',
+      row.topUsage ? `${row.topUsage.label} ${row.topUsage.percent}%` : 'Unlimited',
+      row.attention?.message ?? '',
+    ]
+      .map(csvCell)
+      .join(','),
+  );
+  const blob = new Blob([`${[header.join(','), ...lines].join('\n')}\n`], {
+    type: 'text/csv;charset=utf-8',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `clickforms-billing-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
-// Same default as the Organisations detail page's own Plan & trial panel (see
-// defaultTrialEndDate there) — matches the signup flow's 7-day trial so picking "Trial"
-// here isn't left with an empty, unsavable date, while staying fully editable to any
-// custom length an admin wants to grant.
-function defaultTrialEndDate(): string {
-  const date = new Date();
-  date.setDate(date.getDate() + 7);
-  return date.toISOString().slice(0, 10);
-}
+// --- Icons -----------------------------------------------------------------------------
 
-function SearchIcon() {
+function Icon({ children }: { children: ReactNode }) {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M13 13l-2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
     </svg>
   );
 }
 
-function CheckIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M3.5 8.5 6.5 11.5 12.5 5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const TrendIcon = () => (
+  <Icon>
+    <path d="M2.5 14.5 7.5 9l3 3 6-7" />
+    <path d="M12.5 5h4v4" />
+  </Icon>
+);
+const UsersIcon = () => (
+  <Icon>
+    <circle cx="8" cy="7" r="3" />
+    <path d="M2.5 16c.5-3 2.7-4.5 5.5-4.5s5 1.5 5.5 4.5" />
+    <path d="M13.5 4.4a3 3 0 0 1 0 5.2M15.5 11.8c1.2.7 1.9 1.9 2.2 3.7" />
+  </Icon>
+);
+const ClockIcon = () => (
+  <Icon>
+    <circle cx="10" cy="10" r="7" />
+    <path d="M10 6v4.2l2.8 1.6" />
+  </Icon>
+);
+const AlertIcon = () => (
+  <Icon>
+    <path d="M10 3 2.5 16h15L10 3Z" />
+    <path d="M10 8.5v3.2M10 14h.01" />
+  </Icon>
+);
+const SearchIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
+    <path d="M13 13l-2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+const DownloadIcon = () => (
+  <Icon>
+    <path d="M10 3v9M6.5 8.5 10 12l3.5-3.5M4 15.5h12" />
+  </Icon>
+);
+const ChevronRight = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path
+      d="M6 3.5 10.5 8 6 12.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// --- Page ------------------------------------------------------------------------------
 
 export function BillingAdminClient({
-  initialOrganizations,
+  rows,
+  activity,
 }: {
-  initialOrganizations: BillingOrgRow[];
+  rows: BillingOverviewRow[];
+  activity: BillingActivityItem[];
 }) {
-  const [organizations, setOrganizations] = useState(initialOrganizations);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [sort, setSort] = useState<Sort>('attention');
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<StatusFilter, number> = {
-      all: organizations.length,
-      active: 0,
-      trial: 0,
-      suspended: 0,
+  const summary = useMemo(() => {
+    const paying = rows.filter((row) => row.state === 'subscribed' || row.state === 'past_due');
+    const atRisk = rows.filter((row) => row.state === 'past_due');
+    const trials = rows.filter((row) => row.state === 'trial');
+    const now = Date.now();
+    return {
+      mrrCents: paying.reduce((sum, row) => sum + row.mrrCents, 0),
+      subscribers: paying.length,
+      annual: paying.filter((row) => row.interval === 'year').length,
+      trials: trials.length,
+      trialsEndingSoon: trials.filter(
+        (row) => row.date && new Date(row.date).getTime() - now <= 3 * 86_400_000,
+      ).length,
+      manual: rows.filter((row) => row.state === 'manual').length,
+      atRiskCount: atRisk.length,
+      atRiskCents: atRisk.reduce((sum, row) => sum + row.mrrCents, 0),
+      attention: rows.filter((row) => row.attention !== null).length,
+      urgent: rows.filter((row) => row.attention?.severity === 'urgent').length,
     };
-    for (const org of organizations) {
-      counts[org.status] += 1;
-    }
-    return counts;
-  }, [organizations]);
+  }, [rows]);
 
-  const urgentTrialCount = useMemo(
+  const revenueByPlan = useMemo(() => {
+    const paying = rows.filter((row) => row.state === 'subscribed' || row.state === 'past_due');
+    const total = paying.reduce((sum, row) => sum + row.mrrCents, 0);
+    return {
+      total,
+      plans: PLAN_ORDER.map((plan) => {
+        const members = paying.filter((row) => row.plan === plan);
+        const mrr = members.reduce((sum, row) => sum + row.mrrCents, 0);
+        return { plan, count: members.length, mrr, share: total > 0 ? mrr / total : 0 };
+      }),
+    };
+  }, [rows]);
+
+  const upcoming = useMemo(() => {
+    const now = Date.now();
+    const horizon = now + 30 * 86_400_000;
+    return rows
+      .filter(
+        (row) =>
+          row.date &&
+          (row.state === 'subscribed' || row.state === 'past_due' || row.state === 'trial') &&
+          new Date(row.date).getTime() <= horizon &&
+          new Date(row.date).getTime() >= now - 86_400_000,
+      )
+      .sort((a, b) => new Date(a.date ?? 0).getTime() - new Date(b.date ?? 0).getTime())
+      .slice(0, 6);
+  }, [rows]);
+
+  const attentionRows = useMemo(
     () =>
-      organizations.filter((org) => {
-        const days = getTrialDaysRemaining(org.trialEndsAt, org.status);
-        return days !== null && days <= 7;
-      }).length,
-    [organizations],
+      rows
+        .filter((row) => row.attention !== null)
+        .sort((a, b) => attentionRank(a) - attentionRank(b)),
+    [rows],
   );
 
-  const visibleOrganizations = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return organizations.filter((org) => {
-      if (statusFilter !== 'all' && org.status !== statusFilter) return false;
-      if (!term) return true;
-      return org.name.toLowerCase().includes(term) || org.subdomain.toLowerCase().includes(term);
-    });
-  }, [organizations, search, statusFilter]);
+  const counts = useMemo(() => {
+    const result = {} as Record<Filter, number>;
+    for (const key of FILTERS) result[key] = rows.filter((row) => matchesFilter(row, key)).length;
+    return result;
+  }, [rows]);
 
-  function handleSaved(updated: BillingOrgRow) {
-    setOrganizations((current) => current.map((row) => (row.id === updated.id ? updated : row)));
-  }
+  const visibleRows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const filtered = rows.filter((row) => {
+      if (!matchesFilter(row, filter)) return false;
+      if (!term) return true;
+      return row.name.toLowerCase().includes(term) || row.subdomain.toLowerCase().includes(term);
+    });
+    const time = (row: BillingOverviewRow) =>
+      row.date ? new Date(row.date).getTime() : Number.POSITIVE_INFINITY;
+    return [...filtered].sort((a, b) => {
+      if (sort === 'name') return a.name.localeCompare(b.name);
+      if (sort === 'mrr') return b.mrrCents - a.mrrCents || a.name.localeCompare(b.name);
+      if (sort === 'date') return time(a) - time(b) || a.name.localeCompare(b.name);
+      return attentionRank(a) - attentionRank(b) || a.name.localeCompare(b.name);
+    });
+  }, [rows, search, filter, sort]);
 
   return (
-    <div className="billing-page admin-orgs-directory">
-      <header className="admin-orgs-header">
+    <div className="bo">
+      <header className="bo-header">
         <div>
-          <h1 className="admin-orgs-title">Billing</h1>
-          <p className="admin-orgs-lead">Plan, usage, and trial for every organisation.</p>
+          <h1 className="bo-title">Billing</h1>
         </div>
-        <label className="admin-orgs-search billing-page-search">
-          <span className="admin-orgs-search-icon">
-            <SearchIcon />
-          </span>
-          <input
-            type="text"
-            placeholder="Search organisations…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search organisations"
-          />
-        </label>
+        <div className="bo-header-actions">
+          <button type="button" className="button button--ghost" onClick={() => exportCsv(rows)}>
+            <DownloadIcon /> Export CSV
+          </button>
+          <Link href="/admin/billing/promotions" className="button button--dark">
+            Promotion codes
+          </Link>
+        </div>
       </header>
 
-      {organizations.length > 0 ? (
-        <section className="admin-orgs-directory-stats" aria-label="Billing snapshot">
-          {STATUS_FILTERS.map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              className={`admin-orgs-directory-stat${
-                statusFilter === filter ? ' admin-orgs-directory-stat--active' : ''
-              }${filter === 'trial' && urgentTrialCount > 0 ? ' admin-orgs-directory-stat--alert' : ''}`}
-              onClick={() => setStatusFilter(filter)}
-            >
-              <span className="admin-orgs-directory-stat-value">{statusCounts[filter]}</span>
-              <span className="admin-orgs-directory-stat-label">
-                {STATUS_FILTER_LABELS[filter]}
-                {filter === 'trial' && urgentTrialCount > 0 ? (
-                  <span className="admin-orgs-directory-stat-note">
-                    {urgentTrialCount} need review
+      <section className="bo-kpis" aria-label="Billing summary">
+        <article className="bo-kpi">
+          <span className="bo-kpi-icon bo-kpi-icon--green">
+            <TrendIcon />
+          </span>
+          <div>
+            <p className="bo-kpi-label">Monthly revenue</p>
+            <p className="bo-kpi-value">{money(summary.mrrCents)}</p>
+            <p className="bo-kpi-note">{money(summary.mrrCents * 12)} a year</p>
+          </div>
+        </article>
+        <article className="bo-kpi">
+          <span className="bo-kpi-icon bo-kpi-icon--blue">
+            <UsersIcon />
+          </span>
+          <div>
+            <p className="bo-kpi-label">Subscribers</p>
+            <p className="bo-kpi-value">{summary.subscribers}</p>
+            <p className="bo-kpi-note">
+              {summary.annual} annual · {summary.subscribers - summary.annual} monthly
+            </p>
+          </div>
+        </article>
+        <article className="bo-kpi">
+          <span className="bo-kpi-icon bo-kpi-icon--amber">
+            <ClockIcon />
+          </span>
+          <div>
+            <p className="bo-kpi-label">Trials</p>
+            <p className="bo-kpi-value">{summary.trials}</p>
+            <p className="bo-kpi-note">
+              {summary.trialsEndingSoon > 0
+                ? `${summary.trialsEndingSoon} ending soon`
+                : `${summary.manual} on manual billing`}
+            </p>
+          </div>
+        </article>
+        <article className={`bo-kpi${summary.urgent > 0 ? ' bo-kpi--alert' : ''}`}>
+          <span className="bo-kpi-icon bo-kpi-icon--red">
+            <AlertIcon />
+          </span>
+          <div>
+            <p className="bo-kpi-label">Needs attention</p>
+            <p className="bo-kpi-value">{summary.attention}</p>
+            <p className="bo-kpi-note">
+              {summary.atRiskCount > 0
+                ? `${money(summary.atRiskCents)}/mo at risk`
+                : summary.urgent > 0
+                  ? `${summary.urgent} urgent`
+                  : 'All healthy'}
+            </p>
+          </div>
+        </article>
+      </section>
+
+      <div className="bo-insights">
+        <section className="bo-card" aria-label="Revenue by plan">
+          <header className="bo-card-head">
+            <h2>Revenue by plan</h2>
+            <span className="bo-card-meta">{money(revenueByPlan.total)}/mo</span>
+          </header>
+          {revenueByPlan.total === 0 ? (
+            <p className="bo-empty">No paying subscribers yet.</p>
+          ) : (
+            <ul className="bo-plan-bars">
+              {revenueByPlan.plans.map((entry) => (
+                <li key={entry.plan}>
+                  <div className="bo-plan-bar-head">
+                    <span>{PLAN_LABELS[entry.plan]}</span>
+                    <span>
+                      {entry.count} {entry.count === 1 ? 'org' : 'orgs'} · {money(entry.mrr)}
+                    </span>
+                  </div>
+                  <div className="bo-bar">
+                    <div
+                      className="bo-bar-fill"
+                      style={{ width: `${Math.round(entry.share * 100)}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="bo-card" aria-label="Upcoming">
+          <header className="bo-card-head">
+            <h2>Coming up</h2>
+          </header>
+          {upcoming.length === 0 ? (
+            <p className="bo-empty">Nothing in the next 30 days.</p>
+          ) : (
+            <ul className="bo-list">
+              {upcoming.map((row) => (
+                <li key={row.id} className="bo-list-row">
+                  <span className="bo-avatar" aria-hidden="true">
+                    {initials(row.name)}
                   </span>
-                ) : null}
-              </span>
-            </button>
-          ))}
+                  <div className="bo-list-copy">
+                    <Link href={`/admin/organisations/${row.id}#admin-org-billing`}>
+                      {row.name}
+                    </Link>
+                    <span>
+                      {stateDateLabel(row)} {row.date ? <LocalDate iso={row.date} /> : null}
+                    </span>
+                  </div>
+                  <span className="bo-list-amount">
+                    {row.state === 'trial'
+                      ? 'Trial'
+                      : row.mrrCents > 0
+                        ? money(row.mrrCents * (row.interval === 'year' ? 12 : 1))
+                        : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {attentionRows.length > 0 ? (
+        <section className="bo-card" aria-label="Needs attention">
+          <header className="bo-card-head">
+            <h2>Needs attention</h2>
+          </header>
+          <ul className="bo-list">
+            {attentionRows.map((row) => (
+              <li key={row.id} className="bo-list-row">
+                <span className={`bo-dot bo-dot--${row.attention?.severity}`} aria-hidden="true" />
+                <div className="bo-list-copy">
+                  <Link href={`/admin/organisations/${row.id}#admin-org-billing`}>{row.name}</Link>
+                  <span>{row.attention?.message}</span>
+                </div>
+                <Link
+                  href={`/admin/organisations/${row.id}#admin-org-billing`}
+                  className="button button--ghost bo-small"
+                >
+                  {row.state === 'past_due' ? 'Retry payment' : 'Open billing'}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 
-      {visibleOrganizations.length === 0 ? (
-        <div className="org-panel billing-empty">
-          <p>
-            {search.trim() ? `No organisations match “${search.trim()}”.` : 'No organisations yet.'}
-          </p>
-        </div>
-      ) : (
-        <div className="billing-org-list">
-          {visibleOrganizations.map((org) => (
-            <BillingOrgCard key={org.id} org={org} onSaved={handleSaved} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BillingOrgCard({
-  org,
-  onSaved,
-}: {
-  org: BillingOrgRow;
-  onSaved: (updated: BillingOrgRow) => void;
-}) {
-  const toast = useToast();
-  const bars = buildUsageBars(org.plan, org.usage);
-  const limits = PLAN_LIMITS[org.plan];
-
-  // Draft plan/status/trial fields, separate from `org` (the committed, saved values shown
-  // in the header badge, usage bars, and footer) — same split as the Organisations detail
-  // page's "Plan & trial" panel, so nothing here takes effect until Save is pressed. This is
-  // also what lets a plan change and a trial start/extend/end happen as one atomic PATCH
-  // instead of two separate requests racing each other.
-  const [plan, setPlan] = useState<OrgPlan>(org.plan);
-  const [status, setStatus] = useState<OrgStatus>(org.status);
-  const [trialEndsAt, setTrialEndsAt] = useState(
-    org.status === 'trial' ? toDateInputValue(org.trialEndsAt) : '',
-  );
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const isDirty = useMemo(() => {
-    const currentTrialEndsAt = org.status === 'trial' ? toDateInputValue(org.trialEndsAt) : '';
-    const nextTrialEndsAt = status === 'trial' ? trialEndsAt : '';
-    return plan !== org.plan || status !== org.status || nextTrialEndsAt !== currentTrialEndsAt;
-  }, [plan, status, trialEndsAt, org]);
-
-  function handleStatusChange(nextStatus: OrgStatus) {
-    setStatus(nextStatus);
-    if (nextStatus === 'trial' && !trialEndsAt) {
-      setTrialEndsAt(defaultTrialEndDate());
-    }
-  }
-
-  async function handleSave() {
-    setError(null);
-    if (status === 'trial' && !trialEndsAt) {
-      setError('Trial end date is required while status is Trial');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const response = await fetch(`/api/admin/organizations/${org.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan,
-          status,
-          // Cleared the moment status isn't 'trial', same as the detail page — a stale date
-          // shouldn't linger once an org leaves trial (see isTrialExpired in plan-limits.ts).
-          trialEndsAt:
-            status === 'trial' ? new Date(`${trialEndsAt}T23:59:59.999`).toISOString() : null,
-        }),
-      });
-      if (!response.ok) {
-        setError(await readApiError(response, 'Could not save plan & trial settings'));
-        return;
-      }
-      const data: {
-        organization: {
-          plan: OrgPlan;
-          status: OrgStatus;
-          trialEndsAt: string | null;
-          renewsAt: string | null;
-        };
-      } = await response.json();
-      onSaved({
-        ...org,
-        plan: data.organization.plan,
-        status: data.organization.status,
-        trialEndsAt: data.organization.trialEndsAt,
-        renewsAt: data.organization.renewsAt,
-      });
-      toast.success(`${org.name} updated`);
-    } catch {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  const daysRemaining = getTrialDaysRemaining(org.trialEndsAt, org.status);
-  const urgentTrial = trialLabel(daysRemaining);
-  const renewalLabel =
-    org.status === 'trial' && org.trialEndsAt
-      ? daysRemaining === 0
-        ? 'Trial ends today'
-        : `Trial through ${formatDate(org.trialEndsAt)}`
-      : org.renewsAt
-        ? `Renews ${formatDate(org.renewsAt)}`
-        : null;
-
-  return (
-    <article
-      className={`org-panel billing-org-card${urgentTrial ? ' billing-org-card--alert' : ''}`}
-    >
-      <header className="billing-org-head">
-        <div className="billing-org-identity">
-          <span className="admin-orgs-directory-mark" aria-hidden="true">
-            {getInitials(org.name)}
-          </span>
-          <div>
-            <Link href={`/admin/organisations/${org.id}`} className="billing-org-name">
-              {org.name}
-            </Link>
-            <p className="billing-org-subdomain">
-              {org.subdomain}
-              {' · '}
-              {PLAN_LABELS[org.plan]}
-            </p>
-          </div>
-        </div>
-        <div className="billing-org-head-meta">
-          {urgentTrial ? (
-            <span
-              className={`billing-org-trial${
-                daysRemaining !== null && daysRemaining < 0 ? ' billing-org-trial--expired' : ''
-              }`}
-            >
-              {urgentTrial}
-            </span>
-          ) : renewalLabel ? (
-            <span className="billing-org-renewal">{renewalLabel}</span>
-          ) : null}
-          <span className={`badge ${STATUS_BADGE_CLASS[org.status]}`}>
-            {STATUS_LABELS[org.status]}
-          </span>
-        </div>
-      </header>
-
-      <div className="billing-org-controls">
-        {error ? (
-          <p className="form-error billing-org-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="billing-org-control-row">
-          <div className="billing-org-control">
-            <span className="billing-org-control-label">Plan</span>
-            <fieldset className="billing-chip-row" aria-label="Plan">
-              {PLAN_ORDER.map((planOption) => (
-                <button
-                  key={planOption}
-                  type="button"
-                  className={`billing-chip${plan === planOption ? ' billing-chip--selected' : ''}`}
-                  disabled={isSaving}
-                  aria-pressed={plan === planOption}
-                  onClick={() => setPlan(planOption)}
-                >
-                  {PLAN_LABELS[planOption]}
-                </button>
-              ))}
-            </fieldset>
-          </div>
-          <div className="billing-org-control">
-            <span className="billing-org-control-label">Status</span>
-            <fieldset className="billing-chip-row" aria-label="Status">
-              {(Object.keys(STATUS_LABELS) as OrgStatus[]).map((statusOption) => (
-                <button
-                  key={statusOption}
-                  type="button"
-                  className={`billing-chip${status === statusOption ? ` billing-chip--selected billing-chip--${statusOption}` : ''}`}
-                  disabled={isSaving}
-                  aria-pressed={status === statusOption}
-                  onClick={() => handleStatusChange(statusOption)}
-                >
-                  {STATUS_LABELS[statusOption]}
-                </button>
-              ))}
-            </fieldset>
-          </div>
-          {status === 'trial' ? (
-            <label className="billing-org-control">
-              <span className="billing-org-control-label">Trial ends</span>
+      <section className="bo-card bo-card--flush" aria-label="Organisations">
+        <header className="bo-toolbar">
+          <fieldset className="bo-tabs" aria-label="Filter organisations">
+            {FILTERS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={`bo-tab${filter === key ? ' bo-tab--active' : ''}`}
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+              >
+                {FILTER_LABELS[key]}
+                <span className="bo-tab-count">{counts[key]}</span>
+              </button>
+            ))}
+          </fieldset>
+          <div className="bo-toolbar-right">
+            <label className="bo-select">
+              <span className="bo-visually-hidden">Sort by</span>
+              <select value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
+                {SORTS.map((key) => (
+                  <option key={key} value={key}>
+                    {SORT_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="bo-search">
+              <SearchIcon />
               <input
-                className="text-input org-input billing-trial-input"
-                type="date"
-                value={trialEndsAt}
-                disabled={isSaving}
-                onChange={(event) => setTrialEndsAt(event.target.value)}
-                required
+                type="text"
+                placeholder="Search organisations"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                aria-label="Search organisations"
               />
             </label>
-          ) : null}
-          <div className="billing-org-save">
-            <button
-              type="button"
-              className="button button--dark"
-              disabled={isSaving || !isDirty}
-              onClick={() => void handleSave()}
-            >
-              {isSaving ? 'Saving…' : 'Save'}
-            </button>
           </div>
-        </div>
-      </div>
+        </header>
 
-      <div className="org-usage-grid billing-org-usage">
-        {bars.map((bar) => {
-          const overLimit = bar.limit !== null && bar.used > bar.limit;
-          return (
-            <div
-              key={bar.label}
-              className={`org-usage-card${overLimit ? ' org-usage-card--over' : ''}`}
-            >
-              <div className="org-usage-card-head">
-                <span>{bar.label}</span>
-                <strong>{bar.percent === null ? 'Unlimited' : `${bar.percent}%`}</strong>
-              </div>
-              <p className="org-usage-card-value">{bar.formatted}</p>
-              <div className="org-usage-track">
-                <div
-                  className={`org-usage-fill${overLimit ? ' org-usage-fill--over' : ''}`}
-                  style={{ width: `${bar.percent ?? 100}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+        {visibleRows.length === 0 ? (
+          <p className="bo-empty bo-empty--pad">
+            {search.trim() ? `No organisations match “${search.trim()}”.` : 'No organisations.'}
+          </p>
+        ) : (
+          <div className="bo-table-wrap">
+            <table className="bo-table">
+              <thead>
+                <tr>
+                  <th>Organisation</th>
+                  <th>Plan</th>
+                  <th>Billing</th>
+                  <th className="bo-num">MRR</th>
+                  <th>Date</th>
+                  <th>Plan usage</th>
+                  <th aria-label="Open" />
+                </tr>
+              </thead>
+              <tbody>
+                {visibleRows.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      <div className="bo-org">
+                        <span className="bo-avatar" aria-hidden="true">
+                          {initials(row.name)}
+                        </span>
+                        <div>
+                          <Link
+                            href={`/admin/organisations/${row.id}#admin-org-billing`}
+                            className="bo-org-name"
+                          >
+                            {row.name}
+                          </Link>
+                          <span className="bo-muted">{row.subdomain}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{PLAN_LABELS[row.plan]}</td>
+                    <td>
+                      <span className={`bo-pill bo-pill--${STATE_TONE[row.state]}`}>
+                        {STATE_LABELS[row.state]}
+                      </span>
+                      {row.interval || row.discountLabel ? (
+                        <span className="bo-muted">
+                          {[
+                            row.interval === 'year'
+                              ? 'Annual'
+                              : row.interval === 'month'
+                                ? 'Monthly'
+                                : null,
+                            row.discountLabel,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="bo-num">
+                      {row.mrrCents > 0 ? (
+                        money(row.mrrCents)
+                      ) : (
+                        <span className="bo-muted">None</span>
+                      )}
+                    </td>
+                    <td>
+                      {row.date ? (
+                        <>
+                          <span className="bo-muted">{stateDateLabel(row)}</span>
+                          <LocalDate iso={row.date} />
+                        </>
+                      ) : (
+                        <span className="bo-muted">None</span>
+                      )}
+                    </td>
+                    <td>
+                      {row.topUsage ? (
+                        <div className="bo-usage">
+                          <div className="bo-usage-head">
+                            <span>{row.topUsage.label}</span>
+                            <span>{row.topUsage.percent}%</span>
+                          </div>
+                          <div className="bo-bar">
+                            <div
+                              className={`bo-bar-fill${
+                                row.topUsage.percent > 100
+                                  ? ' bo-bar-fill--bad'
+                                  : row.topUsage.percent >= 90
+                                    ? ' bo-bar-fill--warn'
+                                    : ''
+                              }`}
+                              style={{ width: `${Math.min(100, row.topUsage.percent)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="bo-muted">Unlimited</span>
+                      )}
+                    </td>
+                    <td className="bo-action">
+                      <Link
+                        href={`/admin/organisations/${row.id}#admin-org-billing`}
+                        className="bo-manage"
+                        aria-label={`Manage billing for ${row.name}`}
+                      >
+                        Manage <ChevronRight />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
-      <footer className="billing-org-footer">
-        <ul className="billing-org-features">
-          {PLAN_FEATURE_PILLS.map((feature) => {
-            const on = limits[feature.key];
-            return (
-              <li
-                key={feature.key}
-                className={on ? 'billing-org-feature--on' : 'billing-org-feature--off'}
-              >
-                {on ? <CheckIcon /> : null}
-                {feature.label}
+      <section className="bo-card" aria-label="Activity">
+        <header className="bo-card-head">
+          <h2>Activity</h2>
+          <Link href="/admin/audit-log" className="bo-card-link">
+            View all
+          </Link>
+        </header>
+        {activity.length === 0 ? (
+          <p className="bo-empty">No activity yet.</p>
+        ) : (
+          <ul className="bo-list">
+            {activity.map((item) => (
+              <li key={item.id} className="bo-list-row">
+                <span className="bo-dot bo-dot--info" aria-hidden="true" />
+                <div className="bo-list-copy">
+                  <span className="bo-list-strong">
+                    {item.text}
+                    {item.organizationId ? (
+                      <>
+                        {' for '}
+                        <Link
+                          href={`/admin/organisations/${item.organizationId}#admin-org-billing`}
+                        >
+                          {item.organizationName}
+                        </Link>
+                      </>
+                    ) : null}
+                  </span>
+                  <span>{item.actor}</span>
+                </div>
+                <span className="bo-muted bo-nowrap">
+                  <LocalDate iso={item.at} />
+                </span>
               </li>
-            );
-          })}
-        </ul>
-      </footer>
-    </article>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   );
 }

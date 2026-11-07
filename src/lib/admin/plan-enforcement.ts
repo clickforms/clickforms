@@ -1,12 +1,12 @@
 import type { OrgPlan, Prisma } from '@prisma/client';
 import {
   formatBytes,
-  isTrialExpired,
   PLAN_LABELS,
   PLAN_LIMITS,
   startOfCurrentMonth,
 } from '@/lib/admin/plan-limits';
 import { PlanLimitError, TrialExpiredError } from '@/lib/api-errors';
+import { getBillingAccess } from '@/lib/billing/status';
 
 // Split out of plan-limits.ts because PlanLimitError/TrialExpiredError come from
 // api-errors.ts, which imports session.ts -> auth.ts -> db.ts (`import 'server-only'`).
@@ -146,11 +146,22 @@ export async function assertOrgActionsAllowed(
 ): Promise<void> {
   const organization = await tx.organization.findUnique({
     where: { id: organizationId },
-    select: { status: true, trialEndsAt: true },
+    select: {
+      status: true,
+      trialEndsAt: true,
+      billingMode: true,
+      subscription: { select: { stripeStatus: true } },
+    },
   });
-  if (organization && isTrialExpired(organization)) {
+  if (!organization) return;
+
+  // Manual-billing orgs: only an expired trial restricts. Stripe-billed orgs follow their
+  // subscription: past_due is a grace period (still allowed), unpaid/canceled is read-only.
+  if (getBillingAccess(organization, organization.subscription) === 'read_only') {
     throw new TrialExpiredError(
-      'Your trial has ended. Subscribe to keep making changes — see /pricing or contact us.',
+      organization.billingMode === 'stripe' && organization.subscription
+        ? 'Your subscription is inactive, so this organisation is read-only. Update your billing details under Organisation > Plan to continue.'
+        : 'Your trial has ended. Subscribe to keep making changes, see /pricing or contact us.',
     );
   }
 }

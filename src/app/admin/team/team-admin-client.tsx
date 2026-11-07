@@ -162,11 +162,11 @@ export function TeamAdminClient({
       await navigator.clipboard.writeText(url);
       toast.success(
         options?.alsoResent
-          ? 'Invite resent — link also copied to clipboard'
+          ? 'Invite resent, link also copied to clipboard'
           : 'Invite link copied to clipboard',
       );
     } catch {
-      toast.error('Could not copy link — select and copy manually');
+      toast.error('Could not copy link. Select and copy manually');
     }
   }
 
@@ -347,7 +347,7 @@ export function TeamAdminClient({
                       </td>
                       <td data-label="Actions">
                         {admin.isSelf ? (
-                          <span className="admin-templates-facet-empty">—</span>
+                          <span className="admin-templates-facet-empty">-</span>
                         ) : (
                           <TeamRowMenu
                             label={admin.name ?? admin.email}

@@ -429,7 +429,7 @@ export function TemplateSettingsClient({
                 <textarea
                   className="text-input admin-template-textarea"
                   rows={3}
-                  placeholder="Optional — shown when browsing the gallery"
+                  placeholder="Optional: shown when browsing the gallery"
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                   disabled={isSaving}
@@ -511,7 +511,7 @@ export function TemplateSettingsClient({
             </div>
             <p className="modal-body-text">
               This removes it from the template gallery. Forms organisations already created from it
-              are never affected — this only deletes the template itself.
+              are never affected. This only deletes the template itself.
             </p>
             <div className="modal-footer">
               <button

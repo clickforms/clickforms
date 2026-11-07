@@ -613,7 +613,7 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
             </div>
             <p className="modal-body-text">
               This removes it from the template gallery. Forms organisations already created from it
-              are never affected — this only deletes the template itself.
+              are never affected. This only deletes the template itself.
             </p>
             <div className="modal-footer">
               <button
@@ -735,7 +735,7 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
             </div>
             <p className="modal-body-text">
               This removes them from the template gallery. Forms organisations already created from
-              them are never affected — this only deletes the templates themselves.
+              them are never affected. This only deletes the templates themselves.
             </p>
             <div className="modal-footer">
               <button
@@ -764,7 +764,7 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
           <div>
             <h2 className="admin-home-empty-title">No templates yet</h2>
             <p className="admin-home-empty-copy">
-              Create the first template — publish it and organisations can copy it into their own
+              Create the first template. Publish it and organisations can copy it into their own
               workspace.
             </p>
             <button
@@ -958,21 +958,21 @@ export function TemplatesListClient({ initialTemplates }: { initialTemplates: Te
                           {template.industry ? (
                             <span className="admin-templates-facet">{template.industry}</span>
                           ) : (
-                            <span className="admin-templates-facet-empty">—</span>
+                            <span className="admin-templates-facet-empty">-</span>
                           )}
                         </td>
                         <td data-label="Category">
                           {template.category ? (
                             <span className="admin-templates-facet">{template.category}</span>
                           ) : (
-                            <span className="admin-templates-facet-empty">—</span>
+                            <span className="admin-templates-facet-empty">-</span>
                           )}
                         </td>
                         <td data-label="Form type">
                           {template.formType ? (
                             <span className="admin-templates-facet">{template.formType}</span>
                           ) : (
-                            <span className="admin-templates-facet-empty">—</span>
+                            <span className="admin-templates-facet-empty">-</span>
                           )}
                         </td>
                         <td data-label="Status">

@@ -52,7 +52,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
       });
       if (emailCollision) {
         throw new InvalidRequestError(
-          'This organisation already has a member with your email address — join is not possible.',
+          'This organisation already has a member with your email address. Joining is not possible.',
         );
       }
 

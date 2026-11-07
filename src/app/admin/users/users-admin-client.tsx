@@ -164,7 +164,7 @@ export function UsersAdminClient({ initialUsers }: { initialUsers: PlatformUserR
   async function copyResetLink(url: string) {
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Reset email sent — link copied');
+      toast.success('Reset email sent, link copied');
     } catch {
       toast.success('Reset email sent');
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import type { OrgPlan, OrgStatus, UserRole } from '@prisma/client';
+import type { BillingMode, OrgPlan, OrgStatus, UserRole } from '@prisma/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useCallback, useMemo, useRef, useState } from 'react';
@@ -9,6 +9,7 @@ import {
   JoinOrganisationSession,
   useJoinOrganisation,
 } from '@/app/admin/organisations/[id]/join-organisation-button';
+import { OrgBillingPanel } from '@/app/admin/organisations/[id]/org-billing-panel';
 import { DeleteOrganisationModal } from '@/app/admin/organisations/delete-organisation-modal';
 import { DropdownMenu } from '@/components/dropdown-menu';
 import { LocalDate } from '@/components/local-date';
@@ -34,6 +35,9 @@ export interface AdminOrgProfile {
   contactPhone: string | null;
   plan: OrgPlan;
   status: OrgStatus;
+  /** 'stripe' orgs get plan, renewal and payment state from Stripe; their manual plan
+   * controls are replaced by the billing panel. */
+  billingMode: BillingMode;
   // Only meaningful while status === 'trial' (see isTrialExpired in plan-limits.ts) — a
   // date left over from a past trial the org has since graduated or been suspended out of
   // is harmless dead data, so the PATCH below always clears it back to null the moment
@@ -314,6 +318,7 @@ function OrganisationDetailInner({
       nextTrialEndsAt !== currentTrialEndsAt
     );
   }, [plan, status, trialEndsAt, organization]);
+  const isStripeBilled = organization.billingMode === 'stripe';
   const trialNotice = useMemo(
     () => getTrialNotice(organization.trialEndsAt, organization.status),
     [organization.trialEndsAt, organization.status],
@@ -406,7 +411,7 @@ function OrganisationDetailInner({
       await navigator.clipboard.writeText(url);
       toast.success('Invite link copied');
     } catch {
-      toast.error('Could not copy link — select and copy it below');
+      toast.error('Could not copy link. Select and copy it below');
     }
   }
 
@@ -666,80 +671,89 @@ function OrganisationDetailInner({
         ))}
       </section>
 
+      <OrgBillingPanel organizationId={organization.id} onBillingChanged={() => void refresh()} />
+
       <div className="admin-org-main-grid">
         <section id="admin-org-plan" className="admin-org-panel admin-org-panel--plan">
           <div className="admin-org-panel-header">
             <div>
               <h2 className="admin-org-panel-title">Plan &amp; trial</h2>
               <p className="admin-org-panel-copy">
-                Assign a plan, or put this organisation on a trial with a custom end date — for a
-                new trial, extending one, or moving an existing paid org onto one without disturbing
-                anything else.
+                {isStripeBilled
+                  ? 'This organisation is billed through Stripe, so its plan, renewal date and trial are managed by Stripe.'
+                  : 'Assign a plan, or put this organisation on a trial with a custom end date, for a new trial, extending one, or moving an existing paid org onto one without disturbing anything else.'}
               </p>
             </div>
           </div>
 
-          <form className="admin-org-form" onSubmit={handleSavePlan}>
-            {planError ? (
-              <p className="form-error" role="alert">
-                {planError}
-              </p>
-            ) : null}
+          {isStripeBilled ? (
+            <p className="admin-org-empty">
+              Use the Billing panel above to retry payments, grant discounts or cancel. Use the menu
+              at the top of the page to suspend or reactivate the organisation.
+            </p>
+          ) : (
+            <form className="admin-org-form" onSubmit={handleSavePlan}>
+              {planError ? (
+                <p className="form-error" role="alert">
+                  {planError}
+                </p>
+              ) : null}
 
-            <div className="admin-org-fields">
-              <label className="admin-org-field">
-                <span>Plan</span>
-                <select
-                  className="text-input"
-                  value={plan}
-                  onChange={(event) => setPlan(event.target.value as OrgPlan)}
-                  disabled={isSavingPlan}
-                >
-                  {PLAN_ORDER.map((planOption) => (
-                    <option key={planOption} value={planOption}>
-                      {PLAN_LABELS[planOption]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="admin-org-field">
-                <span>Status</span>
-                <select
-                  className="text-input"
-                  value={status}
-                  onChange={(event) => handleStatusChange(event.target.value as OrgStatus)}
-                  disabled={isSavingPlan}
-                >
-                  {(Object.keys(STATUS_LABELS) as OrgStatus[]).map((statusOption) => (
-                    <option key={statusOption} value={statusOption}>
-                      {STATUS_LABELS[statusOption]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="admin-org-field">
-                <span>Trial ends on</span>
-                <input
-                  className="text-input"
-                  type="date"
-                  value={trialEndsAt}
-                  onChange={(event) => setTrialEndsAt(event.target.value)}
-                  disabled={isSavingPlan || status !== 'trial'}
-                  required={status === 'trial'}
-                />
-              </label>
-            </div>
+              <div className="admin-org-fields">
+                <label className="admin-org-field">
+                  <span>Plan</span>
+                  <select
+                    className="text-input"
+                    value={plan}
+                    onChange={(event) => setPlan(event.target.value as OrgPlan)}
+                    disabled={isSavingPlan}
+                  >
+                    {PLAN_ORDER.map((planOption) => (
+                      <option key={planOption} value={planOption}>
+                        {PLAN_LABELS[planOption]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="admin-org-field">
+                  <span>Status</span>
+                  <select
+                    className="text-input"
+                    value={status}
+                    onChange={(event) => handleStatusChange(event.target.value as OrgStatus)}
+                    disabled={isSavingPlan}
+                  >
+                    {(Object.keys(STATUS_LABELS) as OrgStatus[]).map((statusOption) => (
+                      <option key={statusOption} value={statusOption}>
+                        {STATUS_LABELS[statusOption]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="admin-org-field">
+                  <span>Trial ends on</span>
+                  <input
+                    className="text-input"
+                    type="date"
+                    value={trialEndsAt}
+                    onChange={(event) => setTrialEndsAt(event.target.value)}
+                    disabled={isSavingPlan || status !== 'trial'}
+                    required={status === 'trial'}
+                  />
+                </label>
+              </div>
 
-            <div className="admin-org-form-actions">
-              <button
-                type="submit"
-                className="button button--dark"
-                disabled={isSavingPlan || !isPlanDirty}
-              >
-                {isSavingPlan ? 'Saving…' : 'Save changes'}
-              </button>
-            </div>
-          </form>
+              <div className="admin-org-form-actions">
+                <button
+                  type="submit"
+                  className="button button--dark"
+                  disabled={isSavingPlan || !isPlanDirty}
+                >
+                  {isSavingPlan ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </form>
+          )}
         </section>
 
         <section className="admin-org-panel admin-org-panel--people">

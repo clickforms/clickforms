@@ -96,9 +96,12 @@ export interface PlanPricing {
 }
 
 export const PLAN_PRICING: Record<OrgPlan, PlanPricing> = {
-  standard: { monthly: 82, annual: 72 },
-  business: { monthly: 129, annual: 109 },
-  professional: { monthly: 219, annual: 185 },
+  // All prices are AUD and GST-inclusive. `annual` is the effective per-month price when
+  // billed yearly: 10% off twelve months (see ANNUAL_DISCOUNT_PERCENT in lib/billing/config.ts,
+  // which also derives the charged annual totals, e.g. $82 -> $885.60 a year).
+  standard: { monthly: 82, annual: 73.8 },
+  business: { monthly: 129, annual: 116.1 },
+  professional: { monthly: 219, annual: 197.1 },
   enterprise: { monthly: null, annual: null },
 };
 
@@ -206,3 +209,45 @@ export function isTrialExpired(org: { status: OrgStatus; trialEndsAt: Date | nul
 // assertCanInviteUser, assertWithinStorageLimit, assertWithinSubmissionLimit,
 // assertOrgActionsAllowed) live in src/lib/admin/plan-enforcement.ts, not here — see the
 // comment at the top of this file for why.
+
+/** Price for display: whole dollars stay whole ("$82"), everything else shows cents ("$73.80"). */
+export function formatPrice(amount: number): string {
+  return Number.isInteger(amount) ? `${amount}` : amount.toFixed(2);
+}
+
+/** Which of the four usage bars would already be over `targetPlan`'s cap given current
+ * usage. Used to warn before a plan switch in the UI and to block a downgrade server-side
+ * (src/app/api/billing/change-plan). */
+export function computeOverLimitLabels(targetPlan: OrgPlan, usage: PlanUsage): string[] {
+  const limits = PLAN_LIMITS[targetPlan];
+  const labels: string[] = [];
+  if (limits.maxForms !== null && usage.forms > limits.maxForms) labels.push('Forms');
+  if (limits.maxUsers !== null && usage.users > limits.maxUsers) labels.push('Users');
+  if (limits.maxStorageBytes !== null && usage.storageBytes > limits.maxStorageBytes) {
+    labels.push('Storage');
+  }
+  if (
+    limits.maxSubmissionsPerMonth !== null &&
+    usage.submissionsThisMonth > limits.maxSubmissionsPerMonth
+  ) {
+    labels.push('Submissions this month');
+  }
+  return labels;
+}
+
+/** The four numeric limits of a plan as short display lines, e.g. "10 forms", "500 MB storage". */
+export function planLimitLines(plan: OrgPlan): string[] {
+  const limits = PLAN_LIMITS[plan];
+  return [
+    limits.maxForms === null ? 'Unlimited forms' : `${limits.maxForms} forms`,
+    limits.maxUsers === null
+      ? 'Unlimited users'
+      : `${limits.maxUsers} ${limits.maxUsers === 1 ? 'user' : 'users'}`,
+    limits.maxStorageBytes === null
+      ? 'Unlimited storage'
+      : `${formatBytes(limits.maxStorageBytes)} storage`,
+    limits.maxSubmissionsPerMonth === null
+      ? 'Unlimited submissions'
+      : `${limits.maxSubmissionsPerMonth.toLocaleString()} submissions a month`,
+  ];
+}

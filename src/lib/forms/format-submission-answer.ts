@@ -131,7 +131,7 @@ export function formatSubmissionAnswer(
         entries: answeredRows.map((row) => {
           const columnId = answer[row.id];
           const column = field.columns.find((c) => c.id === columnId);
-          return { row: row.label, column: column?.label ?? columnId ?? '—' };
+          return { row: row.label, column: column?.label ?? columnId ?? '-' };
         }),
       };
     }
@@ -180,7 +180,7 @@ export function formatSubmissionAnswer(
         type: QuestionRowAnswerType,
         options: { id: string; label: string }[] | undefined,
       ): string {
-        if (!raw) return '—';
+        if (!raw) return '-';
         if (type === 'dropdown') {
           return options?.find((o) => o.id === raw)?.label ?? raw;
         }

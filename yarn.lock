@@ -2610,6 +2610,7 @@ __metadata:
     resend: "npm:^6.28.0"
     server-only: "npm:^0.0.1"
     sharp: "npm:^0.35.4"
+    stripe: "npm:^23.1.0"
     tsx: "npm:^4.23.0"
     typescript: "npm:^6.0.0"
     vitest: "npm:^4.1.10"
@@ -4643,6 +4644,18 @@ __metadata:
   dependencies:
     ansi-regex: "npm:^6.2.2"
   checksum: 10c0/544d13b7582f8254811ea97db202f519e189e59d35740c46095897e254e4f1aa9fe1524a83ad6bc5ad67d4dd6c0281d2e0219ed62b880a6238a16a17d375f221
+  languageName: node
+  linkType: hard
+
+"stripe@npm:^23.1.0":
+  version: 23.1.0
+  resolution: "stripe@npm:23.1.0"
+  peerDependencies:
+    "@types/node": ">=20"
+  peerDependenciesMeta:
+    "@types/node":
+      optional: true
+  checksum: 10c0/9f17a0317824e499297efcf89e37cecdab456b019005efb54f62e3a932f59dc44663e8eac01cd04034c68d73d8748cc04d169308536c8098a273a3066b7caf4b
   languageName: node
   linkType: hard
 

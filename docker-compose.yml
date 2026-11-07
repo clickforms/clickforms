@@ -59,6 +59,13 @@ services:
       MESSAGEMEDIA_API_KEY: ${MESSAGEMEDIA_API_KEY:-}
       MESSAGEMEDIA_API_SECRET: ${MESSAGEMEDIA_API_SECRET:-}
       MESSAGEMEDIA_SENDER_ID: ${MESSAGEMEDIA_SENDER_ID:-}
+      # Stripe billing (specs/08-billing.md). Test keys in dev/staging, live keys in prod only.
+      # Unset = billing disabled (plan changes fall back to the free dev switch).
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_AUTOMATIC_TAX: ${STRIPE_AUTOMATIC_TAX:-}
+      STRIPE_GST_TAX_RATE_ID: ${STRIPE_GST_TAX_RATE_ID:-}
+      STRIPE_PORTAL_CONFIGURATION_ID: ${STRIPE_PORTAL_CONFIGURATION_ID:-}
     expose:
       - '3000'
     networks:

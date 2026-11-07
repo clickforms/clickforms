@@ -28,7 +28,7 @@ export const SOLUTIONS: Solution[] = [
     name: 'Online form builder',
     title: 'Online Form Builder Australia | Clickforms',
     description:
-      'Build professional online forms in minutes. Multi-page forms, conditional logic, e-signatures and file uploads — an Australian form builder with a 7-day free trial.',
+      'Build professional online forms in minutes. Multi-page forms, conditional logic, e-signatures and file uploads. An Australian form builder with a 7-day free trial.',
     keywords: [
       'online form builder',
       'form builder',
@@ -37,14 +37,14 @@ export const SOLUTIONS: Solution[] = [
     ],
     eyebrow: 'Online form builder',
     h1: 'The online form builder for forms that have to be right',
-    lead: 'Design branded, multi-page forms with a drag-and-drop builder, collect structured responses and signatures, and keep every submission searchable — hosted and supported in Australia.',
+    lead: 'Design branded, multi-page forms with a drag-and-drop builder, collect structured responses and signatures, and keep every submission searchable, hosted and supported in Australia.',
     sectionTitle: 'Everything you need to build and run online forms',
     sectionLead:
-      'Clickforms is a form builder for teams that collect detailed information — not just a contact box. Start free and publish your first form today.',
+      'Clickforms is a form builder for teams that collect detailed information, not just a contact box. Start free and publish your first form today.',
     features: [
       {
         title: '20+ field types',
-        body: 'Text, dates, dropdowns, tables, ratings, signatures, file uploads and more — all built in, no add-ons.',
+        body: 'Text, dates, dropdowns, tables, ratings, signatures, file uploads and more, all built in, no add-ons.',
       },
       {
         title: 'Conditional logic',
@@ -71,7 +71,7 @@ export const SOLUTIONS: Solution[] = [
       { title: 'Build', body: 'Add fields, pages and logic in the visual builder.' },
       {
         title: 'Publish',
-        body: 'Share one link — your form is live on your own organisation subdomain.',
+        body: 'Share one link and your form is live on your own organisation subdomain.',
       },
       { title: 'Collect', body: 'Responses arrive complete, timestamped and ready to review.' },
     ],
@@ -98,12 +98,12 @@ export const SOLUTIONS: Solution[] = [
   {
     slug: 'custom-forms',
     name: 'Custom forms',
-    title: 'Custom Forms Builder — Create Your Own Forms | Clickforms',
+    title: 'Custom Forms Builder: Create Your Own Forms | Clickforms',
     description:
       'Create custom forms that match your workflow and brand. Choose from 20+ field types, add conditional logic, signatures and approvals. Try Clickforms free for 7 days.',
     keywords: ['custom forms', 'custom form builder', 'create custom forms', 'build your own form'],
     eyebrow: 'Custom forms',
-    h1: 'Create custom forms that fit your workflow — not the other way around',
+    h1: 'Create custom forms that fit your workflow, not the other way around',
     lead: 'Start from a blank canvas or a ready-made category, then shape every field, page and rule to match how your organisation actually works.',
     sectionTitle: 'Fully custom, without any code',
     sectionLead:
@@ -160,7 +160,7 @@ export const SOLUTIONS: Solution[] = [
     name: 'Intake forms',
     title: 'Online Client Intake Forms | Clickforms',
     description:
-      'Collect client intake information online — demographics, referrals and consent in one guided form. Conditional logic, e-signatures and secure storage. Free 7-day trial.',
+      'Collect client intake information online: demographics, referrals and consent in one guided form. Conditional logic, e-signatures and secure storage. Free 7-day trial.',
     keywords: [
       'intake forms',
       'client intake form',
@@ -169,7 +169,7 @@ export const SOLUTIONS: Solution[] = [
       'new client form',
     ],
     eyebrow: 'Intake forms',
-    h1: 'Client intake forms that arrive complete — not as scattered PDFs',
+    h1: 'Client intake forms that arrive complete, not as scattered PDFs',
     lead: 'Capture demographics, referral details, supporting documents and consent in a single guided form, so new clients are fully onboarded before their first appointment.',
     sectionTitle: 'Online intake forms built for detail-heavy onboarding',
     sectionLead:
@@ -235,14 +235,14 @@ export const SOLUTIONS: Solution[] = [
     ],
     eyebrow: 'Consent forms',
     h1: 'Online consent forms with e-signatures you can stand behind',
-    lead: 'Collect informed consent digitally — branded to your organisation, recorded with a timestamp and ready to produce whenever you are asked for it.',
+    lead: 'Collect informed consent digitally, branded to your organisation, recorded with a timestamp and ready to produce whenever you are asked for it.',
     sectionTitle: 'Digital consent without the paper trail',
     sectionLead:
       'Move consent off printed pages and inboxes into a form that records exactly what was agreed, by whom and when.',
     features: [
       {
         title: 'E-signature capture',
-        body: 'Signatures are a built-in field — drawn on any device.',
+        body: 'Signatures are a built-in field, drawn on any device.',
       },
       {
         title: 'Clause-level logic',
@@ -277,7 +277,7 @@ export const SOLUTIONS: Solution[] = [
   {
     slug: 'e-signature-forms',
     name: 'E-signature forms',
-    title: 'E-Signature Forms — Collect Signatures Online | Clickforms',
+    title: 'E-Signature Forms: Collect Signatures Online | Clickforms',
     description:
       'Collect electronic signatures inside your online forms. Sign on any device, store with each submission and export to PDF. Try Clickforms free for 7 days.',
     keywords: [
@@ -291,7 +291,7 @@ export const SOLUTIONS: Solution[] = [
     lead: 'No separate signing tool. Add a signature field to any form and collect signed submissions from any device.',
     sectionTitle: 'Signatures built into your forms',
     sectionLead:
-      'Signing is part of the form, not an extra step — so the signature, the answers and the timestamp always stay together.',
+      'Signing is part of the form, not an extra step, so the signature, the answers and the timestamp always stay together.',
     features: [
       { title: 'Sign on any device', body: 'Draw a signature with a finger, stylus or mouse.' },
       {
@@ -340,7 +340,7 @@ export const SOLUTIONS: Solution[] = [
     ],
     eyebrow: 'Service agreements',
     h1: 'Service agreement forms clients can review and sign online',
-    lead: 'Turn multi-page service agreements into a form that clients read, complete, sign and return from any device — no printing, no scanning.',
+    lead: 'Turn multi-page service agreements into a form that clients read, complete, sign and return from any device, no printing, no scanning.',
     sectionTitle: 'Agreements that get completed the first time',
     sectionLead:
       'Guided pages, required fields and built-in signatures mean fewer follow-ups and fewer incomplete agreements.',
@@ -381,7 +381,7 @@ export const SOLUTIONS: Solution[] = [
   {
     slug: 'ndis-forms',
     name: 'NDIS forms',
-    title: 'NDIS Forms Online — Intake, Consent & Agreements | Clickforms',
+    title: 'NDIS Forms Online: Intake, Consent & Agreements | Clickforms',
     description:
       'Online forms for NDIS providers: participant intake, service agreements, consent and incident reports with e-signatures and audit trails. Australian-hosted.',
     keywords: [
@@ -393,7 +393,7 @@ export const SOLUTIONS: Solution[] = [
     ],
     eyebrow: 'NDIS forms',
     h1: 'NDIS forms online: intake, service agreements, consent and incident reports',
-    lead: 'Give participants one clear place to complete paperwork, and give your team structured, signed, audit-ready records — hosted and supported in Australia.',
+    lead: 'Give participants one clear place to complete paperwork, and give your team structured, signed, audit-ready records, hosted and supported in Australia.',
     sectionTitle: 'Built for providers who run a lot of forms',
     sectionLead:
       'NDIS providers handle intake, agreements, consent and reporting every day. Clickforms keeps all of it consistent, searchable and traceable.',

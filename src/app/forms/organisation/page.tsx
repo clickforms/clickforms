@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { OrganisationDetailsClient } from '@/app/forms/organisation/organisation-details-client';
-import { startOfCurrentMonth } from '@/lib/admin/plan-limits';
 import { authOptions } from '@/lib/auth';
+import { syncAfterCheckout } from '@/lib/billing/checkout-sync';
+import { loadBillingInfo } from '@/lib/billing/info';
+import { isStripeConfigured } from '@/lib/billing/stripe';
+import { getOrgPlanUsage } from '@/lib/billing/usage';
 import { withOrgContext } from '@/lib/db';
 import { parsePreheader } from '@/lib/org-preheader';
 import { createPresignedDownloadUrl } from '@/lib/s3';
@@ -10,7 +13,13 @@ import { requireOrganizationId } from '@/lib/session';
 import { buildOrgOrigin } from '@/lib/tenant';
 import { canManageUsers } from '@/lib/user-roles';
 
-export default async function OrganisationSettingsPage() {
+interface OrganisationSettingsPageProps {
+  searchParams: Promise<{ billing?: string; session_id?: string }>;
+}
+
+export default async function OrganisationSettingsPage({
+  searchParams,
+}: OrganisationSettingsPageProps) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     redirect('/login');
@@ -29,58 +38,47 @@ export default async function OrganisationSettingsPage() {
     redirect('/admin');
   }
 
-  const { organization, usage } = await withOrgContext(session.user.organizationId, async (tx) => {
-    const orgId = requireOrganizationId(session);
-    const org = await tx.organization.findFirstOrThrow({
-      where: { id: orgId },
-      select: {
-        id: true,
-        name: true,
-        subdomain: true,
-        abn: true,
-        contactName: true,
-        contactEmail: true,
-        contactPhone: true,
-        notificationEmail: true,
-        logoStorageKey: true,
-        preheader: true,
-        plan: true,
-        status: true,
-        trialEndsAt: true,
-        renewsAt: true,
-      },
-    });
+  // Back from Stripe Checkout: make sure the new subscription is recorded before we render, so
+  // the page shows the plan they just bought even if the webhook is a few seconds behind.
+  const query = await searchParams;
+  if (query.billing === 'success' && query.session_id && isStripeConfigured()) {
+    await syncAfterCheckout(session.user.organizationId, query.session_id);
+  }
 
-    // Same four numbers /admin/billing shows for this org, computed the same way
-    // (buildUsageBars in plan-limits.ts) — an org admin sees exactly what a platform
-    // admin would see for them, not a separately-derived approximation.
-    const [formCount, userCount, orgFileSum, submissionFileSum, submissionCount] =
-      await Promise.all([
-        tx.form.count({ where: { organizationId: orgId } }),
-        tx.user.count({ where: { organizationId: orgId } }),
-        tx.organizationFile.aggregate({
-          where: { organizationId: orgId },
-          _sum: { sizeBytes: true },
-        }),
-        tx.submissionFile.aggregate({
-          where: { organizationId: orgId },
-          _sum: { sizeBytes: true },
-        }),
-        tx.submission.count({
-          where: { organizationId: orgId, submittedAt: { gte: startOfCurrentMonth() } },
-        }),
-      ]);
+  const { organization, usage, billing } = await withOrgContext(
+    session.user.organizationId,
+    async (tx) => {
+      const orgId = requireOrganizationId(session);
+      const org = await tx.organization.findFirstOrThrow({
+        where: { id: orgId },
+        select: {
+          id: true,
+          name: true,
+          subdomain: true,
+          abn: true,
+          contactName: true,
+          contactEmail: true,
+          contactPhone: true,
+          notificationEmail: true,
+          logoStorageKey: true,
+          preheader: true,
+          plan: true,
+          status: true,
+          trialEndsAt: true,
+          renewsAt: true,
+        },
+      });
 
-    return {
-      organization: org,
-      usage: {
-        forms: formCount,
-        users: userCount,
-        storageBytes: (orgFileSum._sum.sizeBytes ?? 0) + (submissionFileSum._sum.sizeBytes ?? 0),
-        submissionsThisMonth: submissionCount,
-      },
-    };
-  });
+      // Same four numbers /admin/billing shows for this org, computed the same way
+      // (buildUsageBars in plan-limits.ts) — an org admin sees exactly what a platform
+      // admin would see for them, not a separately-derived approximation.
+      return {
+        organization: org,
+        usage: await getOrgPlanUsage(tx, orgId),
+        billing: await loadBillingInfo(tx, orgId),
+      };
+    },
+  );
 
   let logoUrl: string | null = null;
   if (organization.logoStorageKey) {
@@ -131,6 +129,7 @@ export default async function OrganisationSettingsPage() {
         trialEndsAt: organization.trialEndsAt?.toISOString() ?? null,
         renewsAt: organization.renewsAt?.toISOString() ?? null,
         usage,
+        billing,
       }}
       publicOrigin={buildOrgOrigin(organization.subdomain)}
     />

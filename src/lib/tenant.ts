@@ -45,6 +45,25 @@ export function buildOrgOrigin(subdomain: string): string {
   return `${protocol}://${subdomain}.${rootDomain}`;
 }
 
+/**
+ * Origin to send someone back to after an external flow (Stripe Checkout or the billing
+ * portal): the host they made the request from, so their session cookie (host-only, per
+ * subdomain) is still valid when they return. Only hosts under ROOT_DOMAIN are accepted (a
+ * forged Host header can't redirect anywhere else); otherwise falls back to the org's
+ * subdomain origin.
+ */
+export function resolveReturnOrigin(request: Request, subdomain: string): string {
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  const rootHost = (process.env.ROOT_DOMAIN ?? 'localhost:3000').split(':')[0] ?? 'localhost';
+  if (host) {
+    const hostname = host.split(':')[0] ?? '';
+    if (hostname === rootHost || hostname.endsWith(`.${rootHost}`)) {
+      return `${rootHost === 'localhost' ? 'http' : 'https'}://${host}`;
+    }
+  }
+  return buildOrgOrigin(subdomain);
+}
+
 /** Builds an absolute public form URL on an org's subdomain, e.g. buildOrgFormUrl("carecircle", "intake-form") -> "https://carecircle.clickforms.com.au/f/intake-form". */
 export function buildOrgFormUrl(subdomain: string, path: string): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;

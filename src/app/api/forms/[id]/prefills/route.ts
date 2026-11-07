@@ -125,7 +125,7 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
       });
       if (recent + targets.length > SEND_RATE_LIMIT) {
         throw new InvalidRequestError(
-          "You've sent a lot of these recently — please wait a bit before sending more.",
+          "You've sent a lot of these recently. Please wait a bit before sending more.",
         );
       }
 

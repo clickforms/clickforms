@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
+import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
 import { requirePlatformAdmin, requireSession } from '@/lib/session';
@@ -50,6 +50,7 @@ const ORG_DETAIL_SELECT = {
   contactPhone: true,
   plan: true,
   status: true,
+  billingMode: true,
   trialEndsAt: true,
   renewsAt: true,
   createdAt: true,
@@ -122,6 +123,27 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
     const organization = await withOrgContext(id, async (tx) => {
       const existing = await tx.organization.findUnique({ where: { id } });
       if (!existing) throw new NotFoundError('Organization');
+
+      // Stripe is the source of truth for plan, renewal and payment state of a subscribed
+      // organisation. Hand edits would be overwritten by the next webhook (or worse, leave
+      // the customer billed for a plan they don't have), so refuse them. Suspending and
+      // reactivating stay available.
+      if (existing.billingMode === 'stripe') {
+        if (body.plan !== undefined && body.plan !== existing.plan) {
+          throw new InvalidRequestError(
+            'This organisation is billed through Stripe. Change its plan from the billing panel.',
+          );
+        }
+        if (
+          body.status === 'trial' ||
+          body.trialEndsAt !== undefined ||
+          body.renewsAt !== undefined
+        ) {
+          throw new InvalidRequestError(
+            'Trial and renewal dates are managed by Stripe for this organisation.',
+          );
+        }
+      }
 
       const updated = await tx.organization.update({
         where: { id },

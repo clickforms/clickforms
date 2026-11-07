@@ -8,53 +8,53 @@ import { useMemo, useState } from 'react';
 import type { OrganizationPlanInfo } from '@/app/forms/organisation/organisation-details-client';
 import { useToast } from '@/components/toast';
 import {
+  computeOverLimitLabels,
   formatBytes,
+  formatPrice,
   PLAN_FEATURE_PILLS,
   PLAN_LABELS,
   PLAN_LIMITS,
   PLAN_ORDER,
   PLAN_PRICING,
-  type PlanUsage,
+  planLimitLines,
 } from '@/lib/admin/plan-limits';
+import { annualTotalCents } from '@/lib/billing/config';
 import { readApiError } from '@/lib/error-message';
 
-/** Which of the four usage bars would already be over `targetPlan`'s cap given current
- * usage — advisory only, shown as a warning before a self-service plan switch: the
- * switch itself is never blocked by this, since an org that's over-limit from an
- * admin-assigned downgrade is already a normal, supported state (see
- * assertOrgActionsAllowed's siblings in plan-enforcement.ts, which only stop the *next*
- * create/invite/upload, not existing data). Moved here from organisation-details-
- * client.tsx along with the rest of the plan grid — see page.tsx's comment for why. */
-function computeOverLimitLabels(targetPlan: OrgPlan, usage: PlanUsage): string[] {
-  const limits = PLAN_LIMITS[targetPlan];
-  const labels: string[] = [];
-  if (limits.maxForms !== null && usage.forms > limits.maxForms) labels.push('Forms');
-  if (limits.maxUsers !== null && usage.users > limits.maxUsers) labels.push('Users');
-  if (limits.maxStorageBytes !== null && usage.storageBytes > limits.maxStorageBytes) {
-    labels.push('Storage');
-  }
-  if (
-    limits.maxSubmissionsPerMonth !== null &&
-    usage.submissionsThisMonth > limits.maxSubmissionsPerMonth
-  ) {
-    labels.push('Submissions this month');
-  }
-  return labels;
-}
-
-function planLimitLines(plan: OrgPlan): string[] {
-  const limits = PLAN_LIMITS[plan];
-  return [
-    limits.maxForms === null ? 'Unlimited forms' : `${limits.maxForms} forms`,
-    limits.maxUsers === null ? 'Unlimited users' : `${limits.maxUsers} users`,
-    limits.maxStorageBytes === null
-      ? 'Unlimited storage'
-      : `${formatBytes(limits.maxStorageBytes)} storage`,
-    limits.maxSubmissionsPerMonth === null
-      ? 'Unlimited submissions'
-      : `${limits.maxSubmissionsPerMonth.toLocaleString()} submissions / mo`,
-  ];
-}
+const COMPARE_ROWS: { label: string; value: (plan: OrgPlan) => string | boolean }[] = [
+  {
+    label: 'Forms',
+    value: (plan) => {
+      const max = PLAN_LIMITS[plan].maxForms;
+      return max === null ? 'Unlimited' : String(max);
+    },
+  },
+  {
+    label: 'Users',
+    value: (plan) => {
+      const max = PLAN_LIMITS[plan].maxUsers;
+      return max === null ? 'Unlimited' : String(max);
+    },
+  },
+  {
+    label: 'Storage',
+    value: (plan) => {
+      const max = PLAN_LIMITS[plan].maxStorageBytes;
+      return max === null ? 'Unlimited' : formatBytes(max);
+    },
+  },
+  {
+    label: 'Submissions a month',
+    value: (plan) => {
+      const max = PLAN_LIMITS[plan].maxSubmissionsPerMonth;
+      return max === null ? 'Unlimited' : max.toLocaleString();
+    },
+  },
+  ...PLAN_FEATURE_PILLS.map((feature) => ({
+    label: feature.label,
+    value: (plan: OrgPlan) => PLAN_LIMITS[plan][feature.key],
+  })),
+];
 
 function CheckIcon() {
   return (
@@ -86,9 +86,14 @@ function BackArrowIcon() {
 
 interface ChangePlanClientProps {
   planInfo: OrganizationPlanInfo;
+  /** Billing interval to preselect (from ?interval=), if the link asked for one. */
+  initialInterval: 'month' | 'year' | null;
 }
 
-export function ChangePlanClient({ planInfo: initialPlanInfo }: ChangePlanClientProps) {
+export function ChangePlanClient({
+  planInfo: initialPlanInfo,
+  initialInterval,
+}: ChangePlanClientProps) {
   const router = useRouter();
   const toast = useToast();
   const [planInfo, setPlanInfo] = useState(initialPlanInfo);
@@ -98,13 +103,71 @@ export function ChangePlanClient({ planInfo: initialPlanInfo }: ChangePlanClient
   // Preview-only — doesn't affect which plan gets saved, just which of the two prices
   // PLAN_PRICING has for each tier is shown on the cards below (mirrors the public
   // /pricing page's toggle, see landing-pricing.tsx).
-  const [billingAnnual, setBillingAnnual] = useState(true);
+  const [billingAnnual, setBillingAnnual] = useState(
+    initialInterval
+      ? initialInterval === 'year'
+      : initialPlanInfo.billing.subscription
+        ? initialPlanInfo.billing.subscription.interval === 'year'
+        : true,
+  );
+  const { billing } = planInfo;
+  const useStripe = billing.stripeEnabled;
+  // A subscription that is still usable: changing plan edits it. Without one (trial, or a
+  // lapsed subscription) the customer goes through Checkout instead.
+  const hasLiveSubscription =
+    useStripe && billing.subscription !== null && billing.access !== 'read_only';
+  const interval = billingAnnual ? 'year' : 'month';
+  const unchanged =
+    selectedPlan === planInfo.plan &&
+    (hasLiveSubscription
+      ? billing.subscription?.interval === interval
+      : planInfo.status !== 'trial');
   const overLimitLabels = useMemo(
     () => computeOverLimitLabels(selectedPlan, planInfo.usage),
     [selectedPlan, planInfo.usage],
   );
 
+  async function handleStripePlanChange() {
+    if (selectedPlan === 'enterprise') {
+      router.push('/contact');
+      return;
+    }
+    setPlanChangeError(null);
+    setIsChangingPlan(true);
+    try {
+      const res = await fetch(
+        hasLiveSubscription ? '/api/billing/change-plan' : '/api/billing/checkout',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: selectedPlan, interval }),
+        },
+      );
+      if (!res.ok) {
+        setPlanChangeError(await readApiError(res, 'Could not change plan'));
+        return;
+      }
+      if (hasLiveSubscription) {
+        toast.success(`Switched to the ${PLAN_LABELS[selectedPlan]} plan`);
+        router.push('/forms/organisation?tab=billing');
+        router.refresh();
+        return;
+      }
+      const data: { url: string } = await res.json();
+      // Stripe-hosted Checkout takes over from here and returns to this page.
+      window.location.href = data.url;
+    } catch {
+      setPlanChangeError('Something went wrong. Please try again.');
+    } finally {
+      setIsChangingPlan(false);
+    }
+  }
+
   async function handleChangePlan() {
+    if (useStripe) {
+      await handleStripePlanChange();
+      return;
+    }
     setPlanChangeError(null);
     setIsChangingPlan(true);
     try {
@@ -136,20 +199,30 @@ export function ChangePlanClient({ planInfo: initialPlanInfo }: ChangePlanClient
     }
   }
 
+  const ctaLabel = isChangingPlan
+    ? useStripe && !hasLiveSubscription
+      ? 'Opening checkout…'
+      : 'Updating…'
+    : selectedPlan === 'enterprise' && useStripe
+      ? 'Contact us'
+      : useStripe && !hasLiveSubscription
+        ? `Subscribe to ${PLAN_LABELS[selectedPlan]}`
+        : unchanged
+          ? 'Current plan'
+          : selectedPlan === planInfo.plan
+            ? `Switch to ${billingAnnual ? 'annual' : 'monthly'} billing`
+            : `Switch to ${PLAN_LABELS[selectedPlan]}`;
+
   return (
-    <div className="org-settings org-ws">
-      <header className="org-settings-header">
-        <div>
-          <Link href="/forms/organisation?tab=billing" className="org-plan-back-link">
-            <BackArrowIcon />
-            Billing
-          </Link>
-          <h1 className="org-settings-title">Change plan</h1>
-          <p className="org-settings-lead">
-            You&apos;re currently on {PLAN_LABELS[planInfo.plan]}. Select a tier, then confirm —
-            existing data is never deleted.
-          </p>
-        </div>
+    <div className="org-settings org-ws pl">
+      <Link href="/forms/organisation?tab=billing" className="org-plan-back-link">
+        <BackArrowIcon />
+        Billing
+      </Link>
+
+      <header className="pl-header">
+        <h1 className="pl-title">Choose your plan</h1>
+        <p className="pl-lead">Change any time. Your data is never deleted.</p>
         <div className="org-plan-toggle">
           <button
             type="button"
@@ -166,104 +239,144 @@ export function ChangePlanClient({ planInfo: initialPlanInfo }: ChangePlanClient
             onClick={() => setBillingAnnual(true)}
           >
             Annual
-            <span className="org-plan-toggle-save">Save ~15%</span>
+            <span className="org-plan-toggle-save">Save 10%</span>
           </button>
         </div>
       </header>
 
-      <section className="org-panel org-panel--wide">
-        {planChangeError ? (
-          <p className="form-error org-settings-error" role="alert">
-            {planChangeError}
-          </p>
-        ) : null}
-        <div className="org-plan-grid">
-          {PLAN_ORDER.map((planOption) => {
-            const current = planOption === planInfo.plan;
-            const selected = planOption === selectedPlan;
-            const price = billingAnnual
-              ? PLAN_PRICING[planOption].annual
-              : PLAN_PRICING[planOption].monthly;
-            return (
-              <button
-                key={planOption}
-                type="button"
-                className={`org-plan-card${selected ? ' org-plan-card--selected' : ''}${current ? ' org-plan-card--current' : ''}`}
-                onClick={() => setSelectedPlan(planOption)}
-                disabled={isChangingPlan}
-                aria-pressed={selected}
-              >
-                <span className="org-plan-card-top">
-                  <span className="org-plan-card-name">{PLAN_LABELS[planOption]}</span>
-                  {current ? <span className="org-plan-card-badge">Current</span> : null}
-                </span>
-                <span className="org-plan-card-price">
-                  {price === null ? (
-                    'Custom'
-                  ) : (
-                    <>
-                      ${price}
-                      <span className="org-plan-card-period"> / mo</span>
-                    </>
-                  )}
-                </span>
-                {price !== null ? (
-                  <p className="org-plan-card-billing-note">
-                    {billingAnnual ? 'billed annually' : 'billed monthly'}
-                  </p>
-                ) : null}
-                <ul className="org-plan-card-limits">
-                  {planLimitLines(planOption).map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-                <ul className="org-plan-card-features">
-                  {PLAN_FEATURE_PILLS.map((feature) => {
-                    const on = PLAN_LIMITS[planOption][feature.key];
+      {planChangeError ? (
+        <p className="form-error org-settings-error" role="alert">
+          {planChangeError}
+        </p>
+      ) : null}
+
+      <div className="pl-grid">
+        {PLAN_ORDER.map((planOption) => {
+          const current = planOption === planInfo.plan;
+          const selected = planOption === selectedPlan;
+          const price = billingAnnual
+            ? PLAN_PRICING[planOption].annual
+            : PLAN_PRICING[planOption].monthly;
+          const monthlyPrice = PLAN_PRICING[planOption].monthly;
+          const annualTotal =
+            billingAnnual && monthlyPrice !== null ? annualTotalCents(monthlyPrice) / 100 : null;
+          return (
+            <button
+              key={planOption}
+              type="button"
+              className={`pl-card${selected ? ' pl-card--selected' : ''}`}
+              onClick={() => setSelectedPlan(planOption)}
+              disabled={isChangingPlan}
+              aria-pressed={selected}
+            >
+              <span className="pl-card-top">
+                <span className="pl-card-name">{PLAN_LABELS[planOption]}</span>
+                {current ? <span className="pl-card-badge">Current</span> : null}
+              </span>
+              <span className="pl-card-price">
+                {price === null ? (
+                  'Custom'
+                ) : (
+                  <>
+                    ${formatPrice(price)}
+                    <span className="pl-card-period"> /month</span>
+                  </>
+                )}
+              </span>
+              <span className="pl-card-note">
+                {price === null
+                  ? 'Tailored to your needs'
+                  : annualTotal !== null
+                    ? `$${formatPrice(annualTotal)} billed yearly`
+                    : 'Billed monthly'}
+              </span>
+              <ul className="pl-card-list">
+                {planLimitLines(planOption).map((line) => (
+                  <li key={line}>
+                    <CheckIcon />
+                    {line}
+                  </li>
+                ))}
+              </ul>
+              <span className="pl-card-cta">
+                {current ? 'Current plan' : selected ? 'Selected' : 'Select plan'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedPlan !== planInfo.plan && overLimitLabels.length > 0 ? (
+        <p className="org-plan-warning">
+          Switching to {PLAN_LABELS[selectedPlan]} would put you over its limit on{' '}
+          {overLimitLabels.join(', ')}. Your data is safe, but you won&apos;t be able to add more
+          there until you&apos;re back under the limit.
+        </p>
+      ) : null}
+
+      <section className="pl-compare-wrap" aria-label="Compare features">
+        <h2 className="pl-compare-title">Compare features</h2>
+        <div className="pl-compare-scroll">
+          <table className="pl-compare">
+            <thead>
+              <tr>
+                <th aria-label="Feature" />
+                {PLAN_ORDER.map((planOption) => (
+                  <th
+                    key={planOption}
+                    className={planOption === selectedPlan ? 'pl-col--selected' : undefined}
+                  >
+                    {PLAN_LABELS[planOption]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARE_ROWS.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row">{row.label}</th>
+                  {PLAN_ORDER.map((planOption) => {
+                    const value = row.value(planOption);
                     return (
-                      <li
-                        key={feature.key}
-                        className={on ? 'org-plan-card-feature--on' : 'org-plan-card-feature--off'}
+                      <td
+                        key={planOption}
+                        className={planOption === selectedPlan ? 'pl-col--selected' : undefined}
                       >
-                        {on ? <CheckIcon /> : null}
-                        {feature.label}
-                      </li>
+                        {value === true ? (
+                          <span className="pl-yes">
+                            <CheckIcon />
+                          </span>
+                        ) : value === false ? (
+                          <span className="pl-no">-</span>
+                        ) : (
+                          value
+                        )}
+                      </td>
                     );
                   })}
-                </ul>
-              </button>
-            );
-          })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        {selectedPlan !== planInfo.plan && overLimitLabels.length > 0 ? (
-          <p className="org-plan-warning">
-            Switching to {PLAN_LABELS[selectedPlan]} would put you over its limit on{' '}
-            {overLimitLabels.join(', ')}. Existing data is safe — you just won&apos;t be able to add
-            more there until you&apos;re back under the limit.
-          </p>
-        ) : null}
-        <div className="org-plan-confirm">
+      </section>
+
+      <div className="pl-confirm">
+        <p className="org-plan-gst-note">All prices are in AUD and include GST.</p>
+        <div className="pl-confirm-actions">
           <Link href="/forms/organisation?tab=billing" className="button button--ghost">
             Cancel
           </Link>
           <button
             type="button"
             className="button org-button-primary"
-            disabled={
-              isChangingPlan || (selectedPlan === planInfo.plan && planInfo.status !== 'trial')
-            }
+            disabled={isChangingPlan || (unchanged && !(useStripe && !hasLiveSubscription))}
             onClick={() => void handleChangePlan()}
           >
-            {isChangingPlan
-              ? 'Updating…'
-              : selectedPlan === planInfo.plan
-                ? planInfo.status === 'trial'
-                  ? 'Subscribe'
-                  : 'Current plan'
-                : `Switch to ${PLAN_LABELS[selectedPlan]}`}
+            {ctaLabel}
           </button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

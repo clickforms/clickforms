@@ -17,5 +17,5 @@ export const PLATFORM_ADMIN_ROLE_LABELS: Record<PlatformAdminRole, string> = {
 // read-only restriction is follow-up work, not yet wired into any /admin route.
 export const PLATFORM_ADMIN_ROLE_DESCRIPTIONS: Record<PlatformAdminRole, string> = {
   super_admin: 'Full access to every organisation, billing, and the Team page itself.',
-  support: 'Intended for support scenarios. Not yet access-restricted — full access today.',
+  support: 'Intended for support scenarios. Not yet access-restricted. Full access today.',
 };

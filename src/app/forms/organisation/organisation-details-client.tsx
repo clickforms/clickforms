@@ -1,7 +1,6 @@
 'use client';
 
 import type { OrgPlan, OrgStatus } from '@prisma/client';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   type ChangeEvent,
@@ -14,14 +13,15 @@ import {
 } from 'react';
 import { ImageCropEditor } from '@/app/forms/[id]/builder/image-crop-editor';
 import { useToast } from '@/components/toast';
-import { buildUsageBars, PLAN_LABELS, type PlanUsage } from '@/lib/admin/plan-limits';
+import { PLAN_LABELS, type PlanUsage } from '@/lib/admin/plan-limits';
+import type { BillingInfo } from '@/lib/billing/types';
 import { getErrorMessage, readApiError } from '@/lib/error-message';
 import { isCroppableImage } from '@/lib/forms/crop-image';
 import type { OrgPreheader } from '@/lib/org-preheader';
+import { BillingTab } from './billing-tab';
 import { HelpTip } from './help-tip';
 import { PreheaderPanel } from './preheader-panel';
 import './organisation.css';
-import { formatShortDate } from '@/lib/format-date';
 
 /** Keep in sync with MAX_LOGO_SIZE_BYTES / the logo MIME allowlist in src/lib/s3.ts —
  * not imported from there because that module is `server-only` (mirrors the same
@@ -52,6 +52,7 @@ export interface OrganizationPlanInfo {
   trialEndsAt: string | null;
   renewsAt: string | null;
   usage: PlanUsage;
+  billing: BillingInfo;
 }
 
 interface OrganisationDetailsClientProps {
@@ -66,20 +67,6 @@ const TAB_LEADS: Record<'general' | 'system' | 'billing', string> = {
   system: 'Response notifications and the header shown at the top of new forms.',
   billing: 'Your current plan, renewal date and what you’ve used this month.',
 };
-
-function formatPlanDate(iso: string): string {
-  return formatShortDate(`${iso.slice(0, 10)}T00:00:00.000Z`);
-}
-
-/** Calendar days from today to `iso`, using the date portion only so a trial set for
- * today is "0" (ends today) rather than "1" from leftover hours until midnight. */
-function daysUntil(iso: string): number {
-  const now = new Date();
-  const [year, month, day] = iso.slice(0, 10).split('-').map(Number);
-  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const targetUtc = Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
-  return Math.round((targetUtc - todayUtc) / (24 * 60 * 60 * 1000));
-}
 
 function orgInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -500,7 +487,6 @@ export function OrganisationDetailsClient({
     setError(null);
   }
 
-  const trialDays = planInfo.trialEndsAt ? daysUntil(planInfo.trialEndsAt) : 0;
   const statusLabel =
     planInfo.status === 'trial'
       ? 'Trial'
@@ -542,7 +528,11 @@ export function OrganisationDetailsClient({
 
       <div className="org-ws-content">
         {activeTab === 'general' || activeTab === 'system' ? (
-          <form id="org-general-form" className="org-settings-stack" onSubmit={handleSubmit}>
+          <form
+            id="org-general-form"
+            className="org-settings-stack org-tab-compact"
+            onSubmit={handleSubmit}
+          >
             {error ? (
               <p className="form-error org-settings-error" role="alert">
                 {error}
@@ -708,7 +698,7 @@ export function OrganisationDetailsClient({
                 </div>
 
                 <div className={`org-savebar${isDirty ? ' org-savebar--dirty' : ''}`}>
-                  <p>{isDirty ? 'You have unsaved changes' : 'All changes saved'}</p>
+                  {isDirty ? <p>You have unsaved changes</p> : null}
                   <div className="org-savebar-actions">
                     {isDirty ? (
                       <button
@@ -765,30 +755,28 @@ export function OrganisationDetailsClient({
                     </Row>
                   ) : null}
                 </Section>
-                {isDirty ? (
-                  <div className={`org-savebar${isDirty ? ' org-savebar--dirty' : ''}`}>
-                    <p>{isDirty ? 'You have unsaved changes' : 'All changes saved'}</p>
-                    <div className="org-savebar-actions">
-                      {isDirty ? (
-                        <button
-                          type="button"
-                          className="button button--ghost button--small"
-                          disabled={isSaving}
-                          onClick={discardChanges}
-                        >
-                          Discard
-                        </button>
-                      ) : null}
+                <div className={`org-savebar${isDirty ? ' org-savebar--dirty' : ''}`}>
+                  {isDirty ? <p>You have unsaved changes</p> : null}
+                  <div className="org-savebar-actions">
+                    {isDirty ? (
                       <button
-                        type="submit"
-                        className="button button--small org-button-primary"
-                        disabled={isSaving || !isDirty}
+                        type="button"
+                        className="button button--ghost button--small"
+                        disabled={isSaving}
+                        onClick={discardChanges}
                       >
-                        {isSaving ? 'Saving…' : 'Save changes'}
+                        Discard
                       </button>
-                    </div>
+                    ) : null}
+                    <button
+                      type="submit"
+                      className="button button--small org-button-primary"
+                      disabled={isSaving || !isDirty}
+                    >
+                      {isSaving ? 'Saving…' : 'Save changes'}
+                    </button>
                   </div>
-                ) : null}
+                </div>
                 <PreheaderPanel
                   orgName={name.trim() || initialOrganization.name}
                   orgLogoUrl={logoUrl}
@@ -800,107 +788,7 @@ export function OrganisationDetailsClient({
           </form>
         ) : null}
 
-        {activeTab === 'billing' ? (
-          <div className="org-settings-stack">
-            {planInfo.status !== 'active' ? (
-              <div
-                className={`org-banner${planInfo.status === 'suspended' ? ' org-banner--danger' : ' org-banner--warning'}`}
-                role="status"
-              >
-                <div>
-                  <p className="org-banner-title">
-                    {planInfo.status === 'trial'
-                      ? trialDays > 0
-                        ? `Trial ends in ${trialDays} day${trialDays === 1 ? '' : 's'}`
-                        : trialDays === 0
-                          ? 'Trial ends today'
-                          : 'Trial ended'
-                      : 'Organisation suspended'}
-                  </p>
-                  <p className="org-banner-body">
-                    {planInfo.status === 'trial' && planInfo.trialEndsAt ? (
-                      trialDays >= 0 ? (
-                        <>
-                          Pick a plan before {formatPlanDate(planInfo.trialEndsAt)} to keep using
-                          Clickforms without interruption.
-                        </>
-                      ) : (
-                        <>
-                          Your trial ended on {formatPlanDate(planInfo.trialEndsAt)}. Choose a plan
-                          below to continue — sign-in is paused until then.
-                        </>
-                      )
-                    ) : (
-                      'This organisation is suspended. Contact us to reactivate it.'
-                    )}
-                  </p>
-                </div>
-                {planInfo.status === 'suspended' ? (
-                  <Link href="/contact" className="button button--dark button--small">
-                    Contact us
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
-
-            <section className="org-card org-plan-card-summary">
-              <div>
-                <p className="org-plan-kicker">Current plan</p>
-                <div className="org-card-name-row">
-                  <h2 className="org-card-name org-card-name--lg">{PLAN_LABELS[planInfo.plan]}</h2>
-                  <span className="org-status-pill" data-status={planInfo.status}>
-                    {statusLabel}
-                  </span>
-                </div>
-                {planInfo.status === 'active' && planInfo.renewsAt ? (
-                  <p className="org-plan-meta">Renews {formatPlanDate(planInfo.renewsAt)}</p>
-                ) : planInfo.status === 'trial' && planInfo.trialEndsAt ? (
-                  <p className="org-plan-meta">
-                    Trial through {formatPlanDate(planInfo.trialEndsAt)}
-                  </p>
-                ) : null}
-              </div>
-              {/* Deliberately a separate page (/forms/organisation/plan) rather than every
-               * tier's price inline — see the note in change-plan-client.tsx. */}
-              <Link
-                href="/forms/organisation/plan"
-                className="button button--small org-button-primary"
-              >
-                {planInfo.status === 'trial' ? 'Choose a plan' : 'Change plan'}
-              </Link>
-            </section>
-
-            <Section title="Usage" description="This month against your current plan's limits.">
-              {buildUsageBars(planInfo.plan, planInfo.usage).map((bar) => {
-                const overLimit = bar.limit !== null && bar.used > bar.limit;
-                return (
-                  <Row
-                    key={bar.label}
-                    label={bar.label}
-                    action={
-                      <span
-                        className={`org-usage-percent${overLimit ? ' org-usage-percent--over' : ''}`}
-                      >
-                        {bar.percent === null ? 'Unlimited' : `${bar.percent}%`}
-                      </span>
-                    }
-                  >
-                    <div className="org-usage">
-                      <div className="org-usage-track">
-                        <div
-                          className={`org-usage-fill${overLimit ? ' org-usage-fill--over' : ''}`}
-                          style={{ width: `${bar.percent ?? 100}%` }}
-                          data-unlimited={bar.percent === null || undefined}
-                        />
-                      </div>
-                      <span className="org-usage-value">{bar.formatted}</span>
-                    </div>
-                  </Row>
-                );
-              })}
-            </Section>
-          </div>
-        ) : null}
+        {activeTab === 'billing' ? <BillingTab planInfo={planInfo} /> : null}
       </div>
 
       {cropSession ? (

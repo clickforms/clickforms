@@ -30,6 +30,23 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Throwaway Postgres for the migration checks below. Matches the placeholder DATABASE_URL
+    # in `env` above (ci / ci / ci on localhost:5432), so the same URL works for both
+    # `prisma generate` and the checks.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     outputs:
       image: ${{ steps.image.outputs.image }}
     steps:
@@ -54,6 +71,16 @@ jobs:
 
       - name: Test
         run: yarn test
+
+      # Migrations are applied automatically on deploy (see _deploy.yml), so prove here that
+      # they work BEFORE anything is built or shipped: replay the whole history on an empty
+      # database, then fail if prisma/schema.prisma has changes that no migration creates
+      # (a forgotten `prisma migrate dev`).
+      - name: Migrations apply cleanly on an empty database
+        run: yarn prisma migrate deploy
+
+      - name: Schema matches migrations (no missing migration)
+        run: yarn prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4

@@ -32,6 +32,12 @@ on:
       host:
         required: true
 
+# One deploy per environment at a time, never cancelled half way: two overlapping runs could
+# race on migrations and on `docker compose up`.
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -90,6 +96,14 @@ jobs:
           # sha-tagged layers just pile up otherwise. Doesn't touch named volumes
           # (caddy_data/caddy_config) since -af only targets images/containers/networks.
           sudo docker system prune -af
+
+          # Apply database migrations from the SAME image that is about to run, BEFORE the new
+          # containers start. `set -e` means a failed migration aborts here: start.sh never
+          # runs, so the previous version keeps serving traffic untouched. Safe to run with
+          # nothing pending. Migrations must be backwards compatible with the previous release
+          # (additive: add columns/tables/enum values; remove things in a later release), since
+          # the old containers keep running while the migration applies.
+          sudo ./migrate.sh
 
           # start.sh pulls the image, fetches all secrets from Infisical (no fallback — it
           # exits non-zero if that fails) and runs `docker compose up -d`.

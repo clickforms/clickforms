@@ -206,10 +206,25 @@ EC2 box authenticates to ECR itself using its own instance role. OIDC is only us
 
 ## 6. Database migrations
 
-**There is no CI step that runs migrations.** `prisma migrate deploy` must be run by hand
-against each environment's RDS instance whenever a new migration is added. This is the
-current gap in the pipeline — treat it as a manual runbook step after every deploy that
-includes a schema change, not something the deploy workflow handles for you.
+**Migrations run automatically on every deploy.** `_deploy.yml` runs `migrate.sh` on the box
+after the new image is pulled and **before** `start.sh` replaces the containers, for both staging
+and production (promote). The flow is therefore: push, CI proves the migrations work, the image
+is built, the box migrates its database from that image, then the new containers start. If a
+migration fails, the deploy stops before touching the running containers, so the previous
+version keeps serving.
+
+Safeguards:
+
+- CI (`deploy-staging.yml`) replays the full migration history on an empty Postgres and fails if
+  `prisma/schema.prisma` has changes without a migration, before any image is built.
+- Staging is migrated first; production only ever receives an image (and migrations) that already
+  ran on staging.
+- Deploys are serialised per environment (`concurrency`), so two runs can't race on migrations.
+- **Write migrations to be backwards compatible** with the release still running (add columns,
+  tables and enum values; remove or rename in a later release), because the old containers serve
+  traffic while the migration applies. Never edit or delete a migration that has been merged.
+
+The manual command below is still useful for ad-hoc use or recovery.
 
 RDS is not publicly reachable (EC2-security-group-only, per `setup-ec2.sh`), and the
 production/staging Docker image doesn't bundle the Prisma CLI or `prisma.config.ts` (both
@@ -343,8 +358,8 @@ container. There is **no fallback**: if the credentials are missing or wrong, or
 unreachable, start.sh exits non-zero before touching the running containers and the problem
 has to be fixed by hand (a failed deploy in GitHub Actions means exactly this).
 
-Migrations: `sudo /srv/clickforms/migrate.sh` (same Infisical bootstrap, fetches `DATABASE_URL`
-and runs `prisma migrate deploy`).
+Migrations run automatically during every deploy (see section 6). Manually: `sudo /srv/clickforms/migrate.sh`
+(same Infisical bootstrap, fetches `DATABASE_URL` and runs `prisma migrate deploy`).
 
 Infisical keys (project `clickforms`, environments `dev` / `staging` / `prod`): `ENVIRONMENT`,
 `CADDYFILE`, `S3_BUCKET`, `ROOT_DOMAIN` (also used as `DOMAIN`), `NEXTAUTH_URL`, `AWS_REGION`,
@@ -383,7 +398,8 @@ with the mode switch in the dashboard).
       "Stripe billing" below, and copy its signing secret.
    3. In Infisical environment `staging` set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
       `STRIPE_PORTAL_CONFIGURATION_ID` and `STRIPE_AUTOMATIC_TAX` / `STRIPE_GST_TAX_RATE_ID`.
-   4. `sudo /srv/clickforms/migrate.sh`, then deploy (push to `main`).
+   4. Push to `main`: CI checks the migrations, then the deploy migrates the staging database and
+      starts the new version.
    5. Test with card `4242 4242 4242 4242`: Free to paid, upgrade, annual, cancel back to Free, a
       failed payment (`4000 0000 0000 0341`), and the Customer Portal.
 2. **Production (live mode) once staging is happy.**
@@ -395,8 +411,8 @@ with the mode switch in the dashboard).
    4. In Infisical environment `prod` set the live `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
       `STRIPE_PORTAL_CONFIGURATION_ID` and `STRIPE_AUTOMATIC_TAX=true` (or `STRIPE_GST_TAX_RATE_ID`
       from the live account; tax rate ids differ between modes).
-   5. `sudo /srv/clickforms/migrate.sh` on the production box, then **Promote to production** with
-      the image tag that passed on staging.
+   5. **Promote to production** with the image tag that passed on staging; the deploy applies the
+      migrations before starting the new containers.
    6. Smoke test with a real card on a throwaway organisation (refund it in Stripe afterwards).
 
 Existing organisations on manual billing keep working; a Free plan exists for new signups. Before
@@ -422,8 +438,7 @@ Code and design: `specs/08-billing.md`. Per environment:
 4. Stripe dashboard settings: enable Smart Retries (retry for 14 days, then mark the subscription
    unpaid), turn on customer emails for receipts and failed payments, restrict subscription payment
    methods to cards, and add the ABN/GST registration under Tax settings.
-5. Run the migration (`sudo /srv/clickforms/migrate.sh`) before the first deploy that contains
-   billing; existing organisations stay on manual billing.
+5. Migrations are applied automatically by the deploy; existing organisations stay on manual billing.
 
 Local development: `stripe listen --forward-to localhost:3000/api/billing/webhook` prints the
 webhook secret to use; with no `STRIPE_SECRET_KEY` set, billing is off and the free dev plan

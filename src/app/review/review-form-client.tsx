@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, useId, useState } from 'react';
+import { type FormEvent, useId, useLayoutEffect, useRef, useState } from 'react';
 import { REVIEW_BODY_MAX, REVIEW_BODY_MIN } from '@/lib/reviews/schema';
 
 function Star({ filled }: { filled: boolean }) {
@@ -25,11 +25,22 @@ export function ReviewForm() {
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [body, setBody] = useState('');
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [role, setRole] = useState('');
   const [rating, setRating] = useState<number | null>(null);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(false);
+
+  // The review box grows with what is typed (up to the CSS max-height, then it scrolls), and can
+  // also be dragged larger by hand.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure whenever the text changes
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [body]);
   const [website, setWebsite] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +122,6 @@ export function ReviewForm() {
           className="rv-input"
           type="text"
           autoComplete="name"
-          placeholder="Sarah Mitchell"
           maxLength={120}
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -126,7 +136,6 @@ export function ReviewForm() {
           className="rv-input"
           type="text"
           autoComplete="organization"
-          placeholder="Bright Path Support Services"
           maxLength={160}
           value={company}
           onChange={(event) => setCompany(event.target.value)}
@@ -140,7 +149,7 @@ export function ReviewForm() {
           id={`${ids}-body`}
           className="rv-input rv-textarea"
           rows={5}
-          placeholder="What were you doing before Clickforms, and what's different now?"
+          ref={bodyRef}
           maxLength={REVIEW_BODY_MAX}
           value={body}
           onChange={(event) => setBody(event.target.value)}
@@ -161,7 +170,6 @@ export function ReviewForm() {
           className="rv-input"
           type="text"
           autoComplete="organization-title"
-          placeholder="Support Coordinator"
           maxLength={120}
           value={role}
           onChange={(event) => setRole(event.target.value)}
@@ -218,7 +226,6 @@ export function ReviewForm() {
           className="rv-input"
           type="email"
           autoComplete="email"
-          placeholder="you@company.com.au"
           maxLength={254}
           value={email}
           onChange={(event) => setEmail(event.target.value)}

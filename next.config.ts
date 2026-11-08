@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
   // .next/standalone and the Docker runtime image will fail at require() time.
   serverExternalPackages: ['puppeteer', 'sharp'],
 
+  // People naturally type the plural; the public review page lives at /review.
+  async redirects() {
+    return [{ source: '/reviews', destination: '/review', permanent: true }];
+  },
+
   // Next.js 16 removed its built-in ESLint integration entirely (the `eslint`
   // config key no longer exists on `NextConfig`), so there's nothing to
   // disable here. Biome (see biome.json) is this project's only linter/formatter.

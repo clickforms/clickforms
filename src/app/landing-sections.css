@@ -472,7 +472,7 @@
    to keep the words apart.) */
 @media (max-width: 767px) {
   .landing-hero-title-wrap {
-    transform: none;
+    transform: rotate(-2.5deg);
   }
 
   .landing-hero .landing-hero-title {

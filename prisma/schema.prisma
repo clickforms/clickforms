@@ -415,6 +415,7 @@ model FormPrefill {
 
   @@index([organizationId])
   @@index([formId])
+  @@index([parentId])
   @@map("form_prefills")
 }
 

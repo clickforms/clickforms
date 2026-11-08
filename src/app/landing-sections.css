@@ -466,28 +466,45 @@
   }
 }
 
-/* Mobile type: a calmer, sentence-case headline and a roomier lead, closer to a clean SaaS
-   hero than the poster-style desktop title. */
-@media (max-width: 640px) {
+/* Mobile and tablet type: a calm, sentence-case two-line headline with a marker accent under
+   "with care", and a roomier lead, closer to a clean SaaS hero than the poster-style desktop
+   title. (Real whitespace sits between the two spans in the markup, so nothing relies on CSS
+   to keep the words apart.) */
+@media (max-width: 767px) {
   .landing-hero-title-wrap {
     transform: none;
   }
 
   .landing-hero .landing-hero-title {
     font-family: var(--font-body), var(--font-display);
-    font-size: clamp(2rem, 9vw, 2.5rem);
+    font-size: clamp(2.4rem, 11.5vw, 3.4rem);
     font-weight: 800;
-    line-height: 1.12;
-    letter-spacing: -0.025em;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
     text-transform: none;
+    text-wrap: balance;
+    isolation: isolate;
   }
 
   .landing-hero .landing-hero-title span {
-    display: inline;
+    display: block;
   }
 
-  .landing-hero .landing-hero-title span + span::before {
-    content: " ";
+  .landing-hero .landing-hero-title-accent {
+    position: relative;
+    display: inline-block;
+  }
+
+  .landing-hero .landing-hero-title-accent::after {
+    content: "";
+    position: absolute;
+    left: -0.05em;
+    right: -0.05em;
+    bottom: 0.04em;
+    z-index: -1;
+    height: 0.32em;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.55);
   }
 
   .landing-hero-bubble {

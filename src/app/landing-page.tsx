@@ -85,8 +85,8 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
               <div className="landing-hero-title-wrap">
                 <ChatBubbleIcon className="landing-hero-bubble landing-hero-bubble--tl" />
                 <h1 className="landing-hero-title">
-                  <span>Build forms</span>
-                  <span>with care</span>
+                  <span>Build forms</span>{' '}
+                  <span className="landing-hero-title-accent">with care</span>
                 </h1>
                 <ChatBubbleIcon className="landing-hero-bubble landing-hero-bubble--br" />
               </div>

@@ -359,6 +359,50 @@ environment, then `sudo /srv/clickforms/start.sh`.
 Rotating a secret: change it in Infisical, then `sudo /srv/clickforms/start.sh` (it recreates
 the app container because its environment changed). Secrets are read only at start.
 
+## Stripe: test for staging, live for production
+
+The two environments use **different Stripe modes**, never mixed:
+
+| | Staging (`staging`) | Production (`prod`) |
+|---|---|---|
+| Stripe mode | Test mode (sandbox) | Live mode |
+| `STRIPE_SECRET_KEY` | `sk_test_...` | `sk_live_...` (or a restricted `rk_live_...`) |
+| Webhook endpoint | `https://staging.clickforms.com.au/api/billing/webhook` (test-mode endpoint) | `https://clickforms.com.au/api/billing/webhook` (live-mode endpoint) |
+| Catalogue | created once with the test key | created once with the live key |
+
+The mode lives in Stripe: the test and live dashboards have separate products, prices, customers,
+webhooks and Customer Portal configurations, so **every step below is done twice** (once per mode,
+with the mode switch in the dashboard).
+
+### Runbook
+
+1. **Staging first (test mode).**
+   1. `STRIPE_SECRET_KEY=sk_test_... yarn billing:setup-prices` (prints `Account mode: test` and the
+      Customer Portal configuration id).
+   2. In the Stripe dashboard (Test mode) add the webhook endpoint above with the events listed in
+      "Stripe billing" below, and copy its signing secret.
+   3. In Infisical environment `staging` set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+      `STRIPE_PORTAL_CONFIGURATION_ID` and `STRIPE_AUTOMATIC_TAX` / `STRIPE_GST_TAX_RATE_ID`.
+   4. `sudo /srv/clickforms/migrate.sh`, then deploy (push to `main`).
+   5. Test with card `4242 4242 4242 4242`: Free to paid, upgrade, annual, cancel back to Free, a
+      failed payment (`4000 0000 0000 0341`), and the Customer Portal.
+2. **Production (live mode) once staging is happy.**
+   1. In Stripe switch to Live mode, add the ABN/GST registration under Tax, and activate the
+      account if Stripe has not already.
+   2. `STRIPE_SECRET_KEY=sk_live_... yarn billing:setup-prices` (prints `Account mode: LIVE`; creates
+      the live products and prices and prints the live Customer Portal configuration id).
+   3. Add the live webhook endpoint (Live mode) and copy its signing secret.
+   4. In Infisical environment `prod` set the live `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+      `STRIPE_PORTAL_CONFIGURATION_ID` and `STRIPE_AUTOMATIC_TAX=true` (or `STRIPE_GST_TAX_RATE_ID`
+      from the live account; tax rate ids differ between modes).
+   5. `sudo /srv/clickforms/migrate.sh` on the production box, then **Promote to production** with
+      the image tag that passed on staging.
+   6. Smoke test with a real card on a throwaway organisation (refund it in Stripe afterwards).
+
+Existing organisations on manual billing keep working; a Free plan exists for new signups. Before
+promoting, check no organisation exceeds its plan's monthly submission limit (Standard 500,
+Business 5,000, Professional 10,000), since the limits are enforced.
+
 ## Stripe billing
 
 Code and design: `specs/08-billing.md`. Per environment:

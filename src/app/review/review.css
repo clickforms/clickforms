@@ -1,0 +1,382 @@
+/* Public review page (/review): green hero, white form card. Self-contained. */
+.rv {
+  --rv-green: #73ea91;
+  --rv-ink: #111118;
+  --rv-muted: #6b6f85;
+  --rv-field: #f4f5f9;
+  --rv-line: #e4e6ef;
+  min-height: 100vh;
+  background: #f0f1f6;
+  color: var(--rv-ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+.rv-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 2rem 1.25rem 7rem;
+  background: var(--rv-green);
+}
+
+.rv-column {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.rv-shape {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  border-radius: 2rem;
+}
+
+.rv-shape--purple {
+  top: -2rem;
+  right: -3rem;
+  width: 16rem;
+  height: 12rem;
+  background: linear-gradient(145deg, #a07ae8, #6d46b8);
+  transform: rotate(10deg);
+}
+
+.rv-shape--sand {
+  bottom: 3rem;
+  left: -3.5rem;
+  width: 9rem;
+  height: 10rem;
+  background: linear-gradient(145deg, #e8c19a, #cf9c6c);
+  transform: rotate(-8deg);
+}
+
+.rv-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 3rem;
+  color: var(--rv-ink);
+  text-decoration: none;
+}
+
+.rv-brand-word {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-poppins), var(--font-body), sans-serif;
+  font-size: 1.05rem;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.95;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+
+.rv-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rv-eyebrow-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--rv-ink);
+}
+
+.rv-title {
+  margin: 0 0 1.5rem;
+  font-family: var(--font-poppins), var(--font-display), sans-serif;
+  font-size: clamp(3rem, 11vw, 5.25rem);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+}
+
+.rv-lead {
+  max-width: 34rem;
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.6;
+}
+
+.rv-body {
+  padding: 0 1.25rem 4rem;
+}
+
+.rv-column--card {
+  max-width: 41rem;
+  margin-top: -4.25rem;
+}
+
+.rv-card {
+  padding: 2.25rem;
+  border-radius: 2rem;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(17, 17, 24, 0.05),
+    0 24px 60px rgba(17, 17, 24, 0.1);
+}
+
+.rv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0 0 1.4rem;
+  padding: 0;
+  border: 0;
+}
+
+.rv-field label,
+.rv-field legend {
+  padding: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.rv-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  gap: 1rem;
+}
+
+.rv-optional {
+  color: var(--rv-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.rv-input {
+  width: 100%;
+  height: 3.25rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--rv-line);
+  border-radius: 999px;
+  background: var(--rv-field);
+  color: var(--rv-ink);
+  font: inherit;
+  font-size: 1rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.rv-input::placeholder {
+  color: #9a9db3;
+}
+
+.rv-input:hover {
+  border-color: #d3d6e4;
+}
+
+.rv-input:focus {
+  outline: none;
+  border-color: #3fcf68;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(115, 234, 145, 0.35);
+}
+
+.rv-textarea {
+  height: auto;
+  min-height: 9.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1.5rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.rv-count {
+  align-self: flex-end;
+  color: var(--rv-muted);
+  font-size: 0.8rem;
+}
+
+.rv-hint {
+  margin: 0;
+  color: var(--rv-muted);
+  font-size: 0.85rem;
+}
+
+.rv-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rv-star {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0.2rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.rv-star:hover {
+  transform: scale(1.1);
+}
+
+.rv-star:focus-within {
+  outline: 2px solid var(--rv-ink);
+  outline-offset: 2px;
+}
+
+.rv-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.rv-rating-label {
+  min-width: 5rem;
+  margin-left: 0.5rem;
+  color: var(--rv-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.rv-trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.rv-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  margin: 0 0 1.4rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 1.25rem;
+  background: #e8fbef;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.rv-consent input {
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin: 0.15rem 0 0;
+  accent-color: #1f9d4c;
+  cursor: pointer;
+}
+
+.rv-error {
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 0.9rem;
+  background: #fdecec;
+  color: #a42424;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.rv-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  height: 3.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: #1c1b2e;
+  color: #fff;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.rv-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(28, 27, 46, 0.25);
+}
+
+.rv-submit:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.rv-card--done {
+  padding: 3.5rem 2.25rem;
+  text-align: center;
+}
+
+.rv-done-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin-bottom: 1.25rem;
+  border-radius: 50%;
+  background: var(--rv-green);
+  color: var(--rv-ink);
+}
+
+.rv-card--done h2 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-poppins), var(--font-display), sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.rv-card--done p {
+  max-width: 28rem;
+  margin: 0 auto;
+  color: var(--rv-muted);
+  line-height: 1.65;
+}
+
+@media (max-width: 560px) {
+  .rv-card {
+    padding: 1.5rem 1.25rem;
+    border-radius: 1.5rem;
+  }
+
+  .rv-shape--purple {
+    width: 11rem;
+    height: 9rem;
+  }
+
+  .rv-shape--sand {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-star,
+  .rv-submit,
+  .rv-input {
+    transition: none;
+  }
+}

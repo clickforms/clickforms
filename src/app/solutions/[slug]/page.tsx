@@ -79,7 +79,7 @@ export default async function SolutionPage({ params }: PageProps) {
 
           <div className="landing-form-types-more-wrap">
             <p className="landing-form-types-more">
-              <span>Free for 7 days. No credit card required.</span>
+              <span>Free plan available. No credit card required.</span>
               <Link href={primaryHref}>
                 {isAuthenticated ? 'Open your workspace' : 'Start building'}
                 <ArrowRightIcon />

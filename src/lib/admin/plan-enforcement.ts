@@ -148,6 +148,7 @@ export async function assertOrgActionsAllowed(
     where: { id: organizationId },
     select: {
       status: true,
+      plan: true,
       trialEndsAt: true,
       billingMode: true,
       subscription: { select: { stripeStatus: true } },

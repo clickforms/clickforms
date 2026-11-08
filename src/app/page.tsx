@@ -8,7 +8,7 @@ export const metadata: Metadata = pageMetadata({
   path: '/',
   title: 'Online Form Builder Australia | Custom Forms with E-Signatures | Clickforms',
   description:
-    'Build custom online forms in minutes: intake, consent and service agreement forms with e-signatures, conditional logic and approvals. Australian-hosted. Free 7-day trial.',
+    'Build custom online forms in minutes: intake, consent and service agreement forms with e-signatures, conditional logic and approvals. Australian-hosted.',
   keywords: DEFAULT_KEYWORDS,
 });
 

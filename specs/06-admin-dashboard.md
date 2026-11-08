@@ -25,3 +25,10 @@ Analytics/reporting dashboards, saved custom views, bulk actions beyond CSV expo
 - Search/filter on the submissions list returns correct results against a seeded set of 100+ test submissions with varied dates/statuses.
 - A `viewer`-role user can see submissions but cannot edit forms or user management (role enforcement re-verified at the UI layer, not just the API layer from spec 01).
 - Archiving a form removes it from the default forms list but its historical submissions remain fully accessible.
+
+## Reviews and Insights (platform admin)
+
+- Public `/review` collects customer reviews (name, company, role, 1-5 stars, text, publish consent). Submissions are rate limited per hashed IP and stored as `pending`.
+- `/admin/reviews` lets platform admins approve, hide, restore or permanently delete reviews. Only approved reviews are eligible to feature publicly.
+- `/admin/insights` shows total and monthly form submissions, review counts by status, average rating and star distribution, 6-month trends, and review breakdowns by role and company. A toggle switches review statistics between all (non-hidden) and approved only.
+- Requires migration `20261108010000_reviews`.

@@ -1,4 +1,4 @@
-import type { BillingMode, OrgStatus } from '@prisma/client';
+import type { BillingMode, OrgPlan, OrgStatus } from '@prisma/client';
 
 // Pure (no server-only imports) so client components and unit tests can use it.
 // Maps Stripe's subscription status to what an organisation may do. See specs/08-billing.md,
@@ -30,6 +30,8 @@ export function accessForStripeStatus(stripeStatus: string): BillingAccess {
 
 interface OrgBillingInput {
   billingMode: BillingMode;
+  /** Needed to tell a lapsed paid subscription from one that ended into the Free plan. */
+  plan?: OrgPlan;
   status: OrgStatus;
   trialEndsAt: Date | null;
 }
@@ -50,6 +52,9 @@ export function getBillingAccess(
     org.status === 'trial' && org.trialEndsAt !== null && org.trialEndsAt.getTime() < now.getTime();
 
   if (org.billingMode === 'stripe' && subscription) {
+    // A subscription that ended on purpose (cancelled, then dropped to Free by the sync) is
+    // not a lapse: the organisation continues on the Free plan's limits with full access.
+    if (subscription.stripeStatus === 'canceled' && org.plan === 'free') return 'full';
     return accessForStripeStatus(subscription.stripeStatus);
   }
   return trialExpired ? 'read_only' : 'full';

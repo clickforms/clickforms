@@ -298,7 +298,6 @@ export function LoginForm({
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           disabled={isSubmitting}
-          placeholder="you@company.com.au"
         />
       </label>
 
@@ -319,7 +318,6 @@ export function LoginForm({
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             disabled={isSubmitting}
-            placeholder="Enter your password"
           />
           <button
             type="button"

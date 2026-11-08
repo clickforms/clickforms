@@ -119,9 +119,10 @@ export function ChangePlanClient({
   const interval = billingAnnual ? 'year' : 'month';
   const unchanged =
     selectedPlan === planInfo.plan &&
-    (hasLiveSubscription
-      ? billing.subscription?.interval === interval
-      : planInfo.status !== 'trial');
+    (selectedPlan === 'free' ||
+      (hasLiveSubscription
+        ? billing.subscription?.interval === interval
+        : planInfo.status !== 'trial'));
   const overLimitLabels = useMemo(
     () => computeOverLimitLabels(selectedPlan, planInfo.usage),
     [selectedPlan, planInfo.usage],
@@ -130,6 +131,10 @@ export function ChangePlanClient({
   async function handleStripePlanChange() {
     if (selectedPlan === 'enterprise') {
       router.push('/contact');
+      return;
+    }
+    if (selectedPlan === 'free') {
+      await handleSwitchToFree();
       return;
     }
     setPlanChangeError(null);
@@ -156,6 +161,34 @@ export function ChangePlanClient({
       const data: { url: string } = await res.json();
       // Stripe-hosted Checkout takes over from here and returns to this page.
       window.location.href = data.url;
+    } catch {
+      setPlanChangeError('Something went wrong. Please try again.');
+    } finally {
+      setIsChangingPlan(false);
+    }
+  }
+
+  async function handleSwitchToFree() {
+    setPlanChangeError(null);
+    setIsChangingPlan(true);
+    try {
+      const res = await fetch('/api/billing/change-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: 'free' }),
+      });
+      if (!res.ok) {
+        setPlanChangeError(await readApiError(res, 'Could not change plan'));
+        return;
+      }
+      const data: { scheduled: boolean; endsAt: string | null } = await res.json();
+      toast.success(
+        data.scheduled
+          ? 'You will move to the Free plan when your current billing period ends'
+          : 'Switched to the Free plan',
+      );
+      router.push('/forms/organisation?tab=billing');
+      router.refresh();
     } catch {
       setPlanChangeError('Something went wrong. Please try again.');
     } finally {
@@ -205,7 +238,7 @@ export function ChangePlanClient({
       : 'Updating…'
     : selectedPlan === 'enterprise' && useStripe
       ? 'Contact us'
-      : useStripe && !hasLiveSubscription
+      : useStripe && !hasLiveSubscription && selectedPlan !== 'free'
         ? `Subscribe to ${PLAN_LABELS[selectedPlan]}`
         : unchanged
           ? 'Current plan'
@@ -239,7 +272,7 @@ export function ChangePlanClient({
             onClick={() => setBillingAnnual(true)}
           >
             Annual
-            <span className="org-plan-toggle-save">Save 10%</span>
+            <span className="org-plan-toggle-save">Save up to 16%</span>
           </button>
         </div>
       </header>
@@ -257,9 +290,11 @@ export function ChangePlanClient({
           const price = billingAnnual
             ? PLAN_PRICING[planOption].annual
             : PLAN_PRICING[planOption].monthly;
-          const monthlyPrice = PLAN_PRICING[planOption].monthly;
+          const annualPerMonth = PLAN_PRICING[planOption].annual;
           const annualTotal =
-            billingAnnual && monthlyPrice !== null ? annualTotalCents(monthlyPrice) / 100 : null;
+            billingAnnual && annualPerMonth !== null && annualPerMonth > 0
+              ? annualTotalCents(annualPerMonth) / 100
+              : null;
           return (
             <button
               key={planOption}
@@ -286,9 +321,11 @@ export function ChangePlanClient({
               <span className="pl-card-note">
                 {price === null
                   ? 'Tailored to your needs'
-                  : annualTotal !== null
-                    ? `$${formatPrice(annualTotal)} billed yearly`
-                    : 'Billed monthly'}
+                  : planOption === 'free'
+                    ? 'Free, no time limit'
+                    : annualTotal !== null
+                      ? `$${formatPrice(annualTotal)} billed yearly`
+                      : 'Billed monthly'}
               </span>
               <ul className="pl-card-list">
                 {planLimitLines(planOption).map((line) => (
@@ -370,7 +407,10 @@ export function ChangePlanClient({
           <button
             type="button"
             className="button org-button-primary"
-            disabled={isChangingPlan || (unchanged && !(useStripe && !hasLiveSubscription))}
+            disabled={
+              isChangingPlan ||
+              (unchanged && !(useStripe && !hasLiveSubscription && selectedPlan !== 'free'))
+            }
             onClick={() => void handleChangePlan()}
           >
             {ctaLabel}

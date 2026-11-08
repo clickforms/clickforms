@@ -14,9 +14,9 @@ import {
 //   STRIPE_SECRET_KEY=sk_test_... yarn billing:setup-prices
 //
 // Creates a product per paid plan and a GST-inclusive AUD monthly and annual price per product,
-// keyed by lookup key (e.g. standard_monthly), and skips anything that already exists, so it is
-// safe to re-run. Prices are immutable in Stripe: if a price ever changes, create a new price
-// with `transfer_lookup_key: true` in the dashboard instead of editing it here.
+// keyed by lookup key (e.g. standard_monthly), and skips anything that already matches, so it is
+// safe to re-run. Prices are immutable in Stripe: when an amount in PLAN_PRICING changes, re-running
+// creates a replacement price that takes over the lookup key.
 // It also creates a Customer Portal configuration (payment method, invoices, cancellation;
 // plan switching is off because plan changes go through the app's own limit checks) and prints
 // the id to set as STRIPE_PORTAL_CONFIGURATION_ID.
@@ -53,21 +53,31 @@ async function main(): Promise<void> {
     for (const interval of ['month', 'year'] as const) {
       const lookupKey = priceLookupKey(plan, interval);
       const found = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
-      if (found.data.length > 0) {
+      const existing = found.data[0];
+      const unitAmount =
+        interval === 'year'
+          ? annualTotalCents(PLAN_PRICING[plan].annual ?? monthly)
+          : monthlyCents(monthly);
+      if (existing && existing.unit_amount === unitAmount) {
         console.log(`exists  ${lookupKey}`);
         continue;
       }
-      const unitAmount = interval === 'year' ? annualTotalCents(monthly) : monthlyCents(monthly);
+      // Prices are immutable. When the amount in PLAN_PRICING changes, a new price takes over
+      // the lookup key (the old one stays on existing subscriptions, so nobody is re-priced
+      // behind their back) and new checkouts use the new amount.
       await stripe.prices.create({
         product: productId,
         currency: 'aud',
         unit_amount: unitAmount,
         tax_behavior: 'inclusive',
         lookup_key: lookupKey,
+        ...(existing ? { transfer_lookup_key: true } : {}),
         recurring: { interval },
         metadata: { plan, interval },
       });
-      console.log(`created ${lookupKey}: ${(unitAmount / 100).toFixed(2)} AUD, GST inclusive`);
+      console.log(
+        `${existing ? 'replaced' : 'created'} ${lookupKey}: ${(unitAmount / 100).toFixed(2)} AUD, GST inclusive`,
+      );
     }
   }
 

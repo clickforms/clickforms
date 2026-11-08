@@ -7,6 +7,19 @@ import { AccountMenu } from '@/app/forms/account-menu';
 import { BrandMark } from '@/components/brand-mark';
 import { ThemeToggleIconButton } from '@/components/theme-toggle';
 import { ToastProvider } from '@/components/toast';
+import '@/app/admin/admin-platform-nav.css';
+
+const NAV_ITEMS = [
+  { label: 'Overview', href: '/admin' },
+  { label: 'Organisations', href: '/admin/organisations' },
+  { label: 'Users', href: '/admin/users' },
+  { label: 'Templates', href: '/admin/templates' },
+  { label: 'Billing', href: '/admin/billing' },
+  { label: 'Insights', href: '/admin/insights' },
+  { label: 'Reviews', href: '/admin/reviews' },
+  { label: 'Audit log', href: '/admin/audit-log' },
+  { label: 'Team', href: '/admin/team' },
+] as const;
 
 const THEME_STORAGE_KEY = 'admin-platform-theme';
 
@@ -37,13 +50,25 @@ export function AdminPlatformShell({
   children,
 }: AdminPlatformShellProps) {
   const pathname = usePathname();
-  const onOverview = pathname === '/admin';
-  const onOrganisations = pathname.startsWith('/admin/organisations');
-  const onUsers = pathname.startsWith('/admin/users');
-  const onTemplates = pathname.startsWith('/admin/templates');
-  const onBilling = pathname.startsWith('/admin/billing');
-  const onAuditLog = pathname.startsWith('/admin/audit-log');
-  const onTeam = pathname.startsWith('/admin/team');
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  function isActive(href: string): boolean {
+    return href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: close the mobile menu on navigation
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setMenuOpen(false);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [menuOpen]);
 
   // Independent from the org workspace's own dark/light preference (forms-admin-theme,
   // set in AdminShellClient) — a platform staffer might reasonably want one area dark
@@ -76,58 +101,29 @@ export function AdminPlatformShell({
                 <span>Clickforms Admin</span>
               </Link>
               <nav className="admin-platform-nav" aria-label="Clickforms Admin">
-                <Link
-                  href="/admin"
-                  className={`admin-platform-nav-link${onOverview ? ' admin-platform-nav-link--active' : ''}`}
-                  aria-current={onOverview ? 'page' : undefined}
-                >
-                  Overview
-                </Link>
-                <Link
-                  href="/admin/organisations"
-                  className={`admin-platform-nav-link${onOrganisations ? ' admin-platform-nav-link--active' : ''}`}
-                  aria-current={onOrganisations ? 'page' : undefined}
-                >
-                  Organisations
-                </Link>
-                <Link
-                  href="/admin/users"
-                  className={`admin-platform-nav-link${onUsers ? ' admin-platform-nav-link--active' : ''}`}
-                  aria-current={onUsers ? 'page' : undefined}
-                >
-                  Users
-                </Link>
-                <Link
-                  href="/admin/templates"
-                  className={`admin-platform-nav-link${onTemplates ? ' admin-platform-nav-link--active' : ''}`}
-                  aria-current={onTemplates ? 'page' : undefined}
-                >
-                  Templates
-                </Link>
-                <Link
-                  href="/admin/billing"
-                  className={`admin-platform-nav-link${onBilling ? ' admin-platform-nav-link--active' : ''}`}
-                  aria-current={onBilling ? 'page' : undefined}
-                >
-                  Billing
-                </Link>
-                <Link
-                  href="/admin/audit-log"
-                  className={`admin-platform-nav-link${onAuditLog ? ' admin-platform-nav-link--active' : ''}`}
-                  aria-current={onAuditLog ? 'page' : undefined}
-                >
-                  Audit log
-                </Link>
-                <Link
-                  href="/admin/team"
-                  className={`admin-platform-nav-link${onTeam ? ' admin-platform-nav-link--active' : ''}`}
-                  aria-current={onTeam ? 'page' : undefined}
-                >
-                  Team
-                </Link>
+                {NAV_ITEMS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`admin-platform-nav-link${isActive(item.href) ? ' admin-platform-nav-link--active' : ''}`}
+                    aria-current={isActive(item.href) ? 'page' : undefined}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </nav>
             </div>
             <div className="admin-header-right">
+              <button
+                type="button"
+                className="admin-platform-menu-toggle"
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={menuOpen}
+                aria-controls="admin-platform-mobile-menu"
+                onClick={() => setMenuOpen((value) => !value)}
+              >
+                <span className="admin-platform-menu-bars" aria-hidden="true" />
+              </button>
               <ThemeToggleIconButton isDarkTheme={isDarkTheme} onToggleTheme={toggleTheme} />
               <AccountMenu
                 email={email}
@@ -138,6 +134,25 @@ export function AdminPlatformShell({
               />
             </div>
           </header>
+          {menuOpen ? (
+            <nav
+              id="admin-platform-mobile-menu"
+              className="admin-platform-mobile-menu"
+              aria-label="Clickforms Admin"
+            >
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="admin-platform-mobile-link"
+                  data-active={isActive(item.href) || undefined}
+                  aria-current={isActive(item.href) ? 'page' : undefined}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          ) : null}
           <main className="admin-main">{children}</main>
         </div>
       </div>

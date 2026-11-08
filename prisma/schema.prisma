@@ -83,6 +83,7 @@ enum SignupFormSituation {
 // `enterprise`; no org retroactively lost or gained access, per the grandfathering
 // decision at the time.
 enum OrgPlan {
+  free
   standard
   business
   professional
@@ -893,4 +894,39 @@ model BillingDiscountGrant {
 
   @@index([organizationId, createdAt])
   @@map("billing_discount_grants")
+}
+
+
+enum ReviewStatus {
+  pending
+  approved
+  hidden
+
+  @@map("review_status")
+}
+
+/// Customer reviews sent through the public /review page. Not tenant data (no organisation,
+/// no RLS): only the public submit route and the platform-admin console touch it. A review is
+/// `pending` until a platform admin approves it; `consentToPublish` records the tick box the
+/// reviewer agreed to. `email` is never published. `ipHash` is a salted hash used only to
+/// rate-limit the public form.
+model Review {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  company          String
+  body             String
+  role             String?
+  /// 1-5, optional.
+  rating           Int?
+  email            String?
+  consentToPublish Boolean      @map("consent_to_publish")
+  status           ReviewStatus @default(pending)
+  ipHash           String?      @map("ip_hash")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  moderatedAt      DateTime?    @map("moderated_at")
+  moderatedByEmail String?      @map("moderated_by_email")
+
+  @@index([status, createdAt])
+  @@index([ipHash, createdAt])
+  @@map("reviews")
 }

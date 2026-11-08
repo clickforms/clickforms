@@ -75,3 +75,25 @@ describe('graceDaysRemaining', () => {
     expect(graceDaysRemaining(new Date('2026-10-01T00:00:00Z'), 14, now)).toBe(0);
   });
 });
+
+describe('getBillingAccess on the Free plan', () => {
+  const now = new Date('2026-06-01T00:00:00Z');
+  it('keeps full access after a subscription ends into Free', () => {
+    const org = {
+      billingMode: 'stripe',
+      plan: 'free',
+      status: 'active',
+      trialEndsAt: null,
+    } as const;
+    expect(getBillingAccess(org, { stripeStatus: 'canceled' }, now)).toBe('full');
+  });
+  it('still treats a lapsed paid subscription as read-only', () => {
+    const org = {
+      billingMode: 'stripe',
+      plan: 'standard',
+      status: 'active',
+      trialEndsAt: null,
+    } as const;
+    expect(getBillingAccess(org, { stripeStatus: 'canceled' }, now)).toBe('read_only');
+  });
+});

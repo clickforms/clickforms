@@ -7,7 +7,7 @@ import { withOrgContext } from '@/lib/db';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 const patchPlanBodySchema = z.object({
-  plan: z.enum(['standard', 'business', 'professional', 'enterprise']),
+  plan: z.enum(['free', 'standard', 'business', 'professional', 'enterprise']),
 });
 
 /**

@@ -11,9 +11,9 @@ import { pageMetadata } from '@/lib/seo/site';
 
 export const metadata: Metadata = pageMetadata({
   path: '/pricing',
-  title: 'Form Builder Pricing in AUD: Free 7-Day Trial | Clickforms',
+  title: 'Form Builder Pricing in AUD | Clickforms',
   description:
-    'Simple Australian-dollar pricing for the Clickforms online form builder. Standard, Business, Professional and Enterprise plans, each with a 7-day free trial and no credit card.',
+    'Simple Australian-dollar pricing for the Clickforms online form builder. Standard, Business, Professional and Enterprise plans for teams that collect detailed, regulated information.',
 });
 
 export default async function PricingPage() {
@@ -27,7 +27,7 @@ export default async function PricingPage() {
       <LandingPageHero
         eyebrow="Pricing"
         title="Plans built for care and compliance teams"
-        lead="Start free for 7 days. No credit card required, and every plan is hosted and supported from Australia."
+        lead="Start free, no credit card and no time limit. Every plan is hosted and supported from Australia."
       />
 
       <LandingPricing />

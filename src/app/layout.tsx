@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     template: '%s',
   },
   description:
-    'Build custom online forms in minutes: intake, consent and service agreement forms with e-signatures, conditional logic and approval workflows. Australian-hosted, with a 7-day free trial.',
+    'Build custom online forms in minutes: intake, consent and service agreement forms with e-signatures, conditional logic and approval workflows. Australian-hosted.',
   keywords: DEFAULT_KEYWORDS,
   applicationName: 'Clickforms',
   icons: {

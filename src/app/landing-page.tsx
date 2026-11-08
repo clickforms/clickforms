@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import '@/app/landing-sections.css';
 import { JsonLd } from '@/components/json-ld';
 import { LandingChatBubble } from '@/components/landing/landing-chat-bubble';
 import { LandingCta } from '@/components/landing/landing-cta';
@@ -42,16 +43,16 @@ const HOME_FAQS = [
     a: 'Yes. A signature field is built in, so people can sign on any device and the signature is stored with their submission.',
   },
   {
-    q: 'Is there a free trial?',
-    a: 'Yes. Every plan starts with a 7-day free trial and no credit card is required. Pricing is in Australian dollars.',
+    q: 'Is there a free plan?',
+    a: 'Yes. The Free plan has no time limit and needs no credit card. Paid plans add more forms, users and submissions, and pricing is in Australian dollars.',
   },
   {
     q: 'Is Clickforms hosted in Australia?',
     a: 'Yes. Clickforms is hosted and supported from Australia.',
   },
   {
-    q: 'What happens when my trial ends?',
-    a: 'Your forms and submissions stay safe. To keep building and editing you choose a plan; until then your account is read-only and public forms keep accepting responses.',
+    q: 'What happens if I outgrow the Free plan?',
+    a: 'Your forms and submissions stay safe. You can upgrade at any time when you need more forms, users or submissions, and cancelling a paid plan returns you to Free.',
   },
   {
     q: 'Can I cancel at any time?',
@@ -80,6 +81,7 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
 
           <div className="landing-container landing-hero-grid">
             <div className="landing-hero-copy landing-anim landing-anim--1">
+              <p className="landing-hero-kicker">Made in Australia, for care teams</p>
               <div className="landing-hero-title-wrap">
                 <ChatBubbleIcon className="landing-hero-bubble landing-hero-bubble--tl" />
                 <h1 className="landing-hero-title">
@@ -126,8 +128,8 @@ export function LandingPage({ isAuthenticated = false }: { isAuthenticated?: boo
                 </li>
                 <li>
                   <CheckIcon />
-                  <span>Our fee</span>
-                  <strong>FREE</strong>
+                  <span>E-signatures</span>
+                  <span className="landing-widget-pill">Built in</span>
                 </li>
                 <li>
                   <CheckIcon />

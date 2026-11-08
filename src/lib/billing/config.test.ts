@@ -31,9 +31,9 @@ describe('billing config', () => {
   });
 
   it('computes GST-inclusive prices with the 10% annual discount', () => {
-    expect(monthlyCents(82)).toBe(8200);
-    expect(annualTotalCents(82)).toBe(88_560);
-    expect(annualTotalCents(129)).toBe(139_320);
-    expect(annualTotalCents(219)).toBe(236_520);
+    expect(monthlyCents(86)).toBe(8600);
+    expect(annualTotalCents(72)).toBe(86_400);
+    expect(annualTotalCents(109)).toBe(130_800);
+    expect(annualTotalCents(185)).toBe(222_000);
   });
 });

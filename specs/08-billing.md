@@ -6,22 +6,32 @@ Status: Phases 1 and 2 built (Checkout, Portal, webhook, enforcement, billing UI
 ## Decisions (from product owner)
 
 - Provider: Stripe Billing, AUD, hosted Checkout and Customer Portal (no card data touches our servers).
-- 7-day trial, **no card up front**. At trial end the org hits the paywall and must subscribe.
+- New signups start on the permanent **Free** plan (no card, no time limit); legacy trial organisations keep their 7-day trial and hit the paywall when it ends.
 - Prices are **GST-inclusive** everywhere (pricing page, checkout, invoices). Invoices show the GST portion.
-- Intervals: monthly and annual. Annual = **10% off** the 12-month total, billed upfront. UI shows both the
+- Intervals: monthly and annual. Annual is billed upfront and discounted per plan (see the table below). UI shows both the
   monthly price and the annual total.
 - Failed payment: grace period (Stripe retries ~14 days, with emails), then the org becomes read-only.
   Public forms keep accepting responses while an org is read-only.
 - Admin must be able to grant discounts, for example 20% off for 2 months, free months and credit.
 
-## Prices (GST-inclusive, AUD)
+## Plans and prices (GST-inclusive, AUD)
 
-| Plan | Monthly | Annual total (10% off) | Annual per month |
-|---|---|---|---|
-| Standard | $82.00 | $885.60 | $73.80 |
-| Business | $129.00 | $1,393.20 | $116.10 |
-| Professional | $219.00 | $2,365.20 | $197.10 |
-| Enterprise | custom | custom | invoice-based, set by admin |
+A permanent **Free** plan replaced the 7-day trial for new signups (existing trial organisations keep
+their trial until it ends). Free needs no card and has no time limit.
+
+| Plan | Monthly | Annual per month | Annual total | Limits |
+|---|---|---|---|---|
+| Free | $0 | $0 | $0 | 2 forms, 1 user, 100 MB, 10 submissions a month, Clickforms mark on public forms |
+| Standard | $86 | $72 | $864 | 10 forms, 3 users, 500 MB, 500 submissions a month |
+| Business | $130 | $109 | $1,308 | 50 forms, 15 users, 10 GB, 5,000 submissions a month, no branding, API |
+| Professional | $219 | $185 | $2,220 | unlimited forms, 50 users, 50 GB, 10,000 submissions a month, custom domain |
+| Enterprise | custom | custom | invoice-based, set by admin | unlimited |
+
+Cancelling a paid plan (Billing > Change plan > Free) ends the subscription at the end of the paid
+period; the sync then moves the organisation to Free with full access and the Free limits (existing
+data is kept, only adding more is blocked). Re-running `yarn billing:setup-prices` creates
+replacement Stripe prices when an amount in `PLAN_PRICING` changes; existing subscribers stay on
+their old price.
 
 Source of truth stays `PLAN_PRICING` in `src/lib/admin/plan-limits.ts` (to be updated); Stripe Prices are
 created from it with lookup keys `standard_monthly`, `standard_annual`, etc., `tax_behavior: inclusive`,

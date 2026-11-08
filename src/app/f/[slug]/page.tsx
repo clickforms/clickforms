@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
+import { showsFormBranding } from '@/lib/admin/plan-limits';
 import { FormOfflineError } from '@/lib/api-errors';
-import { withOrgContext } from '@/lib/db';
+import { prisma, withOrgContext } from '@/lib/db';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { sanitizePrefillAnswers } from '@/lib/forms/prefills';
 import { getFormSchemaByVersionId, getPublishedFormBySlug } from '@/lib/forms/public-lookup';
 import { publicFormShareMetadata } from '@/lib/forms/share-metadata';
+import { siteUrl } from '@/lib/seo/site';
 import {
   getCurrentSubdomain,
   getOrganizationBySubdomain,
@@ -133,6 +135,16 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
     }
   }
 
+  // "Sent with care by Clickforms" footer: public form only, hidden on plans that include
+  // removing the branding. Failing to read the plan simply leaves the mark off.
+  const organizationPlan = await prisma.organization
+    .findUnique({ where: { id: organizationId }, select: { plan: true } })
+    .catch(() => null);
+  const brandingHref =
+    organizationPlan && showsFormBranding(organizationPlan.plan)
+      ? `${siteUrl()}/?utm_source=form&utm_medium=footer&utm_campaign=sent-with-care`
+      : undefined;
+
   return (
     <FormRendererClient
       slug={form.slug}
@@ -141,6 +153,7 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
       schema={schema}
       prefillAnswers={prefillAnswers}
       prefillToken={prefillToken}
+      brandingHref={brandingHref}
     />
   );
 }

@@ -12,8 +12,8 @@ import { withOrgContext } from '@/lib/db';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 const bodySchema = z.object({
-  plan: z.enum(PAID_PLANS as readonly [PaidPlan, ...PaidPlan[]]),
-  interval: z.enum(['month', 'year']),
+  plan: z.enum(['free', ...(PAID_PLANS as readonly [PaidPlan, ...PaidPlan[]])]),
+  interval: z.enum(['month', 'year']).default('month'),
 });
 
 /**
@@ -22,6 +22,11 @@ const bodySchema = z.object({
  * charged for the rest of the period straight away, a downgrade is credited against the next
  * invoice. A downgrade is refused while current usage is over the lower plan's limits.
  * Organisations without a subscription go through /api/billing/checkout instead.
+ *
+ * `plan: 'free'` leaves the paid plans: a live subscription is set to cancel at the end of the
+ * period already paid for (the sync drops the organisation to Free when it ends); an
+ * organisation with no live subscription moves to Free straight away. Usage above the Free
+ * limits is allowed, as with any downgrade: nothing is deleted, only adding more is blocked.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -30,20 +35,68 @@ export async function POST(request: Request): Promise<NextResponse> {
     const body = bodySchema.parse(await request.json());
     const organizationId = requireOrganizationId(session);
 
-    const { subscription, usage, currentPlan } = await withOrgContext(
+    const { subscription, usage, currentPlan, orgStatus } = await withOrgContext(
       organizationId,
       async (tx) => {
         const org = await tx.organization.findUniqueOrThrow({
           where: { id: organizationId },
-          select: { plan: true, subscription: true },
+          select: { plan: true, status: true, subscription: true },
         });
         return {
           subscription: org.subscription,
           currentPlan: org.plan,
+          orgStatus: org.status,
           usage: await getOrgPlanUsage(tx, organizationId),
         };
       },
     );
+
+    if (body.plan === 'free') {
+      if (currentPlan === 'free') {
+        throw new InvalidRequestError('This organisation is already on the Free plan.');
+      }
+      const live = subscription && accessForStripeStatus(subscription.stripeStatus) !== 'read_only';
+      if (live && subscription) {
+        const stripe = getStripe();
+        await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+          cancel_at_period_end: true,
+        });
+        await syncSubscriptionById(subscription.stripeSubscriptionId);
+      } else {
+        await withOrgContext(organizationId, (tx) =>
+          tx.organization.update({
+            where: { id: organizationId },
+            data: {
+              plan: 'free',
+              ...(orgStatus === 'trial' ? { status: 'active' as const, trialEndsAt: null } : {}),
+            },
+          }),
+        );
+      }
+      await withOrgContext(organizationId, (tx) =>
+        logAudit(
+          {
+            organizationId,
+            actorUserId: session.user.id,
+            action: 'organization.plan_change',
+            entityType: 'organization',
+            entityId: organizationId,
+            metadata: {
+              fromPlan: currentPlan,
+              toPlan: 'free',
+              scheduled: Boolean(live),
+              via: 'stripe',
+            },
+          },
+          tx,
+        ),
+      );
+      return NextResponse.json({
+        ok: true,
+        scheduled: Boolean(live),
+        endsAt: live ? (subscription?.currentPeriodEnd?.toISOString() ?? null) : null,
+      });
+    }
 
     if (!subscription || accessForStripeStatus(subscription.stripeStatus) === 'read_only') {
       throw new InvalidRequestError('This organisation has no active subscription to change.');

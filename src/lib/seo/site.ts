@@ -98,11 +98,6 @@ export function softwareJsonLd() {
     description:
       'Online form builder for custom intake, consent and service agreement forms with e-signatures, conditional logic, approval workflows and audit trails.',
     url: siteUrl(),
-    offers: {
-      '@type': 'Offer',
-      priceCurrency: 'AUD',
-      description: '7-day free trial, no credit card required',
-    },
   };
 }
 

@@ -47,8 +47,8 @@ describe('billingStateFor', () => {
 
 describe('monthlyRevenueCents', () => {
   it('uses the monthly price and the annual price per month', () => {
-    expect(monthlyRevenueCents('standard', 'month', null, now)).toBe(8200);
-    expect(monthlyRevenueCents('standard', 'year', null, now)).toBe(7380);
+    expect(monthlyRevenueCents('standard', 'month', null, now)).toBe(8600);
+    expect(monthlyRevenueCents('standard', 'year', null, now)).toBe(7200);
   });
 
   it('applies running percent and amount discounts, ignoring expired ones', () => {
@@ -59,7 +59,7 @@ describe('monthlyRevenueCents', () => {
         { percentOff: 20, amountOff: null, endsAt: null },
         now,
       ),
-    ).toBe(6560);
+    ).toBe(6880);
     expect(
       monthlyRevenueCents(
         'standard',
@@ -67,7 +67,7 @@ describe('monthlyRevenueCents', () => {
         { percentOff: null, amountOff: 1000, endsAt: null },
         now,
       ),
-    ).toBe(7200);
+    ).toBe(7600);
     expect(
       monthlyRevenueCents(
         'standard',
@@ -75,7 +75,7 @@ describe('monthlyRevenueCents', () => {
         { percentOff: 20, amountOff: null, endsAt: '2026-11-01T00:00:00Z' },
         now,
       ),
-    ).toBe(8200);
+    ).toBe(8600);
   });
 
   it('counts enterprise as zero and never goes negative', () => {

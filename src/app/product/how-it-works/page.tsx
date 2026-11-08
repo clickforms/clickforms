@@ -127,16 +127,6 @@ export default async function HowItWorksPage() {
         </div>
       </section>
 
-      <section className="landing-quote-band">
-        <div className="landing-container">
-          <blockquote>
-            &ldquo;Audit trails made our last review straightforward. We could show exactly who
-            published what, and when.&rdquo;
-          </blockquote>
-          <cite>Daniel R., Quality &amp; risk</cite>
-        </div>
-      </section>
-
       <LandingCta isAuthenticated={isAuthenticated} />
       <LandingFooter />
       <LandingChatBubble />

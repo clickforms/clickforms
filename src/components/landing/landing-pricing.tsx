@@ -4,7 +4,8 @@ import type { OrgPlan } from '@prisma/client';
 import Link from 'next/link';
 import { useState } from 'react';
 import { CheckIcon, StarIcon } from '@/components/landing/landing-icons';
-import { formatPrice, PLAN_PRICING } from '@/lib/admin/plan-limits';
+import '@/components/landing/landing-pricing.css';
+import { formatPrice, PLAN_PRICING, planLimitLines } from '@/lib/admin/plan-limits';
 import { annualTotalCents } from '@/lib/billing/config';
 
 interface PricingTier {
@@ -23,12 +24,21 @@ interface PricingTier {
 // that are unique to the marketing page stay here.
 const TIERS: readonly PricingTier[] = [
   {
+    id: 'free',
+    name: 'Free',
+    description: 'Try Clickforms on a couple of forms. No card, no time limit.',
+    limits: planLimitLines('free'),
+    features: ['Signatures & file uploads', 'Conditional logic', 'PDF exports'],
+    ctaLabel: 'Get started free',
+    ctaHref: '/signup',
+  },
+  {
     id: 'standard',
     name: 'Standard',
-    description: 'A single admin getting intake and consent off paper.',
-    limits: ['10 forms', '1 user', '500 MB storage', '1,000 submissions / month'],
+    description: 'A small team getting intake and consent off paper.',
+    limits: planLimitLines('standard'),
     features: ['Signatures & file uploads', 'Conditional logic', 'PDF exports', 'Email support'],
-    ctaLabel: 'Start free trial',
+    ctaLabel: 'Get started',
     ctaHref: '/signup',
   },
   {
@@ -36,30 +46,30 @@ const TIERS: readonly PricingTier[] = [
     name: 'Business',
     description: 'A growing team running intake across multiple programs.',
     badge: 'Most popular',
-    limits: ['50 forms', '15 users', '10 GB storage', '10,000 submissions / month'],
+    limits: planLimitLines('business'),
     features: [
       'Everything in Standard',
       'Remove Clickforms branding',
       'API access',
       'Priority email support',
     ],
-    ctaLabel: 'Start free trial',
+    ctaLabel: 'Get started',
     ctaHref: '/signup',
   },
   {
     id: 'professional',
     name: 'Professional',
     description: 'Multiple departments, one shared workspace.',
-    limits: ['Unlimited forms', '50 users', '50 GB storage', '30,000 submissions / month'],
+    limits: planLimitLines('professional'),
     features: ['Everything in Business', 'Custom domain', 'Priority email support'],
-    ctaLabel: 'Start free trial',
+    ctaLabel: 'Get started',
     ctaHref: '/signup',
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
     description: 'Custom compliance, infrastructure, or contract needs.',
-    limits: ['Unlimited forms', 'Unlimited users', 'Unlimited storage', 'Unlimited submissions'],
+    limits: planLimitLines('enterprise'),
     features: [
       'Everything in Professional',
       'Single sign-on (SSO)',
@@ -76,7 +86,7 @@ export function LandingPricing() {
 
   return (
     <section className="landing-pricing">
-      <div className="landing-container">
+      <div className="landing-container landing-pricing-container">
         <div className="landing-pricing-toggle-wrap">
           <div className="landing-pricing-toggle">
             <button
@@ -94,7 +104,7 @@ export function LandingPricing() {
               onClick={() => setAnnual(true)}
             >
               Annual
-              <span className="landing-pricing-toggle-save">Save 10%</span>
+              <span className="landing-pricing-toggle-save">Save ~15%</span>
             </button>
           </div>
         </div>
@@ -132,8 +142,12 @@ export function LandingPricing() {
                   {price === null
                     ? 'Contact us for a tailored quote'
                     : annual
-                      ? `billed annually ($${formatPrice(annualTotalCents(PLAN_PRICING[tier.id].monthly ?? 0) / 100)} / year), incl. GST`
-                      : 'billed monthly, incl. GST'}
+                      ? tier.id === 'free'
+                        ? 'free, no time limit'
+                        : `billed annually ($${formatPrice(annualTotalCents(price ?? 0) / 100)} / year), incl. GST`
+                      : tier.id === 'free'
+                        ? 'free, no time limit'
+                        : 'billed monthly, incl. GST'}
                 </p>
 
                 <Link
@@ -165,8 +179,8 @@ export function LandingPricing() {
         </div>
 
         <p className="landing-pricing-footnote">
-          Every plan starts with a 7-day free trial at Standard-level access, no credit card
-          required. Prices are in AUD and include GST.
+          Start on the Free plan with no credit card and no time limit, and upgrade when your team
+          needs more. Prices are in AUD and include GST.
         </p>
       </div>
     </section>

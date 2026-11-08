@@ -135,7 +135,6 @@ export function SignupForm() {
           value={organizationName}
           onChange={(event) => setOrganizationName(event.target.value)}
           disabled={isSubmitting}
-          placeholder="Acme Healthcare"
         />
       </label>
 
@@ -177,7 +176,6 @@ export function SignupForm() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           disabled={isSubmitting}
-          placeholder="you@company.com.au"
         />
       </label>
 
@@ -191,7 +189,6 @@ export function SignupForm() {
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
           disabled={isSubmitting}
-          placeholder="04XX XXX XXX"
         />
       </label>
 

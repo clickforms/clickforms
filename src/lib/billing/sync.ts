@@ -100,7 +100,11 @@ export async function syncSubscriptionById(subscriptionId: string): Promise<Sync
       return { organizationId, stripeStatus: subscription.status, applied: false };
     }
 
-    const plan: OrgPlan = parsed?.plan ?? existing?.plan ?? organization.plan;
+    // A subscription that has ended (cancelled) drops the organisation to the Free plan.
+    const plan: OrgPlan =
+      subscription.status === 'canceled'
+        ? 'free'
+        : (parsed?.plan ?? existing?.plan ?? organization.plan);
     const interval: BillingInterval = parsed?.interval ?? existing?.interval ?? 'month';
     const pastDueSince =
       subscription.status === 'past_due' ? (existing?.pastDueSince ?? new Date()) : null;

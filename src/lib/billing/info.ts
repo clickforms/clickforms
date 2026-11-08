@@ -12,13 +12,22 @@ export async function loadBillingInfo(
 ): Promise<BillingInfo> {
   const org = await tx.organization.findUniqueOrThrow({
     where: { id: organizationId },
-    select: { billingMode: true, status: true, trialEndsAt: true, subscription: true },
+    select: {
+      billingMode: true,
+      plan: true,
+      status: true,
+      trialEndsAt: true,
+      subscription: true,
+    },
   });
-  const sub = org.subscription;
+  // A subscription that ended into the Free plan is history, not something to manage: the
+  // customer-facing pages treat the organisation as simply being on Free.
+  const sub =
+    org.plan === 'free' && org.subscription?.stripeStatus === 'canceled' ? null : org.subscription;
   return {
     stripeEnabled: isStripeConfigured(),
     billingMode: org.billingMode,
-    access: getBillingAccess(org, sub),
+    access: getBillingAccess(org, org.subscription),
     subscription: sub
       ? {
           stripeStatus: sub.stripeStatus,

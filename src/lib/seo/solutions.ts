@@ -1,6 +1,6 @@
 // Keyword landing pages (/solutions/<slug>). Copy sticks to what Clickforms actually does:
 // multi-page forms, 20+ field types, conditional logic, e-signatures, file uploads, approval
-// workflows, audit trail, branding, PDF export, Australian hosting, 7-day free trial.
+// workflows, audit trail, branding, PDF export, Australian hosting, free plan.
 
 export interface Solution {
   slug: string;
@@ -28,7 +28,7 @@ export const SOLUTIONS: Solution[] = [
     name: 'Online form builder',
     title: 'Online Form Builder Australia | Clickforms',
     description:
-      'Build professional online forms in minutes. Multi-page forms, conditional logic, e-signatures and file uploads. An Australian form builder with a 7-day free trial.',
+      'Build professional online forms in minutes. Multi-page forms, conditional logic, e-signatures and file uploads. An Australian online form builder.',
     keywords: [
       'online form builder',
       'form builder',
@@ -40,7 +40,7 @@ export const SOLUTIONS: Solution[] = [
     lead: 'Design branded, multi-page forms with a drag-and-drop builder, collect structured responses and signatures, and keep every submission searchable, hosted and supported in Australia.',
     sectionTitle: 'Everything you need to build and run online forms',
     sectionLead:
-      'Clickforms is a form builder for teams that collect detailed information, not just a contact box. Start free and publish your first form today.',
+      'Clickforms is a form builder for teams that collect detailed information, not just a contact box. Build and publish your first form today.',
     features: [
       {
         title: '20+ field types',
@@ -82,7 +82,7 @@ export const SOLUTIONS: Solution[] = [
       },
       {
         q: 'Is Clickforms free to try?',
-        a: 'Yes. Every plan starts with a 7-day free trial and no credit card is required. Plans are priced in Australian dollars.',
+        a: 'Yes. The Free plan has no time limit and needs no credit card. Paid plans are priced in Australian dollars.',
       },
       {
         q: 'Do I need technical skills to build a form?',
@@ -100,7 +100,7 @@ export const SOLUTIONS: Solution[] = [
     name: 'Custom forms',
     title: 'Custom Forms Builder: Create Your Own Forms | Clickforms',
     description:
-      'Create custom forms that match your workflow and brand. Choose from 20+ field types, add conditional logic, signatures and approvals. Try Clickforms free for 7 days.',
+      'Create custom forms that match your workflow and brand. Choose from 20+ field types, add conditional logic, signatures and approvals.',
     keywords: ['custom forms', 'custom form builder', 'create custom forms', 'build your own form'],
     eyebrow: 'Custom forms',
     h1: 'Create custom forms that fit your workflow, not the other way around',
@@ -160,7 +160,7 @@ export const SOLUTIONS: Solution[] = [
     name: 'Intake forms',
     title: 'Online Client Intake Forms | Clickforms',
     description:
-      'Collect client intake information online: demographics, referrals and consent in one guided form. Conditional logic, e-signatures and secure storage. Free 7-day trial.',
+      'Collect client intake information online: demographics, referrals and consent in one guided form. Conditional logic, e-signatures and secure storage.',
     keywords: [
       'intake forms',
       'client intake form',
@@ -279,7 +279,7 @@ export const SOLUTIONS: Solution[] = [
     name: 'E-signature forms',
     title: 'E-Signature Forms: Collect Signatures Online | Clickforms',
     description:
-      'Collect electronic signatures inside your online forms. Sign on any device, store with each submission and export to PDF. Try Clickforms free for 7 days.',
+      'Collect electronic signatures inside your online forms. Sign on any device, store with each submission and export to PDF.',
     keywords: [
       'e-signature forms',
       'electronic signature form',
@@ -331,7 +331,7 @@ export const SOLUTIONS: Solution[] = [
     name: 'Service agreement forms',
     title: 'Online Service Agreement Forms | Clickforms',
     description:
-      'Create service agreements clients can review, sign and attach documents to online. Multi-page forms, e-signatures and PDF export. Free 7-day trial.',
+      'Create service agreements clients can review, sign and attach documents to online. Multi-page forms, e-signatures and PDF export.',
     keywords: [
       'service agreement form',
       'online service agreement',

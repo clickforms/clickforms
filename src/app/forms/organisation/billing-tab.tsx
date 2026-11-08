@@ -107,7 +107,7 @@ function buildPlanView(planInfo: OrganizationPlanInfo): PlanView {
   let priceUnit = '';
   if (monthly !== null) {
     if (interval === 'year') {
-      priceLabel = `$${formatPrice(annualTotalCents(monthly) / 100)}`;
+      priceLabel = `$${formatPrice(annualTotalCents(PLAN_PRICING[plan].annual ?? monthly) / 100)}`;
       priceUnit = 'per year';
     } else {
       priceLabel = `$${formatPrice(monthly)}`;
@@ -315,7 +315,7 @@ function SubscriptionPanel({ planInfo }: { planInfo: OrganizationPlanInfo }) {
               href={`/forms/organisation/plan?interval=${otherInterval}`}
               className="bl-btn bl-btn--light"
             >
-              {view.interval === 'year' ? 'Switch to monthly' : 'Switch to annual, save 10%'}
+              {view.interval === 'year' ? 'Switch to monthly' : 'Switch to annual and save'}
             </Link>
             <Link href="/forms/organisation/plan" className="bl-btn">
               Change plan
@@ -345,7 +345,11 @@ function SubscriptionPanel({ planInfo }: { planInfo: OrganizationPlanInfo }) {
           </>
         ) : (
           <Link href="/forms/organisation/plan" className="bl-btn bl-btn--light">
-            {planInfo.status === 'trial' ? 'Choose a plan' : 'Change plan'}
+            {planInfo.status === 'trial'
+              ? 'Choose a plan'
+              : planInfo.plan === 'free'
+                ? 'Upgrade plan'
+                : 'Change plan'}
           </Link>
         )}
       </div>

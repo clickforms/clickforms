@@ -65,6 +65,10 @@ interface FormRendererClientProps {
   /** Admin "send a prefilled form" mode (/f/[slug]/prefill): the last-page button opens a
    * send-by-email panel instead of submitting. */
   prefillBuilder?: boolean;
+  /** Link target for the "Sent with care by Clickforms" mark. Only the live public page
+   * passes it (and only for plans that don't remove branding); previews, the prefill builder
+   * and template previews leave it unset, so no mark renders. */
+  brandingHref?: string;
   /** Builder only: the saved draft being continued (updated in place when saved/sent). */
   draftId?: string;
   /** A sent prefill being edited in place and re-sent. */
@@ -115,6 +119,7 @@ function FormRendererInner({
   prefillAnswers,
   prefillToken,
   prefillBuilder = false,
+  brandingHref,
   draftId,
   reopenId,
 }: FormRendererClientProps) {
@@ -554,6 +559,7 @@ function FormRendererInner({
             </>
           )}
         </div>
+        {brandingHref ? <BrandMark href={brandingHref} /> : null}
       </div>
     );
   }
@@ -827,6 +833,17 @@ function FormRendererInner({
           ) : null}
         </div>
       </div>
+      {brandingHref ? <BrandMark href={brandingHref} /> : null}
     </div>
+  );
+}
+
+function BrandMark({ href }: { href: string }) {
+  return (
+    <p className="form-brand-mark">
+      <a href={href} target="_blank" rel="noopener">
+        Sent with care by <strong>Clickforms</strong>
+      </a>
+    </p>
   );
 }

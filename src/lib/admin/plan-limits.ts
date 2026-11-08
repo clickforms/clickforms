@@ -32,11 +32,20 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
+  free: {
+    maxForms: 2,
+    maxUsers: 1,
+    maxStorageBytes: 100 * 1024 * 1024,
+    maxSubmissionsPerMonth: 10,
+    removeBranding: false,
+    apiAccess: false,
+    customDomain: false,
+  },
   standard: {
     maxForms: 10,
-    maxUsers: 1,
+    maxUsers: 3,
     maxStorageBytes: 500 * 1024 * 1024,
-    maxSubmissionsPerMonth: 1000,
+    maxSubmissionsPerMonth: 500,
     removeBranding: false,
     apiAccess: false,
     customDomain: false,
@@ -45,7 +54,7 @@ export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
     maxForms: 50,
     maxUsers: 15,
     maxStorageBytes: 10 * 1024 * 1024 * 1024,
-    maxSubmissionsPerMonth: 10000,
+    maxSubmissionsPerMonth: 5000,
     removeBranding: true,
     apiAccess: true,
     customDomain: false,
@@ -54,7 +63,7 @@ export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
     maxForms: null,
     maxUsers: 50,
     maxStorageBytes: 50 * 1024 * 1024 * 1024,
-    maxSubmissionsPerMonth: 30000,
+    maxSubmissionsPerMonth: 10000,
     removeBranding: true,
     apiAccess: true,
     customDomain: true,
@@ -70,7 +79,14 @@ export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
   },
 };
 
+/** The "Sent with care by Clickforms" mark on public forms: shown unless the plan includes
+ * removing the branding (Business and above). */
+export function showsFormBranding(plan: OrgPlan): boolean {
+  return !PLAN_LIMITS[plan].removeBranding;
+}
+
 export const PLAN_LABELS: Record<OrgPlan, string> = {
+  free: 'Free',
   standard: 'Standard',
   business: 'Business',
   professional: 'Professional',
@@ -78,6 +94,7 @@ export const PLAN_LABELS: Record<OrgPlan, string> = {
 };
 
 export const PLAN_ORDER = [
+  'free',
   'standard',
   'business',
   'professional',
@@ -97,11 +114,12 @@ export interface PlanPricing {
 
 export const PLAN_PRICING: Record<OrgPlan, PlanPricing> = {
   // All prices are AUD and GST-inclusive. `annual` is the effective per-month price when
-  // billed yearly: 10% off twelve months (see ANNUAL_DISCOUNT_PERCENT in lib/billing/config.ts,
-  // which also derives the charged annual totals, e.g. $82 -> $885.60 a year).
-  standard: { monthly: 82, annual: 73.8 },
-  business: { monthly: 129, annual: 116.1 },
-  professional: { monthly: 219, annual: 197.1 },
+  // billed yearly; the charged annual total is `annual * 12` (see annualTotalCents in
+  // lib/billing/config.ts), e.g. Standard $72/mo -> $864 a year.
+  free: { monthly: 0, annual: 0 },
+  standard: { monthly: 86, annual: 72 },
+  business: { monthly: 130, annual: 109 },
+  professional: { monthly: 219, annual: 185 },
   enterprise: { monthly: null, annual: null },
 };
 

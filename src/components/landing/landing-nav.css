@@ -1,0 +1,139 @@
+/* Mobile navigation: hamburger + slide-down menu (src/components/landing/landing-nav.tsx).
+   Below 768px the desktop link row is hidden, so everything lives in this menu. */
+.landing-nav-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.landing-nav-toggle-bars,
+.landing-nav-toggle-bars::before,
+.landing-nav-toggle-bars::after {
+  display: block;
+  width: 1.05rem;
+  height: 2px;
+  border-radius: 2px;
+  background: #111;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.landing-nav-toggle-bars {
+  position: relative;
+}
+
+.landing-nav-toggle-bars::before,
+.landing-nav-toggle-bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.landing-nav-toggle-bars::before {
+  top: -0.35rem;
+}
+
+.landing-nav-toggle-bars::after {
+  top: 0.35rem;
+}
+
+.landing-nav-toggle[aria-expanded="true"] .landing-nav-toggle-bars {
+  background: transparent;
+}
+
+.landing-nav-toggle[aria-expanded="true"] .landing-nav-toggle-bars::before {
+  transform: translateY(0.35rem) rotate(45deg);
+}
+
+.landing-nav-toggle[aria-expanded="true"] .landing-nav-toggle-bars::after {
+  transform: translateY(-0.35rem) rotate(-45deg);
+}
+
+.landing-mobile-scrim {
+  position: fixed;
+  inset: var(--landing-nav-h) 0 0;
+  z-index: 98;
+  border: 0;
+  background: rgba(17, 17, 17, 0.35);
+  cursor: default;
+}
+
+.landing-mobile-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100svh - var(--landing-nav-h));
+  padding: 0.75rem 1.25rem 1.5rem;
+  overflow-y: auto;
+  background: #fff;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+  box-shadow: 0 18px 32px rgba(27, 27, 47, 0.12);
+  animation: landing-mobile-menu-in 0.18s ease-out;
+}
+
+@keyframes landing-mobile-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.landing-mobile-group {
+  margin: 0.5rem 0 0.15rem;
+  color: rgba(17, 17, 17, 0.5);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.landing-mobile-link {
+  display: block;
+  padding: 0.8rem 0;
+  color: #111;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.landing-mobile-link[data-active] {
+  color: var(--landing-primary-dark, #1f9d55);
+}
+
+.landing-mobile-divider {
+  height: 1px;
+  margin: 0.4rem 0;
+  background: rgba(17, 17, 17, 0.08);
+}
+
+.landing-mobile-cta {
+  margin-top: 1rem;
+  padding: 0.8rem 1.25rem;
+  font-size: 1rem;
+}
+
+/* The bar keeps just Get started + the hamburger on phones; Sign up moves into the menu. */
+@media (max-width: 767px) {
+  .landing-nav-signup {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .landing-nav-toggle,
+  .landing-mobile-menu,
+  .landing-mobile-scrim {
+    display: none;
+  }
+}

@@ -261,6 +261,7 @@ model User {
   approvedWorkflows  WorkflowStep[]  @relation("WorkflowApprover")
   auditLogs          AuditLog[]      @relation("AuditActor")
   twoFactorCodes     TwoFactorCode[]
+  preferences        UserPreference[]
   sentInvites        UserInvite[]    @relation("InviteSender")
   sentPlatformAdminInvites PlatformAdminInvite[] @relation("PlatformAdminInviteSender")
   passwordResetTokens PasswordResetToken[]
@@ -384,6 +385,21 @@ model TwoFactorCode {
 
   @@index([userId, purpose])
   @@map("two_factor_codes")
+}
+
+// Per-user UI preferences (remembered Responses/Prefills filters, ...) so they follow the
+// person across devices and login sessions. One small JSON object per (user, key). No
+// organization_id / RLS: always read and written by the signed-in user's own id.
+model UserPreference {
+  userId    String   @map("user_id") @db.Uuid
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key])
+  @@map("user_preferences")
 }
 
 // An admin-created "prefill": a form with some answers pre-populated, emailed to one

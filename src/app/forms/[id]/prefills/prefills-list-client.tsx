@@ -12,7 +12,8 @@ import {
   FilterPanel,
 } from '@/components/list-filters/list-filters';
 import { useToast } from '@/components/toast';
-import { readLocalPrefs, writeLocalPrefs } from '@/lib/local-prefs';
+import { readLocalPrefs } from '@/lib/local-prefs';
+import { loadSyncedPrefs, saveSyncedPrefs } from '@/lib/synced-prefs';
 import './prefills.css';
 
 type Status =
@@ -138,10 +139,13 @@ export function PrefillsListClient({
   const [toDelete, setToDelete] = useState<PrefillItem | null>(null);
   const [hold, setHold] = useState(holdResponses);
 
-  // Remember the search and status filter across visits (this browser), restored after mount.
+  // Remember the search and status filter: this browser's cache applies instantly, then the
+  // copy saved on the user's account wins so it follows them across devices and logins.
+  // Saving only starts once that has settled, so a fresh device never overwrites the account copy.
   useEffect(() => {
-    const saved = readLocalPrefs(prefsKey);
-    if (saved) {
+    let cancelled = false;
+    function apply(saved: Record<string, unknown> | null) {
+      if (!saved) return;
       if (typeof saved.search === 'string') setSearch(saved.search.slice(0, 200));
       const savedFilter = saved.filter;
       if (
@@ -151,12 +155,20 @@ export function PrefillsListClient({
         setFilter(savedFilter as 'all' | Status);
       }
     }
-    setPrefsReady(true);
+    apply(readLocalPrefs(prefsKey));
+    void loadSyncedPrefs(prefsKey).then((synced) => {
+      if (cancelled) return;
+      apply(synced);
+      setPrefsReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [prefsKey]);
 
   useEffect(() => {
     if (!prefsReady) return;
-    writeLocalPrefs(prefsKey, { search, filter });
+    saveSyncedPrefs(prefsKey, { search, filter });
   }, [prefsReady, prefsKey, search, filter]);
 
   async function toggleHold(next: boolean) {

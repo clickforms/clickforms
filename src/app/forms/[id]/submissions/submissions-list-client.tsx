@@ -12,6 +12,7 @@ import {
   type SubmissionsDateRangeValue,
 } from '@/app/forms/[id]/submissions/submissions-date-range-picker';
 import {
+  loadSyncedSubmissionFilters,
   readSubmissionFilters,
   writeSubmissionFilters,
 } from '@/app/forms/[id]/submissions/submissions-list-filters';
@@ -284,14 +285,30 @@ export function SubmissionsListClient({
   const skipPageReset = useRef(true);
 
   // Restore after mount so SSR/hydration doesn't wipe sessionStorage with empty defaults.
+  // This browser's cache applies instantly; the copy saved on the user's account then wins, so
+  // filters follow them across devices and logins. Saving only starts once that has settled,
+  // so a fresh device's empty defaults never overwrite the account copy.
   useEffect(() => {
+    let cancelled = false;
     skipPageReset.current = true;
-    const stored = readSubmissionFilters(formId);
-    setSearch(stored.search);
-    setStatusFilter(stored.status);
-    setDateRange({ from: stored.from, to: stored.to });
-    setPage(stored.page);
-    setFiltersReady(true);
+    function apply(stored: ReturnType<typeof readSubmissionFilters>) {
+      setSearch(stored.search);
+      setStatusFilter(stored.status);
+      setDateRange({ from: stored.from, to: stored.to });
+      setPage(stored.page);
+    }
+    apply(readSubmissionFilters(formId));
+    void loadSyncedSubmissionFilters(formId).then((synced) => {
+      if (cancelled) return;
+      if (synced) {
+        skipPageReset.current = true;
+        apply(synced);
+      }
+      setFiltersReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [formId]);
 
   // Jump back to page 1 whenever a filter changes — skip the restore pass so opening a

@@ -1,4 +1,5 @@
-import { readLocalPrefs, writeLocalPrefs } from '@/lib/local-prefs';
+import { readLocalPrefs } from '@/lib/local-prefs';
+import { loadSyncedPrefs, saveSyncedPrefs } from '@/lib/synced-prefs';
 
 export type StoredSubmissionStatus = 'all' | 'in_progress' | 'submitted' | 'approved' | 'rejected';
 
@@ -34,20 +35,7 @@ const emptyFilters: StoredSubmissionFilters = {
   page: 1,
 };
 
-/** Restores the Responses list's search, status and date filters (remembered across visits in
- * this browser) and its page (remembered only for the current tab, so a new visit starts on
- * page 1). */
-export function readSubmissionFilters(formId: string): StoredSubmissionFilters {
-  if (typeof window === 'undefined') return emptyFilters;
-  const saved = readLocalPrefs(filtersKey(formId));
-  let page = 1;
-  try {
-    const rawPage = Number(window.sessionStorage.getItem(pageKey(formId)));
-    if (Number.isInteger(rawPage) && rawPage >= 1) page = rawPage;
-  } catch {
-    // sessionStorage unavailable: start on page 1.
-  }
-  if (!saved) return { ...emptyFilters, page };
+function parseSaved(saved: Record<string, unknown>, page: number): StoredSubmissionFilters {
   const status = saved.status;
   return {
     search: typeof saved.search === 'string' ? saved.search.slice(0, 200) : '',
@@ -61,9 +49,37 @@ export function readSubmissionFilters(formId: string): StoredSubmissionFilters {
   };
 }
 
+function readStoredPage(formId: string): number {
+  try {
+    const rawPage = Number(window.sessionStorage.getItem(pageKey(formId)));
+    if (Number.isInteger(rawPage) && rawPage >= 1) return rawPage;
+  } catch {
+    // sessionStorage unavailable: start on page 1.
+  }
+  return 1;
+}
+
+/** Instant restore from this browser's cache (search, status and date filters) plus the page
+ * (remembered only for the current tab, so a new visit starts on page 1). */
+export function readSubmissionFilters(formId: string): StoredSubmissionFilters {
+  if (typeof window === 'undefined') return emptyFilters;
+  const page = readStoredPage(formId);
+  const saved = readLocalPrefs(filtersKey(formId));
+  return saved ? parseSaved(saved, page) : { ...emptyFilters, page };
+}
+
+/** The filters saved on the user's account (they follow the person across devices and login
+ * sessions), or null when none are saved or the request failed. */
+export async function loadSyncedSubmissionFilters(
+  formId: string,
+): Promise<StoredSubmissionFilters | null> {
+  const saved = await loadSyncedPrefs(filtersKey(formId));
+  return saved ? parseSaved(saved, readStoredPage(formId)) : null;
+}
+
 export function writeSubmissionFilters(formId: string, filters: StoredSubmissionFilters): void {
   if (typeof window === 'undefined') return;
-  writeLocalPrefs(filtersKey(formId), {
+  saveSyncedPrefs(filtersKey(formId), {
     search: filters.search,
     status: filters.status,
     from: filters.from,

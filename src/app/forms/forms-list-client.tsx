@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DeleteFormModal } from '@/app/forms/delete-form-modal';
 import { FormActionsMenu } from '@/app/forms/form-actions-menu';
-import '@/app/forms/forms-toolbar.css';
-import { readFormsListPrefs, writeFormsListPrefs } from '@/app/forms/forms-list-prefs';
 import { TransferFormModal } from '@/app/forms/transfer-form-modal';
 import { DropdownMenu } from '@/components/dropdown-menu';
 import { LiveStatusBadge } from '@/components/live-status-badge';
@@ -123,15 +121,12 @@ function SortIcon() {
 }
 
 function FilterIcon() {
-  // A solid-looking funnel: filled at low opacity with a firm outline so it reads at a glance.
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
-        d="M2.4 3.6a.6.6 0 0 1 .6-.6h12a.6.6 0 0 1 .46.98L11 9.4v4.3a.6.6 0 0 1-.33.54l-2.4 1.2a.6.6 0 0 1-.87-.54V9.4L2.54 3.98a.6.6 0 0 1-.14-.38Z"
-        fill="currentColor"
-        fillOpacity="0.14"
+        d="M2 3.2h12L9.6 8v5l-3.2 1.4V8L2 3.2z"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.3"
         strokeLinejoin="round"
       />
     </svg>
@@ -282,26 +277,8 @@ export function FormsListClient({
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  const [prefsReady, setPrefsReady] = useState(false);
   const sortTriggerRef = useRef<HTMLButtonElement>(null);
   const filterTriggerRef = useRef<HTMLButtonElement>(null);
-
-  // Restore the last-used search/filter/sort/layout after mount (reading storage during render
-  // would not match the server HTML), then keep it saved as it changes.
-  useEffect(() => {
-    const saved = readFormsListPrefs();
-    setSearch(saved.search);
-    setStatusFilter(saved.statusFilter);
-    setSortColumn(saved.sortColumn);
-    setSortDirection(saved.sortDirection);
-    setViewMode(saved.viewMode);
-    setPrefsReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!prefsReady) return;
-    writeFormsListPrefs({ search, statusFilter, sortColumn, sortDirection, viewMode });
-  }, [prefsReady, search, statusFilter, sortColumn, sortDirection, viewMode]);
 
   async function handleCopyLink(url: string) {
     try {
@@ -554,11 +531,6 @@ export function FormsListClient({
     return counts;
   }, [forms]);
 
-  const sortLabel = COLUMNS.find((column) => column.key === sortColumn)?.label ?? 'Last updated';
-  const activeFilterCount = statusFilter === 'all' ? 0 : 1;
-  const statusFilterLabel = STATUS_FILTERS.find((filter) => filter.key === statusFilter)?.label;
-  const hasAppliedChips = statusFilter !== 'all' || search.trim() !== '';
-
   return (
     <div className="forms-list-page">
       <header className="forms-list-header">
@@ -641,15 +613,12 @@ export function FormsListClient({
                 <button
                   ref={sortTriggerRef}
                   type="button"
-                  className="forms-tool-btn"
-                  aria-label={`Sort forms, currently by ${sortLabel}`}
+                  className="forms-toolbar-icon-btn"
+                  aria-label="Sort forms"
                   aria-haspopup="menu"
-                  aria-expanded={isSortMenuOpen}
                   onClick={() => setIsSortMenuOpen((current) => !current)}
                 >
                   <SortIcon />
-                  <span>Sort</span>
-                  <span className="forms-tool-btn-hint">{sortLabel}</span>
                 </button>
                 <DropdownMenu
                   open={isSortMenuOpen}
@@ -688,58 +657,43 @@ export function FormsListClient({
                 <button
                   ref={filterTriggerRef}
                   type="button"
-                  className={`forms-tool-btn${activeFilterCount > 0 ? ' forms-tool-btn--active' : ''}`}
-                  aria-label={
-                    activeFilterCount > 0
-                      ? `Filter forms, ${activeFilterCount} applied`
-                      : 'Filter forms'
-                  }
-                  aria-haspopup="dialog"
-                  aria-expanded={isFilterMenuOpen}
+                  className={`forms-toolbar-icon-btn${statusFilter !== 'all' ? ' forms-toolbar-icon-btn--active' : ''}`}
+                  aria-label="Filter forms"
+                  aria-haspopup="menu"
                   onClick={() => setIsFilterMenuOpen((current) => !current)}
                 >
                   <FilterIcon />
-                  <span>Filter</span>
-                  {activeFilterCount > 0 ? (
-                    <span className="forms-tool-badge">{activeFilterCount}</span>
-                  ) : null}
                 </button>
                 <DropdownMenu
                   open={isFilterMenuOpen}
                   onOpenChange={setIsFilterMenuOpen}
                   triggerRef={filterTriggerRef}
                   align="start"
-                  panelClassName="actions-menu-panel forms-filter-panel"
                 >
-                  <div className="forms-filter-panel-head">
-                    <h3>Filter forms</h3>
-                    <button
-                      type="button"
-                      className="forms-filter-clear"
-                      disabled={statusFilter === 'all'}
-                      onClick={() => setStatusFilter('all')}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <p className="forms-filter-group-label">Status</p>
-                  <div className="forms-filter-options">
+                  {/* biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA APG menu pattern, matches DropdownMenu's usage elsewhere in the app */}
+                  <ul role="menu">
                     {STATUS_FILTERS.map((filter) => (
-                      <button
-                        key={filter.key}
-                        type="button"
-                        className="forms-filter-option"
-                        aria-pressed={statusFilter === filter.key}
-                        onClick={() => setStatusFilter(filter.key)}
-                      >
-                        {statusFilter === filter.key ? <CheckIcon /> : null}
-                        {filter.label}
-                        <span className="forms-filter-option-count">
-                          {filterCounts[filter.key]}
-                        </span>
-                      </button>
+                      <li role="none" key={filter.key}>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="actions-menu-item"
+                          onClick={() => {
+                            setStatusFilter(filter.key);
+                            setIsFilterMenuOpen(false);
+                          }}
+                        >
+                          <span className="actions-menu-icon actions-menu-check">
+                            {statusFilter === filter.key ? <CheckIcon /> : null}
+                          </span>
+                          <span className="actions-menu-item-text">{filter.label}</span>
+                          <span className="forms-filter-chip-count">
+                            {filterCounts[filter.key]}
+                          </span>
+                        </button>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </DropdownMenu>
 
                 <div className="forms-view-toggle" role="tablist" aria-label="Layout">
@@ -767,41 +721,6 @@ export function FormsListClient({
               </div>
             </div>
           </div>
-          {hasAppliedChips ? (
-            <div className="forms-applied">
-              <span className="forms-applied-label">Showing</span>
-              {statusFilter !== 'all' ? (
-                <span className="forms-applied-chip">
-                  Status: {statusFilterLabel}
-                  <button
-                    type="button"
-                    aria-label="Remove status filter"
-                    onClick={() => setStatusFilter('all')}
-                  >
-                    <CloseIcon />
-                  </button>
-                </span>
-              ) : null}
-              {search.trim() !== '' ? (
-                <span className="forms-applied-chip">
-                  Search: &ldquo;{search.trim()}&rdquo;
-                  <button type="button" aria-label="Clear search" onClick={() => setSearch('')}>
-                    <CloseIcon />
-                  </button>
-                </span>
-              ) : null}
-              <button
-                type="button"
-                className="forms-applied-clear"
-                onClick={() => {
-                  setStatusFilter('all');
-                  setSearch('');
-                }}
-              >
-                Clear all
-              </button>
-            </div>
-          ) : null}
           <div className="card admin-table-card">
             {viewMode === 'grid' ? (
               <div className="forms-grid">

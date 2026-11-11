@@ -1,0 +1,215 @@
+/* Forms list toolbar: labelled Filter / Sort buttons (icon + text + state), the filter popover,
+   and the row of removable chips showing what is currently applied. */
+.forms-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.6rem;
+  padding: 0 0.95rem 0 0.8rem;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-strong, #cbd5e1);
+  border-radius: 999px;
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #111827);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.forms-tool-btn svg {
+  flex-shrink: 0;
+  color: #111827;
+}
+
+.forms-tool-btn:hover {
+  background: var(--color-surface-sunken, #f4f6fa);
+  border-color: #94a3b8;
+}
+
+.forms-tool-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(85, 234, 140, 0.45);
+}
+
+.forms-tool-btn[aria-expanded="true"],
+.forms-tool-btn--active {
+  border-color: #3fcf68;
+  background: #e9fdf1;
+}
+
+.forms-tool-btn--active svg {
+  color: #0d7a3e;
+}
+
+.forms-tool-btn-hint {
+  color: var(--color-text-muted, #6b7280);
+  font-weight: 500;
+}
+
+.forms-tool-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* Filter popover */
+.forms-filter-panel {
+  width: 18.5rem;
+  padding: 0.9rem;
+}
+
+.forms-filter-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.forms-filter-panel-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.forms-filter-clear {
+  border: 0;
+  background: none;
+  color: #0d7a3e;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.forms-filter-clear:disabled {
+  color: var(--color-text-subtle, #9ca3af);
+  cursor: default;
+}
+
+.forms-filter-group-label {
+  margin: 0 0 0.45rem;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.forms-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.forms-filter-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border-strong, #cbd5e1);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-text, #111827);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.forms-filter-option:hover {
+  border-color: #94a3b8;
+  background: var(--color-surface-sunken, #f4f6fa);
+}
+
+.forms-filter-option[aria-pressed="true"] {
+  border-color: #3fcf68;
+  background: #e9fdf1;
+  color: #0d5c31;
+}
+
+.forms-filter-option-count {
+  padding: 0.02rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.07);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Applied chips */
+.forms-applied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: -0.35rem 0 1rem;
+}
+
+.forms-applied-label {
+  margin-right: 0.15rem;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.forms-applied-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.4rem 0.28rem 0.75rem;
+  border: 1px solid #b8f5d0;
+  border-radius: 999px;
+  background: #e9fdf1;
+  color: #0d5c31;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.forms-applied-chip button {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(13, 92, 49, 0.14);
+  color: inherit;
+  cursor: pointer;
+}
+
+.forms-applied-chip button:hover {
+  background: rgba(13, 92, 49, 0.28);
+}
+
+.forms-applied-clear {
+  border: 0;
+  background: none;
+  color: var(--color-text-muted, #6b7280);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .forms-tool-btn-hint {
+    display: none;
+  }
+}

@@ -72,6 +72,27 @@ export default async function FormPrefillPage({ params, searchParams }: PageProp
   );
 
   if (!form || !version) {
+    // Form exists but isn't live: explain instead of a 404.
+    const offline = await withOrgContext(session.user.organizationId, (tx) =>
+      tx.form.findFirst({
+        where: {
+          slug,
+          organizationId: requireOrganizationId(session),
+          status: { not: 'archived' },
+        },
+        select: { id: true },
+      }),
+    );
+    if (offline) {
+      return (
+        <div className="form-renderer">
+          <div className="form-renderer-body form-success">
+            <h1>This form is not live right now</h1>
+            <p>Publish the form again to send prefilled copies of it.</p>
+          </div>
+        </div>
+      );
+    }
     notFound();
   }
 

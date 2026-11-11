@@ -82,6 +82,27 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
         </div>
       );
     }
+    // A form that exists but has been taken offline (or is being edited) is not a missing
+    // page: say so, so an emailed prefill link doesn't dead-end on a 404.
+    const offline = await prisma.form
+      .findFirst({
+        where: { slug, organizationId, status: { not: 'archived' }, currentVersionId: null },
+        select: { id: true },
+      })
+      .catch(() => null);
+    if (offline) {
+      return (
+        <div className="form-renderer">
+          <div className="form-renderer-body form-success">
+            <h1>This form is not live right now</h1>
+            <p>
+              It has been taken offline for now. Please check back later, or contact the
+              organisation that sent you this link.
+            </p>
+          </div>
+        </div>
+      );
+    }
     notFound();
   }
   if (!form) {

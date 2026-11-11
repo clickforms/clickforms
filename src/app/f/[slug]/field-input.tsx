@@ -37,7 +37,7 @@ import {
   type TableRowAnswer,
 } from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
-import { getFieldImageSrc } from '@/lib/forms/field-image';
+import { getFieldImageSrc, imageCaption } from '@/lib/forms/field-image';
 import {
   fieldHasCustomAppearance,
   resolveDividerCaptionStyle,
@@ -243,12 +243,12 @@ export function FieldInput({
         className={`form-image-field form-image-field--align-${align}`}
         style={resolveImageSpacingStyle(field)}
       >
-        {field.label ? (
+        {imageCaption(field.label) ? (
           <p
             className="form-image-field-caption"
             style={field.textColor ? { color: field.textColor } : undefined}
           >
-            {field.label}
+            {imageCaption(field.label)}
           </p>
         ) : null}
         {field.linkUrl ? (

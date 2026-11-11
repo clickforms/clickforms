@@ -10,6 +10,7 @@ import {
   questionTableExtraCellKey,
 } from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
+import { imageCaption } from '@/lib/forms/field-image';
 import {
   fieldHasCustomAppearance,
   resolveDividerCaptionStyle,
@@ -110,7 +111,9 @@ export function SubmissionFieldDisplay({
         className={`export-image-field export-image-field--align-${align}`}
         style={resolveImageSpacingStyle(field)}
       >
-        {field.label ? <p className="export-image-caption">{field.label}</p> : null}
+        {imageCaption(field.label) ? (
+          <p className="export-image-caption">{imageCaption(field.label)}</p>
+        ) : null}
         {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
         <img src={src} alt={field.alt ?? field.label} style={resolveImageStyle(field)} />
       </div>

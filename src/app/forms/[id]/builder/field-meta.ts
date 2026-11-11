@@ -173,7 +173,9 @@ export function createDefaultField(type: FieldType): FormField {
         required: false,
       };
     case 'image':
-      return { id, type, label, required: false };
+      // The caption is optional and shows as visible text on the form, so a new image starts
+      // with none rather than the "Image" palette name.
+      return { id, type, label: '', required: false };
     case 'address':
       return { id, type, label, required: false };
     case 'full_name':

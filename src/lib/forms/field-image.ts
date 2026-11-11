@@ -27,3 +27,12 @@ export function getFieldImageSrc(params: {
   if (formId) return `/api/forms/${formId}/fields/${fieldId}/image`;
   return null;
 }
+
+/** The visible caption for an image field, or null. Older image fields were created with the
+ * palette name "Image" as their label, which then showed on the form as a stray caption; that
+ * placeholder is treated as no caption. */
+export function imageCaption(label: string | undefined): string | null {
+  const text = label?.trim();
+  if (!text || text.toLowerCase() === 'image') return null;
+  return text;
+}

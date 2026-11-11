@@ -9,7 +9,7 @@ import { SubmissionStatusControl } from '@/app/forms/[id]/submissions/[submissio
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
-import { getFieldImageSrc } from '@/lib/forms/field-image';
+import { getFieldImageSrc, imageCaption } from '@/lib/forms/field-image';
 import {
   resolveDividerCaptionStyle,
   resolveDividerLineStyle,
@@ -496,8 +496,8 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                       className="submission-image-field"
                       style={resolveImageSpacingStyle(field)}
                     >
-                      {field.label ? (
-                        <p className="submission-image-caption">{field.label}</p>
+                      {imageCaption(field.label) ? (
+                        <p className="submission-image-caption">{imageCaption(field.label)}</p>
                       ) : null}
                       {/* biome-ignore lint/performance/noImgElement: dynamic/presigned image URLs; next/image is a poor fit here */}
                       <img

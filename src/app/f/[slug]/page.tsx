@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
+import { FormNotice } from '@/components/form-notice/form-notice';
 import { showsFormBranding } from '@/lib/admin/plan-limits';
 import { FormOfflineError } from '@/lib/api-errors';
 import { prisma, withOrgContext } from '@/lib/db';
@@ -74,12 +75,9 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
     // falls back to.
     if (error instanceof FormOfflineError) {
       return (
-        <div className="form-renderer">
-          <div className="form-renderer-body form-success">
-            <h1>This form isn&apos;t accepting responses right now</h1>
-            <p>Please check back later, or contact the organisation directly.</p>
-          </div>
-        </div>
+        <FormNotice title="This form isn&apos;t accepting responses right now">
+          <p>Please check back later, or contact the organisation directly.</p>
+        </FormNotice>
       );
     }
     // A form that exists but has been taken offline (or is being edited) is not a missing
@@ -92,15 +90,12 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
       .catch(() => null);
     if (offline) {
       return (
-        <div className="form-renderer">
-          <div className="form-renderer-body form-success">
-            <h1>This form is not live right now</h1>
-            <p>
-              It has been taken offline for now. Please check back later, or contact the
-              organisation that sent you this link.
-            </p>
-          </div>
-        </div>
+        <FormNotice title="This form is not live right now">
+          <p>
+            It has been taken offline for now. Please check back later, or contact the organisation
+            that sent you this link.
+          </p>
+        </FormNotice>
       );
     }
     notFound();
@@ -139,15 +134,12 @@ export default async function PublicFormPage({ params, searchParams }: PageProps
     if (found?.used) {
       // One response per link: once it has come back, the link just says so.
       return (
-        <div className="form-renderer">
-          <div className="form-renderer-body form-success">
-            <h1>This form has already been submitted</h1>
-            <p>
-              Thank you, your response was received. If you need to change something, please contact
-              the organisation directly.
-            </p>
-          </div>
-        </div>
+        <FormNotice title="This form has already been submitted" tone="success">
+          <p>
+            Thank you, your response was received. If you need to change something, please contact
+            the organisation directly.
+          </p>
+        </FormNotice>
       );
     }
     if (found) {

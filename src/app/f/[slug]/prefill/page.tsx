@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { FormRendererClient } from '@/app/f/[slug]/form-renderer-client';
+import { FormNotice } from '@/components/form-notice/form-notice';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { sanitizePrefillAnswers } from '@/lib/forms/prefills';
@@ -85,12 +86,9 @@ export default async function FormPrefillPage({ params, searchParams }: PageProp
     );
     if (offline) {
       return (
-        <div className="form-renderer">
-          <div className="form-renderer-body form-success">
-            <h1>This form is not live right now</h1>
-            <p>Publish the form again to send prefilled copies of it.</p>
-          </div>
-        </div>
+        <FormNotice title="This form is not live right now">
+          <p>Publish the form again to send prefilled copies of it.</p>
+        </FormNotice>
       );
     }
     notFound();

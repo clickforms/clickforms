@@ -1,10 +1,18 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { PrefillPanel } from '@/app/forms/[id]/prefills/prefill-panel';
 import { ColumnPicker } from '@/app/forms/[id]/submissions/column-picker';
+import {
+  AppliedFilters,
+  FilterButton,
+  FilterGroup,
+  FilterOption,
+  FilterPanel,
+} from '@/components/list-filters/list-filters';
 import { useToast } from '@/components/toast';
+import { readLocalPrefs, writeLocalPrefs } from '@/lib/local-prefs';
 import './prefills.css';
 
 type Status =
@@ -122,9 +130,34 @@ export function PrefillsListClient({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | Status>('all');
   const [search, setSearch] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [prefsReady, setPrefsReady] = useState(false);
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
+  const prefsKey = `clickforms.prefills.filters.${formId}`;
   const [openId, setOpenId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<PrefillItem | null>(null);
   const [hold, setHold] = useState(holdResponses);
+
+  // Remember the search and status filter across visits (this browser), restored after mount.
+  useEffect(() => {
+    const saved = readLocalPrefs(prefsKey);
+    if (saved) {
+      if (typeof saved.search === 'string') setSearch(saved.search.slice(0, 200));
+      const savedFilter = saved.filter;
+      if (
+        typeof savedFilter === 'string' &&
+        FILTERS.some((candidate) => candidate.key === savedFilter)
+      ) {
+        setFilter(savedFilter as 'all' | Status);
+      }
+    }
+    setPrefsReady(true);
+  }, [prefsKey]);
+
+  useEffect(() => {
+    if (!prefsReady) return;
+    writeLocalPrefs(prefsKey, { search, filter });
+  }, [prefsReady, prefsKey, search, filter]);
 
   async function toggleHold(next: boolean) {
     setHold(next);
@@ -275,18 +308,32 @@ export function PrefillsListClient({
               aria-label="Search prefills"
             />
           </label>
-          <select
-            className="pf-select"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value as 'all' | Status)}
-            aria-label="Filter by status"
+          <FilterButton
+            buttonRef={filterTriggerRef}
+            appliedCount={filter !== 'all' ? 1 : 0}
+            open={isFilterOpen}
+            onClick={() => setIsFilterOpen((current) => !current)}
+          />
+          <FilterPanel
+            open={isFilterOpen}
+            onOpenChange={setIsFilterOpen}
+            triggerRef={filterTriggerRef}
+            onClear={() => setFilter('all')}
+            canClear={filter !== 'all'}
           >
-            {FILTERS.filter((f) => f.key === 'all' || (counts.get(f.key) ?? 0) > 0).map((f) => (
-              <option key={f.key} value={f.key}>
-                {f.key === 'all' ? 'All statuses' : f.label} ({counts.get(f.key) ?? 0})
-              </option>
-            ))}
-          </select>
+            <FilterGroup label="Status">
+              {FILTERS.filter((f) => f.key === 'all' || (counts.get(f.key) ?? 0) > 0).map((f) => (
+                <FilterOption
+                  key={f.key}
+                  selected={filter === f.key}
+                  count={counts.get(f.key) ?? 0}
+                  onClick={() => setFilter(f.key)}
+                >
+                  {f.label}
+                </FilterOption>
+              ))}
+            </FilterGroup>
+          </FilterPanel>
           <label
             className="pfd-switch"
             title="When on, a returned prefill waits here until you promote it to a response"
@@ -310,6 +357,32 @@ export function PrefillsListClient({
           </a>
         ) : null}
       </div>
+      <AppliedFilters
+        chips={[
+          ...(filter !== 'all'
+            ? [
+                {
+                  key: 'status',
+                  label: `Status: ${STATUS_LABEL[filter]}`,
+                  onRemove: () => setFilter('all'),
+                },
+              ]
+            : []),
+          ...(search.trim()
+            ? [
+                {
+                  key: 'search',
+                  label: `Search: \u201c${search.trim()}\u201d`,
+                  onRemove: () => setSearch(''),
+                },
+              ]
+            : []),
+        ]}
+        onClearAll={() => {
+          setFilter('all');
+          setSearch('');
+        }}
+      />
 
       <div className="admin-table-scroll">
         <table className="admin-table submissions-table pf-list-table">

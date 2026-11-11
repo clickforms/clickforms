@@ -1,0 +1,226 @@
+/* Shared filter UI for list pages (Responses, Prefills): labelled Filter button, popover with
+   selectable chips, and the row of removable applied-filter chips. */
+.lf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 0.95rem 0 0.8rem;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-strong, #cbd5e1);
+  border-radius: 999px;
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #111827);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.lf-btn svg {
+  flex-shrink: 0;
+  color: #111827;
+}
+
+.lf-btn:hover {
+  background: var(--color-surface-sunken, #f4f6fa);
+  border-color: #94a3b8;
+}
+
+.lf-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(85, 234, 140, 0.45);
+}
+
+.lf-btn[aria-expanded="true"],
+.lf-btn--active {
+  border-color: #3fcf68;
+  background: #e9fdf1;
+}
+
+.lf-btn--active svg {
+  color: #0d7a3e;
+}
+
+.lf-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* Popover */
+.lf-panel {
+  width: 20rem;
+  padding: 0.9rem;
+}
+
+.lf-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.lf-panel-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.lf-clear {
+  border: 0;
+  background: none;
+  color: #0d7a3e;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lf-clear:disabled {
+  color: var(--color-text-subtle, #9ca3af);
+  cursor: default;
+}
+
+.lf-group + .lf-group {
+  margin-top: 0.9rem;
+}
+
+.lf-group-label {
+  margin: 0 0 0.45rem;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.lf-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.lf-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border-strong, #cbd5e1);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-text, #111827);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.lf-option:hover {
+  border-color: #94a3b8;
+  background: var(--color-surface-sunken, #f4f6fa);
+}
+
+.lf-option[aria-pressed="true"] {
+  border-color: #3fcf68;
+  background: #e9fdf1;
+  color: #0d5c31;
+}
+
+.lf-option-count {
+  padding: 0.02rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.07);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Applied chips */
+.lf-applied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface-sunken, #f4f6fa);
+}
+
+.lf-applied-label {
+  margin-right: 0.15rem;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.lf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.4rem 0.28rem 0.75rem;
+  border: 1px solid #b8f5d0;
+  border-radius: 999px;
+  background: #e9fdf1;
+  color: #0d5c31;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.lf-chip button {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(13, 92, 49, 0.14);
+  color: inherit;
+  cursor: pointer;
+}
+
+.lf-chip button:hover {
+  background: rgba(13, 92, 49, 0.28);
+}
+
+.lf-applied-clear {
+  border: 0;
+  background: none;
+  color: var(--color-text-muted, #6b7280);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Make the existing date-range trigger match the Filter pill beside it. */
+.submissions-toolbar .submissions-date-range-trigger {
+  height: 2.5rem;
+  padding: 0 0.95rem 0 0.8rem;
+  border-color: var(--color-border-strong, #cbd5e1);
+}
+
+.submissions-toolbar .submissions-date-range-trigger:hover {
+  background: var(--color-surface-sunken, #f4f6fa);
+  border-color: #94a3b8;
+}
+
+.submissions-toolbar .submissions-date-range-icon {
+  color: #111827;
+}

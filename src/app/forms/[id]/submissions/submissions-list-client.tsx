@@ -7,6 +7,7 @@ import { DeleteSubmissionModal } from '@/app/forms/[id]/submissions/delete-submi
 import { SubmissionPreviewModal } from '@/app/forms/[id]/submissions/submission-preview-modal';
 import { SubmissionStatusMenu } from '@/app/forms/[id]/submissions/submission-status-menu';
 import {
+  formatRangeLabel,
   SubmissionsDateRangePicker,
   type SubmissionsDateRangeValue,
 } from '@/app/forms/[id]/submissions/submissions-date-range-picker';
@@ -14,6 +15,13 @@ import {
   readSubmissionFilters,
   writeSubmissionFilters,
 } from '@/app/forms/[id]/submissions/submissions-list-filters';
+import {
+  AppliedFilters,
+  FilterButton,
+  FilterGroup,
+  FilterOption,
+  FilterPanel,
+} from '@/components/list-filters/list-filters';
 import { useToast } from '@/components/toast';
 import '@/app/forms/[id]/prefills/prefills.css';
 import { ColumnPicker } from '@/app/forms/[id]/submissions/column-picker';
@@ -253,6 +261,9 @@ export function SubmissionsListClient({
     from: null,
     to: null,
   });
+  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | 'all'>('all');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
   const [page, setPage] = useState(1);
   const [filtersReady, setFiltersReady] = useState(false);
   // `submissions` is local state (rows can be deleted/updated optimistically), so a
@@ -277,6 +288,7 @@ export function SubmissionsListClient({
     skipPageReset.current = true;
     const stored = readSubmissionFilters(formId);
     setSearch(stored.search);
+    setStatusFilter(stored.status);
     setDateRange({ from: stored.from, to: stored.to });
     setPage(stored.page);
     setFiltersReady(true);
@@ -293,17 +305,18 @@ export function SubmissionsListClient({
       return;
     }
     setPage(1);
-  }, [filtersReady, search, dateRange.from, dateRange.to]);
+  }, [filtersReady, search, statusFilter, dateRange.from, dateRange.to]);
 
   useEffect(() => {
     if (!filtersReady) return;
     writeSubmissionFilters(formId, {
       search,
+      status: statusFilter,
       from: dateRange.from,
       to: dateRange.to,
       page,
     });
-  }, [filtersReady, formId, search, dateRange.from, dateRange.to, page]);
+  }, [filtersReady, formId, search, statusFilter, dateRange.from, dateRange.to, page]);
 
   async function handleDeleteConfirm() {
     if (!deletingId) return;
@@ -394,6 +407,7 @@ export function SubmissionsListClient({
     if (toDate) toDate.setHours(23, 59, 59, 999);
 
     return submissions.filter((submission) => {
+      if (statusFilter !== 'all' && submission.status !== statusFilter) return false;
       if (fromDate || toDate) {
         const reference = new Date(submission.submittedAt ?? submission.createdAt);
         if (fromDate && reference < fromDate) return false;
@@ -415,7 +429,51 @@ export function SubmissionsListClient({
         .toLowerCase();
       return haystack.includes(term);
     });
-  }, [submissions, search, dateRange, mounted, labelById]);
+  }, [submissions, search, statusFilter, dateRange, mounted, labelById]);
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const submission of submissions) {
+      counts[submission.status] = (counts[submission.status] ?? 0) + 1;
+    }
+    return counts;
+  }, [submissions]);
+  const hasDateFilter = Boolean(dateRange.from || dateRange.to);
+  const appliedCount = (statusFilter !== 'all' ? 1 : 0) + (hasDateFilter ? 1 : 0);
+  const appliedChips = [
+    ...(statusFilter !== 'all'
+      ? [
+          {
+            key: 'status',
+            label: `Status: ${SUBMISSION_STATUS_BADGE[statusFilter].label}`,
+            onRemove: () => setStatusFilter('all'),
+          },
+        ]
+      : []),
+    ...(hasDateFilter
+      ? [
+          {
+            key: 'date',
+            label: `Date: ${formatRangeLabel(dateRange)}`,
+            onRemove: () => setDateRange({ from: null, to: null }),
+          },
+        ]
+      : []),
+    ...(search.trim()
+      ? [
+          {
+            key: 'search',
+            label: `Search: \u201c${search.trim()}\u201d`,
+            onRemove: () => setSearch(''),
+          },
+        ]
+      : []),
+  ];
+  function clearAllFilters() {
+    setStatusFilter('all');
+    setDateRange({ from: null, to: null });
+    setSearch('');
+  }
 
   const totalPages = Math.max(1, Math.ceil(filteredSubmissions.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -459,6 +517,41 @@ export function SubmissionsListClient({
                 aria-label="Search responses"
               />
             </label>
+            <FilterButton
+              buttonRef={filterTriggerRef}
+              appliedCount={appliedCount}
+              open={isFilterOpen}
+              onClick={() => setIsFilterOpen((current) => !current)}
+            />
+            <FilterPanel
+              open={isFilterOpen}
+              onOpenChange={setIsFilterOpen}
+              triggerRef={filterTriggerRef}
+              onClear={() => setStatusFilter('all')}
+              canClear={statusFilter !== 'all'}
+            >
+              <FilterGroup label="Status">
+                <FilterOption
+                  selected={statusFilter === 'all'}
+                  count={submissions.length}
+                  onClick={() => setStatusFilter('all')}
+                >
+                  All
+                </FilterOption>
+                {(Object.keys(SUBMISSION_STATUS_BADGE) as SubmissionStatus[])
+                  .filter((status) => (statusCounts[status] ?? 0) > 0)
+                  .map((status) => (
+                    <FilterOption
+                      key={status}
+                      selected={statusFilter === status}
+                      count={statusCounts[status] ?? 0}
+                      onClick={() => setStatusFilter(status)}
+                    >
+                      {SUBMISSION_STATUS_BADGE[status].label}
+                    </FilterOption>
+                  ))}
+              </FilterGroup>
+            </FilterPanel>
             <SubmissionsDateRangePicker value={dateRange} onChange={setDateRange} />
             <span className="submissions-count-badge">
               {filteredSubmissions.length} of {submissions.length}{' '}
@@ -466,6 +559,8 @@ export function SubmissionsListClient({
             </span>
           </div>
         </div>
+
+        <AppliedFilters chips={appliedChips} onClearAll={clearAllFilters} />
 
         <div className="admin-table-scroll">
           <table className="admin-table submissions-table">

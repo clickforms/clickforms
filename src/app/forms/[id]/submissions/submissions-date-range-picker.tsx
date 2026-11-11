@@ -115,7 +115,7 @@ const MONTH_NAMES = [
   'December',
 ];
 
-function formatRangeLabel(value: SubmissionsDateRangeValue): string {
+export function formatRangeLabel(value: SubmissionsDateRangeValue): string {
   const wholeMonth = isWholeMonth(value);
   if (wholeMonth) {
     return `${MONTH_NAMES[wholeMonth.getMonth()]} ${wholeMonth.getFullYear()}`;

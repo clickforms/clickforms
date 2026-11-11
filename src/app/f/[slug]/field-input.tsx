@@ -125,7 +125,7 @@ interface FieldInputProps {
   onCaptureSignature?: (fieldId: string, file: File | undefined) => void;
   /** Admin response editor only: image URL of each already-saved signature, by field id. A saved
    * signature's answer is a file id, which the drawing pad can't render, so the control shows the
-   * stored image instead (with "Clear and redraw") rather than a blank pad. */
+   * stored image instead (read-only) rather than a blank pad. */
   savedSignatureUrls?: Record<string, string>;
   /** Only needed for static_text fields — lets its merge-field tokens resolve against the
    * respondent's answers so far (see lib/forms/merge-fields.ts). Optional because every
@@ -863,13 +863,12 @@ interface SignatureControlProps {
   field: Extract<FormField, { type: 'signature' }>;
   value: FieldValue;
   onCapture?: (fieldId: string, file: File | undefined) => void;
-  /** URL of the signature already stored for this response (admin editor only). */
+  /** URL of the signature already stored for this response (admin editor only); when present the
+   * signature is shown read-only. */
   savedImageUrl?: string;
 }
 
 function SignatureControl({ field, value, onCapture, savedImageUrl }: SignatureControlProps) {
-  const [redrawing, setRedrawing] = useState(false);
-
   function handleCapture(blob: Blob) {
     onCapture?.(field.id, new File([blob], 'signature.png', { type: 'image/png' }));
   }
@@ -878,12 +877,13 @@ function SignatureControl({ field, value, onCapture, savedImageUrl }: SignatureC
     onCapture?.(field.id, undefined);
   }
 
-  // A stored signature's answer is a file id, not something the pad can paint, and drawing a
-  // cross-origin storage URL onto its canvas would block re-capturing it. So show the saved
-  // image as a plain <img>, and only mount the pad (blank) once the admin chooses to redraw.
-  const hasSavedSignature =
+  // A signature that is already stored is shown read-only: it can't be cleared or redrawn, so
+  // nobody editing a response can alter someone else's signature. (The API enforces the same
+  // rule, see PATCH /api/forms/[id]/submissions/[submissionId].) It is a plain <img> because a
+  // stored answer is a file id, not something the drawing pad can paint.
+  const isSavedSignature =
     Boolean(savedImageUrl) && typeof value === 'string' && !value.startsWith('blob:');
-  if (hasSavedSignature && !redrawing) {
+  if (isSavedSignature) {
     return (
       <div className="signature-pad-signed">
         {/* biome-ignore lint/performance/noImgElement: short-lived presigned storage URL */}
@@ -900,16 +900,7 @@ function SignatureControl({ field, value, onCapture, savedImageUrl }: SignatureC
             background: '#fff',
           }}
         />
-        <button
-          type="button"
-          className="button button--ghost button--small"
-          onClick={() => {
-            setRedrawing(true);
-            handleClear();
-          }}
-        >
-          Clear and redraw
-        </button>
+        <span className="form-field-help">Signed. Signatures can't be changed after signing.</span>
       </div>
     );
   }

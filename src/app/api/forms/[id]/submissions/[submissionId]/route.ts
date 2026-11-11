@@ -140,6 +140,21 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         }
       }
 
+      // A signature that is already on the response can never be changed, cleared or replaced
+      // through this editor, so nobody can alter someone else's signature. (A field that was
+      // left unsigned is not locked.)
+      const existingAnswers = parseSubmissionAnswers(submission);
+      for (const [fieldId, field] of Object.entries(schema.fields)) {
+        if (field.type !== 'signature') continue;
+        const existing = existingAnswers[fieldId];
+        if (existing === undefined || existing === null || existing === '') continue;
+        if (JSON.stringify(body.answers[fieldId]) !== JSON.stringify(existing)) {
+          throw new InvalidRequestError(
+            'A signature that has already been signed cannot be changed.',
+          );
+        }
+      }
+
       const fieldErrors = validateAnswers(schema, body.answers);
       if (Object.keys(fieldErrors).length > 0) {
         return { fieldErrors };

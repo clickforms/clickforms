@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { SubmissionAnswersEditor } from '@/app/forms/[id]/submissions/[submissionId]/submission-answers-editor';
 import '@/app/forms/[id]/prefills/prefills.css';
 import { PrefillReviewBar } from '@/app/forms/[id]/submissions/[submissionId]/prefill-review-bar';
+import { PrefillUnpromoteBar } from '@/app/forms/[id]/submissions/[submissionId]/prefill-unpromote-bar';
 import { SubmissionStatusControl } from '@/app/forms/[id]/submissions/[submissionId]/submission-status-control';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
@@ -21,6 +22,7 @@ import {
 import { formatSubmissionAnswer } from '@/lib/forms/format-submission-answer';
 import { resolveMergeFieldsForRespondent } from '@/lib/forms/merge-fields';
 import { buildPrefillComparison } from '@/lib/forms/prefill-compare';
+import { UNPROMOTE_WINDOW_DAYS, UNPROMOTE_WINDOW_MS } from '@/lib/forms/prefill-unpromote';
 import {
   createEmptyFormSchema,
   type FormField,
@@ -185,14 +187,34 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
       FROM submissions s LEFT JOIN form_prefills p ON p.id = s.prefill_id
       WHERE s.id = ${submission.id}::uuid`;
 
-    return { form, submission, version, files, prefillInfo: prefillRows[0] ?? null };
+    // Promoted from a prefill recently enough to be moved back? (time comes from the audit log)
+    let undoUntil: Date | null = null;
+    const info = prefillRows[0];
+    if (info?.prefill_id && !info.prefill_held && submission.status === 'submitted') {
+      const promoted = await tx.auditLog.findFirst({
+        where: {
+          organizationId: requireOrganizationId(session),
+          entityType: 'submission',
+          entityId: submission.id,
+          action: 'submission.promote',
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      });
+      if (promoted) {
+        const until = new Date(promoted.createdAt.getTime() + UNPROMOTE_WINDOW_MS);
+        if (until.getTime() > Date.now()) undoUntil = until;
+      }
+    }
+
+    return { form, submission, version, files, prefillInfo: info ?? null, undoUntil };
   });
 
   if (!result) {
     notFound();
   }
 
-  const { form, submission, version, files, prefillInfo } = result;
+  const { form, submission, version, files, prefillInfo, undoUntil } = result;
   const heldPrefill = Boolean(prefillInfo?.prefill_held && prefillInfo.prefill_id);
 
   let schema: FormSchema;
@@ -315,6 +337,14 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         recipient={prefillInfo.recipient}
         submissionId={submission.id}
         sentBack={Boolean(prefillInfo.sent_back_at)}
+      />
+    ) : undoUntil && canDelete ? (
+      <PrefillUnpromoteBar
+        key="prefill-unpromote"
+        formId={form.id}
+        submissionId={submission.id}
+        undoUntil={undoUntil.toISOString()}
+        days={UNPROMOTE_WINDOW_DAYS}
       />
     ) : null;
 

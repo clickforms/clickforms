@@ -511,6 +511,17 @@ function FormRendererInner({
       return;
     }
 
+    // Builder preview: required fields never block moving between pages, so the whole form
+    // can be flicked through without filling anything in.
+    if (previewMode) {
+      if (pageIndex < schema.pages.length - 1) {
+        setPageIndex((i) => i + 1);
+      } else {
+        setSubmitted(true);
+      }
+      return;
+    }
+
     const pageErrors = validatePageAnswers(schema, page, answers);
     if (Object.keys(pageErrors).length > 0) {
       setErrors((prev) => ({ ...prev, ...pageErrors }));
@@ -524,7 +535,7 @@ function FormRendererInner({
     }
 
     await submitForm();
-  }, [answers, pageIndex, prefillBuilder, schema, submitForm, toast]);
+  }, [answers, pageIndex, prefillBuilder, previewMode, schema, submitForm, toast]);
 
   const handleBack = useCallback(() => {
     setSubmitError(null);

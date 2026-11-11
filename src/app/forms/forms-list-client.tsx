@@ -252,6 +252,9 @@ export function FormsListClient({
 }) {
   const mounted = useMounted();
   const [forms, setForms] = useState(initialForms);
+  useEffect(() => {
+    setForms(initialForms);
+  }, [initialForms]);
   const [search, setSearch] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -428,6 +431,9 @@ export function FormsListClient({
       }
       toast.success('Form deleted');
       setDeletingForm(null);
+      // Invalidate the client router cache so the dashboard, templates and this list
+      // don't serve a stale server render that still includes the deleted form.
+      router.refresh();
     } catch (err) {
       setForms(previous);
       toast.error(err instanceof Error ? err.message : 'Failed to delete form');

@@ -275,7 +275,7 @@
 
 .submissions-date-range-popover .submissions-date-range-preset:hover {
   color: var(--color-lavender-strong);
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .submissions-date-range-popover .submissions-date-range-preset[aria-pressed="true"] {

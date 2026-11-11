@@ -60,6 +60,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.25rem 0.1rem;
+  box-sizing: border-box;
   align-content: start;
   overflow-y: auto;
   overscroll-behavior: contain;

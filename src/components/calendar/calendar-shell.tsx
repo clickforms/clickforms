@@ -60,9 +60,9 @@ export function CalendarShell({
   const [yearView, setYearView] = useState(false);
   const selectedYearRef = useRef<HTMLButtonElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
-  // Height of the day grid when the year grid opens: the year grid takes exactly the same
+  // Size of the day grid when the year grid opens: the year grid takes exactly the same
   // space, so the popover never resizes (and never jumps) when switching views.
-  const [lockedHeight, setLockedHeight] = useState<number | null>(null);
+  const [locked, setLocked] = useState<{ width: number; height: number } | null>(null);
 
   const firstYear = startMonth.getFullYear();
   const lastYear = endMonth.getFullYear();
@@ -100,7 +100,12 @@ export function CalendarShell({
           aria-expanded={yearView}
           aria-label={`${MONTHS[month.getMonth()]} ${month.getFullYear()}, choose year`}
           onClick={() => {
-            if (!yearView) setLockedHeight(bodyRef.current?.offsetHeight ?? null);
+            if (!yearView && bodyRef.current) {
+              setLocked({
+                width: bodyRef.current.offsetWidth,
+                height: bodyRef.current.offsetHeight,
+              });
+            }
             setYearView((current) => !current);
           }}
         >
@@ -136,7 +141,7 @@ export function CalendarShell({
             className="calendar-shell-years"
             role="listbox"
             aria-label="Choose year"
-            style={lockedHeight ? { height: lockedHeight } : undefined}
+            style={locked ? { width: locked.width, height: locked.height } : undefined}
           >
             {years.map((year) => {
               const selected = year === month.getFullYear();

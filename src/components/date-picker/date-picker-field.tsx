@@ -3,6 +3,7 @@
 import { type CSSProperties, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { DayPicker, type Matcher } from 'react-day-picker';
 import 'react-day-picker/style.css';
+import './date-picker-field.css';
 import { formatIsoDateForDisplay, parseIsoDate, toIsoDate } from '@/lib/forms/date-value';
 
 function CalendarIcon() {
@@ -88,6 +89,50 @@ export function DatePickerField({
   }, [open]);
 
   const displayValue = formatIsoDateForDisplay(value);
+  const [month, setMonth] = useState<Date>(() => selected ?? new Date());
+  const [typed, setTyped] = useState(displayValue);
+  const [typedError, setTypedError] = useState(false);
+  const minDate = parseIsoDate(min);
+  const maxDate = parseIsoDate(max);
+  const nowYear = new Date().getFullYear();
+  const startMonth = new Date(minDate ? minDate.getFullYear() : 1900, 0);
+  const endMonth = new Date(maxDate ? maxDate.getFullYear() : nowYear + 20, 11);
+
+  // Re-seed the typed box and visible month each time the popover opens or the value
+  // changes from outside.
+  useEffect(() => {
+    if (!open) return;
+    setTyped(formatIsoDateForDisplay(value));
+    setTypedError(false);
+    setMonth(parseIsoDate(value) ?? new Date());
+  }, [open, value]);
+
+  function formatTyping(raw: string): string {
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
+    return parts.join('/');
+  }
+
+  function commitTyped() {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(typed);
+    if (!match) {
+      setTypedError(typed.length > 0);
+      return;
+    }
+    const day = Number(match[1]);
+    const mon = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(year, mon - 1, day);
+    const valid =
+      date.getFullYear() === year && date.getMonth() === mon - 1 && date.getDate() === day;
+    const inRange = (!minDate || date >= minDate) && (!maxDate || date <= maxDate);
+    if (!valid || !inRange) {
+      setTypedError(true);
+      return;
+    }
+    onChange(toIsoDate(date));
+    setOpen(false);
+  }
 
   function handleSelect(date: Date | undefined) {
     if (!date) return;
@@ -118,12 +163,45 @@ export function DatePickerField({
 
       {open ? (
         <div className="date-picker-popover" id={popoverId} role="dialog" aria-label="Choose date">
+          <div className="date-picker-typed">
+            <input
+              type="text"
+              inputMode="numeric"
+              className={`date-picker-typed-input${typedError ? ' date-picker-typed-input--error' : ''}`}
+              placeholder="DD/MM/YYYY"
+              aria-label="Type a date as DD/MM/YYYY"
+              aria-invalid={typedError}
+              value={typed}
+              onChange={(event) => {
+                setTyped(formatTyping(event.target.value));
+                setTypedError(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commitTyped();
+                }
+              }}
+              onBlur={() => {
+                if (typed.length === 10) commitTyped();
+              }}
+            />
+            {typedError ? (
+              <span className="date-picker-typed-error" role="alert">
+                Enter a valid date{minDate || maxDate ? ' in the allowed range' : ''}
+              </span>
+            ) : null}
+          </div>
           <DayPicker
             mode="single"
             selected={selected}
             onSelect={handleSelect}
             disabled={disabledMatchers}
-            defaultMonth={selected}
+            month={month}
+            onMonthChange={setMonth}
+            captionLayout="dropdown"
+            startMonth={startMonth}
+            endMonth={endMonth}
           />
         </div>
       ) : null}

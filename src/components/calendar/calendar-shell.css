@@ -24,7 +24,8 @@
   cursor: pointer;
 }
 
-.calendar-shell-label:hover {
+.calendar-shell-label:hover,
+.calendar-shell-label[aria-expanded="true"] {
   background: rgba(15, 23, 42, 0.06);
 }
 
@@ -59,8 +60,9 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.25rem 0.1rem;
-  max-height: 15rem;
+  align-content: start;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.25rem 0.25rem 0.5rem;
 }
 

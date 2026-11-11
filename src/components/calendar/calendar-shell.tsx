@@ -59,6 +59,10 @@ export function CalendarShell({
 }) {
   const [yearView, setYearView] = useState(false);
   const selectedYearRef = useRef<HTMLButtonElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  // Height of the day grid when the year grid opens: the year grid takes exactly the same
+  // space, so the popover never resizes (and never jumps) when switching views.
+  const [lockedHeight, setLockedHeight] = useState<number | null>(null);
 
   const firstYear = startMonth.getFullYear();
   const lastYear = endMonth.getFullYear();
@@ -69,7 +73,13 @@ export function CalendarShell({
   const nextDisabled = month.getFullYear() === lastYear && month.getMonth() >= endMonth.getMonth();
 
   useEffect(() => {
-    if (yearView) selectedYearRef.current?.scrollIntoView({ block: 'center' });
+    const grid = selectedYearRef.current?.parentElement;
+    if (yearView && grid && selectedYearRef.current) {
+      grid.scrollTop =
+        selectedYearRef.current.offsetTop -
+        grid.clientHeight / 2 +
+        selectedYearRef.current.offsetHeight / 2;
+    }
   }, [yearView]);
 
   function step(delta: number) {
@@ -89,7 +99,10 @@ export function CalendarShell({
           className="calendar-shell-label"
           aria-expanded={yearView}
           aria-label={`${MONTHS[month.getMonth()]} ${month.getFullYear()}, choose year`}
-          onClick={() => setYearView((current) => !current)}
+          onClick={() => {
+            if (!yearView) setLockedHeight(bodyRef.current?.offsetHeight ?? null);
+            setYearView((current) => !current);
+          }}
         >
           {MONTHS[month.getMonth()]} {month.getFullYear()}
           <Chevron direction={yearView ? 'up' : 'down'} />
@@ -117,28 +130,35 @@ export function CalendarShell({
           </div>
         )}
       </div>
-      {yearView ? (
-        <div className="calendar-shell-years" role="listbox" aria-label="Choose year">
-          {years.map((year) => {
-            const selected = year === month.getFullYear();
-            return (
-              <button
-                key={year}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                ref={selected ? selectedYearRef : undefined}
-                className={`calendar-shell-year${selected ? ' calendar-shell-year--selected' : ''}`}
-                onClick={() => pickYear(year)}
-              >
-                {year}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        children
-      )}
+      <div ref={bodyRef}>
+        {yearView ? (
+          <div
+            className="calendar-shell-years"
+            role="listbox"
+            aria-label="Choose year"
+            style={lockedHeight ? { height: lockedHeight } : undefined}
+          >
+            {years.map((year) => {
+              const selected = year === month.getFullYear();
+              return (
+                <button
+                  key={year}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  ref={selected ? selectedYearRef : undefined}
+                  className={`calendar-shell-year${selected ? ' calendar-shell-year--selected' : ''}`}
+                  onClick={() => pickYear(year)}
+                >
+                  {year}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          children
+        )}
+      </div>
     </div>
   );
 }

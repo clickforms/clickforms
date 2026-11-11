@@ -255,3 +255,30 @@
   outline: 2px solid var(--color-lavender);
   outline-offset: 1px;
 }
+
+/* Quick ranges read as plain text links, not chips. */
+.submissions-date-range-popover .submissions-date-range-presets {
+  gap: 0.15rem 0.75rem;
+}
+
+.submissions-date-range-popover .submissions-date-range-preset,
+.submissions-date-range-popover .submissions-date-range-preset:hover,
+.submissions-date-range-popover .submissions-date-range-preset[aria-pressed="true"] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.submissions-date-range-popover .submissions-date-range-preset:hover {
+  color: var(--color-lavender-strong);
+  text-decoration: underline;
+}
+
+.submissions-date-range-popover .submissions-date-range-preset[aria-pressed="true"] {
+  color: var(--color-lavender-strong);
+  font-weight: 650;
+}

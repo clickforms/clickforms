@@ -64,8 +64,12 @@ export default async function SubmissionsListPage({ params }: PageProps) {
     // The participant name needs a few answer values, but the full answers JSON (signatures,
     // tables, long text) can be large and this list loads every response — so pull only the
     // handful of name/email keys out in SQL rather than selecting the whole blob.
+    // Oldest first, so the "newest version" lookups below (reverse + find) really get the newest.
+    // Without an explicit order Postgres returns rows in no guaranteed order, which made the
+    // Responses column picker offer fields from an arbitrary (often old) version of the form.
     const versions = await tx.formVersion.findMany({
       where: { formId: form.id, organizationId: requireOrganizationId(session) },
+      orderBy: { versionNumber: 'asc' },
       select: { id: true, schema: true },
     });
     const labelRows = await tx.$queryRaw<{ response_label_field_id: string | null }[]>`

@@ -237,3 +237,21 @@
   font-weight: 600;
   line-height: 1.3;
 }
+
+.submissions-date-range-popover .submissions-date-range-preset,
+.submissions-date-range-popover .submissions-date-range-preset:hover,
+.submissions-date-range-popover .submissions-date-range-preset:active,
+.submissions-date-range-popover .submissions-date-range-preset[aria-pressed="true"] {
+  box-shadow: none;
+  transform: none;
+  text-shadow: none;
+}
+
+.submissions-date-range-popover .submissions-date-range-preset:focus {
+  outline: none;
+}
+
+.submissions-date-range-popover .submissions-date-range-preset:focus-visible {
+  outline: 2px solid var(--color-lavender);
+  outline-offset: 1px;
+}

@@ -224,6 +224,15 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     downloadUrlById,
   );
 
+  // Saved signature image per field, for the edit mode (the answer itself is just a file id).
+  const signatureImageUrls: Record<string, string> = {};
+  for (const [fieldId, field] of Object.entries(schema.fields)) {
+    if (field.type !== 'signature') continue;
+    const fileId = (answers as Record<string, unknown>)[fieldId];
+    const url = typeof fileId === 'string' ? downloadUrlById.get(fileId) : undefined;
+    if (url) signatureImageUrls[fieldId] = url;
+  }
+
   const canDelete = canEditForm(session.user.role, form.createdBy, session.user.id);
   // Editing an in-progress submission would race with the respondent's own session
   // (they could still be filling it out), so editing is only offered once it has
@@ -325,6 +334,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         submissionId={submission.id}
         schema={schema}
         initialAnswers={answers as FormAnswers}
+        signatureImageUrls={signatureImageUrls}
         canEditAnswers={canEditAnswers}
         canDelete={canDelete}
         meta={meta}

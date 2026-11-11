@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clickforms · Clients feature · design mockup</title>
+<style>
+  :root{
+    --bg:#eef1f6; --surface:#fff; --sunken:#f4f6fa; --border:#e2e8f0; --border-strong:#cbd5e1;
+    --text:#111827; --muted:#6b7280; --subtle:#9ca3af;
+    --primary:#55ea8c; --primary-hover:#3dd975; --primary-soft:#e9fdf1; --primary-ink:#0d7a3e;
+    --lav:#d3ccff; --lav-soft:#efecff; --lav-strong:#7c5cfa;
+    --warn:#b45309; --warn-soft:#fef3e0; --warn-border:#fbd999;
+    --danger:#dc2626; --danger-soft:#fef2f2;
+    --side:#1a1d24; --side-text:#9ca3af; --side-hover:rgba(255,255,255,.06); --side-active:rgba(85,234,140,.14);
+    --shadow:0 1px 2px rgba(15,23,42,.05),0 4px 16px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--text);background:#dfe4ec;font-size:14px;line-height:1.5}
+  button{font:inherit;cursor:pointer}
+  svg{display:block}
+
+  /* ---- Mockup chrome (not part of the product) ---- */
+  .mock-bar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.7rem 1.25rem;background:#111827;color:#fff}
+  .mock-bar strong{margin-right:.75rem;font-size:.85rem;letter-spacing:.02em}
+  .mock-tab{padding:.4rem .9rem;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:transparent;color:#cbd5e1;font-size:.8rem;font-weight:600}
+  .mock-tab:hover{background:rgba(255,255,255,.08)}
+  .mock-tab[aria-selected=true]{background:var(--primary);border-color:var(--primary);color:#0b1f12}
+  .mock-note{margin-left:auto;color:#94a3b8;font-size:.75rem}
+  .caption{max-width:1280px;margin:1rem auto 0;padding:0 1.25rem;color:#475569;font-size:.85rem}
+  .caption b{color:#111827}
+
+  /* ---- App frame ---- */
+  .app{display:flex;max-width:1280px;height:760px;margin:.75rem auto 2rem;border-radius:14px;overflow:hidden;background:var(--bg);box-shadow:0 24px 60px rgba(15,23,42,.25);position:relative}
+  .side{width:232px;flex-shrink:0;background:var(--side);color:var(--side-text);display:flex;flex-direction:column}
+  .brand{display:flex;align-items:center;gap:.6rem;height:56px;padding:0 1.1rem;color:#fff;font-weight:800;letter-spacing:.01em;border-bottom:1px solid rgba(255,255,255,.07)}
+  .brand i{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--primary);color:#0b1f12;font-style:normal;font-weight:900}
+  .nav{padding:.75rem .6rem;display:flex;flex-direction:column;gap:2px}
+  .nav a{display:flex;align-items:center;gap:.7rem;padding:.55rem .75rem;border-radius:8px;color:var(--side-text);font-weight:600;text-decoration:none;font-size:.86rem}
+  .nav a:hover{background:var(--side-hover);color:#e5e7eb}
+  .nav a.active{background:var(--side-active);color:var(--primary)}
+  .nav a .new{margin-left:auto;padding:.05rem .45rem;border-radius:999px;background:var(--primary);color:#0b1f12;font-size:.62rem;font-weight:800;letter-spacing:.04em}
+  .nav svg{width:17px;height:17px;flex-shrink:0}
+  .side-foot{margin-top:auto;padding:.9rem 1.1rem;border-top:1px solid rgba(255,255,255,.07);font-size:.75rem}
+  .side-foot b{display:block;color:#e5e7eb;font-size:.8rem}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .top{display:flex;align-items:center;gap:1rem;height:56px;padding:0 1.5rem;background:var(--surface);box-shadow:0 1px 0 rgba(15,23,42,.05);flex-shrink:0}
+  .top h1{margin:0;font-size:1.05rem;font-weight:800;letter-spacing:-.01em}
+  .top .sp{flex:1}
+  .avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--lav);color:#4b2fd0;font-weight:800;font-size:.75rem}
+  .content{flex:1;overflow:auto;padding:1.5rem}
+  .screen{display:none}.screen.on{display:block}
+
+  /* ---- Primitives ---- */
+  .btn{display:inline-flex;align-items:center;gap:.45rem;height:36px;padding:0 1rem;border:1px solid var(--border-strong);border-radius:999px;background:var(--surface);color:var(--text);font-weight:700;font-size:.82rem}
+  .btn:hover{background:var(--sunken)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#0b1f12;box-shadow:0 1px 2px rgba(85,234,140,.4)}
+  .btn.primary:hover{background:var(--primary-hover)}
+  .btn.dark{background:#111827;border-color:#111827;color:#fff}
+  .btn.sm{height:30px;padding:0 .8rem;font-size:.76rem}
+  .btn svg{width:15px;height:15px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
+  .chip{display:inline-flex;align-items:center;gap:.3rem;padding:.12rem .6rem;border-radius:999px;font-size:.7rem;font-weight:700;background:var(--sunken);color:#475569}
+  .chip.green{background:var(--primary-soft);color:var(--primary-ink)}
+  .chip.lav{background:var(--lav-soft);color:#5a3fd6}
+  .chip.warn{background:var(--warn-soft);color:var(--warn)}
+  .chip.grey{background:#eef1f6;color:#64748b}
+  .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .ava{display:grid;place-items:center;flex-shrink:0;border-radius:50%;font-weight:800;color:#33313f}
+  .ava.s{width:32px;height:32px;font-size:.72rem}.ava.m{width:40px;height:40px;font-size:.85rem}.ava.l{width:64px;height:64px;font-size:1.35rem}
+  .c1{background:#d3ccff}.c2{background:#bff5d3}.c3{background:#ffd9c2}.c4{background:#c9e4ff}.c5{background:#ffd0e0}.c6{background:#f4eaa8}
+  .muted{color:var(--muted)}.sub{color:var(--subtle)}
+  .input{width:100%;height:38px;padding:0 .9rem;border:1px solid var(--border-strong);border-radius:999px;background:#fff;font:inherit;color:var(--text)}
+  .input:focus{outline:none;border-color:#3fcf68;box-shadow:0 0 0 4px rgba(85,234,140,.25)}
+  .search{position:relative}.search svg{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--subtle)}.search .input{padding-left:2.3rem}
+
+  .head{display:flex;align-items:flex-end;gap:1rem;margin-bottom:1.1rem}
+  .head h2{margin:0;font-size:1.5rem;letter-spacing:-.02em}
+  .head p{margin:.2rem 0 0;color:var(--muted)}
+  .head .sp{flex:1}
+
+  /* ---- Clients list ---- */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-bottom:1.1rem}
+  .kpi{padding:1rem 1.1rem}.kpi b{display:block;font-size:1.6rem;letter-spacing:-.03em;line-height:1.1}.kpi span{color:var(--muted);font-size:.78rem;font-weight:600}
+  .alert{display:flex;align-items:center;gap:.8rem;padding:.8rem 1rem;margin-bottom:1.1rem;border:1px solid var(--warn-border);border-radius:12px;background:var(--warn-soft);color:#7a3b05;font-weight:600}
+  .alert .sp{flex:1}
+  .toolbar{display:flex;align-items:center;gap:.6rem;padding:.9rem 1rem;border-bottom:1px solid var(--border)}
+  .toolbar .search{width:280px}
+  .seg{display:inline-flex;padding:3px;border-radius:999px;background:var(--sunken)}
+  .seg button{height:28px;padding:0 .8rem;border:0;border-radius:999px;background:transparent;color:var(--muted);font-weight:700;font-size:.76rem}
+  .seg button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(15,23,42,.1)}
+  table{width:100%;border-collapse:collapse}
+  th{padding:.6rem 1rem;text-align:left;color:var(--subtle);font-size:.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+  td{padding:.75rem 1rem;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr.row{cursor:pointer}tr.row:hover td{background:#fafbfd}
+  tr:last-child td{border-bottom:0}
+  .who{display:flex;align-items:center;gap:.75rem}.who b{display:block;font-weight:700}.who small{color:var(--muted)}
+
+  /* ---- Client page ---- */
+  .crumbs{display:flex;align-items:center;gap:.4rem;margin-bottom:.9rem;color:var(--muted);font-weight:600;font-size:.8rem}
+  .crumbs a{color:var(--muted);text-decoration:none}.crumbs a:hover{color:var(--text)}
+  .profile{display:flex;align-items:center;gap:1.1rem;padding:1.25rem 1.4rem;margin-bottom:1rem}
+  .profile h2{margin:0;font-size:1.4rem;letter-spacing:-.02em}
+  .meta{display:flex;flex-wrap:wrap;gap:.3rem 1.2rem;margin-top:.25rem;color:var(--muted);font-size:.82rem}
+  .profile .sp{flex:1}
+  .cols{display:grid;grid-template-columns:1fr 300px;gap:1rem;align-items:start}
+  .tabs{display:flex;gap:1.4rem;padding:0 1.2rem;border-bottom:1px solid var(--border)}
+  .tabs button{padding:.85rem 0;border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);font-weight:700;font-size:.84rem}
+  .tabs button.on{border-color:var(--primary);color:var(--text)}
+  .tabs em{margin-left:.35rem;padding:.02rem .45rem;border-radius:999px;background:var(--sunken);font-style:normal;font-size:.68rem}
+  .timeline{list-style:none;margin:0;padding:1.1rem 1.3rem 1.3rem}
+  .timeline li{position:relative;display:flex;gap:.9rem;padding-bottom:1.15rem}
+  .timeline li:last-child{padding-bottom:0}
+  .timeline li:not(:last-child)::before{content:"";position:absolute;left:15px;top:32px;bottom:2px;width:2px;background:var(--border)}
+  .ticon{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--primary-soft);color:var(--primary-ink)}
+  .ticon.lav{background:var(--lav-soft);color:#5a3fd6}.ticon.grey{background:var(--sunken);color:#64748b}.ticon svg{width:15px;height:15px}
+  .timeline b{font-weight:700}.timeline .when{margin-left:auto;color:var(--subtle);font-size:.76rem;white-space:nowrap}
+  .tl-body{flex:1;min-width:0}.tl-row{display:flex;gap:.6rem;align-items:baseline}
+  .tl-body p{margin:.15rem 0 0;color:var(--muted);font-size:.83rem}
+  .side-card{padding:1.1rem 1.2rem;margin-bottom:1rem}
+  .side-card h4{margin:0 0 .7rem;font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle)}
+  .kv{display:flex;justify-content:space-between;gap:1rem;padding:.4rem 0;border-bottom:1px dashed var(--border);font-size:.84rem}
+  .kv:last-child{border:0}.kv span{color:var(--muted)}.kv b{font-weight:700;text-align:right}
+  .filelist{display:flex;flex-direction:column;gap:.55rem}.file{display:flex;align-items:center;gap:.6rem;font-size:.84rem;font-weight:600}
+  .file i{display:grid;place-items:center;width:28px;height:32px;border-radius:6px;background:#fee2e2;color:#b91c1c;font-style:normal;font-size:.55rem;font-weight:900}
+  .file small{display:block;color:var(--subtle);font-weight:500}
+
+  /* ---- Responses table ---- */
+  .resp-name{font-weight:700}
+  .tag-unassigned{border:1px dashed var(--border-strong);background:transparent;color:var(--muted)}
+
+  /* ---- Overlays / modal ---- */
+  .scrim{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(17,24,39,.5);backdrop-filter:blur(2px);z-index:20}
+  .scrim.on{display:flex}
+  .modal{width:560px;max-height:92%;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 30px 80px rgba(15,23,42,.35)}
+  .modal header{display:flex;align-items:center;padding:1.15rem 1.4rem;border-bottom:1px solid var(--border)}
+  .modal header h3{margin:0;font-size:1.05rem}.modal header .x{margin-left:auto;border:0;background:none;color:var(--muted);font-size:1.3rem}
+  .modal .body{padding:1.3rem 1.4rem}
+  .field{margin-bottom:1.1rem}.field>label{display:flex;justify-content:space-between;margin-bottom:.4rem;font-weight:700;font-size:.82rem}
+  .field>label small{color:var(--subtle);font-weight:600}
+  .picker{position:relative}
+  .picker-list{margin-top:.4rem;max-height:210px;overflow:auto;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
+  .opt{display:flex;align-items:center;gap:.7rem;padding:.55rem .8rem;cursor:pointer}
+  .opt:hover,.opt.hl{background:var(--primary-soft)}
+  .opt b{display:block;font-size:.86rem}.opt small{color:var(--muted)}
+  .opt.create{border-top:1px solid var(--border);color:var(--primary-ink);font-weight:700}
+  .opt.create i{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--primary-soft);font-style:normal;font-size:1.1rem}
+  .selected{display:flex;align-items:center;gap:.7rem;padding:.55rem .8rem;border:1.5px solid #3fcf68;border-radius:14px;background:var(--primary-soft)}
+  .selected .x{margin-left:auto;border:0;background:none;color:var(--muted);font-size:1.1rem}
+  textarea.input{height:auto;min-height:96px;padding:.8rem 1rem;border-radius:16px;resize:vertical;line-height:1.5}
+  .counter{display:flex;justify-content:space-between;align-items:center;margin-top:.4rem;font-size:.76rem;color:var(--muted)}
+  .meter{flex:1;height:5px;margin-right:.8rem;border-radius:999px;background:var(--border);overflow:hidden}
+  .meter i{display:block;height:100%;width:34%;border-radius:inherit;background:var(--primary);transition:width .15s,background .15s}
+  .counter.warn{color:var(--warn)}.counter.warn .meter i{background:#f59e0b}
+  .counter.over{color:var(--danger)}.counter.over .meter i{background:var(--danger)}
+  .counter .msg{font-weight:700}
+  .modal footer{display:flex;justify-content:flex-end;gap:.6rem;padding:1rem 1.4rem;border-top:1px solid var(--border);background:var(--sunken)}
+
+  /* ---- Unassigned inbox ---- */
+  .inbox-item{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:center;padding:1rem 1.2rem;border-bottom:1px solid var(--border)}
+  .inbox-item:last-child{border:0}
+  .inbox-item h5{margin:0;font-size:.92rem}.inbox-item p{margin:.15rem 0 0;color:var(--muted);font-size:.8rem}
+  .suggest{display:flex;align-items:center;gap:.6rem;margin-top:.7rem;padding:.55rem .75rem;border:1px dashed #b9a8ff;border-radius:12px;background:var(--lav-soft);font-size:.82rem}
+  .suggest b{font-weight:800}.suggest .why{color:#5a3fd6;font-size:.72rem;font-weight:700}
+  .acts{display:flex;gap:.45rem;align-items:center}
+  .gone{opacity:0;transform:translateX(12px);height:0;padding:0 1.2rem;overflow:hidden;border:0;transition:all .3s}
+  .toast{position:absolute;left:50%;bottom:22px;transform:translate(-50%,20px);padding:.65rem 1.1rem;border-radius:999px;background:#111827;color:#fff;font-weight:600;font-size:.82rem;opacity:0;pointer-events:none;transition:all .25s;z-index:30}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<div class="mock-bar" role="tablist" aria-label="Mockup screens">
+  <strong>CLICKFORMS · Clients feature</strong>
+  <button class="mock-tab" role="tab" aria-selected="true" data-go="list">1 · Clients</button>
+  <button class="mock-tab" role="tab" aria-selected="false" data-go="detail">2 · Client page</button>
+  <button class="mock-tab" role="tab" aria-selected="false" data-go="send">3 · Send a form</button>
+  <button class="mock-tab" role="tab" aria-selected="false" data-go="inbox">4 · Unassigned inbox</button>
+  <button class="mock-tab" role="tab" aria-selected="false" data-go="responses">5 · Responses</button>
+  <span class="mock-note">Clickable prototype with fake data. Nothing is saved.</span>
+</div>
+<p class="caption" id="caption"></p>
+
+<div class="app" id="app">
+  <aside class="side">
+    <div class="brand"><i>c</i> CLICKFORMS</div>
+    <nav class="nav" aria-label="Main">
+      <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/></svg>Dashboard</a>
+      <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h7l3 3v11H5V3Zm7 0v3h3M8 10h4M8 13h4" stroke-linecap="round" stroke-linejoin="round"/></svg>Forms</a>
+      <a href="#" data-go="responses"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 4h14v9H8l-4 3v-3H3V4Z" stroke-linejoin="round"/></svg>Responses</a>
+      <a href="#" class="active" data-go="list"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="7" r="3"/><path d="M2.5 16c.6-2.9 2.7-4.5 5.5-4.5s4.9 1.6 5.5 4.5M14 4.5a2.8 2.8 0 0 1 0 5.2M15 11.8c1.5.5 2.5 1.8 2.9 4.2" stroke-linecap="round"/></svg>Clients<span class="new">NEW</span></a>
+      <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M3 8h14"/></svg>Templates</a>
+      <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6a2 2 0 0 1 2-2h3l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Z" stroke-linejoin="round"/></svg>Files</a>
+      <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c.8-3 3-4.5 6-4.5s5.2 1.5 6 4.5" stroke-linecap="round"/></svg>Users</a>
+      <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h12M4 10h12M4 15h8" stroke-linecap="round"/></svg>Logs</a>
+    </nav>
+    <div class="side-foot"><b>Bright Path Support</b>Standard plan</div>
+  </aside>
+
+  <section class="main">
+    <header class="top"><h1 id="page-title">Clients</h1><span class="sp"></span><div class="avatar">AP</div></header>
+    <div class="content">
+
+      <!-- 1 · CLIENTS LIST -->
+      <div class="screen on" id="s-list">
+        <div class="head">
+          <div><h2>Clients</h2><p>Everyone you work with, with all their forms and documents in one place.</p></div>
+          <span class="sp"></span>
+          <button class="btn" data-modal="import">Import CSV</button>
+          <button class="btn primary" data-modal="newclient"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>New client</button>
+        </div>
+        <div class="kpis">
+          <div class="card kpi"><b>48</b><span>Active clients</span></div>
+          <div class="card kpi"><b>312</b><span>Forms received</span></div>
+          <div class="card kpi"><b>7</b><span>Waiting on a client</span></div>
+          <div class="card kpi"><b>3</b><span>Unassigned responses</span></div>
+        </div>
+        <div class="alert">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.5M10 13.2v.1" stroke-linecap="round"/></svg>
+          3 responses came in without a client. Match them so they land in the right file.
+          <span class="sp"></span><button class="btn sm dark" data-go="inbox">Review</button>
+        </div>
+        <div class="card">
+          <div class="toolbar">
+            <div class="search"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 3 3"/></svg><input class="input" id="client-search" placeholder="Search by name, email or reference" aria-label="Search clients"></div>
+            <div class="seg"><button class="on">Active</button><button>Archived</button><button>All</button></div>
+            <span style="flex:1"></span><span class="muted" style="font-size:.78rem">Sorted by recent activity</span>
+          </div>
+          <table>
+            <thead><tr><th style="width:34%">Client</th><th>Latest form</th><th>Status</th><th>Forms</th><th>Last activity</th><th></th></tr></thead>
+            <tbody id="client-rows">
+              <tr class="row" data-name="jane smith" data-go="detail"><td><div class="who"><span class="ava m c1">JS</span><div><b>Jane Smith</b><small>jane.smith@email.com</small></div></div></td><td>Service Agreement</td><td><span class="chip green"><span class="dot"></span>Signed</span></td><td>6</td><td class="muted">2 hours ago</td><td>›</td></tr>
+              <tr class="row" data-name="marcus chen"><td><div class="who"><span class="ava m c2">MC</span><div><b>Marcus Chen</b><small>marcus.c@email.com</small></div></div></td><td>Intake Form</td><td><span class="chip warn"><span class="dot"></span>Awaiting client</span></td><td>2</td><td class="muted">Yesterday</td><td>›</td></tr>
+              <tr class="row" data-name="aroha williams"><td><div class="who"><span class="ava m c3">AW</span><div><b>Aroha Williams</b><small>0412 555 019</small></div></div></td><td>Consent to Share Information</td><td><span class="chip green"><span class="dot"></span>Signed</span></td><td>4</td><td class="muted">Yesterday</td><td>›</td></tr>
+              <tr class="row" data-name="liam o'connor"><td><div class="who"><span class="ava m c4">LO</span><div><b>Liam O'Connor</b><small>liam.oconnor@email.com</small></div></div></td><td>Risk Assessment</td><td><span class="chip lav"><span class="dot"></span>In review</span></td><td>3</td><td class="muted">3 days ago</td><td>›</td></tr>
+              <tr class="row" data-name="priya nair"><td><div class="who"><span class="ava m c5">PN</span><div><b>Priya Nair</b><small>priya.n@email.com</small></div></div></td><td>Service Agreement</td><td><span class="chip green"><span class="dot"></span>Signed</span></td><td>5</td><td class="muted">5 days ago</td><td>›</td></tr>
+              <tr class="row" data-name="tom becker"><td><div class="who"><span class="ava m c6">TB</span><div><b>Tom Becker</b><small>No email on file</small></div></div></td><td>Intake Form</td><td><span class="chip grey"><span class="dot"></span>Not sent yet</span></td><td>1</td><td class="muted">1 week ago</td><td>›</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 2 · CLIENT PAGE -->
+      <div class="screen" id="s-detail">
+        <div class="crumbs"><a href="#" data-go="list">Clients</a> › <span style="color:var(--text)">Jane Smith</span></div>
+        <div class="card profile">
+          <span class="ava l c1">JS</span>
+          <div>
+            <h2>Jane Smith <span class="chip green" style="vertical-align:middle;margin-left:.4rem">Active</span></h2>
+            <div class="meta"><span>jane.smith@email.com</span><span>0411 222 333</span><span>Ref: PLAN-30417</span><span>Client since Mar 2026</span></div>
+          </div>
+          <span class="sp"></span>
+          <button class="btn">Edit</button>
+          <button class="btn primary" data-go="send"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 9 11M17 3l-5 14-3-6-6-3 14-5Z"/></svg>Send a form</button>
+        </div>
+        <div class="cols">
+          <div class="card">
+            <div class="tabs"><button class="on">Activity</button><button>Responses<em>6</em></button><button>Files<em>9</em></button><button>Forms sent<em>8</em></button></div>
+            <ul class="timeline">
+              <li><span class="ticon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 10.5 3.5 3.5 7.5-8"/></svg></span><div class="tl-body"><div class="tl-row"><b>Service Agreement signed</b><span class="when">2 hours ago</span></div><p>Signed on mobile · PDF saved to Files</p></div></li>
+              <li><span class="ticon lav"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="3"/><path d="M1.5 10S5 4.5 10 4.5 18.5 10 18.5 10 15 15.5 10 15.5 1.5 10 1.5 10Z"/></svg></span><div class="tl-body"><div class="tl-row"><b>Opened Service Agreement</b><span class="when">Today, 9:41 am</span></div><p>Opened from the emailed link</p></div></li>
+              <li><span class="ticon grey"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 9 11M17 3l-5 14-3-6-6-3 14-5Z"/></svg></span><div class="tl-body"><div class="tl-row"><b>Service Agreement sent</b><span class="when">Yesterday</span></div><p>Emailed to jane.smith@email.com by Alex P.</p></div></li>
+              <li><span class="ticon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 10.5 3.5 3.5 7.5-8"/></svg></span><div class="tl-body"><div class="tl-row"><b>Consent to Share Information submitted</b><span class="when">12 Oct</span></div><p>Approved by Alex P.</p></div></li>
+              <li><span class="ticon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 10.5 3.5 3.5 7.5-8"/></svg></span><div class="tl-body"><div class="tl-row"><b>Intake Form submitted</b><span class="when">Mar 2026</span></div><p>Client created from this response</p></div></li>
+            </ul>
+          </div>
+          <div>
+            <div class="card side-card"><h4>At a glance</h4>
+              <div class="kv"><span>Forms received</span><b>6</b></div>
+              <div class="kv"><span>Waiting on client</span><b>0</b></div>
+              <div class="kv"><span>Last activity</span><b>2 hours ago</b></div>
+              <div class="kv"><span>Storage used</span><b>14.2 MB</b></div>
+            </div>
+            <div class="card side-card"><h4>Latest documents</h4>
+              <div class="filelist">
+                <div class="file"><i>PDF</i><div>Smith_Jane_Service Agreement.pdf<small>Signed · 2 hours ago</small></div></div>
+                <div class="file"><i>PDF</i><div>Smith_Jane_Consent.pdf<small>12 Oct</small></div></div>
+                <div class="file"><i>PDF</i><div>Smith_Jane_Intake.pdf<small>Mar 2026</small></div></div>
+              </div>
+              <button class="btn sm" style="margin-top:.9rem;width:100%;justify-content:center">Download everything (.zip)</button>
+            </div>
+            <div class="card side-card"><h4>Notes</h4><p class="muted" style="margin:0;font-size:.84rem">Prefers email. Plan manager is Corrine at Care Circle.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 · SEND A FORM (background = form page) -->
+      <div class="screen" id="s-send">
+        <div class="head"><div><h2>Service Agreement</h2><p>Published · 38 responses</p></div><span class="sp"></span><button class="btn">Edit form</button><button class="btn primary" data-modal="send">Send form</button></div>
+        <div class="card" style="padding:2rem;text-align:center;color:var(--muted)">
+          <p style="margin:0 0 1rem">Click <b>Send form</b> to see the new send dialog.</p>
+          <button class="btn primary" data-modal="send">Send form</button>
+        </div>
+      </div>
+
+      <!-- 4 · UNASSIGNED INBOX -->
+      <div class="screen" id="s-inbox">
+        <div class="crumbs"><a href="#" data-go="list">Clients</a> › <span style="color:var(--text)">Unassigned</span></div>
+        <div class="head"><div><h2>Unassigned responses</h2><p>These arrived through a public link, so we don't know which client they belong to yet.</p></div></div>
+        <div class="card" id="inbox">
+          <div class="inbox-item" data-item>
+            <div><h5>Intake Form · "Michael Dunn"</h5><p>Received today, 8:12 am · michael.dunn@email.com</p>
+              <div class="suggest"><span class="why">SUGGESTED</span><span class="ava s c4">MD</span><div><b>Michael Dunn</b> <span class="muted">· same email address</span></div></div></div>
+            <div class="acts"><button class="btn sm primary" data-assign="Michael Dunn">Confirm match</button><button class="btn sm" data-modal="assign">Choose client</button></div>
+          </div>
+          <div class="inbox-item" data-item>
+            <div><h5>Consent to Share Information · "S. Patel"</h5><p>Received yesterday · no email provided</p>
+              <div class="suggest"><span class="why">SUGGESTED</span><span class="ava s c5">PN</span><div><b>Priya Nair</b> <span class="muted">· similar name, check before confirming</span></div></div></div>
+            <div class="acts"><button class="btn sm primary" data-assign="Priya Nair">Confirm match</button><button class="btn sm" data-modal="assign">Choose client</button></div>
+          </div>
+          <div class="inbox-item" data-item>
+            <div><h5>Risk Assessment · "Ben Harlow"</h5><p>Received 3 days ago · ben.h@email.com</p>
+              <div class="suggest" style="border-color:var(--border-strong);background:var(--sunken)"><span class="why" style="color:var(--muted)">NO MATCH</span><div class="muted">No existing client looks like this person.</div></div></div>
+            <div class="acts"><button class="btn sm dark" data-assign="Ben Harlow (new client)">Create client "Ben Harlow"</button><button class="btn sm" data-modal="assign">Choose client</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 · RESPONSES -->
+      <div class="screen" id="s-responses">
+        <div class="head"><div><h2>Responses</h2><p>Every submission across your forms.</p></div><span class="sp"></span><button class="btn">Export</button></div>
+        <div class="card">
+          <div class="toolbar">
+            <div class="search" style="width:260px"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 3 3"/></svg><input class="input" placeholder="Search responses"></div>
+            <button class="btn sm" style="border-style:dashed">Client: <b>Anyone</b> ▾</button>
+            <button class="btn sm">Form ▾</button><button class="btn sm">Status ▾</button>
+          </div>
+          <table>
+            <thead><tr><th style="width:28%">Client</th><th>Form</th><th>Status</th><th>Received</th></tr></thead>
+            <tbody>
+              <tr><td><div class="who"><span class="ava s c1">JS</span><div class="resp-name">Jane Smith</div></div></td><td>Service Agreement</td><td><span class="chip green">Signed</span></td><td class="muted">2 hours ago</td></tr>
+              <tr><td><div class="who"><span class="ava s c4">?</span><div><span class="chip tag-unassigned">Unassigned</span> <small class="muted">· Michael Dunn</small></div></div></td><td>Intake Form</td><td><span class="chip lav">In review</span></td><td class="muted">Today, 8:12 am</td></tr>
+              <tr><td><div class="who"><span class="ava s c2">MC</span><div class="resp-name">Marcus Chen</div></div></td><td>Intake Form</td><td><span class="chip warn">Awaiting client</span></td><td class="muted">Yesterday</td></tr>
+              <tr><td><div class="who"><span class="ava s c3">AW</span><div class="resp-name">Aroha Williams</div></div></td><td>Consent to Share Information</td><td><span class="chip green">Signed</span></td><td class="muted">Yesterday</td></tr>
+              <tr><td><div class="who"><span class="ava s c4">LO</span><div class="resp-name">Liam O'Connor</div></div></td><td>Risk Assessment</td><td><span class="chip lav">In review</span></td><td class="muted">3 days ago</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ---- SEND MODAL ---- -->
+  <div class="scrim" id="m-send">
+    <div class="modal" role="dialog" aria-label="Send form">
+      <header><h3>Send "Service Agreement"</h3><button class="x" data-close aria-label="Close">×</button></header>
+      <div class="body">
+        <div class="field">
+          <label>Client <small>Who is this form for?</small></label>
+          <div class="picker" id="picker">
+            <input class="input" id="pick-input" placeholder="Search clients or add a new one" autocomplete="off" aria-label="Client">
+            <div class="picker-list" id="pick-list"></div>
+            <div class="selected" id="pick-selected" hidden>
+              <span class="ava s c1" id="sel-ava">JS</span><div><b id="sel-name">Jane Smith</b><br><small class="muted" id="sel-sub">jane.smith@email.com</small></div>
+              <button class="x" id="sel-clear" aria-label="Change client">×</button>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Send to <small>We fill this in from the client</small></label>
+          <input class="input" id="send-to" placeholder="Email address or mobile number" value="">
+        </div>
+        <div class="field">
+          <label>Message <small>Optional</small></label>
+          <textarea class="input" id="msg" placeholder="">Hi, please complete and sign your service agreement before our first session.</textarea>
+          <div class="counter" id="counter"><div class="meter"><i id="meter"></i></div><span class="msg" id="count-msg"></span></div>
+        </div>
+        <div class="field" style="margin-bottom:0"><label style="font-weight:600"><span><input type="checkbox" checked> Hold the response for review before it is filed</span></label></div>
+      </div>
+      <footer><button class="btn" data-close>Cancel</button><button class="btn primary" id="do-send">Send form</button></footer>
+    </div>
+  </div>
+
+  <!-- ---- NEW CLIENT MODAL ---- -->
+  <div class="scrim" id="m-newclient">
+    <div class="modal" style="width:480px" role="dialog" aria-label="New client">
+      <header><h3>New client</h3><button class="x" data-close aria-label="Close">×</button></header>
+      <div class="body">
+        <div class="field"><label>Full name</label><input class="input"></div>
+        <div class="field"><label>Email <small>Optional</small></label><input class="input"></div>
+        <div class="field"><label>Mobile <small>Optional</small></label><input class="input"></div>
+        <div class="field" style="margin-bottom:0"><label>Reference <small>Optional · e.g. plan or file number</small></label><input class="input"></div>
+      </div>
+      <footer><button class="btn" data-close>Cancel</button><button class="btn primary" data-close data-toast="Client created">Create client</button></footer>
+    </div>
+  </div>
+
+  <!-- ---- ASSIGN MODAL ---- -->
+  <div class="scrim" id="m-assign">
+    <div class="modal" style="width:480px" role="dialog" aria-label="Choose client">
+      <header><h3>Choose a client</h3><button class="x" data-close aria-label="Close">×</button></header>
+      <div class="body">
+        <div class="search" style="margin-bottom:.8rem"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 3 3"/></svg><input class="input" placeholder="Search clients"></div>
+        <div class="picker-list" style="margin:0;max-height:240px">
+          <div class="opt" data-close data-toast="Assigned to Jane Smith"><span class="ava s c1">JS</span><div><b>Jane Smith</b><small>jane.smith@email.com</small></div></div>
+          <div class="opt" data-close data-toast="Assigned to Marcus Chen"><span class="ava s c2">MC</span><div><b>Marcus Chen</b><small>marcus.c@email.com</small></div></div>
+          <div class="opt" data-close data-toast="Assigned to Aroha Williams"><span class="ava s c3">AW</span><div><b>Aroha Williams</b><small>0412 555 019</small></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- IMPORT MODAL ---- -->
+  <div class="scrim" id="m-import">
+    <div class="modal" style="width:480px" role="dialog" aria-label="Import clients">
+      <header><h3>Import clients</h3><button class="x" data-close aria-label="Close">×</button></header>
+      <div class="body"><div style="padding:2rem;border:2px dashed var(--border-strong);border-radius:14px;text-align:center;color:var(--muted)"><b style="color:var(--text)">Drop a CSV here</b><br>Name, email, mobile and reference columns. We'll show you duplicates before anything is added.</div></div>
+      <footer><button class="btn" data-close>Cancel</button></footer>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+</div>
+
+<script>
+(function(){
+  var captions={
+    list:'<b>Clients.</b> A searchable directory, with a nudge when responses arrive without a client. Click Jane Smith to open her page.',
+    detail:'<b>The client page.</b> The "folder": everything for one person in one timeline, with documents alongside and a one-click send.',
+    send:'<b>Send a form.</b> The client is chosen first, so every response comes back already filed. The message box now has a live character counter.',
+    inbox:'<b>Unassigned inbox.</b> Responses from public links wait here with a suggested match. You always confirm, nothing merges silently.',
+    responses:'<b>Responses list.</b> Rows show the client\'s name instead of an anonymous submission, and you can filter by client.'
+  };
+  var titles={list:'Clients',detail:'Clients',send:'Forms',inbox:'Clients',responses:'Responses'};
+  var app=document.getElementById('app'), toast=document.getElementById('toast'), tt;
+
+  function go(name){
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('on',s.id==='s-'+name)});
+    document.querySelectorAll('.mock-tab').forEach(function(t){t.setAttribute('aria-selected',t.dataset.go===name)});
+    document.getElementById('caption').innerHTML=captions[name];
+    document.getElementById('page-title').textContent=titles[name];
+    document.querySelectorAll('.nav a').forEach(function(a){
+      var g=a.dataset.go; a.classList.toggle('active', g? (g===name||(g==='list'&&(name==='detail'||name==='inbox'))) : false);
+    });
+    closeAll(); if(name==='send') openModal('send');
+  }
+  function openModal(n){closeAll();var m=document.getElementById('m-'+n);if(m)m.classList.add('on');if(n==='send')initPicker()}
+  function closeAll(){document.querySelectorAll('.scrim').forEach(function(s){s.classList.remove('on')})}
+  function say(t){toast.textContent=t;toast.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){toast.classList.remove('on')},2200)}
+
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('[data-assign]');
+    if(a){var item=a.closest('[data-item]');item.classList.add('gone');setTimeout(function(){item.remove()},320);say('Assigned to '+a.dataset.assign);return}
+    var m=e.target.closest('[data-modal]'); if(m){e.preventDefault();openModal(m.dataset.modal);return}
+    var c=e.target.closest('[data-close]'); if(c){var t=c.dataset.toast;closeAll();if(t)say(t);return}
+    var g=e.target.closest('[data-go]'); if(g){e.preventDefault();go(g.dataset.go);return}
+    if(e.target.classList.contains('scrim')) closeAll();
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeAll()});
+
+  /* clients search */
+  document.getElementById('client-search').addEventListener('input',function(e){
+    var q=e.target.value.toLowerCase().trim();
+    document.querySelectorAll('#client-rows tr').forEach(function(r){r.style.display=(!q||r.dataset.name.indexOf(q)>-1||r.textContent.toLowerCase().indexOf(q)>-1)?'':'none'});
+  });
+
+  /* send modal: client picker */
+  var CLIENTS=[
+    {n:'Jane Smith',s:'jane.smith@email.com',a:'JS',c:'c1'},
+    {n:'Marcus Chen',s:'marcus.c@email.com',a:'MC',c:'c2'},
+    {n:'Aroha Williams',s:'0412 555 019',a:'AW',c:'c3'},
+    {n:'Liam O\'Connor',s:'liam.oconnor@email.com',a:'LO',c:'c4'},
+    {n:'Priya Nair',s:'priya.n@email.com',a:'PN',c:'c5'},
+    {n:'Tom Becker',s:'No email on file',a:'TB',c:'c6'}
+  ];
+  var inp=document.getElementById('pick-input'),list=document.getElementById('pick-list'),sel=document.getElementById('pick-selected'),to=document.getElementById('send-to');
+  function renderList(){
+    var q=inp.value.toLowerCase().trim();
+    var rows=CLIENTS.filter(function(c){return !q||c.n.toLowerCase().indexOf(q)>-1||c.s.toLowerCase().indexOf(q)>-1});
+    var h=rows.map(function(c,i){return '<div class="opt'+(i===0&&q?' hl':'')+'" data-pick="'+c.n+'"><span class="ava s '+c.c+'">'+c.a+'</span><div><b>'+c.n+'</b><small>'+c.s+'</small></div></div>'}).join('');
+    if(q) h+='<div class="opt create" data-create="'+inp.value.trim().replace(/"/g,'')+'"><i>+</i><div>Add "'+inp.value.trim().replace(/</g,'')+'" as a new client</div></div>';
+    list.innerHTML=h||'<div class="opt muted">No clients yet</div>';
+  }
+  function pick(c){
+    inp.hidden=true;list.hidden=true;sel.hidden=false;
+    document.getElementById('sel-name').textContent=c.n;document.getElementById('sel-sub').textContent=c.s;
+    var av=document.getElementById('sel-ava');av.textContent=c.a;av.className='ava s '+c.c;
+    to.value=c.s.indexOf('@')>-1||/^\d/.test(c.s)?c.s:'';
+  }
+  function initPicker(){inp.hidden=false;list.hidden=false;sel.hidden=true;inp.value='';to.value='';renderList();updateCount()}
+  inp.addEventListener('input',renderList);
+  list.addEventListener('click',function(e){
+    var o=e.target.closest('[data-pick]');if(o){pick(CLIENTS.filter(function(c){return c.n===o.dataset.pick})[0]);return}
+    var n=e.target.closest('[data-create]');if(n){var nm=n.dataset.create;pick({n:nm,s:'New client',a:nm.split(/\s+/).map(function(p){return p[0]}).join('').slice(0,2).toUpperCase(),c:'c6'});say('"'+nm+'" will be created when you send')}
+  });
+  document.getElementById('sel-clear').addEventListener('click',function(){initPicker()});
+
+  /* message character counter */
+  var msg=document.getElementById('msg'),counter=document.getElementById('counter'),meter=document.getElementById('meter'),cm=document.getElementById('count-msg'),MAX=480;
+  function updateCount(){
+    var n=msg.value.length,left=MAX-n;
+    meter.style.width=Math.min(100,n/MAX*100)+'%';
+    counter.className='counter'+(left<0?' over':left<=60?' warn':'');
+    cm.textContent=left<0?(-left)+' characters over the limit. Shorten your message to send.':(left<=60?left+' characters left':n+' / '+MAX);
+    document.getElementById('do-send').disabled=left<0;
+    document.getElementById('do-send').style.opacity=left<0?.5:1;
+  }
+  msg.addEventListener('input',updateCount);
+  document.getElementById('do-send').addEventListener('click',function(){if(!this.disabled){closeAll();say('Form sent to '+(document.getElementById('sel-name').textContent||'client'))}});
+
+  go('list');
+})();
+</script>
+</body>
+</html>

@@ -28,6 +28,8 @@ interface SubmissionAnswersEditorProps {
   submissionId: string;
   schema: FormSchema;
   initialAnswers: FormAnswers;
+  /** Image URL of each saved signature by field id, so editing shows it instead of a blank pad. */
+  signatureImageUrls: Record<string, string>;
   canEditAnswers: boolean;
   canDelete: boolean;
   meta: ReactNode;
@@ -343,6 +345,7 @@ export function SubmissionAnswersEditor({
   submissionId,
   schema,
   initialAnswers,
+  signatureImageUrls,
   canEditAnswers,
   canDelete,
   meta,
@@ -603,6 +606,7 @@ export function SubmissionAnswersEditor({
                                   onChange={(value) => handleChange(childId, value)}
                                   onUploadFile={uploadFile}
                                   onCaptureSignature={captureSignature}
+                                  savedSignatureUrls={signatureImageUrls}
                                   allFields={schema.fields}
                                   answers={answers}
                                   disableOptionGrid
@@ -624,6 +628,8 @@ export function SubmissionAnswersEditor({
                         error={errors[fieldId]}
                         onChange={(value) => handleChange(fieldId, value)}
                         onUploadFile={uploadFile}
+                        onCaptureSignature={captureSignature}
+                        savedSignatureUrls={signatureImageUrls}
                         allFields={schema.fields}
                         answers={answers}
                       />

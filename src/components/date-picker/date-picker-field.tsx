@@ -4,6 +4,7 @@ import { type CSSProperties, useEffect, useId, useMemo, useRef, useState } from 
 import { DayPicker, type Matcher } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import './date-picker-field.css';
+import { CalendarShell } from '@/components/calendar/calendar-shell';
 import { formatIsoDateForDisplay, parseIsoDate, toIsoDate } from '@/lib/forms/date-value';
 
 function CalendarIcon() {
@@ -46,7 +47,7 @@ export function DatePickerField({
   min,
   max,
   disabled = false,
-  placeholder = 'Select date…',
+  placeholder = 'DD/MM/YYYY',
   className = '',
   style,
   onChange,
@@ -55,15 +56,32 @@ export function DatePickerField({
   const popoverId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const selected = parseIsoDate(value);
+  const displayValue = formatIsoDateForDisplay(value);
+  const [month, setMonth] = useState<Date>(() => selected ?? new Date());
+  const [typed, setTyped] = useState(displayValue);
+  const [typedInvalid, setTypedInvalid] = useState(false);
+
+  const minDate = parseIsoDate(min);
+  const maxDate = parseIsoDate(max);
+  const nowYear = new Date().getFullYear();
+  const startMonth = new Date(minDate ? minDate.getFullYear() : 1900, 0);
+  const endMonth = new Date(maxDate ? maxDate.getFullYear() : nowYear + 20, 11);
 
   const disabledMatchers = useMemo(() => {
     const matchers: Matcher[] = [];
-    const minDate = parseIsoDate(min);
-    const maxDate = parseIsoDate(max);
     if (minDate) matchers.push({ before: minDate });
     if (maxDate) matchers.push({ after: maxDate });
     return matchers.length > 0 ? matchers : undefined;
-  }, [min, max]);
+  }, [minDate, maxDate]);
+
+  // Keep the typed text and visible month in step with the value when it changes from
+  // outside (calendar pick, reset, prefill).
+  useEffect(() => {
+    setTyped(formatIsoDateForDisplay(value));
+    setTypedInvalid(false);
+    const next = parseIsoDate(value);
+    if (next) setMonth(next);
+  }, [value]);
 
   useEffect(() => {
     if (!open) return;
@@ -88,121 +106,102 @@ export function DatePickerField({
     };
   }, [open]);
 
-  const displayValue = formatIsoDateForDisplay(value);
-  const [month, setMonth] = useState<Date>(() => selected ?? new Date());
-  const [typed, setTyped] = useState(displayValue);
-  const [typedError, setTypedError] = useState(false);
-  const minDate = parseIsoDate(min);
-  const maxDate = parseIsoDate(max);
-  const nowYear = new Date().getFullYear();
-  const startMonth = new Date(minDate ? minDate.getFullYear() : 1900, 0);
-  const endMonth = new Date(maxDate ? maxDate.getFullYear() : nowYear + 20, 11);
-
-  // Re-seed the typed box and visible month each time the popover opens or the value
-  // changes from outside.
-  useEffect(() => {
-    if (!open) return;
-    setTyped(formatIsoDateForDisplay(value));
-    setTypedError(false);
-    setMonth(parseIsoDate(value) ?? new Date());
-  }, [open, value]);
-
-  function formatTyping(raw: string): string {
-    const digits = raw.replace(/\D/g, '').slice(0, 8);
-    const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
-    return parts.join('/');
-  }
-
-  function commitTyped() {
-    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(typed);
-    if (!match) {
-      setTypedError(typed.length > 0);
-      return;
-    }
-    const day = Number(match[1]);
-    const mon = Number(match[2]);
-    const year = Number(match[3]);
-    const date = new Date(year, mon - 1, day);
-    const valid =
-      date.getFullYear() === year && date.getMonth() === mon - 1 && date.getDate() === day;
-    const inRange = (!minDate || date >= minDate) && (!maxDate || date <= maxDate);
-    if (!valid || !inRange) {
-      setTypedError(true);
-      return;
-    }
-    onChange(toIsoDate(date));
-    setOpen(false);
-  }
-
   function handleSelect(date: Date | undefined) {
     if (!date) return;
     onChange(toIsoDate(date));
     setOpen(false);
   }
 
+  function formatTyping(raw: string): string {
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join('/');
+  }
+
+  function handleType(raw: string) {
+    const text = formatTyping(raw);
+    setTyped(text);
+    if (text === '') {
+      setTypedInvalid(false);
+      if (value) onChange('');
+      return;
+    }
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
+    if (!match) {
+      setTypedInvalid(false);
+      return;
+    }
+    const day = Number(match[1]);
+    const mon = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(year, mon - 1, day);
+    const real =
+      date.getFullYear() === year && date.getMonth() === mon - 1 && date.getDate() === day;
+    const inRange = (!minDate || date >= minDate) && (!maxDate || date <= maxDate);
+    if (!real || !inRange) {
+      setTypedInvalid(true);
+      return;
+    }
+    setTypedInvalid(false);
+    setMonth(date);
+    onChange(toIsoDate(date));
+  }
+
   return (
     <div className="date-picker-field" ref={rootRef}>
-      <button
-        type="button"
+      <input
+        type="text"
         id={id}
-        className={`date-picker-trigger ${className}`.trim()}
+        inputMode="numeric"
+        autoComplete="off"
+        className={`date-picker-trigger date-picker-input ${className}`.trim()}
         style={style}
         disabled={disabled}
+        placeholder={placeholder}
+        aria-invalid={typedInvalid || undefined}
+        value={typed}
+        onChange={(event) => handleType(event.target.value)}
+        onBlur={() => {
+          // An incomplete or out-of-range entry snaps back to the last valid value.
+          setTyped(displayValue);
+          setTypedInvalid(false);
+        }}
+      />
+      <button
+        type="button"
+        className="date-picker-icon-button"
+        disabled={disabled}
+        aria-label="Open calendar"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? popoverId : undefined}
+        onMouseDown={(event) => event.preventDefault()}
         onClick={() => {
           if (!disabled) setOpen((current) => !current);
         }}
       >
-        <span className={displayValue ? 'date-picker-value' : 'date-picker-placeholder'}>
-          {displayValue || placeholder}
-        </span>
         <CalendarIcon />
       </button>
 
       {open ? (
         <div className="date-picker-popover" id={popoverId} role="dialog" aria-label="Choose date">
-          <div className="date-picker-typed">
-            <input
-              type="text"
-              inputMode="numeric"
-              className={`date-picker-typed-input${typedError ? ' date-picker-typed-input--error' : ''}`}
-              placeholder="DD/MM/YYYY"
-              aria-label="Type a date as DD/MM/YYYY"
-              aria-invalid={typedError}
-              value={typed}
-              onChange={(event) => {
-                setTyped(formatTyping(event.target.value));
-                setTypedError(false);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  commitTyped();
-                }
-              }}
-              onBlur={() => {
-                if (typed.length === 10) commitTyped();
-              }}
-            />
-            {typedError ? (
-              <span className="date-picker-typed-error" role="alert">
-                Enter a valid date{minDate || maxDate ? ' in the allowed range' : ''}
-              </span>
-            ) : null}
-          </div>
-          <DayPicker
-            mode="single"
-            selected={selected}
-            onSelect={handleSelect}
-            disabled={disabledMatchers}
+          <CalendarShell
             month={month}
             onMonthChange={setMonth}
-            captionLayout="dropdown"
             startMonth={startMonth}
             endMonth={endMonth}
-          />
+          >
+            <DayPicker
+              mode="single"
+              selected={selected}
+              onSelect={handleSelect}
+              disabled={disabledMatchers}
+              month={month}
+              onMonthChange={setMonth}
+              hideNavigation
+              startMonth={startMonth}
+              endMonth={endMonth}
+            />
+          </CalendarShell>
         </div>
       ) : null}
     </div>

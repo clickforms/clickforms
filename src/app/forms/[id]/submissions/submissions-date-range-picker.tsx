@@ -3,6 +3,7 @@
 import { type CSSProperties, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { type DateRange, DayPicker } from 'react-day-picker';
 import { createPortal } from 'react-dom';
+import { CalendarShell } from '@/components/calendar/calendar-shell';
 import 'react-day-picker/style.css';
 import { parseIsoDate, toIsoDate } from '@/lib/forms/date-value';
 
@@ -212,7 +213,7 @@ export function SubmissionsDateRangePicker({
   }
 
   const hasValue = Boolean(value.from || value.to);
-  const startMonth = new Date(today.getFullYear() - 10, 0, 1);
+  const startMonth = new Date(1990, 0, 1);
   const endMonth = new Date(today.getFullYear() + 1, 11, 1);
   const thisMonth = rangeForMonth(today);
   const lastMonth = rangeForMonth(new Date(today.getFullYear(), today.getMonth() - 1, 1));
@@ -304,17 +305,23 @@ export function SubmissionsDateRangePicker({
                   {displayMonthLabel}
                 </button>
               </fieldset>
-              <DayPicker
-                mode="range"
+              <CalendarShell
                 month={displayMonth}
                 onMonthChange={setDisplayMonth}
-                captionLayout="dropdown"
-                navLayout="around"
                 startMonth={startMonth}
                 endMonth={endMonth}
-                selected={selected}
-                onSelect={handleSelect}
-              />
+              >
+                <DayPicker
+                  mode="range"
+                  month={displayMonth}
+                  onMonthChange={setDisplayMonth}
+                  hideNavigation
+                  startMonth={startMonth}
+                  endMonth={endMonth}
+                  selected={selected}
+                  onSelect={handleSelect}
+                />
+              </CalendarShell>
               <div className="submissions-date-range-actions">
                 <button
                   type="button"

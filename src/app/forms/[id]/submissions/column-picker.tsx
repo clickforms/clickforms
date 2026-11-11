@@ -6,6 +6,8 @@ import { createPortal } from 'react-dom';
 import { useToast } from '@/components/toast';
 import './column-picker.css';
 
+const TIP_STORAGE_KEY = 'clickforms-response-column-tip-seen';
+
 interface ColumnPickerProps {
   formId: string;
   /** Current column heading. */
@@ -23,6 +25,7 @@ export function ColumnPicker({ formId, label, fields, selectedId }: ColumnPicker
   const router = useRouter();
   const toast = useToast();
   const [open, setOpen] = useState(false);
+  const [showTip, setShowTip] = useState(false);
   const [query, setQuery] = useState('');
   const [pending, setPending] = useState<string | null | undefined>(undefined);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -68,6 +71,25 @@ export function ColumnPicker({ formId, label, fields, selectedId }: ColumnPicker
     };
   }, [open]);
 
+  // One-time pointer to the control: a header that doubles as a menu is easy to miss, so the
+  // first visit shows a short tip under it. Dismissed for good once seen or used.
+  useEffect(() => {
+    try {
+      if (!window.localStorage.getItem(TIP_STORAGE_KEY)) setShowTip(true);
+    } catch {
+      // Storage unavailable (private mode): simply don't show the tip.
+    }
+  }, []);
+
+  function dismissTip() {
+    setShowTip(false);
+    try {
+      window.localStorage.setItem(TIP_STORAGE_KEY, '1');
+    } catch {
+      // Ignore: the tip just reappears next visit.
+    }
+  }
+
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
     return term ? fields.filter((f) => f.label.toLowerCase().includes(term)) : fields;
@@ -108,21 +130,32 @@ export function ColumnPicker({ formId, label, fields, selectedId }: ColumnPicker
         type="button"
         className="column-picker-trigger"
         aria-expanded={open}
+        aria-haspopup="dialog"
         disabled={busy}
-        onClick={() => setOpen((v) => !v)}
-        title="Choose what this column shows"
+        onClick={() => {
+          dismissTip();
+          setOpen((v) => !v);
+        }}
+        title="Click to choose which field this column shows"
       >
         <span>{label}</span>
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-          <path
-            d="M2 3.75 5 6.75l3-3"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <span className="column-picker-caret" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+            <title>Open menu</title>
+            <path d="M1.5 3.2h7a.5.5 0 0 1 .4.8l-3.5 4.2a.5.5 0 0 1-.8 0L1.1 4a.5.5 0 0 1 .4-.8Z" />
+          </svg>
+        </span>
       </button>
+
+      {showTip && !open ? (
+        <div className="column-picker-tip" role="status">
+          <strong>Tip</strong>
+          <span>Click this heading to choose what identifies each response.</span>
+          <button type="button" onClick={dismissTip}>
+            Got it
+          </button>
+        </div>
+      ) : null}
 
       {open && coords
         ? createPortal(

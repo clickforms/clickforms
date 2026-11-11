@@ -21,6 +21,7 @@ export function FormNotice({
         <div className={`form-notice-icon form-notice-icon--${tone}`} aria-hidden="true">
           {tone === 'success' ? (
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <title>Done</title>
               <path
                 d="M5 12.5l4.5 4.5L19 7.5"
                 stroke="currentColor"
@@ -31,6 +32,7 @@ export function FormNotice({
             </svg>
           ) : (
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <title>Form</title>
               <rect
                 x="5"
                 y="3.5"

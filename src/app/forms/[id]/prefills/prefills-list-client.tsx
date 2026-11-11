@@ -487,7 +487,12 @@ export function PrefillsListClient({
                             {isOpen ? 'Close' : 'Review'}
                           </button>
                         ) : item.status === 'draft' ? (
-                          <a className="pf-btn pf-btn--primary pf-btn--sm" href={item.continueHref}>
+                          <a
+                            className="pf-btn pf-btn--primary pf-btn--sm"
+                            href={item.continueHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
                             Open
                           </a>
                         ) : null}
@@ -495,6 +500,8 @@ export function PrefillsListClient({
                           <a
                             className="pf-btn pf-btn--ghost pf-btn--sm"
                             href={item.sendAgainHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             title="Edit this prefill and send it again, to the same person or others"
                           >
                             Open

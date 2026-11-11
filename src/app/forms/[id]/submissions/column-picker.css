@@ -6,55 +6,67 @@
 .column-picker-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.32rem 0.45rem 0.32rem 0.8rem;
-  margin: -0.32rem 0;
-  border: 1px solid rgba(15, 23, 42, 0.16);
-  border-radius: 999px;
+  gap: 0.5rem;
+  height: 2rem;
+  padding: 0 0.4rem 0 0.75rem;
+  margin: -0.2rem 0;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 0.6rem;
   background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-  color: #111827;
+  color: #374151;
+  /* Same type as the other column headings so the control sits in the row, not above it. */
   font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
   transition:
     border-color 0.15s,
     background 0.15s,
-    box-shadow 0.15s;
+    box-shadow 0.15s,
+    color 0.15s;
 }
-/* Solid caret in a dark disc: reads as "this opens a menu" at a glance. */
+/* Solid caret in a soft disc: clearly a menu, without a heavy black blob. */
 .column-picker-caret {
   display: grid;
   place-items: center;
-  width: 1.35rem;
-  height: 1.35rem;
-  border-radius: 50%;
-  background: #111827;
-  color: #fff;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 0.4rem;
+  background: #e8ecf2;
+  color: #1f2937;
   transition:
     background 0.15s,
+    color 0.15s,
     transform 0.15s;
 }
 .column-picker-trigger:hover {
   border-color: #3fcf68;
   background: #f3fcf6;
-  box-shadow: 0 0 0 3px rgba(85, 234, 140, 0.25);
+  color: #0d5c31;
 }
 .column-picker-trigger:hover .column-picker-caret {
-  background: #1f9d4c;
+  background: #55ea8c;
+  color: #0b1f12;
 }
 .column-picker-trigger[aria-expanded="true"] {
   border-color: #3fcf68;
   background: #e9fdf1;
+  color: #0d5c31;
 }
 .column-picker-trigger[aria-expanded="true"] .column-picker-caret {
-  background: #1f9d4c;
+  background: #55ea8c;
+  color: #0b1f12;
   transform: rotate(180deg);
 }
 .column-picker-trigger:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(85, 234, 140, 0.45);
+}
+.column-picker-trigger:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 .column-picker-tip {
   position: absolute;
@@ -111,10 +123,6 @@
 }
 .column-picker-tip button:hover {
   background: rgba(255, 255, 255, 0.12);
-}
-.column-picker-trigger:disabled {
-  opacity: 0.6;
-  cursor: progress;
 }
 .column-picker-popover {
   position: absolute;

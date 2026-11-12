@@ -910,7 +910,12 @@ function SignatureControl({ field, value, onCapture, savedImageUrl }: SignatureC
       <SignaturePad
         onCapture={handleCapture}
         onClear={handleClear}
-        initialImageUrl={typeof value === 'string' && value.startsWith('blob:') ? value : undefined}
+        initialImageUrl={
+          typeof value === 'string' &&
+          (value.startsWith('blob:') || value.startsWith('data:image/'))
+            ? value
+            : undefined
+        }
         heightPx={field.padHeightPx ?? DEFAULT_SIGNATURE_PAD_HEIGHT_PX}
       />
     </div>

@@ -15,7 +15,6 @@ export const PREFILL_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 // Answers that can't be meaningfully pre-seeded from text (binary/drawn/derived values).
 const NON_PREFILLABLE_TYPES = new Set([
   'file_upload',
-  'signature',
   'draw_on_image',
   'calculation',
   'section_break',
@@ -29,13 +28,31 @@ export function generatePrefillToken(): string {
   return randomBytes(24).toString('base64url');
 }
 
-/** Keeps only string / string[] answers for fields that exist and accept a typed value. */
+// A sender's signature travels inside the prefill as a small PNG data URL (the recipient's form
+// shows it as already signed, and it is stored as a real file when they submit).
+const SIGNATURE_DATA_URL = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
+const MAX_SIGNATURE_DATA_URL_LENGTH = 600_000;
+
+export function isSignatureDataUrl(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= MAX_SIGNATURE_DATA_URL_LENGTH &&
+    SIGNATURE_DATA_URL.test(value)
+  );
+}
+
+/** Keeps only string / string[] answers for fields that exist and accept a typed value
+ * (plus a signature as a PNG data URL on signature fields). */
 export function sanitizePrefillAnswers(schema: FormSchema, answers: unknown): FormAnswers {
   const result: FormAnswers = {};
   if (typeof answers !== 'object' || answers === null) return result;
   for (const [fieldId, value] of Object.entries(answers as Record<string, unknown>)) {
     const field = schema.fields[fieldId];
     if (!field || NON_PREFILLABLE_TYPES.has(field.type)) continue;
+    if (field.type === 'signature') {
+      if (isSignatureDataUrl(value)) result[fieldId] = value;
+      continue;
+    }
     if (typeof value === 'string') {
       if (value.trim()) result[fieldId] = value;
     } else if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {

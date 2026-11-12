@@ -210,6 +210,24 @@ function FormRendererInner({
     return submissionPromiseRef.current;
   }, [slug, previewMode, prefillToken]);
 
+  // A signature the sender applied in the prefill is shown to the recipient as already signed
+  // (read-only, can't be redrawn or cleared). Not applied in the prefill builder or previews,
+  // where the sender is still free to change their own signature.
+  const lockedSignatureUrls = useMemo(() => {
+    if (!prefillAnswers || prefillBuilder || previewMode) return undefined;
+    const urls: Record<string, string> = {};
+    for (const [fieldId, value] of Object.entries(prefillAnswers)) {
+      if (
+        schema.fields[fieldId]?.type === 'signature' &&
+        typeof value === 'string' &&
+        value.startsWith('data:image/png;base64,')
+      ) {
+        urls[fieldId] = value;
+      }
+    }
+    return Object.keys(urls).length > 0 ? urls : undefined;
+  }, [prefillAnswers, prefillBuilder, previewMode, schema]);
+
   const visibleFieldIds = useMemo(() => getVisibleFieldIds(schema, answers), [schema, answers]);
 
   const handleAnswerChange = useCallback(
@@ -333,8 +351,28 @@ function FormRendererInner({
   // re-upload a signature that already succeeded.
   const resolvePendingSignatures = useCallback(
     async (currentAnswers: FormAnswers): Promise<FormAnswers> => {
-      if (pendingSignaturesRef.current.size === 0) return currentAnswers;
       const resolved = { ...currentAnswers };
+      // A signature the sender already applied in a prefill arrives as a PNG data URL: store it
+      // as a real file for this submission, same as a freshly drawn one.
+      const inherited = Object.entries(currentAnswers).filter(
+        ([fieldId, value]) =>
+          schema.fields[fieldId]?.type === 'signature' &&
+          typeof value === 'string' &&
+          value.startsWith('data:image/png;base64,') &&
+          !pendingSignaturesRef.current.has(fieldId),
+      );
+      await Promise.all(
+        inherited.map(async ([fieldId, value]) => {
+          const blob = await (await fetch(value as string)).blob();
+          const fileId = await uploadFile(
+            fieldId,
+            new File([blob], 'signature.png', { type: 'image/png' }),
+          );
+          resolved[fieldId] = fileId;
+          setAnswers((prev) => ({ ...prev, [fieldId]: fileId }));
+        }),
+      );
+      if (pendingSignaturesRef.current.size === 0) return resolved;
       await Promise.all(
         Array.from(pendingSignaturesRef.current.entries()).map(async ([fieldId, file]) => {
           const fileId = await uploadFile(fieldId, file);
@@ -351,7 +389,7 @@ function FormRendererInner({
       );
       return resolved;
     },
-    [uploadFile],
+    [schema, uploadFile],
   );
 
   const findPageIndexForField = useCallback(
@@ -435,6 +473,23 @@ function FormRendererInner({
     setSendMode('email');
   }, []);
 
+  // Prefill builder: turns every signature drawn so far (a local blob) into a PNG data URL so
+  // it is saved inside the prefill and the recipient's form can show it as already signed.
+  const inlineSignatures = useCallback(async (current: FormAnswers): Promise<FormAnswers> => {
+    const result = { ...current };
+    await Promise.all(
+      Array.from(pendingSignaturesRef.current.entries()).map(async ([fieldId, file]) => {
+        result[fieldId] = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+      }),
+    );
+    return result;
+  }, []);
+
   const sendPrefill = useCallback(
     async (emailsOverride?: string[]) => {
       if (!formId) return;
@@ -445,11 +500,12 @@ function FormRendererInner({
       }
       setSubmitting(true);
       try {
+        const answersToSend = await inlineSignatures(answers);
         const res = await fetch(`/api/forms/${formId}/prefills`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            answers,
+            answers: answersToSend,
             delivery: sendMode,
             draftId,
             reopenId,
@@ -470,17 +526,29 @@ function FormRendererInner({
         setSubmitting(false);
       }
     },
-    [answers, draftId, reopenId, formId, note, recipientEmails, recipientName, sendMode, toast],
+    [
+      answers,
+      draftId,
+      reopenId,
+      formId,
+      inlineSignatures,
+      note,
+      recipientEmails,
+      recipientName,
+      sendMode,
+      toast,
+    ],
   );
 
   const saveDraft = useCallback(async () => {
     if (!formId) return;
     setSubmitting(true);
     try {
+      const answersToSave = await inlineSignatures(answers);
       const res = await fetch(`/api/forms/${formId}/prefills`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers, delivery: 'draft', draftId }),
+        body: JSON.stringify({ answers: answersToSave, delivery: 'draft', draftId }),
       });
       const data: { error?: string } = await res.json();
       if (!res.ok) {
@@ -494,7 +562,7 @@ function FormRendererInner({
       toast.error('Could not save the draft.');
       setSubmitting(false);
     }
-  }, [answers, draftId, formId, toast]);
+  }, [answers, draftId, formId, inlineSignatures, toast]);
 
   const handleNextOrSubmit = useCallback(async () => {
     const page = schema.pages[pageIndex];
@@ -725,6 +793,7 @@ function FormRendererInner({
                               onChange={(value) => handleAnswerChange(childId, value)}
                               onUploadFile={uploadFile}
                               onCaptureSignature={captureSignature}
+                              savedSignatureUrls={lockedSignatureUrls}
                               allFields={schema.fields}
                               answers={answers}
                               disableOptionGrid
@@ -750,6 +819,7 @@ function FormRendererInner({
                     onChange={(value) => handleAnswerChange(fieldId, value)}
                     onUploadFile={uploadFile}
                     onCaptureSignature={captureSignature}
+                    savedSignatureUrls={lockedSignatureUrls}
                     allFields={schema.fields}
                     answers={answers}
                   />

@@ -4,6 +4,8 @@ import { toErrorResponse } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { signupVerificationEmail } from '@/lib/emails/templates';
+import { log } from '@/lib/log';
+import { clientIp, isRateLimited } from '@/lib/rate-limit';
 import { signupVerifyUrl } from '@/lib/users/signup-verify-url';
 
 const signupBodySchema = z.object({
@@ -26,20 +28,35 @@ const PENDING_SIGNUP_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
  * happens once the link is clicked and a password is set (POST
  * /api/auth/signup/verify). See PendingSignup in schema.prisma.
  *
- * Always returns a generic success response regardless of whether the email
- * address was already taken, so this endpoint can't be used to enumerate
- * existing accounts.
+ * An address that already has an account is told so plainly (HTTP 409, code
+ * "account_exists") so the person can sign in or reset their password instead of
+ * waiting for an email that will never come — the same choice Google and Amazon make.
+ * The cost is that the form can reveal whether an address is registered, so it is
+ * rate-limited per client address to make bulk probing impractical.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    if (isRateLimited(`signup:${clientIp(request)}`, 10, 15 * 60 * 1000)) {
+      log.warn('auth.signup_rate_limited', { ip: clientIp(request) });
+      return NextResponse.json(
+        { error: 'Too many attempts. Please wait a few minutes and try again.' },
+        { status: 429 },
+      );
+    }
+
     const body = signupBodySchema.parse(await request.json());
     const email = body.email.toLowerCase();
 
     const existingUser = await prisma.user.findFirst({ where: { email } });
     if (existingUser) {
-      // Don't reveal via a distinct error that this email is taken — silently no-op
-      // (no pending row written, no email sent) and return the same success shape.
-      return NextResponse.json({ ok: true }, { status: 200 });
+      log.info('auth.signup_existing_account', { email });
+      return NextResponse.json(
+        {
+          error: 'An account with this email address already exists.',
+          code: 'account_exists',
+        },
+        { status: 409 },
+      );
     }
 
     const token = crypto.randomUUID();

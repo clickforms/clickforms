@@ -20,12 +20,14 @@ export function SignupForm() {
   const [formSituation, setFormSituation] = useState<FormSituation | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountExists, setAccountExists] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setAccountExists(false);
 
     if (!formSituation) {
       setError('Select which of the following most applies to you');
@@ -51,8 +53,12 @@ export function SignupForm() {
           termsAccepted,
         }),
       });
-      const data: { error?: string; devVerifyUrl?: string } = await res.json();
+      const data: { error?: string; code?: string; devVerifyUrl?: string } = await res.json();
       if (!res.ok) {
+        if (data.code === 'account_exists') {
+          setAccountExists(true);
+          return;
+        }
         setError(data.error ?? 'Could not create your account. Please try again.');
         return;
       }
@@ -123,6 +129,14 @@ export function SignupForm() {
       {error ? (
         <p className="signup-form-error" role="alert">
           {error}
+        </p>
+      ) : null}
+      {accountExists ? (
+        <p className="signup-form-error" role="alert">
+          An account with <strong>{email.trim()}</strong> already exists.{' '}
+          <Link href="/login">Sign in</Link> or{' '}
+          <Link href="/forgot-password">reset your password</Link>, or use a different email
+          address.
         </p>
       ) : null}
 

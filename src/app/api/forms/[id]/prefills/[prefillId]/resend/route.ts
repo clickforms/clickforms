@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
+import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
 import { prefillUrl, sendPrefillEmail } from '@/lib/forms/send-prefill-email';
@@ -68,6 +69,14 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
       url: prefillUrl(data.subdomain, data.form.slug, data.prefill.token),
       expiresAt: data.prefill.expires_at,
       organizationId,
+    });
+    await logAudit({
+      organizationId,
+      actorUserId: session.user.id,
+      action: 'prefill.resend',
+      entityType: 'prefill',
+      entityId: prefillId,
+      metadata: { formId: id },
     });
 
     return NextResponse.json({ ok: true });

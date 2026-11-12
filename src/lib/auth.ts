@@ -14,6 +14,7 @@ import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { hasTwoFactorTrust, issueTwoFactorCode, verifyTwoFactorCode } from '@/lib/auth/two-factor';
 import { prisma, withOrgContext } from '@/lib/db';
+import { log } from '@/lib/log';
 import { hashPassword, needsRehash, verifyPassword } from '@/lib/users/password';
 
 /**
@@ -94,6 +95,10 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (verifiedCandidates.length === 0) {
+          log.warn('auth.login_failed', {
+            email: normalizedEmail,
+            reason: candidates.length === 0 ? 'unknown_email' : 'wrong_password',
+          });
           return null;
         }
 
@@ -107,6 +112,7 @@ export const authOptions: NextAuthOptions = {
           (verifiedCandidates.length === 1 ? verifiedCandidates[0] : undefined);
 
         if (!user) {
+          log.warn('auth.login_failed', { email: normalizedEmail, reason: 'ambiguous_account' });
           throw new Error('AmbiguousAccount');
         }
 
@@ -115,6 +121,11 @@ export const authOptions: NextAuthOptions = {
         // Blocking sign-in here is the enforcement point; it deliberately does not
         // touch public /f/* form access, which is a separate scope decision.
         if (user.organization?.status === 'suspended') {
+          log.warn('auth.login_failed', {
+            email: normalizedEmail,
+            userId: user.id,
+            reason: 'organisation_suspended',
+          });
           throw new Error('OrganizationSuspended');
         }
 
@@ -138,9 +149,15 @@ export const authOptions: NextAuthOptions = {
           const submittedCode = credentials.code?.trim();
           if (!submittedCode) {
             await issueTwoFactorCode(user, 'login');
+            log.info('auth.two_factor_sent', { userId: user.id, email: normalizedEmail });
             throw new Error('TwoFactorRequired');
           }
           if (!(await verifyTwoFactorCode(user.id, 'login', submittedCode))) {
+            log.warn('auth.login_failed', {
+              email: normalizedEmail,
+              userId: user.id,
+              reason: 'invalid_two_factor_code',
+            });
             throw new Error('InvalidTwoFactorCode');
           }
         }
@@ -164,6 +181,13 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
+        log.info('auth.login', {
+          userId: user.id,
+          email: user.email,
+          organizationId: user.organizationId,
+          role: user.role,
+          isPlatformAdmin: user.isPlatformAdmin,
+        });
         return {
           id: user.id,
           email: user.email,

@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { log, redact } from '@/lib/log';
 
 interface LogAuditParams {
   organizationId: string;
@@ -26,6 +27,8 @@ export async function logAudit(
   params: LogAuditParams,
   client: Prisma.TransactionClient | typeof prisma = prisma,
 ): Promise<void> {
+  // Anything password/token/secret-like in the details is masked before it is stored or logged.
+  const metadata = redact(params.metadata ?? {}) as Record<string, unknown>;
   await client.auditLog.create({
     data: {
       organizationId: params.organizationId,
@@ -33,7 +36,15 @@ export async function logAudit(
       action: params.action,
       entityType: params.entityType,
       entityId: params.entityId,
-      metadata: (params.metadata ?? {}) as Prisma.InputJsonValue,
+      metadata: metadata as Prisma.InputJsonValue,
     },
+  });
+  log.info('audit', {
+    action: params.action,
+    organizationId: params.organizationId,
+    actorUserId: params.actorUserId ?? null,
+    entityType: params.entityType,
+    entityId: params.entityId,
+    metadata,
   });
 }

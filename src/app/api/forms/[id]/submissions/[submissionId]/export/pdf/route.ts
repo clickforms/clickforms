@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
+import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
 import {
@@ -102,6 +103,15 @@ export async function GET(request: Request, { params }: RouteContext): Promise<N
       (submission.answers ?? {}) as Record<string, unknown>,
       prefixValue,
     );
+
+    await logAudit({
+      organizationId: requireOrganizationId(session),
+      actorUserId: session.user.id,
+      action: 'submission.export_pdf',
+      entityType: 'submission',
+      entityId: submission.id,
+      metadata: { formId: form.id },
+    });
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {

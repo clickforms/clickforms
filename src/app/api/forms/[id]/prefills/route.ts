@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { assertOrgActionsAllowed } from '@/lib/admin/plan-enforcement';
 import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
+import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
 import { generatePrefillToken, PREFILL_TTL_MS, sanitizePrefillAnswers } from '@/lib/forms/prefills';
@@ -209,6 +210,17 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         note: body.note,
         expiresAt: created.expiresAt,
         organizationId,
+      });
+    }
+
+    for (const item of results) {
+      await logAudit({
+        organizationId,
+        actorUserId: session.user.id,
+        action: body.reopenId ? 'prefill.resend_edited' : 'prefill.send',
+        entityType: 'prefill',
+        entityId: item.id,
+        metadata: { formId: id, delivery: body.delivery, recipient: item.email },
       });
     }
 

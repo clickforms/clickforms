@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+import { log } from '@/lib/log';
 import { ForbiddenError, UnauthorizedError } from '@/lib/session';
 
 /** Thrown by route handlers for a resource that doesn't exist (or isn't in this org's data). */
@@ -66,6 +67,19 @@ export class FormOfflineError extends Error {
  * or a validation problem.
  */
 export function toErrorResponse(error: unknown): NextResponse {
+  const response = classifyError(error);
+  if (response.status >= 500) {
+    log.error('api.unhandled_error', { status: response.status, error });
+  } else if (response.status >= 400) {
+    log.warn('api.error', {
+      status: response.status,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  return response;
+}
+
+function classifyError(error: unknown): NextResponse {
   if (error instanceof UnauthorizedError) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -97,6 +111,5 @@ export function toErrorResponse(error: unknown): NextResponse {
     );
   }
 
-  console.error('[api] unhandled error:', error);
   return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 }

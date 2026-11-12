@@ -2,6 +2,7 @@ import 'server-only';
 
 import { Resend } from 'resend';
 import { prisma } from '@/lib/db';
+import { log } from '@/lib/log';
 
 interface EmailAttachment {
   filename: string;
@@ -70,6 +71,15 @@ async function logEmailAttempt(params: {
   providerMessageId?: string | null;
   error?: string | null;
 }): Promise<void> {
+  // Always on stdout too, so `docker logs` shows every send, not just failures.
+  log[params.status === 'failed' ? 'error' : 'info'](`email.${params.status}`, {
+    kind: params.kind,
+    to: params.to,
+    subject: params.subject,
+    organizationId: params.organizationId ?? null,
+    providerMessageId: params.providerMessageId ?? null,
+    error: params.error ?? null,
+  });
   try {
     await prisma.emailLog.create({
       data: {
@@ -112,6 +122,11 @@ export async function sendEmail({
   const client = getClient();
 
   if (!client) {
+    log.warn('email.not_configured', {
+      kind,
+      to,
+      hint: 'RESEND_API_KEY is not set, so nothing is actually sent',
+    });
     const attachmentNote = attachments?.length
       ? ` (with attachment${attachments.length > 1 ? 's' : ''}: ${attachments.map((a) => a.filename).join(', ')})`
       : '';
@@ -123,21 +138,36 @@ export async function sendEmail({
   }
 
   const from = process.env.RESEND_FROM ?? 'Clickforms <no-reply@localhost>';
-  const { data, error } = await client.emails.send({
-    from,
-    to,
-    subject,
-    html,
-    text,
-    attachments,
-    replyTo,
-  });
+  if (!process.env.RESEND_FROM) {
+    log.warn('email.default_from', {
+      kind,
+      from,
+      hint: 'RESEND_FROM is not set; Resend rejects unverified sender domains',
+    });
+  }
+  let data: { id?: string } | null = null;
+  let error: { message: string } | null = null;
+  try {
+    const result = await client.emails.send({
+      from,
+      to,
+      subject,
+      html,
+      text,
+      attachments,
+      replyTo,
+    });
+    data = result.data;
+    error = result.error;
+  } catch (thrown) {
+    // Network failure / SDK exception: record it like any other failed send.
+    error = { message: thrown instanceof Error ? thrown.message : 'Unknown send error' };
+  }
 
   if (error) {
     // Never throw — a broken email send shouldn't fail the request that triggered it
     // (e.g. a form submission completing) any more than it did under the old SMTP
     // transport. The caller finds out via EmailLog / server logs, not a thrown error.
-    console.error(`[email] Resend send failed (${kind}) to ${to}:`, error);
     await logEmailAttempt({
       to,
       subject,

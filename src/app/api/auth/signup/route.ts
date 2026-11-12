@@ -7,13 +7,53 @@ import { signupVerificationEmail } from '@/lib/emails/templates';
 import { log } from '@/lib/log';
 import { clientIp, isRateLimited } from '@/lib/rate-limit';
 import { signupVerifyUrl } from '@/lib/users/signup-verify-url';
+import {
+  validateEmailField,
+  validateNameField,
+  validateOrganisationNameField,
+  validatePhoneField,
+} from '@/lib/validation/contact-fields';
 
 const signupBodySchema = z.object({
-  organizationName: z.string().trim().min(1, 'Organisation name is required').max(200),
-  firstName: z.string().trim().min(1, 'First name is required').max(200),
-  lastName: z.string().trim().min(1, 'Last name is required').max(200),
-  email: z.string().trim().email('Enter a valid email'),
-  phone: z.string().trim().min(1, 'Phone number is required').max(50),
+  organizationName: z
+    .string()
+    .trim()
+    .max(200)
+    .superRefine((value, ctx) => {
+      const message = validateOrganisationNameField(value);
+      if (message) ctx.addIssue({ code: 'custom', message });
+    }),
+  firstName: z
+    .string()
+    .trim()
+    .max(200)
+    .superRefine((value, ctx) => {
+      const message = validateNameField(value, 'First name');
+      if (message) ctx.addIssue({ code: 'custom', message });
+    }),
+  lastName: z
+    .string()
+    .trim()
+    .max(200)
+    .superRefine((value, ctx) => {
+      const message = validateNameField(value, 'Last name');
+      if (message) ctx.addIssue({ code: 'custom', message });
+    }),
+  email: z
+    .string()
+    .trim()
+    .superRefine((value, ctx) => {
+      const message = validateEmailField(value);
+      if (message) ctx.addIssue({ code: 'custom', message });
+    }),
+  phone: z
+    .string()
+    .trim()
+    .max(50)
+    .superRefine((value, ctx) => {
+      const message = validatePhoneField(value);
+      if (message) ctx.addIssue({ code: 'custom', message });
+    }),
   formSituation: z.enum(['paper_form', 'existing_online_form', 'no_form'], {
     message: 'Select which of the following most applies to you',
   }),

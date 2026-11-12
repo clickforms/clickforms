@@ -1,0 +1,18 @@
+.signup-field-error {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: #c62828;
+}
+
+.text-input.signup-field-input[aria-invalid="true"] {
+  border-color: #e57373;
+}
+
+.signup-choice-group-error,
+.signup-terms-error {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: #c62828;
+}

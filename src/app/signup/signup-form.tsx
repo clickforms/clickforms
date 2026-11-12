@@ -1,7 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
+import './signup-validation.css';
+import {
+  validateEmailField,
+  validateNameField,
+  validateOrganisationNameField,
+  validatePhoneField,
+} from '@/lib/validation/contact-fields';
 
 const FORM_SITUATION_OPTIONS = [
   { value: 'paper_form', label: 'We currently use a PDF or paper form' },
@@ -10,6 +17,15 @@ const FORM_SITUATION_OPTIONS = [
 ] as const;
 
 type FormSituation = (typeof FORM_SITUATION_OPTIONS)[number]['value'];
+
+type FieldName =
+  | 'organizationName'
+  | 'firstName'
+  | 'lastName'
+  | 'email'
+  | 'phone'
+  | 'formSituation'
+  | 'terms';
 
 export function SignupForm() {
   const [organizationName, setOrganizationName] = useState('');
@@ -21,20 +37,71 @@ export function SignupForm() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountExists, setAccountExists] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({});
+  const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+
+  function check(field: FieldName): string | null {
+    switch (field) {
+      case 'organizationName':
+        return validateOrganisationNameField(organizationName);
+      case 'firstName':
+        return validateNameField(firstName, 'First name');
+      case 'lastName':
+        return validateNameField(lastName, 'Last name');
+      case 'email':
+        return validateEmailField(email);
+      case 'phone':
+        return validatePhoneField(phone);
+      case 'formSituation':
+        return formSituation
+          ? null
+          : 'Select which of these best describes where you are starting.';
+      case 'terms':
+        return termsAccepted ? null : 'You must agree to the Terms of Use to continue.';
+    }
+  }
+
+  function validateField(field: FieldName) {
+    const message = check(field);
+    setFieldErrors((current) => {
+      const next = { ...current };
+      if (message) next[field] = message;
+      else delete next[field];
+      return next;
+    });
+  }
+
+  // Re-validates a field only once it has shown an error, so people aren't nagged while typing
+  // but see the error clear as soon as they fix it.
+  function revalidateIfInvalid(field: FieldName) {
+    if (fieldErrors[field]) validateField(field);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setAccountExists(false);
 
-    if (!formSituation) {
-      setError('Select which of the following most applies to you');
-      return;
+    const order: FieldName[] = [
+      'organizationName',
+      'firstName',
+      'lastName',
+      'email',
+      'phone',
+      'formSituation',
+      'terms',
+    ];
+    const errors: Partial<Record<FieldName, string>> = {};
+    for (const field of order) {
+      const message = check(field);
+      if (message) errors[field] = message;
     }
-    if (!termsAccepted) {
-      setError('You must agree to the Terms of Use to continue');
+    setFieldErrors(errors);
+    const firstInvalid = order.find((field) => errors[field]);
+    if (firstInvalid) {
+      formRef.current?.querySelector<HTMLElement>(`[data-field="${firstInvalid}"]`)?.focus();
       return;
     }
 
@@ -77,15 +144,7 @@ export function SignupForm() {
     }
   }
 
-  const canSubmit =
-    organizationName.trim().length > 0 &&
-    firstName.trim().length > 0 &&
-    lastName.trim().length > 0 &&
-    email.trim().length > 0 &&
-    phone.trim().length > 0 &&
-    formSituation !== null &&
-    termsAccepted &&
-    !isSubmitting;
+  const canSubmit = !isSubmitting;
 
   if (submittedEmail) {
     return (
@@ -125,7 +184,7 @@ export function SignupForm() {
   }
 
   return (
-    <form className="signup-form" onSubmit={handleSubmit}>
+    <form className="signup-form" onSubmit={handleSubmit} noValidate ref={formRef}>
       {error ? (
         <p className="signup-form-error" role="alert">
           {error}
@@ -147,9 +206,21 @@ export function SignupForm() {
           type="text"
           required
           value={organizationName}
-          onChange={(event) => setOrganizationName(event.target.value)}
+          onChange={(event) => {
+            setOrganizationName(event.target.value);
+            revalidateIfInvalid('organizationName');
+          }}
+          onBlur={() => validateField('organizationName')}
           disabled={isSubmitting}
+          data-field="organizationName"
+          aria-invalid={fieldErrors.organizationName ? true : undefined}
+          aria-describedby={fieldErrors.organizationName ? 'err-organizationName' : undefined}
         />
+        {fieldErrors.organizationName ? (
+          <span className="signup-field-error" id="err-organizationName" role="alert">
+            {fieldErrors.organizationName}
+          </span>
+        ) : null}
       </label>
 
       <div className="signup-field-row">
@@ -160,10 +231,22 @@ export function SignupForm() {
             type="text"
             required
             value={firstName}
-            onChange={(event) => setFirstName(event.target.value)}
+            onChange={(event) => {
+              setFirstName(event.target.value);
+              revalidateIfInvalid('firstName');
+            }}
+            onBlur={() => validateField('firstName')}
             disabled={isSubmitting}
+            data-field="firstName"
+            aria-invalid={fieldErrors.firstName ? true : undefined}
+            aria-describedby={fieldErrors.firstName ? 'err-firstName' : undefined}
             autoComplete="given-name"
           />
+          {fieldErrors.firstName ? (
+            <span className="signup-field-error" id="err-firstName" role="alert">
+              {fieldErrors.firstName}
+            </span>
+          ) : null}
         </label>
 
         <label className="signup-field">
@@ -173,10 +256,22 @@ export function SignupForm() {
             type="text"
             required
             value={lastName}
-            onChange={(event) => setLastName(event.target.value)}
+            onChange={(event) => {
+              setLastName(event.target.value);
+              revalidateIfInvalid('lastName');
+            }}
+            onBlur={() => validateField('lastName')}
             disabled={isSubmitting}
+            data-field="lastName"
+            aria-invalid={fieldErrors.lastName ? true : undefined}
+            aria-describedby={fieldErrors.lastName ? 'err-lastName' : undefined}
             autoComplete="family-name"
           />
+          {fieldErrors.lastName ? (
+            <span className="signup-field-error" id="err-lastName" role="alert">
+              {fieldErrors.lastName}
+            </span>
+          ) : null}
         </label>
       </div>
 
@@ -188,9 +283,21 @@ export function SignupForm() {
           autoComplete="email"
           required
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            revalidateIfInvalid('email');
+          }}
+          onBlur={() => validateField('email')}
           disabled={isSubmitting}
+          data-field="email"
+          aria-invalid={fieldErrors.email ? true : undefined}
+          aria-describedby={fieldErrors.email ? 'err-email' : undefined}
         />
+        {fieldErrors.email ? (
+          <span className="signup-field-error" id="err-email" role="alert">
+            {fieldErrors.email}
+          </span>
+        ) : null}
       </label>
 
       <label className="signup-field">
@@ -201,9 +308,21 @@ export function SignupForm() {
           autoComplete="tel"
           required
           value={phone}
-          onChange={(event) => setPhone(event.target.value)}
+          onChange={(event) => {
+            setPhone(event.target.value);
+            revalidateIfInvalid('phone');
+          }}
+          onBlur={() => validateField('phone')}
           disabled={isSubmitting}
+          data-field="phone"
+          aria-invalid={fieldErrors.phone ? true : undefined}
+          aria-describedby={fieldErrors.phone ? 'err-phone' : undefined}
         />
+        {fieldErrors.phone ? (
+          <span className="signup-field-error" id="err-phone" role="alert">
+            {fieldErrors.phone}
+          </span>
+        ) : null}
       </label>
 
       <fieldset className="signup-choice-group">
@@ -223,7 +342,17 @@ export function SignupForm() {
                   name="formSituation"
                   value={option.value}
                   checked={selected}
-                  onChange={() => setFormSituation(option.value)}
+                  onChange={() => {
+                    setFormSituation(option.value);
+                    setFieldErrors((current) => {
+                      const next = { ...current };
+                      delete next.formSituation;
+                      return next;
+                    });
+                  }}
+                  data-field={
+                    option.value === FORM_SITUATION_OPTIONS[0].value ? 'formSituation' : undefined
+                  }
                   disabled={isSubmitting}
                   required
                 />
@@ -233,17 +362,37 @@ export function SignupForm() {
             );
           })}
         </div>
+        {fieldErrors.formSituation ? (
+          <p className="signup-choice-group-error" role="alert">
+            {fieldErrors.formSituation}
+          </p>
+        ) : null}
       </fieldset>
 
       <label className="signup-terms">
         <input
           type="checkbox"
           checked={termsAccepted}
-          onChange={(event) => setTermsAccepted(event.target.checked)}
+          onChange={(event) => {
+            setTermsAccepted(event.target.checked);
+            if (event.target.checked) {
+              setFieldErrors((current) => {
+                const next = { ...current };
+                delete next.terms;
+                return next;
+              });
+            }
+          }}
           disabled={isSubmitting}
+          data-field="terms"
         />
         <span>I agree to the Clickforms Terms of Use and Privacy Policy.</span>
       </label>
+      {fieldErrors.terms ? (
+        <p className="signup-terms-error" role="alert">
+          {fieldErrors.terms}
+        </p>
+      ) : null}
 
       <button className="button signup-submit" type="submit" disabled={!canSubmit}>
         {isSubmitting ? 'Creating workspace…' : 'Create organisation'}

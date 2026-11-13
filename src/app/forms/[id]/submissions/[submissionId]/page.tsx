@@ -22,7 +22,7 @@ import {
 import { formatSubmissionAnswer } from '@/lib/forms/format-submission-answer';
 import { resolveMergeFieldsForRespondent } from '@/lib/forms/merge-fields';
 import { buildPrefillComparison } from '@/lib/forms/prefill-compare';
-import { UNPROMOTE_WINDOW_DAYS, UNPROMOTE_WINDOW_MS } from '@/lib/forms/prefill-unpromote';
+import { UNPROMOTE_WINDOW_MS } from '@/lib/forms/prefill-unpromote';
 import {
   createEmptyFormSchema,
   type FormField,
@@ -344,7 +344,6 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         formId={form.id}
         submissionId={submission.id}
         undoUntil={undoUntil.toISOString()}
-        days={UNPROMOTE_WINDOW_DAYS}
       />
     ) : null;
 

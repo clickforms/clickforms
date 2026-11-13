@@ -387,6 +387,17 @@ model TwoFactorCode {
   @@map("two_factor_codes")
 }
 
+// Shared rate-limit counters (fixed window), so limits hold across every app instance and
+// survive restarts. `key` is a SHA-256 hash of "<purpose>:<client address>", never the raw
+// address. No organization_id / RLS: used on public endpoints before any org context exists.
+model RateLimit {
+  key         String   @id
+  windowStart DateTime @map("window_start")
+  count       Int      @default(1)
+
+  @@map("rate_limits")
+}
+
 // Per-user UI preferences (remembered Responses/Prefills filters, ...) so they follow the
 // person across devices and login sessions. One small JSON object per (user, key). No
 // organization_id / RLS: always read and written by the signed-in user's own id.

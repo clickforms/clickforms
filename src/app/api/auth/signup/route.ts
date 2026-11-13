@@ -76,7 +76,7 @@ const PENDING_SIGNUP_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
  */
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    if (isRateLimited(`signup:${clientIp(request)}`, 10, 15 * 60 * 1000)) {
+    if (await isRateLimited(`signup:${clientIp(request)}`, 10, 15 * 60 * 1000)) {
       log.warn('auth.signup_rate_limited', { ip: clientIp(request) });
       return NextResponse.json(
         { error: 'Too many attempts. Please wait a few minutes and try again.' },

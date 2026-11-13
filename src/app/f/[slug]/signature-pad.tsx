@@ -2,6 +2,7 @@
 
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import './signature-pad-hint.css';
 
 // Plain HTML5 canvas signature pad — Pointer Events (not separate mouse/touch listeners)
 // give us mouse + touch + pen drawing from one set of handlers, per specs/03: "supporting
@@ -203,13 +204,19 @@ export function SignaturePad({ onCapture, onClear, initialImageUrl, heightPx }: 
   return (
     <div className="signature-pad">
       <div className="signature-pad-toolbar">
-        <button
-          type="button"
-          className={`signature-pad-tab ${mode === 'draw' ? 'signature-pad-tab--active' : ''}`}
-          onClick={() => handleModeChange('draw')}
-        >
-          Draw signature
-        </button>
+        {TYPED_SIGNATURE_ENABLED ? (
+          <button
+            type="button"
+            className={`signature-pad-tab ${mode === 'draw' ? 'signature-pad-tab--active' : ''}`}
+            onClick={() => handleModeChange('draw')}
+          >
+            Draw signature
+          </button>
+        ) : (
+          // With drawing as the only option there is nothing to switch between, so this is a
+          // quiet hint rather than a highlighted tab.
+          <span className="signature-pad-hint">Draw your signature in the box</span>
+        )}
         {TYPED_SIGNATURE_ENABLED ? (
           <>
             <span className="signature-pad-divider" aria-hidden="true">

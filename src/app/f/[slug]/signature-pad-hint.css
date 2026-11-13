@@ -1,0 +1,20 @@
+.signature-pad-hint {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-muted, #6b7280);
+}
+
+/* "Clear" sits at the far end of the toolbar and reads as a quiet text link. */
+.signature-pad-toolbar .signature-pad-clear {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #6b7280);
+  text-decoration: none;
+}
+
+.signature-pad-toolbar .signature-pad-clear:hover {
+  color: var(--color-text, #111);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

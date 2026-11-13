@@ -306,10 +306,13 @@ export function SignupForm() {
           className="text-input signup-field-input"
           type="tel"
           autoComplete="tel"
+          inputMode="tel"
+          maxLength={20}
           required
           value={phone}
           onChange={(event) => {
-            setPhone(event.target.value);
+            // Letters and symbols are dropped as you type (also on paste): digits, spaces, +, -, ( ).
+            setPhone(event.target.value.replace(/[^\d\s+()-]/g, ''));
             revalidateIfInvalid('phone');
           }}
           onBlur={() => validateField('phone')}

@@ -69,6 +69,15 @@ export function PrefillUnpromoteBar({
         <div className="pub-title-row">
           <strong className="pub-title">Promoted from a prefill</strong>
           <span className="pub-pill">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <circle cx="6" cy="6" r="4.6" stroke="currentColor" strokeWidth="1.3" />
+              <path
+                d="M6 3.6V6l1.6 1"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+              />
+            </svg>
             {daysLeft === null
               ? `Undo until ${until}`
               : daysLeft <= 1
@@ -81,17 +90,21 @@ export function PrefillUnpromoteBar({
           in Responses for good.
         </p>
       </div>
-      <button type="button" className="pub-action" onClick={undo} disabled={busy}>
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path
-            d="M7.5 5 4 8.5 7.5 12M4 8.5h7.5a4.5 4.5 0 0 1 0 9H9"
-            stroke="currentColor"
-            strokeWidth="1.9"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        {busy ? 'Moving…' : 'Move back to Prefills'}
+      <button type="button" className="pub-action" onClick={undo} disabled={busy} aria-busy={busy}>
+        {busy ? (
+          <span className="pub-spinner" aria-hidden="true" />
+        ) : (
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path
+              d="M7.5 5 4 8.5 7.5 12M4 8.5h7.5a4.5 4.5 0 0 1 0 9H9"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+        {busy ? 'Moving back…' : 'Move back to Prefills'}
       </button>
     </div>
   );

@@ -108,8 +108,8 @@
 }
 .pfm-field input:focus,
 .pfm-field textarea:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  border-color: var(--color-lavender, #d3ccff);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft, #efecff);
 }
 .pfm-hint {
   margin: 0;
@@ -150,11 +150,12 @@
   cursor: not-allowed;
 }
 .pfm-btn--primary {
-  background: #4f46e5;
-  color: #fff;
+  /* Site theme: the same green fill and dark text as the Sign in / Create organisation buttons. */
+  background: var(--color-primary, #55ea8c);
+  color: #111111;
 }
 .pfm-btn--primary:hover:not(:disabled) {
-  background: #4338ca;
+  background: #3dd975;
 }
 .pfm-btn--ghost {
   background: #fff;
@@ -258,7 +259,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: #4f46e5;
+  color: #0d9f57;
   font: inherit;
   font-size: 0.86rem;
   font-weight: 600;
@@ -296,8 +297,8 @@
     box-shadow 0.15s;
 }
 .pfm-chips:focus-within {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  border-color: var(--color-lavender, #d3ccff);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft, #efecff);
 }
 .pfm-chips input {
   flex: 1;
@@ -316,8 +317,8 @@
   gap: 0.3rem;
   padding: 0.2rem 0.3rem 0.2rem 0.6rem;
   border-radius: 999px;
-  background: #eef2ff;
-  color: #3730a3;
+  background: var(--color-primary-soft, #e9fdf1);
+  color: #166534;
   font-size: 0.82rem;
   font-weight: 500;
 }
@@ -335,7 +336,7 @@
   cursor: pointer;
 }
 .pfm-chip button:hover {
-  background: rgba(79, 70, 229, 0.18);
+  background: rgba(22, 101, 52, 0.14);
 }
 .pfm-error {
   margin: 0;

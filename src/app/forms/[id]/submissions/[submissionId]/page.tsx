@@ -349,6 +349,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
 
   const statusControl = heldPrefill ? null : (
     <SubmissionStatusControl
+      key="submission-status"
       formId={form.id}
       submissionId={submission.id}
       initialStatus={submission.status}

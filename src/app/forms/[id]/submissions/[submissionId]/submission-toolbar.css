@@ -102,8 +102,8 @@
 }
 
 /* ---- Edit mode -------------------------------------------------------------------------
-   Three quiet cues that add up to "you are editing": the title changes and gains a pill, a
-   slim notice sits above the form, and the form cards get a lavender edge and tint. */
+   Quiet cues that add up to "you are editing": the title changes and gains a pill, the header
+   swaps to Cancel / Save changes, and the form cards get a thin lavender border. */
 .submission-detail-header h1 {
   display: flex;
   flex-wrap: wrap;
@@ -140,28 +140,8 @@
   }
 }
 
-.sub-edit-notice {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.65rem 0.9rem;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  color: #4b3fb0;
-  background: var(--color-lavender-soft, #efecff);
-  border: 1px solid var(--color-lavender, #d3ccff);
-  border-radius: 10px;
-}
-
-.sub-edit-notice svg {
-  flex: none;
-  color: var(--color-lavender-strong, #7c5cfa);
-}
-
 .submission-detail-page .submission-edit-form {
   border: 1px solid var(--color-lavender, #d3ccff);
-  border-top: 3px solid var(--color-lavender-strong, #7c5cfa);
-  box-shadow: 0 0 0 4px rgba(124, 92, 250, 0.06);
 }
 
 .sub-tb-btn--save {

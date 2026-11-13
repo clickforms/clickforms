@@ -592,23 +592,6 @@ export function SubmissionAnswersEditor({
         </div>
       </div>
 
-      {editing ? (
-        <output className="sub-edit-notice">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path
-              d="M10.9 2.6a1.5 1.5 0 0 1 2.1 2.1l-7.4 7.4-2.9.8.8-2.9 7.4-7.4Z"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span>
-            You&apos;re editing this response. Nothing changes until you click{' '}
-            <strong>Save changes</strong>.
-          </span>
-        </output>
-      ) : null}
-
       {editing ? null : banner}
       {editing ? null : meta}
 

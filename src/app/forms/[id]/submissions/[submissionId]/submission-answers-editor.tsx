@@ -16,6 +16,7 @@ import { createPortal } from 'react-dom';
 import { FieldInput, type FieldValue } from '@/app/f/[slug]/field-input';
 import { DeleteSubmissionModal } from '@/app/forms/[id]/submissions/delete-submission-modal';
 import { useToast } from '@/components/toast';
+import './submission-toolbar.css';
 import { readApiError } from '@/lib/error-message';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getVisibleFieldIds } from '@/lib/forms/conditional-logic';
@@ -55,20 +56,6 @@ interface PatchResponse {
   status?: string;
   error?: string;
   fieldErrors?: AnswerErrors;
-}
-
-function ChevronIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-      <path
-        d="M3 4.5l3 3 3-3"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 // Same icon as submission-status-menu.tsx's DownloadIcon — kept as its own copy since
@@ -239,89 +226,65 @@ function SubmissionActionsMenu({
         <li role="none">
           <button
             type="button"
-            className="actions-menu-item"
+            className="actions-menu-item actions-menu-item--danger"
             role="menuitem"
-            disabled={isExporting}
             onClick={() => {
-              // Deliberately not closing the menu immediately (unlike every other item) —
-              // the export can take a few seconds (server-side PDF rendering via
-              // Puppeteer), and closing right away would throw away the only place the
-              // "Downloading…" label is visible, leaving no feedback that anything is
-              // happening at all. Closes itself once the request settles either way.
-              void onExport().then(() => setOpen(false));
+              onDelete();
+              setOpen(false);
             }}
           >
             <span className="actions-menu-icon">
-              {isExporting ? (
-                <span className="actions-menu-spinner" aria-hidden="true" />
-              ) : (
-                <DownloadIcon />
-              )}
+              <TrashIcon />
             </span>
-            {isExporting ? 'Downloading…' : 'Download PDF'}
+            Delete response
           </button>
         </li>
-        {canEditAnswers ? (
-          <li role="none">
-            <button
-              type="button"
-              className="actions-menu-item"
-              role="menuitem"
-              onClick={() => {
-                onEdit();
-                setOpen(false);
-              }}
-            >
-              <span className="actions-menu-icon">
-                <EditIcon />
-              </span>
-              Edit response
-            </button>
-          </li>
-        ) : null}
-        {canDelete ? (
-          <>
-            <li role="none">
-              <hr className="actions-menu-divider" />
-            </li>
-            <li role="none">
-              <button
-                type="button"
-                className="actions-menu-item actions-menu-item--danger"
-                role="menuitem"
-                onClick={() => {
-                  onDelete();
-                  setOpen(false);
-                }}
-              >
-                <span className="actions-menu-icon">
-                  <TrashIcon />
-                </span>
-                Delete
-              </button>
-            </li>
-          </>
-        ) : null}
       </ul>
     ) : null;
 
+  // The two everyday actions are real buttons; only the destructive one sits behind "more".
   return (
-    <div className="actions-menu">
+    <>
+      {canEditAnswers ? (
+        <button type="button" className="sub-tb-btn" onClick={onEdit}>
+          <EditIcon />
+          Edit
+        </button>
+      ) : null}
       <button
-        ref={triggerRef}
         type="button"
-        className="actions-menu-trigger"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={menuId}
-        onClick={() => setOpen((current) => !current)}
+        className="sub-tb-btn sub-tb-btn--primary"
+        disabled={isExporting}
+        aria-busy={isExporting}
+        onClick={() => void onExport()}
       >
-        Actions
-        <ChevronIcon />
+        {isExporting ? <span className="sub-tb-spinner" aria-hidden="true" /> : <DownloadIcon />}
+        {isExporting ? 'Preparing PDF…' : 'Download PDF'}
       </button>
+      {canDelete ? (
+        <div className="actions-menu">
+          <button
+            ref={triggerRef}
+            type="button"
+            className="sub-tb-btn sub-tb-btn--icon"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-controls={menuId}
+            aria-label="More actions"
+            title="More actions"
+            onClick={() => setOpen((current) => !current)}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <circle cx="3" cy="8" r="1.4" />
+              <circle cx="8" cy="8" r="1.4" />
+              <circle cx="13" cy="8" r="1.4" />
+            </svg>
+          </button>
 
-      {panel ? createPortal(panel, document.body) : null}
-    </div>
+          {panel ? createPortal(panel, document.body) : null}
+        </div>
+      ) : null}
+    </>
   );
 }
 

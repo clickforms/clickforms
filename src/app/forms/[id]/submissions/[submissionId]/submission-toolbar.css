@@ -1,0 +1,136 @@
+/* Response page header toolbar: status, Edit, Download PDF and a "more" menu, all sharing one
+   button recipe (height, radius, border, shadow) so they read as a single set of controls. */
+.submission-detail-header-actions {
+  gap: 0.5rem;
+}
+
+.sub-tb-btn,
+.submission-detail-header-actions .submission-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 2.375rem;
+  padding: 0 0.9rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1;
+  color: var(--color-text, #1b1d2a);
+  white-space: nowrap;
+  background: var(--color-surface, #fff);
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    inset 0 -1px 0 rgba(15, 23, 42, 0.04);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease;
+}
+
+.sub-tb-btn {
+  cursor: pointer;
+}
+
+.sub-tb-btn svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--color-text-muted, #5a5f73);
+}
+
+.sub-tb-btn:hover:not(:disabled),
+.submission-detail-header-actions .submission-status-trigger:hover:not(:disabled) {
+  background: var(--color-surface-sunken, #f6f7f9);
+  border-color: rgba(15, 23, 42, 0.28);
+}
+
+.sub-tb-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06);
+}
+
+.sub-tb-btn:focus-visible,
+.submission-detail-header-actions .submission-status-trigger:focus-visible {
+  outline: none;
+  border-color: var(--color-lavender-strong, #7c5cfa);
+  box-shadow: 0 0 0 3px var(--color-lavender-soft, #efecff);
+}
+
+.sub-tb-btn:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+/* The main action: the site's green fill with dark text, like other primary buttons. */
+.sub-tb-btn--primary {
+  color: #0b2a17;
+  background: var(--color-primary, #55ea8c);
+  border-color: rgba(11, 42, 23, 0.18);
+}
+
+.sub-tb-btn--primary svg {
+  color: currentColor;
+}
+
+.sub-tb-btn--primary:hover:not(:disabled) {
+  background: #3dd975;
+  border-color: rgba(11, 42, 23, 0.3);
+}
+
+.sub-tb-btn--icon {
+  width: 2.375rem;
+  padding: 0;
+}
+
+.sub-tb-btn--icon[aria-expanded="true"] {
+  background: var(--color-surface-sunken, #f6f7f9);
+  border-color: rgba(15, 23, 42, 0.28);
+}
+
+/* Status keeps its coloured dot and approved/rejected tints, at toolbar size. */
+.submission-detail-header-actions .submission-status-chip {
+  padding: 0 0.75rem 0 0.7rem;
+}
+
+.submission-detail-header-actions .submission-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.submission-detail-header-actions .submission-status-chip--approved {
+  color: #157a45;
+  background: #f3faf6;
+  border-color: #cfe9db;
+}
+
+.submission-detail-header-actions .submission-status-chip--rejected {
+  color: var(--color-danger-hover);
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger-border);
+}
+
+.sub-tb-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(11, 42, 23, 0.25);
+  border-top-color: #0b2a17;
+  border-radius: 50%;
+  animation: sub-tb-spin 0.7s linear infinite;
+}
+
+@keyframes sub-tb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .sub-tb-btn:not(.sub-tb-btn--icon) {
+    flex: 1;
+  }
+}

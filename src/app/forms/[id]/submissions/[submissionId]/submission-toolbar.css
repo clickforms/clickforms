@@ -100,3 +100,83 @@
 .sub-tb-btn--menu[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
+
+/* ---- Edit mode -------------------------------------------------------------------------
+   Three quiet cues that add up to "you are editing": the title changes and gains a pill, a
+   slim notice sits above the form, and the form cards get a lavender edge and tint. */
+.submission-detail-header h1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.sub-edit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  font-family: var(--font-body, inherit);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-lavender-strong, #7c5cfa);
+  background: var(--color-lavender-soft, #efecff);
+  border: 1px solid var(--color-lavender, #d3ccff);
+  border-radius: 999px;
+}
+
+.sub-edit-pill-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  background: var(--color-lavender-strong, #7c5cfa);
+  border-radius: 50%;
+  animation: sub-edit-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes sub-edit-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.sub-edit-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #4b3fb0;
+  background: var(--color-lavender-soft, #efecff);
+  border: 1px solid var(--color-lavender, #d3ccff);
+  border-radius: 10px;
+}
+
+.sub-edit-notice svg {
+  flex: none;
+  color: var(--color-lavender-strong, #7c5cfa);
+}
+
+.submission-detail-page .submission-edit-form {
+  border: 1px solid var(--color-lavender, #d3ccff);
+  border-top: 3px solid var(--color-lavender-strong, #7c5cfa);
+  box-shadow: 0 0 0 4px rgba(124, 92, 250, 0.06);
+}
+
+.sub-tb-btn--save {
+  color: #0b2a17;
+  background: var(--color-primary, #55ea8c);
+  border-color: rgba(11, 42, 23, 0.18);
+}
+
+.sub-tb-btn--save:hover:not(:disabled) {
+  background: #3dd975;
+  border-color: rgba(11, 42, 23, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sub-edit-pill-dot {
+    animation: none;
+  }
+}

@@ -38,6 +38,7 @@ import {
 } from '@/lib/forms/compound-answer';
 import type { FormAnswers } from '@/lib/forms/conditional-logic';
 import { getFieldImageSrc, imageCaption } from '@/lib/forms/field-image';
+import './signature-saved.css';
 import {
   fieldHasCustomAppearance,
   resolveDividerCaptionStyle,
@@ -885,22 +886,29 @@ function SignatureControl({ field, value, onCapture, savedImageUrl }: SignatureC
     Boolean(savedImageUrl) && typeof value === 'string' && !value.startsWith('blob:');
   if (isSavedSignature) {
     return (
-      <div className="signature-pad-signed">
+      <div className="signature-saved">
         {/* biome-ignore lint/performance/noImgElement: short-lived presigned storage URL */}
         <img
           src={savedImageUrl}
           alt="Saved signature"
-          style={{
-            display: 'block',
-            maxWidth: '100%',
-            height: `${field.padHeightPx ?? DEFAULT_SIGNATURE_PAD_HEIGHT_PX}px`,
-            objectFit: 'contain',
-            border: '1px solid var(--color-border)',
-            borderRadius: '0.5rem',
-            background: '#fff',
-          }}
+          className="signature-saved-img"
+          style={{ height: `${field.padHeightPx ?? DEFAULT_SIGNATURE_PAD_HEIGHT_PX}px` }}
         />
-        <span className="form-field-help">Signed. Signatures can't be changed after signing.</span>
+        <p className="signature-saved-note">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <rect
+              x="2.5"
+              y="6"
+              width="9"
+              height="6"
+              rx="1.5"
+              stroke="currentColor"
+              strokeWidth="1.3"
+            />
+            <path d="M4.5 6V4.5a2.5 2.5 0 0 1 5 0V6" stroke="currentColor" strokeWidth="1.3" />
+          </svg>
+          Signed. This signature can&apos;t be changed.
+        </p>
       </div>
     );
   }

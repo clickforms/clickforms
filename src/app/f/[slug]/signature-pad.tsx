@@ -21,6 +21,10 @@ const SIGNATURE_CANVAS_FONT = `56px "${SIGNATURE_FONT_FAMILY}", cursive`;
 
 type SignatureMode = 'draw' | 'type';
 
+// Typed signatures are switched off for now: only drawing is offered. The typed-mode code is
+// kept below (not deleted) so it can be brought back by flipping this to true.
+const TYPED_SIGNATURE_ENABLED: boolean = false;
+
 interface SignaturePadProps {
   /** Called with the signature as a PNG blob automatically — after each completed stroke
    * in "draw" mode, or on blur in "type" mode. There's no separate confirm step: signing
@@ -206,16 +210,20 @@ export function SignaturePad({ onCapture, onClear, initialImageUrl, heightPx }: 
         >
           Draw signature
         </button>
-        <span className="signature-pad-divider" aria-hidden="true">
-          |
-        </span>
-        <button
-          type="button"
-          className={`signature-pad-tab ${mode === 'type' ? 'signature-pad-tab--active' : ''}`}
-          onClick={() => handleModeChange('type')}
-        >
-          Type signature
-        </button>
+        {TYPED_SIGNATURE_ENABLED ? (
+          <>
+            <span className="signature-pad-divider" aria-hidden="true">
+              |
+            </span>
+            <button
+              type="button"
+              className={`signature-pad-tab ${mode === 'type' ? 'signature-pad-tab--active' : ''}`}
+              onClick={() => handleModeChange('type')}
+            >
+              Type signature
+            </button>
+          </>
+        ) : null}
         <button type="button" className="signature-pad-clear" onClick={handleClear}>
           Clear
         </button>

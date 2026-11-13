@@ -1,7 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ToastItem } from '@/components/toast/types';
 import './toast-action.css';
+import './toast.css';
 
 function SuccessIcon() {
   return (
@@ -38,9 +41,13 @@ interface ToastViewportProps {
 }
 
 export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
-  if (toasts.length === 0) return null;
+  // Rendered into <body> (after mount) so no ancestor's transform/animation can pull the
+  // fixed-position stack away from the top-right corner of the window.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted || toasts.length === 0) return null;
 
-  return (
+  return createPortal(
     <div className="toast-viewport" aria-live="polite" aria-relevant="additions text">
       {toasts.map((toast) => {
         const isError = toast.variant === 'error';
@@ -50,6 +57,11 @@ export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
             className={`toast toast--${toast.variant}${toast.dismissing ? ' toast--dismissing' : ''}`}
             role={isError ? 'alert' : 'status'}
             aria-atomic="true"
+            style={
+              toast.durationMs > 0
+                ? ({ '--toast-duration': `${toast.durationMs}ms` } as React.CSSProperties)
+                : undefined
+            }
           >
             <span className="toast-icon" aria-hidden="true">
               {isError ? <ErrorIcon /> : <SuccessIcon />}
@@ -76,6 +88,7 @@ export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
           </div>
         );
       })}
-    </div>
+    </div>,
+    document.body,
   );
 }

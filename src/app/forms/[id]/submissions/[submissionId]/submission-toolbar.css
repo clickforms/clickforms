@@ -1,5 +1,5 @@
-/* Response page header toolbar: status, Edit, Download PDF and a "more" menu, all sharing one
-   button recipe (height, radius, border, shadow) so they read as a single set of controls. */
+/* Response page header: just two quiet controls, the status dropdown and an Actions menu
+   (Download PDF, Edit, Delete), sharing one button recipe so they read as a pair. */
 .submission-detail-header-actions {
   gap: 0.5rem;
 }
@@ -10,21 +10,19 @@
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  height: 2.375rem;
-  padding: 0 0.9rem;
+  height: 2.125rem;
+  padding: 0 0.8rem;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: -0.005em;
   line-height: 1;
   color: var(--color-text, #1b1d2a);
   white-space: nowrap;
   background: var(--color-surface, #fff);
-  border: 1px solid rgba(15, 23, 42, 0.14);
-  border-radius: 10px;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.06),
-    inset 0 -1px 0 rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
@@ -66,32 +64,6 @@
   opacity: 0.75;
 }
 
-/* The main action: the site's green fill with dark text, like other primary buttons. */
-.sub-tb-btn--primary {
-  color: #0b2a17;
-  background: var(--color-primary, #55ea8c);
-  border-color: rgba(11, 42, 23, 0.18);
-}
-
-.sub-tb-btn--primary svg {
-  color: currentColor;
-}
-
-.sub-tb-btn--primary:hover:not(:disabled) {
-  background: #3dd975;
-  border-color: rgba(11, 42, 23, 0.3);
-}
-
-.sub-tb-btn--icon {
-  width: 2.375rem;
-  padding: 0;
-}
-
-.sub-tb-btn--icon[aria-expanded="true"] {
-  background: var(--color-surface-sunken, #f6f7f9);
-  border-color: rgba(15, 23, 42, 0.28);
-}
-
 /* Status keeps its coloured dot and approved/rejected tints, at toolbar size. */
 .submission-detail-header-actions .submission-status-chip {
   padding: 0 0.75rem 0 0.7rem;
@@ -114,23 +86,17 @@
   border-color: var(--color-danger-border);
 }
 
-.sub-tb-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(11, 42, 23, 0.25);
-  border-top-color: #0b2a17;
-  border-radius: 50%;
-  animation: sub-tb-spin 0.7s linear infinite;
+.sub-tb-btn--menu svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.15s ease;
 }
 
-@keyframes sub-tb-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.sub-tb-btn--menu[aria-expanded="true"] {
+  background: var(--color-surface-sunken, #f6f7f9);
+  border-color: rgba(15, 23, 42, 0.28);
 }
 
-@media (max-width: 640px) {
-  .sub-tb-btn:not(.sub-tb-btn--icon) {
-    flex: 1;
-  }
+.sub-tb-btn--menu[aria-expanded="true"] svg {
+  transform: rotate(180deg);
 }

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/toast';
+import { UNPROMOTE_WINDOW_DAYS } from '@/lib/forms/prefill-unpromote';
 import '@/app/forms/[id]/prefills/prefills.css';
 
 /** Shown on the review page of a response that came back through a prefill and is still held:
@@ -82,7 +83,7 @@ export function PrefillReviewBar({
         return;
       }
       if (action === 'promote') {
-        toast.success('Promoted to Responses');
+        toast.success('Promoted to Responses and removed from Prefills');
         setConfirm(null);
         router.refresh();
       } else {
@@ -196,7 +197,7 @@ export function PrefillReviewBar({
             </h2>
             <p>
               {confirm === 'promote'
-                ? 'It will appear in Responses and count as a submitted response. The prefill and its original answers stay in the Prefills tab.'
+                ? `Heads up: it moves to Responses, counts as a submitted response, and is removed from the Prefills list. If that was a mistake, you can move it back from the response page for ${UNPROMOTE_WINDOW_DAYS} days.`
                 : confirm === 'sendback'
                   ? 'They get a new link with their answers filled in so they can fix them. It stays under this prefill, and this response is kept as a record.'
                   : 'The returned response is deleted for good. The prefill stays, and the link can be used again.'}

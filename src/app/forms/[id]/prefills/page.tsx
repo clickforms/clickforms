@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { PrefillsListClient } from '@/app/forms/[id]/prefills/prefills-list-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
-import { listPrefills, prefillStatus } from '@/lib/forms/prefills';
+import { isPromotedAway, listPrefills, prefillStatus } from '@/lib/forms/prefills';
 import { formatResponseLabel, listResponseLabelCandidates } from '@/lib/forms/response-label';
 import { formSchemaSchema } from '@/lib/forms/schema';
 import { prefillUrl } from '@/lib/forms/send-prefill-email';
@@ -45,7 +45,8 @@ export default async function PrefillsPage({ params }: PageProps) {
       form,
       labelFieldId,
       schema: version?.schema ?? null,
-      rows: await listPrefills(tx, form.id, labelFieldId),
+      // Promoted prefills have moved to Responses, so they are no longer listed here.
+      rows: (await listPrefills(tx, form.id, labelFieldId)).filter((row) => !isPromotedAway(row)),
       subdomain: organization.subdomain,
       hold: holdRows[0]?.hold ?? true,
     };
@@ -66,8 +67,8 @@ export default async function PrefillsPage({ params }: PageProps) {
         <p className="submissions-page-kicker">{form.name}</p>
         <h1 className="submissions-page-title">Prefills</h1>
         <p className="submissions-page-subtitle">
-          Forms you&apos;ve sent with answers already filled in. Responses that come back appear
-          under Responses, marked as prefilled.
+          Forms you&apos;ve sent with answers already filled in. Once a returned prefill is promoted
+          it moves to Responses, marked as prefilled, and leaves this list.
         </p>
       </div>
       <PrefillsListClient

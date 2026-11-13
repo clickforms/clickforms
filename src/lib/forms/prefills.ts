@@ -93,6 +93,20 @@ export interface PrefillRow {
   label_value: unknown;
   /** Corrections sent back to the recipient that haven't come back yet. */
   pending_corrections: number;
+  /** Responses from this prefill that someone promoted into Responses (and haven't been moved
+   * back). Once this is the whole story, the prefill leaves the Prefills list. */
+  promoted: number;
+}
+
+/** A prefill whose returned response has been promoted, with nothing left to review or wait
+ * for, is finished: it lives in Responses now and is no longer listed under Prefills. (Moving
+ * the response back within the undo window makes it held again, so it reappears.) */
+export function isPromotedAway(row: {
+  promoted: number;
+  held: number;
+  pending_corrections: number;
+}): boolean {
+  return row.promoted > 0 && row.held === 0 && row.pending_corrections === 0;
 }
 
 export function prefillStatus(row: {
@@ -142,7 +156,13 @@ export async function listPrefills(
            (SELECT count(*)::int FROM form_prefills c
               WHERE c.parent_id = p.id
                 AND NOT EXISTS (SELECT 1 FROM submissions s WHERE s.prefill_id = c.id
-                                  AND (s.prefill_held OR s.status <> 'in_progress'))) AS pending_corrections
+                                  AND (s.prefill_held OR s.status <> 'in_progress'))) AS pending_corrections,
+           (SELECT count(*)::int FROM submissions s JOIN form_prefills f ON f.id = s.prefill_id
+              WHERE (f.id = p.id OR f.parent_id = p.id) AND NOT s.prefill_held
+                AND s.status <> 'in_progress'
+                AND EXISTS (SELECT 1 FROM audit_log a
+                            WHERE a.entity_id = s.id AND a.entity_type = 'submission'
+                              AND a.action = 'submission.promote')) AS promoted
     FROM form_prefills p
     LEFT JOIN users u ON u.id = p.created_by
     WHERE p.form_id = ${formId}::uuid AND p.parent_id IS NULL

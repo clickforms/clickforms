@@ -83,7 +83,7 @@ export async function GET(request: Request, { params }: RouteContext): Promise<N
     // address, e.g. "https://0.0.0.0:3000", which Puppeteer then fails to load with
     // net::ERR_SSL_PROTOCOL_ERROR (HTTPS attempted against a plain-HTTP internal port
     // that was never reachable to begin with). The preview page is also only reachable
-    // on the org's own subdomain in the first place (see src/middleware.ts) — building
+    // on the org's own subdomain in the first place (see src/proxy.ts) — building
     // that directly, the same way every other public-form link in this codebase does
     // (buildOrgFormUrl), sidesteps both problems at once.
     const previewUrl = buildOrgFormUrl(

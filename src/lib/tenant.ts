@@ -10,7 +10,7 @@ import { findOrganizationSubdomainForSlug } from '@/lib/forms/public-lookup';
 const SUBDOMAIN_HEADER = 'x-org-subdomain';
 
 /**
- * Reads the org subdomain that src/middleware.ts resolved from the request hostname.
+ * Reads the org subdomain that src/proxy.ts resolved from the request hostname.
  * Only meaningful inside routes covered by the middleware matcher (/f/*, /api/f/*) —
  * returns null on the bare root domain (or outside that matcher), meaning "no tenant
  * resolved from the URL", which callers should treat as a legacy/shared-link request.

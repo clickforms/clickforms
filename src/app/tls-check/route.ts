@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { resolveSubdomain } from '@/middleware';
+import { resolveSubdomain } from '@/proxy';
 
 // Caddy's on-demand TLS "ask" endpoint (Caddyfile.staging). Before Caddy requests a Let's
 // Encrypt certificate for a hostname it has never seen, it calls

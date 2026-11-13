@@ -53,7 +53,7 @@ export default async function FormsListPage() {
   const responseCountByFormId = new Map(responseCounts.map((row) => [row.formId, row._count]));
 
   // Public form pages live on the org's subdomain (not this admin dashboard's domain —
-  // see src/middleware.ts), so "View form" needs an absolute URL rather than a
+  // see src/proxy.ts), so "View form" needs an absolute URL rather than a
   // same-origin relative /f/[slug] link.
   const formSummaries = forms.map((form) => ({
     id: form.id,

@@ -283,7 +283,7 @@ never deleted except via the 7-day untagged-image lifecycle rule).
 ## 9. Known gotchas
 
 - **`ROOT_DOMAIN` must be set in `docker-compose.yml`'s `app.environment` block.**
-  `src/lib/tenant.ts` and `src/middleware.ts` both silently fall back to `localhost:3000`
+  `src/lib/tenant.ts` and `src/proxy.ts` both silently fall back to `localhost:3000`
   when it's unset. This isn't just cosmetic — `resolveOrganizationIdForSlugOrRedirect` uses
   it to build a real `redirect()` target for legacy/no-subdomain links, so a missing
   `ROOT_DOMAIN` sends real users' browsers to `http://<subdomain>.localhost:3000`. Confirm
@@ -292,7 +292,7 @@ never deleted except via the 7-day untagged-image lifecycle rule).
 
 - **The S3 bucket's CORS policy needs a wildcard org-subdomain entry, not just the bare
   root domain.** Every public form is served from `<org-subdomain>.<root-domain>`
-  (`src/middleware.ts`), and file/signature uploads PUT straight from the respondent's
+  (`src/proxy.ts`), and file/signature uploads PUT straight from the respondent's
   browser to S3 via a presigned URL — a cross-origin request S3 will silently reject
   (surfacing as a plain "Failed to fetch" in the browser, no server-side log) unless that
   exact `Origin` is in the bucket's `AllowedOrigins`. `scripts/s3-cors.json` must include
@@ -301,7 +301,7 @@ never deleted except via the 7-day untagged-image lifecycle rule).
   live bucket any time that file changes — editing the repo file alone does nothing to a
   bucket that was already provisioned. This isn't staging/production-only: local dev hits it
   too, since a public form still resolves to `<org-subdomain>.localhost:3000`
-  (`resolveSubdomain` in `src/middleware.ts`), not bare `localhost:3000` — so
+  (`resolveSubdomain` in `src/proxy.ts`), not bare `localhost:3000` — so
   `http://*.localhost:3000` needs to be in `AllowedOrigins` as well (added 2026-09-15). If
   uploads fail, check the actual applied policy first with
   `aws s3api get-bucket-cors --bucket <bucket> --region ap-southeast-2` — whichever bucket

@@ -6,8 +6,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 // so a member of the public filling in a form sees which org they're submitting to
 // right in the URL, e.g. carecircle.clickforms.com.au/f/intake-form.
 //
-// Middleware runs on the Edge runtime, which can't hold the Postgres connection
-// src/lib/db.ts uses (PrismaPg over `pg`) — so this file does no database work. It only
+// This is the Next.js "proxy" file (called "middleware" before Next 16). It runs before every
+// matched request and deliberately does no database work
+// (src/lib/db.ts holds a Postgres connection that does not belong in this layer). It only
 // parses the request hostname and forwards the subdomain (if any) as a header for
 // Server Components/Route Handlers to resolve against the database themselves (see
 // src/lib/tenant.ts). Requests on the bare root domain get no header — the /f/[slug]
@@ -54,7 +55,7 @@ export function resolveSubdomain(host: string, rootDomain: string): string | nul
   return label;
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const rootDomain = process.env.ROOT_DOMAIN ?? 'localhost:3000';
   const host = request.headers.get('host') ?? '';
   const subdomain = resolveSubdomain(host, rootDomain);

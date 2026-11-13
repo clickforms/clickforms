@@ -122,3 +122,15 @@ export async function revokeTwoFactorTrust(userId: string): Promise<void> {
   await prisma.$executeRaw`
     DELETE FROM two_factor_codes WHERE user_id = ${userId}::uuid AND purpose = 'login'`;
 }
+
+/** Starts the 24-hour trust without an emailed code, for a moment that has itself just proved
+ * control of the user's inbox (completing a password reset from the emailed link). Two-step
+ * codes go to that same inbox, so asking for one straight after adds friction but no security.
+ * Recorded the same way a verified code is: a used 'login' row. Older rows are cleared first. */
+export async function grantTwoFactorTrust(userId: string): Promise<void> {
+  await prisma.$executeRaw`
+    DELETE FROM two_factor_codes WHERE user_id = ${userId}::uuid AND purpose = 'login'`;
+  await prisma.$executeRaw`
+    INSERT INTO two_factor_codes (user_id, purpose, code_hash, attempts, expires_at, used_at)
+    VALUES (${userId}::uuid, 'login', 'trust-granted-by-password-reset', 0, now(), now())`;
+}

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
-import { revokeTwoFactorTrust } from '@/lib/auth/two-factor';
+import { grantTwoFactorTrust } from '@/lib/auth/two-factor';
 import { prisma, withOrgContext } from '@/lib/db';
 import { hashPassword, passwordSchema } from '@/lib/users/password';
 
@@ -68,8 +68,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       });
     }
 
-    // A reset password ends the 24-hour two-step trust: the next sign-in asks for a code.
-    await revokeTwoFactorTrust(user.id);
+    // The reset link was emailed to the same inbox two-step codes go to, so finishing a reset
+    // has already proved what a code would prove. Start the 24-hour trust now, so the sign-in
+    // that follows straight away (and any in the next day) isn't interrupted by a code.
+    await grantTwoFactorTrust(user.id);
 
     // Any other still-unused reset tokens for this user are now stale — drop them so an
     // older emailed link can't also be used to change the password again.

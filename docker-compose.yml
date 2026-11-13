@@ -66,10 +66,15 @@ services:
       STRIPE_AUTOMATIC_TAX: ${STRIPE_AUTOMATIC_TAX:-}
       STRIPE_GST_TAX_RATE_ID: ${STRIPE_GST_TAX_RATE_ID:-}
       STRIPE_PORTAL_CONFIGURATION_ID: ${STRIPE_PORTAL_CONFIGURATION_ID:-}
-      # Daily log files (src/lib/file-logging.ts): everything the app logs is also appended to
-      # /srv/logs/clickforms-YYYY-MM-DD.log on the host, a new file per day (Sydney time).
+      # Application logs (src/lib/log.ts): besides stdout, two files per day on the host,
+      #   /srv/logs/<YYYY-MM-DD>.clickforms.verbose.log   everything
+      #   /srv/logs/<YYYY-MM-DD>.clickforms.error.log     errors only
+      # A new pair starts at midnight in LOG_TIMEZONE. LOG_LEVEL=debug turns on developer detail.
       LOG_DIR: /srv/logs
       LOG_TIMEZONE: Australia/Sydney
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Stamped on every log line so a problem can be tied to the exact release.
+      APP_VERSION: ${ECR_IMAGE:-local}
     volumes:
       # Host directory, so the files outlive the container (each deploy replaces it).
       # start.sh creates it and gives it to the app's user (uid 1001).

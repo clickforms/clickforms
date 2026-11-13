@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { log } from '@/lib/log';
 import { getStripe } from './stripe';
 import { syncSubscriptionById } from './sync';
 
@@ -16,6 +17,6 @@ export async function syncAfterCheckout(organizationId: string, sessionId: strin
     );
   } catch (error) {
     // The webhook will still deliver the same state; this is best effort.
-    console.warn('[billing] post-checkout sync failed:', (error as Error).message);
+    log.warn('billing.checkout_sync_failed', { error });
   }
 }

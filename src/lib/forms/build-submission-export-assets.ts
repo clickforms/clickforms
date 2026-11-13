@@ -2,6 +2,7 @@ import type { SubmissionFile } from '@prisma/client';
 import type { ResolvedSubmissionFile } from '@/lib/forms/format-submission-answer';
 import type { FormSchema } from '@/lib/forms/schema';
 import type { SubmissionExportAssets } from '@/lib/forms/submission-export-assets';
+import { log } from '@/lib/log';
 import { createPresignedDownloadUrl } from '@/lib/s3';
 
 // Server-only: builds the actual data URLs (presigns against S3, then fetches and
@@ -21,16 +22,18 @@ async function fetchDataUrl(url: string, mimeType?: string): Promise<string | nu
       // body — the status/statusText alone ("400 Bad Request") doesn't say why, so log
       // the body too.
       const body = await response.text().catch(() => '<unreadable body>');
-      console.error(
-        `[forms] fetchDataUrl: presigned GET failed with ${response.status} ${response.statusText}\n${body}`,
-      );
+      log.error('export.file_fetch_failed', {
+        status: response.status,
+        statusText: response.statusText,
+        response: body,
+      });
       return null;
     }
     const buffer = Buffer.from(await response.arrayBuffer());
     const type = mimeType || response.headers.get('content-type') || 'application/octet-stream';
     return `data:${type};base64,${buffer.toString('base64')}`;
   } catch (error) {
-    console.error('[forms] fetchDataUrl: failed to fetch/encode file for embedding', error);
+    log.error('export.file_embed_failed', { error });
     return null;
   }
 }

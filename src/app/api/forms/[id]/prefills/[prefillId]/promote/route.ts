@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
 import { sendSubmissionNotification } from '@/lib/forms/submission-notification';
+import { log } from '@/lib/log';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 
 interface RouteContext {
@@ -79,7 +80,7 @@ export async function POST(_request: Request, { params }: RouteContext): Promise
       },
       organizationNotificationEmail: promoted.organization.notificationEmail,
     }).catch((error) => {
-      console.error('[notifications] promote notification failed', error);
+      log.error('notification.promote_failed', { prefillId, error });
     });
 
     return NextResponse.json({ submissionId: promoted.submission.id });

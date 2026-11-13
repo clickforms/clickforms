@@ -342,25 +342,44 @@ never deleted except via the 7-day untagged-image lifecycle rule).
 
 ## Application logs
 
-Everything the app logs goes to two places on each box:
+The app logs through one structured logger (`src/lib/log.ts`, built on [pino](https://getpino.io)).
+Every event is a single JSON line with `ts`, `level`, `event`, `service`, `env`, `version` (the
+image tag) and the event's own fields. Lines go to:
 
-- `docker logs clickforms-app` (the container's output; lost when a deploy replaces the container).
-- **Daily files in `/srv/logs`** on the host: `clickforms-YYYY-MM-DD.log`, one JSON object per
-  line, a new file each day (the day rolls over at midnight Sydney time, `LOG_TIMEZONE`).
-  These survive deploys. `start.sh` creates the directory and gives it to the app's user.
+- **stdout**, i.e. `docker logs clickforms-app` (lost when a deploy replaces the container).
+- **Two daily files in `/srv/logs`** on the host, which survive deploys:
+  - `<YYYY-MM-DD>.clickforms.verbose.log`: everything.
+  - `<YYYY-MM-DD>.clickforms.error.log`: errors only.
 
-Passwords, tokens, keys and codes are masked as `***********` before anything is written
-(`src/lib/log.ts`). Useful commands:
+  A new pair starts at midnight Sydney time (`LOG_TIMEZONE`). `start.sh` creates the directory
+  and gives it to the app's user.
+
+What is logged: sign-ins and failures, two-step codes being issued (never the code), every email
+and SMS attempt, every audited action, every API error with its status, unhandled request errors
+(Next.js `onRequestError`), process-level crashes, billing/webhook problems, PDF/export failures.
+Anything a library prints to the console is captured as `event: "console"`.
+
+Rules for new code (enforced by lint: `console.*` is an error under `src/`):
+
+- `log.info('area.what_happened', { ids, details })`. The event name is stable; values go in fields.
+- Pass errors as `error`. Never put a secret in a string: fields named like password/token/
+  secret/key/cookie/code are masked as `***********` automatically, strings are not inspected.
+- Levels: `debug` (off in production unless `LOG_LEVEL=debug`), `info`, `warn`, `error`.
+
+Useful commands on a box:
 
 ```bash
-tail -f /srv/logs/clickforms-$(TZ=Australia/Sydney date +%F).log      # follow today
-grep '"event":"email' /srv/logs/clickforms-2026-11-13.log            # one day's emails
-grep -h '"level":"error"' /srv/logs/clickforms-*.log | tail -50       # recent errors
+cd /srv/logs
+tail -f "$(TZ=Australia/Sydney date +%F).clickforms.verbose.log"       # follow today
+cat "$(TZ=Australia/Sydney date +%F).clickforms.error.log"             # today's errors
+grep -h '"event":"email' 2026-11-13.clickforms.verbose.log             # one day's emails
+grep -h '"event":"auth.login_failed"' *.clickforms.verbose.log | tail  # recent failed sign-ins
 ```
 
-Nothing deletes old files yet: keep an eye on disk (`du -sh /srv/logs`) or remove old days by
-hand (`find /srv/logs -name 'clickforms-*.log' -mtime +90 -delete`) until log shipping or
-automatic retention is added. The files live only on that box.
+Not done yet (deliberately, to revisit): nothing deletes old files (`du -sh /srv/logs`;
+`find /srv/logs -name '*.clickforms.*.log' -mtime +90 -delete`), the files live only on that
+box, and there is no per-request access log or request id (Caddy sees every request; the app
+logs events and errors, not every hit).
 
 ## Secrets from Infisical via `start.sh`
 

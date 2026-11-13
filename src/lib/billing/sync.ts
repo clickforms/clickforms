@@ -3,6 +3,7 @@ import 'server-only';
 import { type BillingInterval, type OrgPlan, Prisma } from '@prisma/client';
 import type Stripe from 'stripe';
 import { prisma, withOrgContext } from '@/lib/db';
+import { log } from '@/lib/log';
 import { parsePriceLookupKey } from './config';
 import { accessForStripeStatus } from './status';
 import { getStripe } from './stripe';
@@ -57,9 +58,7 @@ export async function syncSubscriptionById(subscriptionId: string): Promise<Sync
 
   const organizationId = subscription.metadata.organizationId;
   if (!organizationId) {
-    console.warn(
-      `[billing] subscription ${subscription.id} has no organizationId metadata, skipped`,
-    );
+    log.warn('billing.subscription_without_organisation', { subscriptionId: subscription.id });
     return null;
   }
 
@@ -83,7 +82,10 @@ export async function syncSubscriptionById(subscriptionId: string): Promise<Sync
       select: { status: true, plan: true },
     });
     if (!organization) {
-      console.warn(`[billing] organisation ${organizationId} not found for ${subscription.id}`);
+      log.warn('billing.organisation_not_found', {
+        organizationId,
+        subscriptionId: subscription.id,
+      });
       return null;
     }
 

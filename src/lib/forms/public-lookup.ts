@@ -4,6 +4,7 @@ import { isTrialExpired } from '@/lib/admin/plan-limits';
 import { FormOfflineError, NotFoundError } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
 import { type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
+import { log } from '@/lib/log';
 
 // Lookups shared by the unauthenticated public routes — the renderer page
 // (src/app/f/[slug]/page.tsx) and the submission API routes under
@@ -121,10 +122,7 @@ export async function getFormSchemaByVersionId(formVersionId: string): Promise<F
     // Every write path validates against formSchemaSchema before persisting (see
     // src/app/forms/[id]/builder/page.tsx's identical fallback comment) — this only
     // fires if the JSONB was altered out-of-band.
-    console.error(
-      `[public-lookup] form_version ${formVersionId} failed formSchemaSchema`,
-      parsed.error,
-    );
+    log.error('form.schema_invalid', { formVersionId, error: parsed.error });
     throw new NotFoundError('Form version');
   }
   if (schemaMemo.size >= SCHEMA_MEMO_MAX) {

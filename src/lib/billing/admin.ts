@@ -6,6 +6,7 @@ import Stripe from 'stripe';
 import { InvalidRequestError, NotFoundError } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
+import { log } from '@/lib/log';
 import { ensureStripeCustomer } from './customer';
 import {
   couponParams,
@@ -250,7 +251,7 @@ export async function getAdminBillingOverview(
     overview.invoices = invoices.data.map(toAdminInvoice);
     overview.balanceCents = customer.deleted ? null : customer.balance;
   } catch (error) {
-    console.error('[billing] admin overview: Stripe request failed:', stripeMessage(error));
+    log.error('billing.admin_overview_failed', { error: stripeMessage(error) });
     overview.stripeError = stripeMessage(error);
   }
   return overview;
@@ -692,7 +693,10 @@ export async function createPromotionCode(
       metadata: { createdBy: actor.email },
       expand: ['promotion.coupon'],
     });
-    console.info(`[admin] promotion code ${code.code} created by ${actor.email}`);
+    log.info('admin.promotion_code_created', {
+      promotionCode: code.code,
+      actorEmail: actor.email,
+    });
     return toAdminPromotionCode(code);
   } catch (error) {
     if (error instanceof Stripe.errors.StripeError) throw new InvalidRequestError(error.message);
@@ -707,9 +711,11 @@ export async function setPromotionCodeActive(
 ): Promise<void> {
   try {
     await getStripe().promotionCodes.update(promotionCodeId, { active });
-    console.info(
-      `[admin] promotion code ${promotionCodeId} ${active ? 'activated' : 'deactivated'} by ${actor.email}`,
-    );
+    log.info('admin.promotion_code_updated', {
+      promotionCodeId,
+      active,
+      actorEmail: actor.email,
+    });
   } catch (error) {
     if (error instanceof Stripe.errors.StripeError) throw new InvalidRequestError(error.message);
     throw error;

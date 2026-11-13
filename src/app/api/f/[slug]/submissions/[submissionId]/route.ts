@@ -13,6 +13,7 @@ import {
 } from '@/lib/forms/public-lookup';
 import { sendSubmissionNotification } from '@/lib/forms/submission-notification';
 import { validateAnswers } from '@/lib/forms/validate-answers';
+import { log } from '@/lib/log';
 import { buildStorageKey, putObjectBytes } from '@/lib/s3';
 import { getCurrentSubdomain, resolveOrganizationIdOrThrow } from '@/lib/tenant';
 
@@ -241,10 +242,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         },
         organizationNotificationEmail,
       }).catch((error) => {
-        console.error(
-          `[notifications] submission notification failed for submission ${updated.id}`,
-          error,
-        );
+        log.error('notification.submission_failed', { submissionId: updated.id, error });
       });
     }
 

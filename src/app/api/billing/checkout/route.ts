@@ -7,6 +7,7 @@ import { ensureStripeCustomer } from '@/lib/billing/customer';
 import { accessForStripeStatus } from '@/lib/billing/status';
 import { BillingNotConfiguredError, getStripe, getTaxConfig } from '@/lib/billing/stripe';
 import { withOrgContext } from '@/lib/db';
+import { log } from '@/lib/log';
 import { ForbiddenError, requireOrganizationId, requireRole, requireSession } from '@/lib/session';
 import { resolveReturnOrigin } from '@/lib/tenant';
 
@@ -64,9 +65,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
     const price = prices.data[0];
     if (!price) {
-      console.error(
-        `[billing] no active Stripe price for ${priceLookupKey(body.plan, body.interval)}`,
-      );
+      log.error('billing.price_not_found', {
+        lookupKey: priceLookupKey(body.plan, body.interval),
+      });
       throw new InvalidRequestError('This plan is not available for purchase yet.');
     }
 

@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema } from '@/lib/forms/schema';
 import { slugify, uniqueSlug } from '@/lib/forms/slug';
+import { log } from '@/lib/log';
 import { buildPreheaderFields, parsePreheader, resolvePreheaderLogoKey } from '@/lib/org-preheader';
 import { buildFormFieldImageKey, copyObject } from '@/lib/s3';
 import { requireOrganizationId, requireRole, requireSession } from '@/lib/session';
@@ -139,7 +140,7 @@ export async function POST(request: Request): Promise<NextResponse> {
               await copyObject(sourceKey, key);
               logo = { fieldId, storageKey: key };
             } catch (error) {
-              console.error('[forms] could not copy pre-header logo into new form', error);
+              log.warn('form.preheader_logo_copy_failed', { error });
             }
           }
           const built = buildPreheaderFields(preheader, logo);

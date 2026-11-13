@@ -35,6 +35,7 @@ import {
   createSubmissionFileResolver,
   parseSubmissionAnswers,
 } from '@/lib/forms/submission-files';
+import { log } from '@/lib/log';
 import { requireOrganizationId } from '@/lib/session';
 import { canEditForm } from '@/lib/user-roles';
 
@@ -223,16 +224,18 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     if (parsed.success) {
       schema = parsed.data;
     } else {
-      console.error(
-        `[forms/submissions] form_version ${version.id} (submission ${submission.id}) failed formSchemaSchema`,
-        parsed.error,
-      );
+      log.error('form.schema_invalid', {
+        formVersionId: version.id,
+        submissionId: submission.id,
+        error: parsed.error,
+      });
       schema = createEmptyFormSchema();
     }
   } else {
-    console.error(
-      `[forms/submissions] submission ${submission.id} references missing form_version ${submission.formVersionId}`,
-    );
+    log.error('form.version_missing', {
+      submissionId: submission.id,
+      formVersionId: submission.formVersionId,
+    });
     schema = createEmptyFormSchema();
   }
 

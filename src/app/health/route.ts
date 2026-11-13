@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { log } from '@/lib/log';
 
 // specs/00-infrastructure.md acceptance criteria: the health endpoint must actually
 // query the database, not just return a static 200 — proving the app-to-DB path works
@@ -13,7 +14,7 @@ export async function GET(): Promise<NextResponse> {
     await prisma.$queryRaw`SELECT 1`;
     return NextResponse.json({ status: 'ok' }, { status: 200 });
   } catch (error) {
-    console.error('[health] database check failed:', error);
+    log.error('health.database_check_failed', { error });
     return NextResponse.json({ status: 'error' }, { status: 500 });
   }
 }

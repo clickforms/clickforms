@@ -4,6 +4,7 @@ import type { FormNotificationMode } from '@prisma/client';
 import { sendEmail } from '@/lib/email';
 import { prefillReturnedEmail } from '@/lib/emails/templates';
 import { resolveNotificationRecipient } from '@/lib/forms/submission-notification';
+import { log } from '@/lib/log';
 
 export function adminPrefillUrl(formId: string, prefillId: string): string {
   const base = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
@@ -45,6 +46,6 @@ export async function notifyPrefillReturned(params: {
       organizationId: params.organizationId,
     });
   } catch (error) {
-    console.error('[prefills] could not send the review notification', error);
+    log.error('notification.prefill_review_failed', { error });
   }
 }

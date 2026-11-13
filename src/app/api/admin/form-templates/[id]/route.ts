@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { prisma } from '@/lib/db';
 import { formSchemaSchema } from '@/lib/forms/schema';
+import { log } from '@/lib/log';
 import { deleteObject } from '@/lib/s3';
 import { requirePlatformAdmin, requireSession } from '@/lib/session';
 
@@ -124,9 +125,11 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
       }
     }
 
-    console.info(
-      `[admin] template deleted: ${existing.name} (${existing.id}) by ${session.user.email}`,
-    );
+    log.info('admin.template_deleted', {
+      templateId: existing.id,
+      name: existing.name,
+      actorEmail: session.user.email,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -12,6 +12,7 @@ import {
 import { createInternalPreviewToken } from '@/lib/forms/internal-preview-token';
 import { getFormSchemaByVersionId } from '@/lib/forms/public-lookup';
 import { listFilenamePrefixCandidates } from '@/lib/forms/schema';
+import { log } from '@/lib/log';
 import { buildOrgFormUrl } from '@/lib/tenant';
 
 /** Which address (if any) a form's "new response" email should go to — org_default
@@ -127,10 +128,10 @@ export async function sendSubmissionNotification(
   } catch (error) {
     // The notification is still worth sending without its attachment — a broken PDF
     // render shouldn't also swallow the "someone responded" alert itself.
-    console.error(
-      `[notifications] failed to render PDF attachment for submission ${params.submission.id}`,
+    log.error('notification.pdf_attachment_failed', {
+      submissionId: params.submission.id,
       error,
-    );
+    });
   }
 
   const { subject, html, text } = submissionNotificationEmail({

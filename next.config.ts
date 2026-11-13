@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   // square OG-image thumbnail) -- both need to stay external to the webpack/Turbopack
   // bundle, or the standalone output above won't carry their native files into
   // .next/standalone and the Docker runtime image will fail at require() time.
-  serverExternalPackages: ['puppeteer', 'sharp'],
+  serverExternalPackages: ['puppeteer', 'sharp', 'pino'],
 
   // People naturally type the plural; the public review page lives at /review.
   async redirects() {

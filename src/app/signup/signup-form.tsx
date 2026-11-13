@@ -143,6 +143,7 @@ function SignupFormInner() {
       // Dev-mode convenience — see the devVerifyUrl comment in the API route. Never
       // present once SMTP is configured, so this is a no-op in production.
       if (data.devVerifyUrl) {
+        // biome-ignore lint/suspicious/noConsole: browser-side, local development only (the API never returns this in production)
         console.log('[dev] signup verification link:', data.devVerifyUrl);
       }
 

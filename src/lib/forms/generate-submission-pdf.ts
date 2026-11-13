@@ -6,6 +6,7 @@ import type { Prisma } from '@prisma/client';
 import { PDFDocument } from 'pdf-lib';
 import puppeteer from 'puppeteer';
 import type { FormSchema } from '@/lib/forms/schema';
+import { log } from '@/lib/log';
 import { createPresignedDownloadUrl } from '@/lib/s3';
 
 export async function generateSubmissionPdfFromPreviewUrl(
@@ -260,7 +261,7 @@ export async function appendUploadedPdfPages(
       // A malformed/corrupted/password-protected uploaded PDF shouldn't take the whole
       // export down with it — the admin still gets the answers summary, just without
       // that one attachment merged in.
-      console.error(`[forms] failed to merge uploaded PDF "${file.filename}" into export`, error);
+      log.error('export.pdf_merge_failed', { filename: file.filename, error });
     }
   }
 

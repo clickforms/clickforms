@@ -4,6 +4,7 @@ import { BuilderClient } from '@/app/forms/[id]/builder/builder-client';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
 import { createEmptyFormSchema, type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
+import { log } from '@/lib/log';
 import { requireOrganizationId } from '@/lib/session';
 import { canUseBuilder } from '@/lib/user-roles';
 
@@ -60,10 +61,11 @@ export default async function FormBuilderPage({ params }: PageProps) {
       // via formSchemaSchema-validated body) only ever persists a schema that already
       // satisfies this validator, so this branch means the JSONB was altered out-of-band.
       // Fail soft with an empty draft rather than 500ing the whole page.
-      console.error(
-        `[forms/builder] form ${form.id} version ${version.id} has a stored schema that fails formSchemaSchema`,
-        parsed.error,
-      );
+      log.error('form.schema_invalid', {
+        formId: form.id,
+        formVersionId: version.id,
+        error: parsed.error,
+      });
       schema = createEmptyFormSchema();
     }
   } else {

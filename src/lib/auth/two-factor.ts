@@ -4,6 +4,7 @@ import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { prisma } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { twoFactorCodeEmail } from '@/lib/emails/templates';
+import { log } from '@/lib/log';
 
 // Email-code two-step verification. A 6-digit code is emailed, valid 10 minutes, max 5 wrong
 // guesses, single use. Only an HMAC of the code is stored (a bare hash of a 6-digit number
@@ -36,7 +37,7 @@ export async function issueTwoFactorCode(
     ORDER BY created_at DESC LIMIT 1`;
   const last = recent[0]?.created_at;
   if (last && Date.now() - last.getTime() < RESEND_COOLDOWN_MS) {
-    console.log(`[2fa] ${purpose} code NOT sent to ${user.email} — resend cooldown (30s)`);
+    log.info('auth.two_factor_throttled', { userId: user.id, email: user.email, purpose });
     return 'throttled';
   }
 
@@ -52,7 +53,7 @@ export async function issueTwoFactorCode(
   // Local development only: print the code so sign-in can be tested without working email
   // delivery. Never logged in production.
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[2fa] DEV ONLY — ${purpose} code for ${user.email}: ${code}`);
+    log.debug('auth.two_factor_dev_preview', { email: user.email, purpose, devOnlyValue: code });
   }
 
   const rendered = twoFactorCodeEmail({ name: user.name ?? user.email, code, purpose });
@@ -64,7 +65,7 @@ export async function issueTwoFactorCode(
     kind: 'two_factor_code',
     organizationId: user.organizationId,
   });
-  console.log(`[2fa] ${purpose} code issued for ${user.email}; email handed to the mailer`);
+  log.info('auth.two_factor_issued', { userId: user.id, email: user.email, purpose });
   return 'sent';
 }
 

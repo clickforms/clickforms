@@ -1,6 +1,7 @@
 import type { Prisma, Submission, SubmissionFile } from '@prisma/client';
 import type { ResolvedSubmissionFile } from '@/lib/forms/format-submission-answer';
 import { createEmptyFormSchema, type FormSchema, formSchemaSchema } from '@/lib/forms/schema';
+import { log } from '@/lib/log';
 import { createPresignedDownloadUrl } from '@/lib/s3';
 
 export function buildSubmissionFileMaps(files: SubmissionFile[]) {
@@ -91,18 +92,20 @@ export async function loadSubmissionFormSchema(
     where: { id: submission.formVersionId, organizationId },
   });
   if (!version) {
-    console.error(
-      `[forms] submission ${submission.id} references missing form_version ${submission.formVersionId}`,
-    );
+    log.error('form.version_missing', {
+      submissionId: submission.id,
+      formVersionId: submission.formVersionId,
+    });
     return createEmptyFormSchema();
   }
 
   const parsed = formSchemaSchema.safeParse(version.schema);
   if (!parsed.success) {
-    console.error(
-      `[forms] form_version ${version.id} (submission ${submission.id}) failed formSchemaSchema`,
-      parsed.error,
-    );
+    log.error('form.schema_invalid', {
+      formVersionId: version.id,
+      submissionId: submission.id,
+      error: parsed.error,
+    });
     return createEmptyFormSchema();
   }
   return parsed.data;

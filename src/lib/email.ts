@@ -93,7 +93,7 @@ async function logEmailAttempt(params: {
       },
     });
   } catch (error) {
-    console.error('[email] failed to write EmailLog row', error);
+    log.error('email.log_write_failed', { error });
   }
 }
 
@@ -130,9 +130,16 @@ export async function sendEmail({
     const attachmentNote = attachments?.length
       ? ` (with attachment${attachments.length > 1 ? 's' : ''}: ${attachments.map((a) => a.filename).join(', ')})`
       : '';
-    console.log(
-      `[email] RESEND_API_KEY not configured — logging instead of sending.\nTo: ${to}\nSubject: ${subject}${attachmentNote}\n\n${text}`,
-    );
+    // Local development only: show the message (links included) so flows can be tested without
+    // real delivery. Never written in production, where it could expose reset/verify links.
+    if (process.env.NODE_ENV !== 'production') {
+      log.debug('email.dev_preview', {
+        to,
+        subject,
+        attachments: attachmentNote || undefined,
+        links: text.match(/https?:\/\/\S+/g) ?? [],
+      });
+    }
     await logEmailAttempt({ to, subject, kind, organizationId, status: 'dev_logged' });
     return;
   }

@@ -31,6 +31,7 @@ export function ForgotPasswordForm() {
       // more than one link if this email matches an account in more than one organisation.
       if (data.devResetUrls?.length) {
         for (const url of data.devResetUrls) {
+          // biome-ignore lint/suspicious/noConsole: browser-side, local development only (the API never returns this in production)
           console.log('[dev] password reset link:', url);
         }
       }

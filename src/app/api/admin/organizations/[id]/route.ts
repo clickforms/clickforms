@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { prisma, withOrgContext } from '@/lib/db';
+import { log } from '@/lib/log';
 import { requirePlatformAdmin, requireSession } from '@/lib/session';
 
 interface RouteContext {
@@ -220,9 +221,11 @@ export async function DELETE(_request: Request, { params }: RouteContext): Promi
 
     await prisma.organization.delete({ where: { id } });
 
-    console.info(
-      `[admin] organization deleted: ${existing.name} (${existing.id}) by ${session.user.email}`,
-    );
+    log.info('admin.organization_deleted', {
+      organizationId: existing.id,
+      name: existing.name,
+      actorEmail: session.user.email,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

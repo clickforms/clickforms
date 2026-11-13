@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { prisma } from '@/lib/db';
+import { log } from '@/lib/log';
 
 /**
  * Every SMS this app sends is tagged with one of these — see SmsLog.kind in
@@ -76,7 +77,7 @@ async function logSmsAttempt(params: {
       },
     });
   } catch (error) {
-    console.error('[sms] failed to write SmsLog row', error);
+    log.error('sms.log_write_failed', { error });
   }
 }
 
@@ -94,9 +95,13 @@ export async function sendSms({ to, message, kind, organizationId }: SendSmsPara
   const credentials = getCredentials();
 
   if (!credentials) {
-    console.log(
-      `[sms] MESSAGEMEDIA_API_KEY/MESSAGEMEDIA_API_SECRET not configured — logging instead of sending.\nTo: ${to}\n\n${message}`,
-    );
+    log.warn('sms.not_configured', {
+      kind,
+      to,
+      hint: 'MESSAGEMEDIA_API_KEY / MESSAGEMEDIA_API_SECRET are not set, so nothing is sent',
+      // The text is only useful (and only shown) while developing locally.
+      ...(process.env.NODE_ENV !== 'production' ? { preview: message } : {}),
+    });
     await logSmsAttempt({ to, kind, organizationId, status: 'dev_logged' });
     return;
   }
@@ -128,7 +133,7 @@ export async function sendSms({ to, message, kind, organizationId }: SendSmsPara
       // Never throw — a broken SMS send shouldn't fail the request that triggered it,
       // same reasoning as sendEmail(). The caller finds out via SmsLog / server logs.
       const errorMessage = `MessageMedia responded ${response.status}`;
-      console.error(`[sms] MessageMedia send failed (${kind}) to ${to}:`, errorMessage, body);
+      log.error('sms.send_failed', { kind, to, error: errorMessage, response: body });
       await logSmsAttempt({ to, kind, organizationId, status: 'failed', error: errorMessage });
       return;
     }
@@ -142,7 +147,7 @@ export async function sendSms({ to, message, kind, organizationId }: SendSmsPara
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[sms] MessageMedia send failed (${kind}) to ${to}:`, error);
+    log.error('sms.send_failed', { kind, to, error });
     await logSmsAttempt({ to, kind, organizationId, status: 'failed', error: errorMessage });
   }
 }

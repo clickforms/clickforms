@@ -3,6 +3,7 @@ import type Stripe from 'stripe';
 import { getStripe, getWebhookSecret } from '@/lib/billing/stripe';
 import { syncSubscriptionById } from '@/lib/billing/sync';
 import { prisma } from '@/lib/db';
+import { log } from '@/lib/log';
 
 // Stripe needs the raw request body to verify the signature, and this route must never be
 // cached or statically optimised.
@@ -51,7 +52,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     event = getStripe().webhooks.constructEvent(payload, signature, getWebhookSecret());
   } catch (error) {
-    console.warn('[billing] webhook signature verification failed:', (error as Error).message);
+    log.warn('billing.webhook_signature_invalid', { error });
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
@@ -84,7 +85,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ received: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[billing] failed to process ${event.type} ${event.id}:`, message);
+    log.error('billing.webhook_processing_failed', {
+      stripeEventType: event.type,
+      stripeEventId: event.id,
+      error,
+    });
     await prisma.billingEvent
       .update({ where: { stripeEventId: event.id }, data: { error: message.slice(0, 500) } })
       .catch(() => undefined);

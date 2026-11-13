@@ -1,6 +1,7 @@
 'use client';
 
 import type { ToastItem } from '@/components/toast/types';
+import './toast-action.css';
 
 function SuccessIcon() {
   return (
@@ -53,7 +54,17 @@ export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
             <span className="toast-icon" aria-hidden="true">
               {isError ? <ErrorIcon /> : <SuccessIcon />}
             </span>
-            <p className="toast-message">{toast.message}</p>
+            <p className="toast-message">
+              {toast.message}
+              {toast.action ? (
+                <>
+                  {' '}
+                  <a className="toast-action" href={toast.action.href}>
+                    {toast.action.label}
+                  </a>
+                </>
+              ) : null}
+            </p>
             <button
               type="button"
               className="toast-dismiss"

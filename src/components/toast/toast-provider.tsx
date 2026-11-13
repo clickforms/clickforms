@@ -84,7 +84,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
       dispatch({
         type: 'add',
-        toast: { id, variant, message: trimmed, durationMs },
+        toast: { id, variant, message: trimmed, durationMs, action: options?.action },
       });
 
       if (durationMs > 0) {

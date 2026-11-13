@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { type FormEvent, useRef, useState } from 'react';
+import { ToastProvider, useToast } from '@/components/toast';
 import './signup-validation.css';
 import {
   validateEmailField,
@@ -27,7 +28,17 @@ type FieldName =
   | 'formSituation'
   | 'terms';
 
+// The signup page has no app shell to supply toasts, so the form brings its own provider.
 export function SignupForm() {
+  return (
+    <ToastProvider>
+      <SignupFormInner />
+    </ToastProvider>
+  );
+}
+
+function SignupFormInner() {
+  const toast = useToast();
   const [organizationName, setOrganizationName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -35,8 +46,6 @@ export function SignupForm() {
   const [phone, setPhone] = useState('');
   const [formSituation, setFormSituation] = useState<FormSituation | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [accountExists, setAccountExists] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({});
   const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,8 +90,6 @@ export function SignupForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setAccountExists(false);
 
     const order: FieldName[] = [
       'organizationName',
@@ -123,10 +130,13 @@ export function SignupForm() {
       const data: { error?: string; code?: string; devVerifyUrl?: string } = await res.json();
       if (!res.ok) {
         if (data.code === 'account_exists') {
-          setAccountExists(true);
+          toast.error(`An account with ${email.trim()} already exists. Please sign in or`, {
+            durationMs: 12_000,
+            action: { label: 'reset your password', href: '/forgot-password' },
+          });
           return;
         }
-        setError(data.error ?? 'Could not create your account. Please try again.');
+        toast.error(data.error ?? 'Could not create your account. Please try again.');
         return;
       }
 
@@ -138,7 +148,7 @@ export function SignupForm() {
 
       setSubmittedEmail(email.trim());
     } catch {
-      setError('Something went wrong. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -185,20 +195,6 @@ export function SignupForm() {
 
   return (
     <form className="signup-form" onSubmit={handleSubmit} noValidate ref={formRef}>
-      {error ? (
-        <p className="signup-form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {accountExists ? (
-        <p className="signup-form-error" role="alert">
-          An account with <strong>{email.trim()}</strong> already exists.{' '}
-          <Link href="/login">Sign in</Link> or{' '}
-          <Link href="/forgot-password">reset your password</Link>, or use a different email
-          address.
-        </p>
-      ) : null}
-
       <label className="signup-field">
         <span className="signup-field-label">Organisation name</span>
         <input

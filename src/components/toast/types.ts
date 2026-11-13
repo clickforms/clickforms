@@ -1,16 +1,25 @@
 export type ToastVariant = 'success' | 'error';
 
+/** An optional link shown inside a toast, e.g. "Sign in". */
+export interface ToastAction {
+  label: string;
+  href: string;
+}
+
 export interface ToastItem {
   id: string;
   variant: ToastVariant;
   message: string;
   durationMs: number;
   dismissing?: boolean;
+  action?: ToastAction;
 }
 
 export interface ToastOptions {
   /** Defaults to 4s for success, 6s for error. Pass `0` to disable auto-dismiss. */
   durationMs?: number;
+  /** A link shown after the message. */
+  action?: ToastAction;
 }
 
 export interface ToastContextValue {

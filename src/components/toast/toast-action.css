@@ -1,0 +1,11 @@
+.toast-message .toast-action {
+  font-weight: 700;
+  color: #0d9f57;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.toast-message .toast-action:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

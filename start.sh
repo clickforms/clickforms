@@ -50,6 +50,11 @@ export DOMAIN="${DOMAIN:-${ROOT_DOMAIN:-}}"
 # Tells entrypoint.sh the secrets are already in the environment — skip the check.
 export SECRETS_INJECTED=1
 
+# Daily app log files are written here (see docker-compose.yml / src/lib/file-logging.ts).
+# The app runs as uid 1001 inside the container, so the directory has to belong to it.
+mkdir -p /srv/logs
+chown 1001:1001 /srv/logs
+
 docker compose pull
 docker compose up -d --remove-orphans
 

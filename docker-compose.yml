@@ -66,6 +66,14 @@ services:
       STRIPE_AUTOMATIC_TAX: ${STRIPE_AUTOMATIC_TAX:-}
       STRIPE_GST_TAX_RATE_ID: ${STRIPE_GST_TAX_RATE_ID:-}
       STRIPE_PORTAL_CONFIGURATION_ID: ${STRIPE_PORTAL_CONFIGURATION_ID:-}
+      # Daily log files (src/lib/file-logging.ts): everything the app logs is also appended to
+      # /srv/logs/clickforms-YYYY-MM-DD.log on the host, a new file per day (Sydney time).
+      LOG_DIR: /srv/logs
+      LOG_TIMEZONE: Australia/Sydney
+    volumes:
+      # Host directory, so the files outlive the container (each deploy replaces it).
+      # start.sh creates it and gives it to the app's user (uid 1001).
+      - /srv/logs:/srv/logs
     expose:
       - '3000'
     networks:

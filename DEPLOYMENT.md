@@ -340,6 +340,28 @@ never deleted except via the 7-day untagged-image lifecycle rule).
 | Infisical env | `staging` | `prod` |
 | RDS instance | clickforms-staging | clickforms-production |
 
+## Application logs
+
+Everything the app logs goes to two places on each box:
+
+- `docker logs clickforms-app` (the container's output; lost when a deploy replaces the container).
+- **Daily files in `/srv/logs`** on the host: `clickforms-YYYY-MM-DD.log`, one JSON object per
+  line, a new file each day (the day rolls over at midnight Sydney time, `LOG_TIMEZONE`).
+  These survive deploys. `start.sh` creates the directory and gives it to the app's user.
+
+Passwords, tokens, keys and codes are masked as `***********` before anything is written
+(`src/lib/log.ts`). Useful commands:
+
+```bash
+tail -f /srv/logs/clickforms-$(TZ=Australia/Sydney date +%F).log      # follow today
+grep '"event":"email' /srv/logs/clickforms-2026-11-13.log            # one day's emails
+grep -h '"level":"error"' /srv/logs/clickforms-*.log | tail -50       # recent errors
+```
+
+Nothing deletes old files yet: keep an eye on disk (`du -sh /srv/logs`) or remove old days by
+hand (`find /srv/logs -name 'clickforms-*.log' -mtime +90 -delete`) until log shipping or
+automatic retention is added. The files live only on that box.
+
 ## Secrets from Infisical via `start.sh`
 
 The stack on each box is started with one command: `sudo /srv/clickforms/start.sh` (the deploy

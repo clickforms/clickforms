@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { FormWorkspaceShell } from '@/app/forms/[id]/form-workspace-shell';
 import { authOptions } from '@/lib/auth';
 import { withOrgContext } from '@/lib/db';
+import { isPromotedAway, listPrefills } from '@/lib/forms/prefills';
 import { requireOrganizationId, userDisplayName } from '@/lib/session';
 import { buildOrgFormUrl } from '@/lib/tenant';
 import { canViewForm } from '@/lib/user-roles';
@@ -43,12 +44,12 @@ export default async function FormWorkspaceLayout({ children, params }: LayoutPr
       const responseCount = await tx.submission.count({
         where: { formId: id, organizationId: requireOrganizationId(session), status: 'submitted' },
       });
-      // Number of prefills listed on the Prefills tab (corrections sit under their original) — shown on the Prefills tab like the Responses
-      // count. Raw SQL: form_prefills isn't in the generated Prisma client.
-      const prefillRows = await tx.$queryRaw<{ count: number }[]>`
-        SELECT count(*)::int AS count FROM form_prefills
-        WHERE form_id = ${id}::uuid AND parent_id IS NULL`;
-      const prefillCount = prefillRows[0]?.count ?? 0;
+      // Number of prefills listed on the Prefills tab — the same rows that tab shows (corrections
+      // sit under their original, and a promoted prefill has left the list), so the badge and
+      // the list can never disagree.
+      const prefillCount = (await listPrefills(tx, id)).filter(
+        (row) => !isPromotedAway(row),
+      ).length;
       // Needed to build the absolute /f/[slug] link for the top nav's Share button —
       // see src/app/forms/list/page.tsx for the same buildOrgFormUrl pattern.
       const organization = await tx.organization.findUniqueOrThrow({

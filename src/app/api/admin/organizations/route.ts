@@ -27,7 +27,7 @@ const createOrganizationBodySchema = z.object({
     .optional(),
   // Defaults to standard — matches Organization.plan's own schema default — so onboarding
   // an org without picking a plan behaves exactly as it did before this field existed.
-  plan: z.enum(['standard', 'business', 'professional', 'enterprise']).default('standard'),
+  plan: z.enum(['free', 'standard', 'business', 'professional', 'enterprise']).default('standard'),
 });
 
 const ORGANIZATION_LIST_SELECT = {

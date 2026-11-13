@@ -326,6 +326,24 @@ export async function getObjectBytes(storageKey: string): Promise<Uint8Array> {
   return response.Body.transformToByteArray();
 }
 
+/** Writes a small object straight from the server. Uploads normally go browser -> S3 through a
+ * presigned URL; this exists for the few files the server itself produces, such as the
+ * sender's signature carried inside a prefill (see the public submit route). */
+export async function putObjectBytes(params: {
+  storageKey: string;
+  bytes: Uint8Array;
+  mimeType: string;
+}): Promise<void> {
+  const command = new PutObjectCommand({
+    Bucket: getBucketName(),
+    Key: params.storageKey,
+    Body: params.bytes,
+    ContentType: params.mimeType,
+    ContentLength: params.bytes.byteLength,
+  });
+  await getS3Client().send(command);
+}
+
 /** Best-effort delete — used when a new org logo replaces an old one, or the logo is
  * removed entirely (src/app/api/organization/logo). Callers should not let a failure
  * here block the database update; an orphaned S3 object is harmless clutter, but a

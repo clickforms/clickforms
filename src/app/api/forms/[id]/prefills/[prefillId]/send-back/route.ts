@@ -5,7 +5,12 @@ import { InvalidRequestError, NotFoundError, toErrorResponse } from '@/lib/api-e
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { assertFormEditAccess } from '@/lib/form-access';
-import { generatePrefillToken, PREFILL_TTL_MS, sanitizePrefillAnswers } from '@/lib/forms/prefills';
+import {
+  generatePrefillToken,
+  isSignatureDataUrl,
+  PREFILL_TTL_MS,
+  sanitizePrefillAnswers,
+} from '@/lib/forms/prefills';
 import { formSchemaSchema } from '@/lib/forms/schema';
 import { prefillUrl, sendPrefillEmail } from '@/lib/forms/send-prefill-email';
 import { requireOrganizationId, requireRole, requireSession, userDisplayName } from '@/lib/session';
@@ -44,8 +49,9 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
           parent_id: string | null;
           recipient_email: string | null;
           recipient_name: string | null;
+          answers: Record<string, unknown> | null;
         }[]
-      >`SELECT id, parent_id, recipient_email, recipient_name FROM form_prefills
+      >`SELECT id, parent_id, recipient_email, recipient_name, answers FROM form_prefills
         WHERE id = ${prefillId}::uuid AND form_id = ${form.id}::uuid AND NOT is_draft`;
       const parent = parents[0];
       if (!parent) throw new NotFoundError('Prefill');
@@ -61,6 +67,15 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
       const parsed = formSchemaSchema.safeParse(version?.schema);
       if (!parsed.success) throw new InvalidRequestError('The form could not be read.');
       const answers = sanitizePrefillAnswers(parsed.data, sub.answers);
+      // A signature the sender applied in the original prefill travels with the correction, so
+      // the recipient isn't asked to supply it. (The recipient's own signature is not carried:
+      // they sign again after correcting their answers.)
+      for (const [fieldId, field] of Object.entries(parsed.data.fields)) {
+        const original = parent.answers?.[fieldId];
+        if (field.type === 'signature' && isSignatureDataUrl(original)) {
+          answers[fieldId] = original;
+        }
+      }
 
       const rootId = parent.parent_id ?? parent.id;
       const token = generatePrefillToken();

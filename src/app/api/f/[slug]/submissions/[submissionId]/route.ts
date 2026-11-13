@@ -5,6 +5,7 @@ import { InvalidRequestError, toErrorResponse } from '@/lib/api-errors';
 import { logAudit } from '@/lib/audit';
 import { withOrgContext } from '@/lib/db';
 import { notifyPrefillReturned } from '@/lib/forms/prefill-review';
+import { isSignatureDataUrl } from '@/lib/forms/prefills';
 import {
   getFormForExistingSubmission,
   getFormSchemaByVersionId,
@@ -12,6 +13,7 @@ import {
 } from '@/lib/forms/public-lookup';
 import { sendSubmissionNotification } from '@/lib/forms/submission-notification';
 import { validateAnswers } from '@/lib/forms/validate-answers';
+import { buildStorageKey, putObjectBytes } from '@/lib/s3';
 import { getCurrentSubdomain, resolveOrganizationIdOrThrow } from '@/lib/tenant';
 
 interface RouteContext {
@@ -42,6 +44,27 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
 
     const schema = await getFormSchemaByVersionId(submission.formVersionId);
 
+    // Signatures the sender applied in the prefill this response came through are locked: the
+    // server takes them from the prefill itself and ignores whatever the browser sent for
+    // those fields, so a recipient can't swap, clear or alter the sender's signature.
+    const prefillRows = await withOrgContext(
+      form.organizationId,
+      (tx) =>
+        tx.$queryRaw<{ answers: Record<string, unknown> | null }[]>`
+        SELECT p.answers FROM submissions s JOIN form_prefills p ON p.id = s.prefill_id
+        WHERE s.id = ${submission.id}::uuid`,
+    );
+    const prefilledAnswers = prefillRows[0]?.answers ?? null;
+    const lockedSignatures = new Map<string, string>();
+    for (const [fieldId, field] of Object.entries(schema.fields)) {
+      const original = prefilledAnswers?.[fieldId];
+      if (field.type === 'signature' && isSignatureDataUrl(original)) {
+        lockedSignatures.set(fieldId, original);
+        // Counts as answered for validation; replaced by a stored file id further down.
+        body.answers[fieldId] = original;
+      }
+    }
+
     // Every file_upload/signature/draw_on_image answer must reference a
     // submission_files row that was actually uploaded against *this* submission —
     // otherwise a client could forge a fileId belonging to a different org's submission
@@ -58,6 +81,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
         field.type !== 'draw_on_image'
       )
         continue;
+      if (lockedSignatures.has(fieldId)) continue;
       const value = body.answers[fieldId];
       if (value === undefined) continue;
       const fileIds = Array.isArray(value) ? value : [value];
@@ -73,6 +97,33 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
     const fieldErrors = validateAnswers(schema, body.answers);
     if (Object.keys(fieldErrors).length > 0) {
       return NextResponse.json({ error: 'Validation failed', fieldErrors }, { status: 400 });
+    }
+
+    // Store each locked signature as a real file on this submission, exactly like one drawn
+    // on the form, and point the answer at it.
+    for (const [fieldId, dataUrl] of lockedSignatures) {
+      const bytes = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
+      const storageKey = buildStorageKey({
+        organizationId: form.organizationId,
+        formId: form.id,
+        submissionId: submission.id,
+        filename: 'signature.png',
+      });
+      await putObjectBytes({ storageKey, bytes, mimeType: 'image/png' });
+      const file = await withOrgContext(form.organizationId, (tx) =>
+        tx.submissionFile.create({
+          data: {
+            submissionId: submission.id,
+            organizationId: form.organizationId,
+            fieldKey: fieldId,
+            storageKey,
+            filename: 'signature.png',
+            mimeType: 'image/png',
+            sizeBytes: bytes.byteLength,
+          },
+        }),
+      );
+      body.answers[fieldId] = file.id;
     }
 
     const { updated, organizationNotificationEmail, held, heldLabel } = await withOrgContext(

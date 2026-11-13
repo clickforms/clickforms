@@ -352,26 +352,8 @@ function FormRendererInner({
   const resolvePendingSignatures = useCallback(
     async (currentAnswers: FormAnswers): Promise<FormAnswers> => {
       const resolved = { ...currentAnswers };
-      // A signature the sender already applied in a prefill arrives as a PNG data URL: store it
-      // as a real file for this submission, same as a freshly drawn one.
-      const inherited = Object.entries(currentAnswers).filter(
-        ([fieldId, value]) =>
-          schema.fields[fieldId]?.type === 'signature' &&
-          typeof value === 'string' &&
-          value.startsWith('data:image/png;base64,') &&
-          !pendingSignaturesRef.current.has(fieldId),
-      );
-      await Promise.all(
-        inherited.map(async ([fieldId, value]) => {
-          const blob = await (await fetch(value as string)).blob();
-          const fileId = await uploadFile(
-            fieldId,
-            new File([blob], 'signature.png', { type: 'image/png' }),
-          );
-          resolved[fieldId] = fileId;
-          setAnswers((prev) => ({ ...prev, [fieldId]: fileId }));
-        }),
-      );
+      // A signature the sender applied in the prefill stays as its data URL here: the server
+      // takes it from the prefill itself on submit and stores it, ignoring what the browser sends.
       if (pendingSignaturesRef.current.size === 0) return resolved;
       await Promise.all(
         Array.from(pendingSignaturesRef.current.entries()).map(async ([fieldId, file]) => {
@@ -389,7 +371,7 @@ function FormRendererInner({
       );
       return resolved;
     },
-    [schema, uploadFile],
+    [uploadFile],
   );
 
   const findPageIndexForField = useCallback(

@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { type FormEvent, useEffect, useState } from 'react';
 import { PasswordField } from '@/components/password-field';
+import { isPasswordAcceptable, PasswordRequirements } from '@/components/password-requirements';
+import './reset-password.css';
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,6 +37,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!email) return;
+    if (!isPasswordAcceptable(password) || password !== confirm) return;
     setSubmitError(null);
     setIsSubmitting(true);
 
@@ -95,13 +99,20 @@ export function ResetPasswordForm({ token }: { token: string }) {
         </p>
       ) : null}
 
-      <label className="login-field">
-        <span className="login-field-label">Email</span>
-        <input className="text-input login-field-input" type="email" value={email} disabled />
-      </label>
+      <div className="reset-account">
+        <span className="reset-account-avatar" aria-hidden="true">
+          {email.charAt(0)}
+        </span>
+        <span className="reset-account-text">
+          <span className="reset-account-label">Resetting password for</span>
+          <span className="reset-account-email">{email}</span>
+        </span>
+      </div>
 
-      <label className="login-field" htmlFor="reset-password-new-password">
-        <span className="login-field-label">New password</span>
+      <div className="login-field">
+        <label className="login-field-label" htmlFor="reset-password-new-password">
+          New password
+        </label>
         <PasswordField
           id="reset-password-new-password"
           autoComplete="new-password"
@@ -109,10 +120,41 @@ export function ResetPasswordForm({ token }: { token: string }) {
           value={password}
           onChange={setPassword}
           disabled={isSubmitting}
+          placeholder=""
+          showHint={false}
         />
-      </label>
+        <PasswordRequirements password={password} />
+      </div>
 
-      <button className="button login-submit" type="submit" disabled={isSubmitting}>
+      <div className="login-field">
+        <label className="login-field-label" htmlFor="reset-password-confirm-password">
+          Confirm new password
+        </label>
+        <PasswordField
+          id="reset-password-confirm-password"
+          autoComplete="new-password"
+          required
+          value={confirm}
+          onChange={setConfirm}
+          disabled={isSubmitting}
+          placeholder=""
+          showHint={false}
+        />
+        {confirm.length > 0 ? (
+          <p
+            className={`reset-match ${password === confirm ? 'reset-match--ok' : 'reset-match--bad'}`}
+            aria-live="polite"
+          >
+            {password === confirm ? 'Passwords match' : "Passwords don't match yet"}
+          </p>
+        ) : null}
+      </div>
+
+      <button
+        className="button login-submit reset-submit"
+        type="submit"
+        disabled={isSubmitting || !isPasswordAcceptable(password) || password !== confirm}
+      >
         {isSubmitting ? 'Saving…' : 'Reset password'}
       </button>
 
